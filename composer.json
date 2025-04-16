@@ -1,0 +1,25 @@
+{
+    "name": "hospital-manager/hospital-manager",
+    "description": "A comprehensive hospital management system for Nigerian hospitals",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=7.4",
+        "10quality/wpmvc": "^3.1",
+        "10quality/wpmvc-commands": "^1.0",
+        "10quality/wpmvc-mvc": "^1.0",
+        "composer/installers": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "HospitalManager\\": "app/"
+        }
+    },
+    "config": {
+        "vendor-dir": "vendor",
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    },
+    "minimum-stability": "stable"
+}
