@@ -1,5 +1,4 @@
 <?php
-<?php
 
 class CreateHospitalTables
 {
@@ -92,6 +91,20 @@ class CreateHospitalTables
             KEY tech_id (tech_id)
         ) $charset_collate;";
 
+        // Audit Logs table
+        $sql_audit_logs = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_audit_logs (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) NOT NULL,
+            action varchar(50) NOT NULL,
+            entity_type varchar(50) NOT NULL,
+            entity_id bigint(20) NOT NULL,
+            changes JSON,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY user_id (user_id),
+            KEY entity_type_id (entity_type, entity_id)
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
         dbDelta($sql_patients);
@@ -100,6 +113,7 @@ class CreateHospitalTables
         dbDelta($sql_visitations);
         dbDelta($sql_lab_investigations);
         dbDelta($sql_radiological_exams);
+        dbDelta($sql_audit_logs);
     }
 
     public static function down()
