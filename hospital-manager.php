@@ -20,10 +20,8 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/vendor/autoload.php';
 
 use WPMVC\Bridge;
+use HospitalManager\Services\RoleManager;
 
-/**
- * Plugin's main class.
- */
 class HospitalManager extends Bridge
 {
     /**
@@ -38,12 +36,22 @@ class HospitalManager extends Bridge
      */
     protected $plugin_version = '1.0.0';
 
-    /**
-     * Initialize plugin.
-     */
+    public function activate_plugin()
+    {
+        require_once plugin_dir_path(__FILE__) . 'database/migrations/create_hospital_tables.php';
+        CreateHospitalTables::up();
+        RoleManager::init();
+    }
+
+    public function deactivate_plugin()
+    {
+        RoleManager::remove();
+    }
+
     public function init()
     {
-        // Add initialization code here
+        register_activation_hook(__FILE__, [$this, 'activate_plugin']);
+        register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
         parent::init();
     }
 }
