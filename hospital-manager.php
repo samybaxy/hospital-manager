@@ -52,7 +52,21 @@ class HospitalManager extends Bridge
     {
         register_activation_hook(__FILE__, [$this, 'activate_plugin']);
         register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
+        add_action('rest_api_init', [$this, 'register_api_routes']);
         parent::init();
+    }
+
+    public function register_api_routes()
+    {
+        $controllers = [
+            new Controllers\Api\PatientController(),
+            new Controllers\Api\VisitationController(),
+            new Controllers\Api\LabInvestigationController(),
+        ];
+
+        foreach ($controllers as $controller) {
+            $controller->register_routes();
+        }
     }
 }
 
