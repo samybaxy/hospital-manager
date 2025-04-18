@@ -8,12 +8,21 @@ class LabInvestigation extends PostModel
 {
     use FindTrait;
 
+    protected $type = 'lab_investigation';
     protected $primaryKey = 'id';
     protected $table = 'wp_hm_lab_investigations';
     protected $fillable = [
         'visitation_id',
         'lab_tech_id',
-        'results'
+        'patient_id',
+        'test_type',
+        'results',
+        'report_url',
+        'requested_by',
+        'notes',
+        'status',
+        'completed_at',
+        'created_at'
     ];
 
     /**
@@ -21,7 +30,7 @@ class LabInvestigation extends PostModel
      */
     public function visitation()
     {
-        return $this->belongsTo('HospitalManager\Models\Visitation', 'visitation_id', 'id');
+        return $this->belongs_to('HospitalManager\Models\Visitation', 'visitation_id');
     }
 
     /**
@@ -29,6 +38,22 @@ class LabInvestigation extends PostModel
      */
     public function labTech()
     {
-        return $this->belongsTo('WPMVC\MVC\Models\UserModel', 'lab_tech_id', 'ID');
+        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'lab_tech_id');
+    }
+
+    /**
+     * Relationship with requesting doctor (WordPress user)
+     */
+    public function requestedBy()
+    {
+        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'requested_by');
+    }
+
+    /**
+     * Relationship with patient
+     */
+    public function patient()
+    {
+        return $this->belongs_to('HospitalManager\Models\Patient', 'patient_id');
     }
 }

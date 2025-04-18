@@ -1,112 +1,97 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  CssBaseline,
-  AppBar,
-  Toolbar,
-  Typography,
-  Container,
-  Drawer,
-  IconButton,
-  useMediaQuery
-} from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import Navigation from './Navigation';
-import { useHospital } from '../contexts/HospitalContext';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Box, CssBaseline } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
+import { NotificationProvider } from '../services/NotificationService';
 
-const drawerWidth = 240;
+// Import layouts and components
+import MainLayout from './layouts/MainLayout';
+import Login from './auth/Login';
+import ProtectedRoute from './ProtectedRoute';
+
+// Import dashboards
+import PatientDashboard from './dashboards/PatientDashboard';
+import DoctorDashboard from './dashboards/DoctorDashboard';
+import LabTechDashboard from './dashboards/LabTechDashboard';
+import DeskOfficerDashboard from './dashboards/DeskOfficerDashboard';
+import AdminDashboard from './dashboards/AdminDashboard';
+
+// Import other pages
+import PatientProfile from './pages/PatientProfile';
+import VisitationForm from './pages/VisitationForm';
+import LabResultsForm from './pages/LabResultsForm';
+import Unauthorized from './pages/Unauthorized';
 
 const App = () => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [currentPath, setCurrentPath] = useState('/');
-  const { state } = useHospital();
-  const isMobile = useMediaQuery('(max-width:600px)');
+    const { auth } = useAuth();
+    
+    // Redirect to appropriate dashboard based on role
+    const getDashboardByRole = () => {
+        switch (auth.role) {
+            case 'patient':
+                return <PatientDashboard />;
+            case 'doctor':
+                return <DoctorDashboard />;
+            case 'lab_tech':
+                return <LabTechDashboard />;
+            case 'desk_officer':
+                return <DeskOfficerDashboard />;
+            case 'administrator':
+                return <AdminDashboard />;
+            default:
+                return <Navigate to="/login" />;
+        }
+    };
 
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
-
-  const handleNavigate = (path) => {
-    setCurrentPath(path);
-    if (isMobile) {
-      setMobileOpen(false);
+    if (auth.loading) {
+        return <div>Loading...</div>;
     }
-  };
 
-  return (
-    <Box sx={{ display: 'flex' }}>
-      <CssBaseline />
-      <AppBar
-        position="fixed"
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Hospital Manager
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    return (
+        <NotificationProvider>
+            <Box sx={{ display: 'flex' }}>
+                <CssBaseline />
+                <Routes>
+                    <Route path="/login" element={
+                        auth.isAuthenticated ? 
+                            <Navigate to="/" replace /> : 
+                            <Login />
+                    } />
 
-      <Box
-        component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-      >
-        <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better mobile performance
-          }}
-          sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-            },
-          }}
-        >
-          <Toolbar /> {/* This pushes content below the AppBar */}
-          <Navigation onNavigate={handleNavigate} />
-        </Drawer>
-      </Box>
+                    <Route path="/unauthorized" element={<Unauthorized />} />
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px', // Height of AppBar
-        }}
-      >
-        <Container maxWidth="lg">
-          {/* Content will be rendered here based on currentPath */}
-          <Typography variant="h4" gutterBottom>
-            {currentPath === '/' ? 'Dashboard' : 
-             currentPath === '/patients' ? 'Patients' :
-             currentPath === '/doctors' ? 'Doctors' :
-             'Appointments'}
-          </Typography>
-          {state.loading && <Typography>Loading...</Typography>}
-          {state.error && (
-            <Typography color="error">{state.error}</Typography>
-          )}
-        </Container>
-      </Box>
-    </Box>
-  );
+                    <Route path="/" element={
+                        <ProtectedRoute>
+                            <MainLayout />
+                        </ProtectedRoute>
+                    }>
+                        <Route index element={getDashboardByRole()} />
+
+                        {/* Doctor and Desk Officer Routes */}
+                        <Route path="patients/:id" element={
+                            <ProtectedRoute allowedRoles={['doctor', 'desk_officer']}>
+                                <PatientProfile />
+                            </ProtectedRoute>
+                        } />
+
+                        {/* Doctor Routes */}
+                        <Route path="visitations/new" element={
+                            <ProtectedRoute allowedRoles={['doctor']}>
+                                <VisitationForm />
+                            </ProtectedRoute>
+                        } />
+
+                        {/* Lab Tech Routes */}
+                        <Route path="lab-results/:id" element={
+                            <ProtectedRoute allowedRoles={['lab_tech']}>
+                                <LabResultsForm />
+                            </ProtectedRoute>
+                        } />
+                    </Route>
+                </Routes>
+            </Box>
+        </NotificationProvider>
+    );
 };
 
 export default App;

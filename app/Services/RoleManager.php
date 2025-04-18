@@ -4,6 +4,14 @@ namespace HospitalManager\Services;
 
 class RoleManager
 {
+    /**
+     * Initialize all custom roles for the hospital management system
+     */
+    public static function initializeRoles()
+    {
+        self::add_roles();
+    }
+
     private static function add_roles()
     {
         // Update existing roles with more specific capabilities
