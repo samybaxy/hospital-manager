@@ -17,11 +17,19 @@ class ComposerStaticInit0bf00d6e6f345bec078bb34ac8cc71f8
             'WPMVC\\PHPFastCache\\' => 19,
             'WPMVC\\MVC\\' => 10,
             'WPMVC\\KLogger\\' => 14,
+            'WPMVC\\Commands\\' => 15,
             'WPMVC\\' => 6,
         ),
         'T' => 
         array (
             'TenQuality\\WP\\' => 14,
+            'TenQuality\\Gettext\\Scanner\\' => 27,
+        ),
+        'P' => 
+        array (
+            'PhpParser\\' => 10,
+            'Peast\\' => 6,
+            'PHP_Parallel_Lint\\PhpConsoleColor\\' => 34,
         ),
         'M' => 
         array (
@@ -29,11 +37,21 @@ class ComposerStaticInit0bf00d6e6f345bec078bb34ac8cc71f8
         ),
         'H' => 
         array (
-            'HospitalManager\\\\' => 17,
+            'HospitalManager\\' => 16,
+        ),
+        'G' => 
+        array (
+            'Gettext\\Scanner\\' => 16,
+            'Gettext\\Languages\\' => 18,
+            'Gettext\\' => 8,
         ),
         'C' => 
         array (
             'Composer\\Installers\\' => 20,
+        ),
+        'A' => 
+        array (
+            'Ayuco\\' => 6,
         ),
     );
 
@@ -50,6 +68,10 @@ class ComposerStaticInit0bf00d6e6f345bec078bb34ac8cc71f8
         array (
             0 => __DIR__ . '/..' . '/10quality/wpmvc-logger/src',
         ),
+        'WPMVC\\Commands\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/10quality/wpmvc-commands/src',
+        ),
         'WPMVC\\' => 
         array (
             0 => __DIR__ . '/..' . '/10quality/wpmvc-core/src/psr4',
@@ -58,17 +80,50 @@ class ComposerStaticInit0bf00d6e6f345bec078bb34ac8cc71f8
         array (
             0 => __DIR__ . '/..' . '/10quality/wp-file/src',
         ),
+        'TenQuality\\Gettext\\Scanner\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/10quality/gettext-wp-scanner/src',
+        ),
+        'PhpParser\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
+        ),
+        'Peast\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/mck89/peast/lib/Peast',
+        ),
+        'PHP_Parallel_Lint\\PhpConsoleColor\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-parallel-lint/php-console-color/src',
+        ),
         'MyApp\\' => 
         array (
             0 => __DIR__ . '/..' . '/10quality/wpmvc/app',
         ),
-        'HospitalManager\\\\' => 
+        'HospitalManager\\' => 
         array (
             0 => __DIR__ . '/../..' . '/app',
+        ),
+        'Gettext\\Scanner\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/gettext/php-scanner/src',
+            1 => __DIR__ . '/..' . '/gettext/js-scanner/src',
+        ),
+        'Gettext\\Languages\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/gettext/languages/src',
+        ),
+        'Gettext\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/gettext/gettext/src',
         ),
         'Composer\\Installers\\' => 
         array (
             0 => __DIR__ . '/..' . '/composer/installers/src/Composer/Installers',
+        ),
+        'Ayuco\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/10quality/ayuco/src',
         ),
     );
 

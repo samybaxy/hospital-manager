@@ -5,9 +5,9 @@
     "license": "GPL-2.0-or-later",
     "require": {
         "php": ">=7.4",
-        "10quality/wpmvc": "^3.1",
+        "10quality/wpmvc": "^1.0",
         "10quality/wpmvc-commands": "^1.0",
-        "10quality/wpmvc-mvc": "^1.0",
+        "10quality/wpmvc-mvc": "^2.0",
         "composer/installers": "^2.0"
     },
     "autoload": {
