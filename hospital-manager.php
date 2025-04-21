@@ -22,12 +22,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use WPMVC\Bridge;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\EventStreamService;
-use HospitalManager\Models\Notification;
-use HospitalManager\Controllers\Api\PatientController;
-use HospitalManager\Controllers\Api\VisitationController;
-use HospitalManager\Controllers\Api\LabInvestigationController;
-use HospitalManager\Controllers\Api\ChatController;
-use HospitalManager\Controllers\Api\NotificationController;
+use HospitalManager\Services\ApiService;
 
 class HospitalManager extends Bridge
 {
@@ -94,17 +89,8 @@ class HospitalManager extends Bridge
 
     public function register_api_routes()
     {
-        $controllers = [
-            new PatientController(),
-            new VisitationController(),
-            new LabInvestigationController(),
-            new ChatController(),
-            new NotificationController(),
-        ];
-
-        foreach ($controllers as $controller) {
-            $controller->register_routes();
-        }
+        // Use the ApiService to register all routes
+        ApiService::registerRoutes();
     }
 }
 
