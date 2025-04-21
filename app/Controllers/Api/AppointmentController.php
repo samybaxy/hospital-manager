@@ -74,7 +74,8 @@ class AppointmentController extends BaseController
             $query->where('status', $status);
         }
 
-        $appointments = $query->orderBy('appointment_date', 'ASC')
+        $appointments = $query
+            ->orderBy('appointment_date', 'ASC')
             ->orderBy('appointment_time', 'ASC')
             ->get();
 
@@ -183,11 +184,10 @@ class AppointmentController extends BaseController
         ];
 
         // Get existing appointments
-        $existing_appointments = Appointment::where('doctor_id', $doctor_id)
+        $existing_appointments = Appointment::query()
+            ->where('doctor_id', $doctor_id)
             ->where('appointment_date', $date)
-            ->get()
-            ->pluck('appointment_time')
-            ->toArray();
+            ->pluck('appointment_time');
 
         // Generate available slots
         $available_slots = [];
@@ -210,7 +210,8 @@ class AppointmentController extends BaseController
 
     private function is_slot_available($doctor_id, $date, $time)
     {
-        return !Appointment::where('doctor_id', $doctor_id)
+        return !Appointment::query()
+            ->where('doctor_id', $doctor_id)
             ->where('appointment_date', $date)
             ->where('appointment_time', $time)
             ->exists();

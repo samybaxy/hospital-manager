@@ -8,6 +8,7 @@ use WP_REST_Server;
 use HospitalManager\Models\Patient;
 use HospitalManager\Models\Visitation;
 use HospitalManager\Models\LabInvestigation;
+use HospitalManager\Models\Stats;
 
 class StatsController extends BaseController
 {
@@ -26,8 +27,6 @@ class StatsController extends BaseController
 
     public function get_stats()
     {
-        global $wpdb;
-
         $stats = [
             'totalPatients' => Patient::count(),
             'activeDoctors' => count(get_users(['role' => 'doctor'])),
@@ -35,13 +34,13 @@ class StatsController extends BaseController
             'pendingLabTests' => LabInvestigation::where('status', 'pending')->count(),
             
             // Get visitation trends for the last 30 days
-            'visitationsTrend' => $this->get_visitation_trend(),
+            'visitationsTrend' => Stats::getVisitationTrend(),
             
             // Get patient distribution by HMO
-            'patientsByHMO' => $this->get_patients_by_hmo(),
+            'patientsByHMO' => Stats::getPatientsByHMO(),
             
             // Get monthly lab tests statistics
-            'monthlyLabTests' => $this->get_monthly_lab_tests()
+            'monthlyLabTests' => Stats::getMonthlyLabTests()
         ];
 
         return new WP_REST_Response($stats);
@@ -49,48 +48,16 @@ class StatsController extends BaseController
 
     private function get_visitation_trend()
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_visitations';
-        
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                DATE(date) as date,
-                COUNT(*) as count
-            FROM {$table}
-            WHERE date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            GROUP BY DATE(date)
-            ORDER BY date ASC
-        "));
+        return Stats::getVisitationTrend();
     }
 
     private function get_patients_by_hmo()
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_patients';
-        
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                hmo_id as name,
-                COUNT(*) as value
-            FROM {$table}
-            GROUP BY hmo_id
-        "));
+        return Stats::getPatientsByHMO();
     }
 
     private function get_monthly_lab_tests()
     {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_lab_investigations';
-        
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT 
-                DATE_FORMAT(created_at, '%Y-%m') as month,
-                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
-            FROM {$table}
-            WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
-            ORDER BY month ASC
-        "));
+        return Stats::getMonthlyLabTests();
     }
 }

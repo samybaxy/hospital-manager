@@ -39,21 +39,22 @@ class AuditController extends BaseController
         
         $logs = AuditLog::orderBy('created_at', 'DESC')
             ->paginate($per_page, ['*'], 'page', $page);
-            
-        // Enhance logs with user details
-        $logs->each(function($log) {
-            $user = get_userdata($log->user_id);
-            $log->user_name = $user ? $user->display_name : 'Unknown User';
-            $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
-        });
+
+        if ($logs && isset($logs->each)) {
+            $logs->each(function($log) {
+                $user = get_userdata($log->user_id);
+                $log->user_name = $user ? $user->display_name : 'Unknown User';
+                $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
+            });
+        }
 
         return new WP_REST_Response([
-            'data' => $logs->items(),
+            'data' => $logs->items,
             'meta' => [
-                'current_page' => $logs->currentPage(),
-                'last_page' => $logs->lastPage(),
-                'per_page' => $logs->perPage(),
-                'total' => $logs->total()
+                'current_page' => $logs->currentPage,
+                'last_page' => $logs->lastPage,
+                'per_page' => $logs->perPage,
+                'total' => $logs->total
             ]
         ]);
     }
@@ -67,13 +68,14 @@ class AuditController extends BaseController
             ->orderBy('created_at', 'DESC')
             ->get();
 
-        // Enhance logs with user details
-        $logs->each(function($log) {
-            $user = get_userdata($log->user_id);
-            $log->user_name = $user ? $user->display_name : 'Unknown User';
-            $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
-        });
+        if ($logs && isset($logs->each)) {
+            $logs->each(function($log) {
+                $user = get_userdata($log->user_id);
+                $log->user_name = $user ? $user->display_name : 'Unknown User';
+                $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
+            });
+        }
 
-        return new WP_REST_Response($logs);
+        return new WP_REST_Response($logs->items);
     }
 }

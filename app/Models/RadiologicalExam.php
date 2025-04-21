@@ -21,7 +21,7 @@ class RadiologicalExam extends PostModel
      */
     public function visitation()
     {
-        return $this->belongsTo('HospitalManager\Models\Visitation', 'visitation_id', 'id');
+        return $this->belongs_to('HospitalManager\Models\Visitation', 'visitation_id', 'id');
     }
 
     /**
@@ -29,6 +29,6 @@ class RadiologicalExam extends PostModel
      */
     public function technician()
     {
-        return $this->belongsTo('WPMVC\MVC\Models\UserModel', 'tech_id', 'ID');
+        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'tech_id', 'ID');
     }
 }

@@ -20,6 +20,6 @@ class HMO extends PostModel
      */
     public function patients()
     {
-        return $this->hasMany('HospitalManager\Models\Patient', 'hmo_id', 'id');
+        return $this->has_many('HospitalManager\Models\Patient', 'hmo_id', 'id');
     }
 }

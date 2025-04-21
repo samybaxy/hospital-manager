@@ -6,6 +6,7 @@ use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
 use HospitalManager\Models\ChatMessage;
+use HospitalManager\Models\Chat;
 use HospitalManager\Services\WebSocketService;
 
 class ChatController extends BaseController
@@ -62,40 +63,9 @@ class ChatController extends BaseController
 
     public function get_chats()
     {
-        global $wpdb;
         $user_id = get_current_user_id();
         $user = wp_get_current_user();
-        $chats_table = $wpdb->prefix . 'hm_chats';
-        $messages_table = $wpdb->prefix . 'hm_chat_messages';
-
-        // Different queries for doctors and patients
-        if (in_array('doctor', $user->roles)) {
-            $chats = $wpdb->get_results($wpdb->prepare("
-                SELECT c.*,
-                    p.display_name as patient_name,
-                    COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
-                FROM {$chats_table} c
-                JOIN {$wpdb->users} p ON p.ID = c.patient_id
-                LEFT JOIN {$messages_table} m ON m.chat_id = c.id
-                WHERE c.doctor_id = %d
-                GROUP BY c.id
-                ORDER BY c.last_message_at DESC
-            ", $user_id, $user_id));
-        } else {
-            $chats = $wpdb->get_results($wpdb->prepare("
-                SELECT c.*,
-                    d.display_name as doctor_name,
-                    COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
-                FROM {$chats_table} c
-                JOIN {$wpdb->users} d ON d.ID = c.doctor_id
-                LEFT JOIN {$messages_table} m ON m.chat_id = c.id
-                WHERE c.patient_id = %d
-                GROUP BY c.id
-                ORDER BY c.last_message_at DESC
-            ", $user_id, $user_id));
-        }
-
-        return new WP_REST_Response($chats);
+        return new WP_REST_Response(Chat::getUserChats($user_id, in_array('doctor', $user->roles)));
     }
 
     public function get_messages($request)
@@ -114,19 +84,8 @@ class ChatController extends BaseController
             );
         }
 
-        $messages = ChatMessage::where('chat_id', $chat_id)
-            ->orderBy('created_at', 'DESC')
-            ->paginate($per_page, ['*'], 'page', $page);
-
-        return new WP_REST_Response([
-            'data' => $messages->items(),
-            'meta' => [
-                'current_page' => $messages->currentPage(),
-                'last_page' => $messages->lastPage(),
-                'per_page' => $messages->perPage(),
-                'total' => $messages->total()
-            ]
-        ]);
+        $messages = ChatMessage::getChatMessages($chat_id, $page, $per_page);
+        return new WP_REST_Response($messages);
     }
 
     public function send_message($request)
@@ -144,42 +103,20 @@ class ChatController extends BaseController
             );
         }
 
-        global $wpdb;
-        $chat = $wpdb->get_row($wpdb->prepare("
-            SELECT * FROM {$wpdb->prefix}hm_chats WHERE id = %d
-        ", $chat_id));
-
+        $chat = Chat::find($chat_id);
         $receiver_id = $chat->doctor_id == $user_id ? $chat->patient_id : $chat->doctor_id;
 
-        global $wpdb;
-        $wpdb->insert(
-            $wpdb->prefix . 'hm_chat_messages',
-            [
-                'chat_id' => $chat_id,
-                'sender_id' => $user_id,
-                'receiver_id' => $receiver_id,
-                'message' => $message_text,
-                'read' => 0,
-                'created_at' => current_time('mysql')
-            ]
-        );
-        
-        $message_id = $wpdb->insert_id;
-        $message = (object)[
-            'id' => $message_id,
+        $message = ChatMessage::create([
             'chat_id' => $chat_id,
             'sender_id' => $user_id,
             'receiver_id' => $receiver_id,
             'message' => $message_text,
+            'read' => 0,
             'created_at' => current_time('mysql')
-        ];
+        ]);
 
         // Update last_message_at in chat
-        $wpdb->update(
-            $wpdb->prefix . 'hm_chats',
-            ['last_message_at' => current_time('mysql')],
-            ['id' => $chat_id]
-        );
+        Chat::updateLastMessageTime($chat_id);
 
         // Send real-time notification through WebSocket
         WebSocketService::sendMessage('chat', [
@@ -193,35 +130,23 @@ class ChatController extends BaseController
 
     public function start_chat($request)
     {
-        global $wpdb;
         $patient_id = get_current_user_id();
         $doctor_id = $request->get_param('doctor_id');
 
-        // Check if chat already exists
-        $existing_chat = $wpdb->get_row($wpdb->prepare("
-            SELECT * FROM {$wpdb->prefix}hm_chats
-            WHERE doctor_id = %d AND patient_id = %d
-        ", $doctor_id, $patient_id));
-
+        $existing_chat = Chat::findByUsers($doctor_id, $patient_id);
         if ($existing_chat) {
             return new WP_REST_Response($existing_chat);
         }
 
-        // Create new chat
-        $wpdb->insert(
-            $wpdb->prefix . 'hm_chats',
-            [
-                'doctor_id' => $doctor_id,
-                'patient_id' => $patient_id,
-                'created_at' => current_time('mysql'),
-                'last_message_at' => current_time('mysql')
-            ]
-        );
-
-        $chat_id = $wpdb->insert_id;
+        $chat = Chat::create([
+            'doctor_id' => $doctor_id,
+            'patient_id' => $patient_id,
+            'created_at' => current_time('mysql'),
+            'last_message_at' => current_time('mysql')
+        ]);
 
         return new WP_REST_Response([
-            'id' => $chat_id,
+            'id' => $chat->id,
             'doctor_id' => $doctor_id,
             'patient_id' => $patient_id
         ], 201);
@@ -241,21 +166,12 @@ class ChatController extends BaseController
             );
         }
 
-        // Mark all messages as read
-        ChatMessage::where('chat_id', $chat_id)
-            ->where('receiver_id', $user_id)
-            ->where('read', 0)
-            ->update(['read' => 1]);
-
+        ChatMessage::markAsRead($chat_id, $user_id);
         return new WP_REST_Response(['success' => true]);
     }
 
     private function can_access_chat($chat_id, $user_id)
     {
-        global $wpdb;
-        return $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) FROM {$wpdb->prefix}hm_chats
-            WHERE id = %d AND (doctor_id = %d OR patient_id = %d)
-        ", $chat_id, $user_id, $user_id)) > 0;
+        return Chat::canAccess($chat_id, $user_id);
     }
 }
