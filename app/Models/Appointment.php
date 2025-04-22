@@ -99,6 +99,39 @@ class Appointment extends PostModel
         $results = $wpdb->get_col($query);
         return $results;
     }
+    
+    /**
+     * Create a new appointment record in the database
+     *
+     * @param array $data Appointment data to create
+     * @return Appointment The newly created appointment instance
+     */
+    public static function create(array $data)
+    {
+        global $wpdb;
+        
+        // Set created_at timestamp if not provided
+        if (!isset($data['created_at'])) {
+            $data['created_at'] = current_time('mysql');
+        }
+        
+        // Filter data to only include fillable fields
+        $instance = new static();
+        $fillable_data = array_intersect_key($data, array_flip($instance->fillable));
+        
+        // Insert the record
+        $wpdb->insert(
+            $instance->table,
+            $fillable_data
+        );
+        
+        // Get the newly created ID
+        $id = $wpdb->insert_id;
+        
+        // Return a new instance with the created data
+        $created_data = array_merge(['id' => $id], $fillable_data);
+        return new static($created_data);
+    }
 
     public function doctor()
     {
