@@ -13,7 +13,36 @@ class TestCase extends \WP_UnitTestCase
     public function setUp(): void
     {
         parent::setUp();
+        
+        // Initialize database tables for tests
+        $this->initTestDatabase();
+        
         // Common setup code for all tests
+    }
+    
+    /**
+     * Initialize test database tables
+     */
+    protected function initTestDatabase()
+    {
+        global $wpdb;
+        
+        // Check if tables need to be created
+        $table_name = $wpdb->prefix . 'hm_patients';
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") === $table_name;
+        
+        if (!$table_exists) {
+            // Include the database migration file
+            $migration_file = dirname(dirname(__FILE__)) . '/database/migrations/create_hospital_tables.php';
+            
+            if (file_exists($migration_file)) {
+                require_once $migration_file;
+                // Run the migration to create tables
+                \CreateHospitalTables::up();
+            } else {
+                $this->markTestSkipped("Database migration file not found: $migration_file");
+            }
+        }
     }
 
     /**

@@ -4,8 +4,9 @@
   "description": "A comprehensive hospital management system for Nigerian hospitals",
   "main": "index.js",
   "scripts": {
-    "build": "webpack --mode production",
-    "dev": "webpack --mode development --watch",
+    "start": "webpack serve --mode development --config webpack.config.cjs",
+    "build": "webpack --mode production --config webpack.config.cjs",
+    "dev": "webpack --mode development --watch --config webpack.config.cjs",
     "test": "jest"
   },
   "engines": {
@@ -20,24 +21,28 @@
   "author": "Samuel",
   "license": "GPL-2.0-or-later",
   "devDependencies": {
-    "@babel/core": "^7.22.0",
-    "@babel/preset-env": "^7.22.0",
-    "@babel/preset-react": "^7.22.0",
-    "babel-loader": "^9.1.2",
-    "css-loader": "^6.8.1",
-    "style-loader": "^3.3.3",
-    "webpack": "^5.85.0",
-    "webpack-cli": "^5.1.1"
+    "@babel/cli": "^7.27.0",
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "babel-loader": "^10.0.0",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.99.6",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.1"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^5.17.1",
     "@mui/material": "^5.17.1",
-    "@mui/x-data-grid": "^7.28.3",
-    "@mui/x-date-pickers": "^8.0.0",
+    "@mui/x-data-grid": "^5.17.1",
+    "@mui/x-date-pickers": "^5.0.0",
     "@tanstack/react-query": "^5.74.4",
-    "date-fns": "^4.1.0",
+    "core-js": "3",
+    "date-fns": "^2.30.0",
+    "express": "^5.1.0",
     "formik": "^2.4.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -46,5 +51,8 @@
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.2",
     "yup": "^1.6.1"
+  },
+  "directories": {
+    "test": "tests"
   }
 }

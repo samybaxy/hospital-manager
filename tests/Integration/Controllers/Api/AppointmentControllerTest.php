@@ -55,7 +55,6 @@ class AppointmentControllerTest extends TestCase
         // Create test users with different roles
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
-        $this->test_users['receptionist'] = $this->createUserWithRole('receptionist');
         $this->test_users['patient'] = $this->createUserWithRole('patient');
         
         // Create a test doctor
@@ -198,6 +197,139 @@ class AppointmentControllerTest extends TestCase
         // Verify the update was saved to database
         $updated_appointment = Appointment::find($this->test_appointment->id);
         $this->assertEquals('completed', $updated_appointment->status);
+    }
+
+    /**
+     * Test creating an appointment in the past
+     */
+    public function testCreateAppointmentInPast()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        // Prepare appointment data with past date
+        $past_date = date('Y-m-d', strtotime('-1 day'));
+        $appointment_data = [
+            'patient_id' => $this->test_patient->id,
+            'doctor_id' => $this->test_doctor->id,
+            'appointment_date' => $past_date,
+            'appointment_time' => '10:00:00',
+            'reason' => 'Test appointment',
+        ];
+        
+        // Create request to create an appointment
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/appointments");
+        $request->set_body_params($appointment_data);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 400 Bad Request
+        $this->assertEquals(400, $response->get_status());
+        
+        // Verify error message
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+        $this->assertArrayHasKey('message', $data);
+        $this->assertStringContainsString('past', strtolower($data['message']));
+    }
+
+    /**
+     * Test scheduling conflicting appointments
+     */
+    public function testScheduleConflictingAppointments()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        $future_date = date('Y-m-d', strtotime('+1 day'));
+        
+        // Create the first appointment
+        $first_appointment = $this->createTestAppointment(
+            $this->test_patient->id, 
+            $this->test_doctor->id,
+            [
+                'appointment_date' => $future_date,
+                'appointment_time' => '10:00:00',
+            ]
+        );
+        
+        // Try to create a second appointment at the same time
+        $conflicting_data = [
+            'patient_id' => $this->test_patient->id,
+            'doctor_id' => $this->test_doctor->id,
+            'appointment_date' => $future_date,
+            'appointment_time' => '10:00:00', // Same time as first appointment
+            'reason' => 'Conflicting appointment',
+        ];
+        
+        // Create request to create a conflicting appointment
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/appointments");
+        $request->set_body_params($conflicting_data);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 409 Conflict
+        $this->assertEquals(409, $response->get_status());
+        
+        // Verify error message
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+        $this->assertArrayHasKey('message', $data);
+        $this->assertStringContainsString('conflict', strtolower($data['message']));
+    }
+
+    /**
+     * Test creating an appointment with invalid time format
+     */
+    public function testCreateAppointmentInvalidTimeFormat()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        // Prepare appointment data with invalid time format
+        $future_date = date('Y-m-d', strtotime('+1 day'));
+        $appointment_data = [
+            'patient_id' => $this->test_patient->id,
+            'doctor_id' => $this->test_doctor->id,
+            'appointment_date' => $future_date,
+            'appointment_time' => 'not-a-time', // Invalid time format
+            'reason' => 'Test appointment',
+        ];
+        
+        // Create request to create an appointment
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/appointments");
+        $request->set_body_params($appointment_data);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 400 Bad Request
+        $this->assertEquals(400, $response->get_status());
+        
+        // Verify error data contains validation errors
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+    }
+
+    /**
+     * Test canceling a non-existent appointment
+     */
+    public function testCancelNonExistentAppointment()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        // Use an appointment ID that doesn't exist
+        $nonexistent_id = 99999;
+        
+        // Create request to cancel a non-existent appointment
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/appointments/{$nonexistent_id}");
+        $request->set_body_params(['status' => 'canceled']);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 404 Not Found
+        $this->assertEquals(404, $response->get_status());
+        
+        // Verify error message
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+        $this->assertArrayHasKey('message', $data);
     }
 
     /**

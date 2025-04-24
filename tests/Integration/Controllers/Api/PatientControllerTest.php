@@ -43,7 +43,6 @@ class PatientControllerTest extends TestCase
         // Create test users with different roles
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
-        $this->test_users['receptionist'] = $this->createUserWithRole('receptionist');
         $this->test_users['patient'] = $this->createUserWithRole('patient');
         
         // Create a test patient
@@ -399,5 +398,116 @@ class PatientControllerTest extends TestCase
         $data = $response->get_data();
         $this->assertTrue($data['success']);
         $this->assertEquals(0, count($data['data']));
+    }
+
+    /**
+     * Test creating a patient with missing required fields
+     */
+    public function testCreatePatientWithMissingRequiredFields()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        // Prepare incomplete patient data (missing required fields)
+        $incomplete_data = [
+            'first_name' => 'Test',
+            // Missing last_name
+            // Missing phone_number
+            'sex' => 'M',
+        ];
+        
+        // Create request to create a patient
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients");
+        $request->set_body_params($incomplete_data);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 400 Bad Request
+        $this->assertEquals(400, $response->get_status());
+        
+        // Verify error message mentions missing fields
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+        $this->assertArrayHasKey('message', $data);
+    }
+
+    /**
+     * Test retrieving a non-existent patient
+     */
+    public function testGetNonExistentPatient()
+    {
+        // Login as doctor
+        wp_set_current_user($this->test_users['doctor']);
+        
+        // Use a patient ID that doesn't exist
+        $nonexistent_id = 99999;
+        
+        // Create request to get a non-existent patient
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$nonexistent_id}");
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 404 Not Found
+        $this->assertEquals(404, $response->get_status());
+        
+        // Verify error message
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+        $this->assertArrayHasKey('message', $data);
+    }
+
+    /**
+     * Test creating a patient with invalid data formats
+     */
+    public function testCreatePatientWithInvalidDataFormats()
+    {
+        // Login as admin
+        wp_set_current_user($this->test_users['admin']);
+        
+        // Prepare patient data with invalid formats
+        $invalid_data = [
+            'first_name' => 'Test',
+            'last_name' => 'Patient',
+            'phone_number' => 'not-a-phone-number',
+            'sex' => 'invalid-gender',
+            'age' => 'not-a-number',
+        ];
+        
+        // Create request to create a patient
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients");
+        $request->set_body_params($invalid_data);
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 400 Bad Request
+        $this->assertEquals(400, $response->get_status());
+        
+        // Verify error data contains validation errors
+        $data = $response->get_data();
+        $this->assertFalse($data['success']);
+    }
+
+    /**
+     * Test unauthorized access to patient data
+     */
+    public function testUnauthorizedAccessToPatient()
+    {
+        // Create a test patient assigned to a specific doctor
+        $patient = $this->createTestPatient();
+        
+        // Login as a different doctor (not assigned to this patient)
+        $different_doctor_id = wp_create_user(
+            'different_doctor', 
+            'password', 
+            'different_doctor@example.com'
+        );
+        $different_doctor = new \WP_User($different_doctor_id);
+        $different_doctor->set_role('doctor');
+        
+        wp_set_current_user($different_doctor_id);
+        
+        // Attempt to access the patient
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}");
+        $response = $this->server->dispatch($request);
+        
+        // Check response status - should be 403 Forbidden
+        $this->assertEquals(403, $response->get_status());
     }
 }

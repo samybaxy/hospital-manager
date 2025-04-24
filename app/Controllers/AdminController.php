@@ -7,7 +7,8 @@ class AdminController extends Controller
 {
     public function __construct()
     {
-        parent::__construct();
+        // Pass empty string as MVC name parameter to parent constructor
+        parent::__construct('HospitalManager');
         add_action('admin_menu', [$this, 'registerAdminMenu']);
         add_action('admin_enqueue_scripts', [$this, 'enqueueAssets']);
     }

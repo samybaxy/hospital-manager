@@ -3,7 +3,7 @@
         'name' => 'hospital-manager/hospital-manager',
         'pretty_version' => '1.0.x-dev',
         'version' => '1.0.9999999.9999999-dev',
-        'reference' => 'f6ac6a861d4091d310584378efa3276571401ca5',
+        'reference' => '3349b6228d3f9f14f49c7c02837090133274b86b',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -157,7 +157,7 @@
         'hospital-manager/hospital-manager' => array(
             'pretty_version' => '1.0.x-dev',
             'version' => '1.0.9999999.9999999-dev',
-            'reference' => 'f6ac6a861d4091d310584378efa3276571401ca5',
+            'reference' => '3349b6228d3f9f14f49c7c02837090133274b86b',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
