@@ -161,8 +161,6 @@ class HospitalManager extends Bridge
 
     public function init()
     {
-        register_activation_hook(__FILE__, [$this, 'activate_plugin']);
-        register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
         add_action('rest_api_init', [$this, 'register_api_routes']);
         
         // Initialize SSE endpoints
@@ -179,4 +177,10 @@ class HospitalManager extends Bridge
 }
 
 // Initialize plugin
-return new HospitalManager(__FILE__);
+$hospital_manager = new HospitalManager(__FILE__);
+
+// Register activation and deactivation hooks
+register_activation_hook(__FILE__, [$hospital_manager, 'activate_plugin']);
+register_deactivation_hook(__FILE__, [$hospital_manager, 'deactivate_plugin']);
+
+return $hospital_manager;

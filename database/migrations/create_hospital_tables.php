@@ -113,7 +113,7 @@ class CreateHospitalTables
             title varchar(255) NOT NULL,
             message text NOT NULL,
             reference_id bigint(20) DEFAULT NULL,
-            read tinyint(1) DEFAULT 0,
+            `read` tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY user_id (user_id),
@@ -160,7 +160,7 @@ class CreateHospitalTables
             sender_id bigint(20) NOT NULL,
             receiver_id bigint(20) NOT NULL,
             message text NOT NULL,
-            read tinyint(1) DEFAULT 0,
+            `read` tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             KEY chat_id (chat_id),
@@ -197,6 +197,7 @@ class CreateHospitalTables
             'hm_patients',
             'hm_notifications',
             'hm_appointments',
+            'hm_audit_logs',
             'hm_chats',
             'hm_chat_messages'
         ];
