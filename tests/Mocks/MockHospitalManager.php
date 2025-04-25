@@ -38,5 +38,8 @@ class MockHospitalManager
 
         // Register audit log API routes for testing
         AuditMockRestApi::registerRoutes();
+
+        // Register chat API routes for testing
+        ChatMockRestApi::registerRoutes();
     }
 }

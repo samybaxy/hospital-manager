@@ -22,6 +22,21 @@ class ChatMessage extends BaseModel
 
     protected static $conditions = [];
     protected static $orderBy = [];
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
+        parent::__construct($attributes);
+    }
 
     /**
      * Get the sender user
@@ -46,8 +61,12 @@ class ChatMessage extends BaseModel
     {
         global $wpdb;
         
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         $result = $wpdb->insert(
-            static::getTable(),
+            $table,
             $attributes,
             array_map(function($field) {
                 return is_numeric($field) ? '%d' : '%s';
@@ -59,6 +78,7 @@ class ChatMessage extends BaseModel
         }
 
         $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $wpdb->insert_id; // Ensure both lowercase and uppercase ID are set
         return new static($attributes);
     }
 
@@ -68,7 +88,10 @@ class ChatMessage extends BaseModel
     public static function getChatMessages($chatId, $page = 1, $perPage = 50)
     {
         global $wpdb;
-        $table = static::getTable();
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         $offset = ($page - 1) * $perPage;
 
         $query = $wpdb->prepare("
@@ -109,21 +132,17 @@ class ChatMessage extends BaseModel
     public static function markAsRead($chatId, $userId)
     {
         global $wpdb;
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         return $wpdb->query($wpdb->prepare("
-            UPDATE " . static::getTable() . "
+            UPDATE {$table}
             SET `read` = 1
             WHERE chat_id = %d AND receiver_id = %d AND `read` = 0",
             $chatId,
             $userId
         ));
-    }
-
-    /**
-     * Get table name
-     */
-    protected static function getTable()
-    {
-        return (new static)->table;
     }
 
     /**
@@ -150,7 +169,10 @@ class ChatMessage extends BaseModel
     public static function get()
     {
         global $wpdb;
-        $table = static::getTable();
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         $query = "SELECT * FROM {$table} WHERE 1=1";
 
         foreach (static::$conditions as $condition) {

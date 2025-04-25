@@ -87,7 +87,6 @@ class AppointmentControllerTest extends TestCase
         // Debug appointment creation
         Debugger::log("Creation result for test appointment:", ($this->test_appointment ? "Success" : "Failed"));
         if ($this->test_appointment) {
-            Debugger::log("Test appointment data:", $this->test_appointment);
             Debugger::log("Test appointment ID:", (isset($this->test_appointment->id) ? $this->test_appointment->id : "No ID found"));
         } else {
             Debugger::log("Failed to create test appointment in setUp()");

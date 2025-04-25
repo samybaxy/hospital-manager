@@ -21,6 +21,56 @@ class Chat extends BaseModel
     protected static $conditions = [];
     protected static $orderBy = [];
 
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
+        parent::__construct($attributes);
+    }
+
+    /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Fetch the chat record directly from the database.
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $chat_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$chat_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
+        if (isset($chat_data['id']) && !isset($chat_data['ID'])) {
+            $chat_data['ID'] = $chat_data['id'];
+        }
+        
+        // Create a new chat instance with the fetched data.
+        return new self($chat_data);
+    }
+
     /**
      * Get all chats for a user
      */
@@ -31,7 +81,7 @@ class Chat extends BaseModel
         $messages_table = $wpdb->prefix . 'hm_chat_messages';
 
         if ($isDoctor) {
-            return $wpdb->get_results($wpdb->prepare("
+            $results = $wpdb->get_results($wpdb->prepare("
                 SELECT c.*,
                     p.display_name as patient_name,
                     COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
@@ -41,20 +91,35 @@ class Chat extends BaseModel
                 WHERE c.doctor_id = %d
                 GROUP BY c.id
                 ORDER BY c.last_message_at DESC
-            ", $userId, $userId));
+            ", $userId, $userId), ARRAY_A);
+        } else {
+            $results = $wpdb->get_results($wpdb->prepare("
+                SELECT c.*,
+                    d.display_name as doctor_name,
+                    COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
+                FROM {$table} c
+                JOIN {$wpdb->users} d ON d.ID = c.doctor_id
+                LEFT JOIN {$messages_table} m ON m.chat_id = c.id
+                WHERE c.patient_id = %d
+                GROUP BY c.id
+                ORDER BY c.last_message_at DESC
+            ", $userId, $userId), ARRAY_A);
         }
-
-        return $wpdb->get_results($wpdb->prepare("
-            SELECT c.*,
-                d.display_name as doctor_name,
-                COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
-            FROM {$table} c
-            JOIN {$wpdb->users} d ON d.ID = c.doctor_id
-            LEFT JOIN {$messages_table} m ON m.chat_id = c.id
-            WHERE c.patient_id = %d
-            GROUP BY c.id
-            ORDER BY c.last_message_at DESC
-        ", $userId, $userId));
+        
+        // Process results to ensure ID case consistency
+        $chats = [];
+        foreach ($results as $result) {
+            // Make sure both lowercase 'id' and uppercase 'ID' exist
+            if (isset($result['id']) && !isset($result['ID'])) {
+                $result['ID'] = $result['id'];
+            } elseif (isset($result['ID']) && !isset($result['id'])) {
+                $result['id'] = $result['ID'];
+            }
+            
+            $chats[] = new static($result);
+        }
+        
+        return $chats;
     }
 
     /**
@@ -64,8 +129,12 @@ class Chat extends BaseModel
     {
         global $wpdb;
         
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         $result = $wpdb->insert(
-            static::getTable(),
+            $table,
             $attributes,
             array_map(function($field) {
                 return is_numeric($field) ? '%d' : '%s';
@@ -86,7 +155,9 @@ class Chat extends BaseModel
     public static function findByUsers($doctorId, $patientId)
     {
         global $wpdb;
-        $table = static::getTable();
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
         
         $chat = $wpdb->get_row($wpdb->prepare("
             SELECT * FROM {$table}
@@ -102,8 +173,12 @@ class Chat extends BaseModel
     public static function updateLastMessageTime($chatId)
     {
         global $wpdb;
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         return $wpdb->update(
-            static::getTable(),
+            $table,
             ['last_message_at' => current_time('mysql')],
             ['id' => $chatId]
         );
@@ -115,18 +190,14 @@ class Chat extends BaseModel
     public static function canAccess($chatId, $userId)
     {
         global $wpdb;
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
         return $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) FROM " . static::getTable() . "
+            SELECT COUNT(*) FROM {$table}
             WHERE id = %d AND (doctor_id = %d OR patient_id = %d)
         ", $chatId, $userId, $userId)) > 0;
-    }
-
-    /**
-     * Get table name
-     */
-    protected static function getTable()
-    {
-        return (new static)->table;
     }
 
     /**

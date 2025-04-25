@@ -32,6 +32,14 @@ class Patient extends BaseModel
     {
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
         parent::__construct($attributes);
     }
 

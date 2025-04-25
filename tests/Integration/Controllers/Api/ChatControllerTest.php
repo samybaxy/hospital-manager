@@ -56,8 +56,8 @@ class ChatControllerTest extends TestCase
             'user_id' => $this->test_users['patient'],
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'phone_number' => '1234567890',
-            'sex' => 'Male'
+            'phone' => '1234567890',
+            'gender' => 'Male'
         ]);
         
         // Create a test chat between patient and doctor
@@ -73,7 +73,7 @@ class ChatControllerTest extends TestCase
             'chat_id' => $this->test_chat->id,
             'sender_id' => $this->test_users['patient'],
             'message' => 'Hello doctor, I have a question.',
-            'is_read' => 1,
+            'read' => 1,
             'created_at' => date('Y-m-d H:i:s', strtotime('-1 hour'))
         ]);
         
@@ -81,7 +81,7 @@ class ChatControllerTest extends TestCase
             'chat_id' => $this->test_chat->id,
             'sender_id' => $this->test_users['doctor'],
             'message' => 'Hello, how can I help you?',
-            'is_read' => 0,
+            'read' => 0,
             'created_at' => date('Y-m-d H:i:s', strtotime('-30 minutes'))
         ]);
     }
@@ -130,7 +130,7 @@ class ChatControllerTest extends TestCase
         // Verify the chat data is correct
         $found = false;
         foreach ($data as $chat) {
-            if ($chat->id === $this->test_chat->id) {
+            if ( (int)$chat->id === $this->test_chat->id ) {
                 $found = true;
                 $this->assertEquals($this->test_patient->id, $chat->patient_id);
                 $this->assertEquals($this->test_users['doctor'], $chat->doctor_id);
@@ -163,7 +163,7 @@ class ChatControllerTest extends TestCase
         // Verify the chat data is correct
         $found = false;
         foreach ($data as $chat) {
-            if ($chat->id === $this->test_chat->id) {
+            if ( (int) $chat->id === $this->test_chat->id ) {
                 $found = true;
                 $this->assertEquals($this->test_patient->id, $chat->patient_id);
                 $this->assertEquals($this->test_users['doctor'], $chat->doctor_id);
@@ -212,7 +212,7 @@ class ChatControllerTest extends TestCase
                 'chat_id' => $this->test_chat->id,
                 'sender_id' => ($i % 2 == 0) ? $this->test_users['patient'] : $this->test_users['doctor'],
                 'message' => "Test message {$i}",
-                'is_read' => 0,
+                'read' => 0,
                 'created_at' => date('Y-m-d H:i:s', strtotime("-{$i} minutes"))
             ]);
         }
@@ -248,9 +248,11 @@ class ChatControllerTest extends TestCase
         $this->assertEquals(200, $response->get_status());
         
         // Verify the new message was saved
-        $recent_messages = ChatMessage::getChatMessages($this->test_chat->id, 1, 1);
-        $this->assertEquals('This is a new test message', $recent_messages[0]->message);
-        $this->assertEquals($this->test_users['patient'], $recent_messages[0]->sender_id);
+        $messagesObj = ChatMessage::getChatMessages($this->test_chat->id, 1, 1);
+        $message = isset($messagesObj->data) && !empty($messagesObj->data) ? $messagesObj->data[0] : null;
+        $this->assertNotNull($message, 'Message not found');
+        $this->assertEquals('This is a new test message', $message->message);
+        $this->assertEquals($this->test_users['patient'], $message->sender_id);
     }
     
     /**
@@ -277,7 +279,8 @@ class ChatControllerTest extends TestCase
         $this->assertEquals($this->test_users['doctor'], $data->doctor_id);
         
         // Check that the initial message was added
-        $messages = ChatMessage::getChatMessages($data->id, 1, 10);
+        $msgObject = ChatMessage::getChatMessages($data->id, 1, 10);
+        $messages = isset($msgObject->data) && !empty($msgObject->data) ? $msgObject->data : [];
         $this->assertNotEmpty($messages);
         $this->assertEquals('I would like to ask about my medication', $messages[0]->message);
     }
@@ -299,9 +302,9 @@ class ChatControllerTest extends TestCase
         
         // Verify all messages are marked as read
         $messages = ChatMessage::getChatMessages($this->test_chat->id, 1, 10);
-        foreach ($messages as $message) {
+        foreach ($messages->data as $message) {
             if ($message->sender_id != $this->test_users['patient']) {
-                $this->assertEquals(1, $message->is_read);
+                $this->assertEquals(1, $message->read);
             }
         }
     }
