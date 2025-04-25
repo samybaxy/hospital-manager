@@ -19,7 +19,8 @@ class TestCase extends \WP_UnitTestCase
         // Initialize database tables for tests
         $this->initTestDatabase();
         
-        // Common setup code for all tests
+        // Register custom roles for testing
+        $this->registerCustomRoles();
     }
     
     /**
@@ -48,11 +49,82 @@ class TestCase extends \WP_UnitTestCase
     }
 
     /**
+     * Register custom roles needed for testing
+     */
+    protected function registerCustomRoles(): void
+    {
+        // Doctor role
+        if (!get_role('doctor')) {
+            add_role(
+                'doctor',
+                'Doctor',
+                [
+                    'read' => true,
+                    'view_patients' => true,
+                    'edit_patients' => true,
+                    'schedule_appointments' => true,
+                    'create_medical_reports' => true,
+                    'add_visitation' => true,
+                    'edit_visitation' => true,
+                    'manage_medical_reports' => true
+                ]
+            );
+        }
+        
+        // Patient role
+        if (!get_role('patient')) {
+            add_role(
+                'patient',
+                'Patient',
+                [
+                    'read' => true,
+                    'view_own_records' => true,
+                    // Add other capabilities as needed
+                ]
+            );
+        }
+        
+        // Desk Officer Role
+        if (!get_role('desk_officer')) {
+            add_role(
+                'desk_officer',
+                'Desk Officer',
+                [
+                    'read' => true,
+                    'create_patients' => true,
+                    'view_patients' => true,
+                    'edit_patients' => true,
+                    'view_audit_log' => true,
+                    'schedule_appointments' => true
+                ]
+            );
+        }
+        
+        // Lab Tech role
+        if (!get_role('lab_technician')) {
+            add_role(
+                'lab_technician',
+                'Lab Technician',
+                [
+                    'read' => true,
+                    'view_patients' => true,
+                    'manage_medical_reports' => true,
+                    // Add other capabilities as needed
+                ]
+            );
+        }
+    }
+
+    /**
      * Tear down after each test
      */
     public function tearDown(): void
     {
         // Common teardown code for all tests
+        remove_role('doctor');
+        remove_role('patient');
+        remove_role('desk_officer');
+        remove_role('lab_technician');
         parent::tearDown();
     }
 
@@ -64,9 +136,21 @@ class TestCase extends \WP_UnitTestCase
      */
     protected function createUserWithRole(string $role): int
     {
-        $user_id = $this->factory->user->create([
-            'role' => $role,
-        ]);
+        // First create the user
+        $user_id = $this->factory->user->create();
+
+        // Then explicitly set the role
+        $user = new \WP_User($user_id);
+        $user->set_role($role);
+
+        // Force a capability refresh, which can be important in test environment
+        $user = new \WP_User($user_id);
+
+        // Verify role was set correctly (for debugging)
+        if (!in_array($role, $user->roles)) {
+            error_log("Warning: Failed to set role '{$role}' for user {$user_id}");
+        }
+        
         return $user_id;
     }
 
@@ -79,9 +163,11 @@ class TestCase extends \WP_UnitTestCase
     protected function createTestPatient(array $overrides = [])
     {
         $default_data = [
+            'user_id' => 0,
             'first_name' => 'Test',
             'last_name' => 'Patient',
             'phone' => '08012345678',
+            'date_of_birth' => '1990-01-01',
             'gender' => 'Male',
             'age' => 30,
             'bio_data' => json_encode([
@@ -95,6 +181,8 @@ class TestCase extends \WP_UnitTestCase
                 'emergency_contact' => '09087654321',
                 'notes' => 'Test patient for PHPUnit tests'
             ]),
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
         ];
 
         $data = array_merge($default_data, $overrides);

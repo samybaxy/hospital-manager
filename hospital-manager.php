@@ -114,6 +114,13 @@ class HospitalManager extends Bridge
             error_log('Hospital Manager: Running database cleanup');
             CreateHospitalTables::down();
             error_log('Hospital Manager: Database cleanup completed successfully');
+
+            // Remove custom roles
+            remove_role('doctor');
+            remove_role('patient');
+            remove_role('receptionist');
+            remove_role('lab_technician');
+            error_log('Hospital Manager: Custom roles removed successfully');
             
             error_log('Hospital Manager: Plugin deactivation completed successfully');
         } catch (\Exception $e) {

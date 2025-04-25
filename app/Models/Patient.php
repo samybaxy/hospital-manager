@@ -14,6 +14,41 @@ class Patient extends BaseModel
     protected static $orderBy = [];
     protected static $queryType = 'static'; // Track if we're using static or instance query
 
+    /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Fetch the patient record directly from the database
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $patient_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$patient_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+        if (isset($patient_data['id']) && !isset($patient_data['ID'])) {
+            $patient_data['ID'] = $patient_data['id'];
+        }
+        
+        // Create a new Patient instance with the fetched data
+        return new self($patient_data);
+    }
+
     public function __construct(array $attributes = [])
     {
         global $wpdb;
