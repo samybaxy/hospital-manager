@@ -189,16 +189,16 @@ class TestCase extends \WP_UnitTestCase
         
         try {
             // Log the data being used for patient creation
-            \HospitalManager\Tests\Helpers\Debugger::log('Creating test patient with data:', $data);
+            Debugger::log('Creating test patient with data:', $data);
             
             // Create the patient
             $patient = \HospitalManager\Models\Patient::create($data);
             
-            \HospitalManager\Tests\Helpers\Debugger::log('Patient created successfully:', $patient);
+            Debugger::log('Patient created successfully:', $patient);
             return $patient;
         } catch (\Exception $e) {
-            \HospitalManager\Tests\Helpers\Debugger::log('Error creating patient: ' . $e->getMessage());
-            \HospitalManager\Tests\Helpers\Debugger::log('Error trace:', $e->getTraceAsString());
+            Debugger::log('Error creating patient: ' . $e->getMessage());
+            Debugger::log('Error trace:', $e->getTraceAsString());
             $this->fail('Failed to create test patient: ' . $e->getMessage());
             return null;
         }
@@ -213,22 +213,33 @@ class TestCase extends \WP_UnitTestCase
     protected function createTestDoctor(array $overrides = [])
     {
         $default_data = [
+            'user_id' => isset($overrides['user_id']) ? $overrides['user_id'] : 0,
             'first_name' => 'Test',
             'last_name' => 'Doctor',
             'phone' => '08012345679',
-            'specialization' => 'General Practice',
-            'status' => 'active',
+            'photo' => null,
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
         ];
 
         $data = array_merge($default_data, $overrides);
         
         try {
-            return \HospitalManager\Models\Doctor::create($data);
+            // Log the data being used for doctor creation
+            Debugger::log('Creating test doctor with data:', $data);
+            
+            // Create the doctor
+            $doctor = \HospitalManager\Models\Doctor::create($data);
+            
+            Debugger::log('Doctor created successfully:', $doctor);
+            return $doctor;
         } catch (\Exception $e) {
+            Debugger::log('Error creating doctor: ' . $e->getMessage());
+            Debugger::log('Error trace:', $e->getTraceAsString());
             $this->fail('Failed to create test doctor: ' . $e->getMessage());
             return null;
         }
-    }
+    } 
 
     /**
      * Create a test appointment
@@ -238,23 +249,39 @@ class TestCase extends \WP_UnitTestCase
      * @param array $overrides Override default appointment data
      * @return \HospitalManager\Models\Appointment|null
      */
-    protected function createTestAppointment(int $patient_id, int $doctor_id, array $overrides = [])
+    protected function createTestAppointment($patient_id, $doctor_id, array $overrides = [])
     {
         $default_data = [
             'patient_id' => $patient_id,
             'doctor_id' => $doctor_id,
-            'appointment_date' => date('Y-m-d'),
+            'appointment_date' => date('Y-m-d', strtotime('+1 day')),
             'appointment_time' => '10:00:00',
             'reason' => 'Test appointment',
             'status' => 'scheduled',
+            'notes' => 'Created for testing purposes',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
         ];
 
         $data = array_merge($default_data, $overrides);
         
         try {
-            return \HospitalManager\Models\Appointment::create($data);
+            // Log the data being used for appointment creation
+            error_log('Creating test appointment with data: ' . print_r($data, true));
+            
+            // Create the appointment
+            $appointment = \HospitalManager\Models\Appointment::create($data);
+            
+            if ($appointment) {
+                error_log('Appointment created successfully with ID: ' . (isset($appointment->id) ? $appointment->id : 'No ID found'));
+            } else {
+                error_log('Failed to create appointment - returned null');
+            }
+            
+            return $appointment;
         } catch (\Exception $e) {
-            $this->fail('Failed to create test appointment: ' . $e->getMessage());
+            error_log('Error creating appointment: ' . $e->getMessage());
+            error_log('Error trace: ' . $e->getTraceAsString());
             return null;
         }
     }

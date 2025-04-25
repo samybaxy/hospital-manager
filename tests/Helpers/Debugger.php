@@ -9,7 +9,7 @@ class Debugger
      */
     public static function log($message, $data = null)
     {
-        $log_file = dirname(__FILE__, 3) . '/debug-test.log';
+        $log_file = dirname(__FILE__, 3) . '/debug.log';
         $timestamp = date('Y-m-d H:i:s');
         
         $log_message = "[{$timestamp}] {$message}\n";

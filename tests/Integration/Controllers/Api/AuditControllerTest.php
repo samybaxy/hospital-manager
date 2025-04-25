@@ -54,7 +54,7 @@ class AuditControllerTest extends TestCase
         $this->test_patient = $this->createTestPatient([
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'phone_number' => '1234567890',
+            'phone' => '1234567890',
             'sex' => 'Male'
         ]);
         

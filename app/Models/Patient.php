@@ -14,6 +14,27 @@ class Patient extends BaseModel
     protected static $orderBy = [];
     protected static $queryType = 'static'; // Track if we're using static or instance query
 
+    protected $fillable = [
+        'user_id',
+        'first_name',
+        'last_name',
+        'hmo_id',
+        'hmo_designated_id',
+        'phone',
+        'date_of_birth',
+        'age',
+        'gender',
+        'address',
+        'bio_data'
+    ];
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        parent::__construct($attributes);
+    }
+
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
@@ -47,59 +68,6 @@ class Patient extends BaseModel
         
         // Create a new Patient instance with the fetched data
         return new self($patient_data);
-    }
-
-    public function __construct(array $attributes = [])
-    {
-        global $wpdb;
-        $this->table = $wpdb->prefix . 'hm_patients';
-        parent::__construct($attributes);
-    }
-
-    protected $fillable = [
-        'user_id',
-        'first_name',
-        'last_name',
-        'hmo_id',
-        'hmo_designated_id',
-        'phone',
-        'date_of_birth',
-        'age',
-        'gender',
-        'address',
-        'bio_data'
-    ];
-
-    /**
-     * Get all records from the table
-     */
-    public static function all()
-    {
-        return (new static())->get();
-    }
-
-    /**
-     * Relationship with WordPress user
-     */
-    public function user()
-    {
-        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'user_id', 'ID');
-    }
-
-    /**
-     * Relationship with HMO
-     */
-    public function hmo()
-    {
-        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'id');
-    }
-
-    /**
-     * Relationship with visitations
-     */
-    public function visitations()
-    {
-        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'id');
     }
 
     /**
@@ -363,5 +331,37 @@ class Patient extends BaseModel
             $query->where($column, '=', $value);
         }
         return $query->get();
+    }
+
+    /**
+     * Get all records from the table
+     */
+    public static function all()
+    {
+        return (new static())->get();
+    }
+
+    /**
+     * Relationship with WordPress user
+     */
+    public function user()
+    {
+        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'user_id', 'ID');
+    }
+
+    /**
+     * Relationship with HMO
+     */
+    public function hmo()
+    {
+        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'id');
+    }
+
+    /**
+     * Relationship with visitations
+     */
+    public function visitations()
+    {
+        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'id');
     }
 }

@@ -34,7 +34,7 @@ class CreateHospitalTables
             user_id bigint(20) NOT NULL,
             first_name varchar(100) NOT NULL,
             last_name varchar(100) NOT NULL,
-            phone_number varchar(20),
+            phone varchar(20),
             photo bigint(20),
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

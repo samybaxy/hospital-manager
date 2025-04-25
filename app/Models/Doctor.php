@@ -13,9 +13,51 @@ class Doctor extends BaseModel
         'user_id',
         'first_name',
         'last_name',
-        'phone_number',
+        'phone',
         'photo'
     ];
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        parent::__construct($attributes);
+    }
+
+    /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Fetch the doctor record directly from the database
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $doctor_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$doctor_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+        if (isset($doctor_data['id']) && !isset($doctor_data['ID'])) {
+            $doctor_data['ID'] = $doctor_data['id'];
+        }
+        
+        // Create a new doctor instance with the fetched data
+        return new self($doctor_data);
+    }
 
     /**
      * Create a new doctor record
@@ -23,10 +65,41 @@ class Doctor extends BaseModel
     public static function create(array $data)
     {
         global $wpdb;
-        $table = (new static)->table;
+        // Get the table name
+        $instance = new static();
+        $table = $instance->getTable();
         
-        $wpdb->insert($table, $data);
-        return static::find($wpdb->insert_id);
+        // Set created_at if applicable
+        if (!isset($data['created_at'])) {
+            $data['created_at'] = current_time('mysql');
+        }
+        
+        // Set updated_at if applicable
+        if (!isset($data['updated_at'])) {
+            $data['updated_at'] = current_time('mysql');
+        }
+        
+        try {
+            // Insert the record
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result === false) {
+                throw new \Exception($wpdb->last_error);
+            }
+            
+            $data['id'] = $wpdb->insert_id;
+            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            
+            return new static($data);
+        } catch (\Exception $e) {
+            throw new \Exception('Failed to create doctor record: ' . $e->getMessage());
+        }
     }
 
     /**

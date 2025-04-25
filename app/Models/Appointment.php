@@ -11,13 +11,6 @@ class Appointment extends BaseModel
     protected $primaryKey = 'id';
     protected $tableName = 'hm_appointments';
     
-    public function __construct(array $attributes = [])
-    {
-        global $wpdb;
-        $this->table = $wpdb->prefix . 'hm_appointments';
-        parent::__construct($attributes);
-    }
-    
     protected $fillable = [
         'patient_id',
         'doctor_id',
@@ -32,6 +25,56 @@ class Appointment extends BaseModel
 
     protected $conditions = [];
     protected $orderBy = [];
+    
+    public function __construct($attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure $attributes is an array
+        if (is_string($attributes)) {
+            $attributes = json_decode($attributes, true) ?: [];
+        } elseif (!is_array($attributes)) {
+            $attributes = [];
+        }
+        
+        parent::__construct($attributes);
+    }
+
+    /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Fetch the appointment record directly from the database.
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $appointment_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$appointment_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
+        if (isset($appointment_data['id']) && !isset($appointment_data['ID'])) {
+            $appointment_data['ID'] = $appointment_data['id'];
+        }
+        
+        // Create a new appointment instance with the fetched data.
+        return new self($appointment_data);
+    }
     
     public function where($column, $value)
     {
@@ -115,28 +158,43 @@ class Appointment extends BaseModel
     public static function create(array $data)
     {
         global $wpdb;
+    
+        // Get table name
+        $instance = new static();
+        $table = $instance->getTable();
         
         // Set created_at timestamp if not provided
         if (!isset($data['created_at'])) {
             $data['created_at'] = current_time('mysql');
         }
         
+        // Set updated_at if not provided
+        if (!isset($data['updated_at'])) {
+            $data['updated_at'] = current_time('mysql');
+        }
+        
         // Filter data to only include fillable fields
-        $instance = new static();
         $fillable_data = array_intersect_key($data, array_flip($instance->fillable));
         
         // Insert the record
-        $wpdb->insert(
-            $instance->table,
-            $fillable_data
+        $result = $wpdb->insert(
+            $table,
+            $fillable_data,
+            array_map(function($field) {
+                return is_numeric($field) ? '%d' : '%s';
+            }, $fillable_data)
         );
         
-        // Get the newly created ID
-        $id = $wpdb->insert_id;
+        if ($result === false) {
+            throw new \Exception($wpdb->last_error);
+        }
+        
+        // Get the newly created ID and add it to the data
+        $data['id'] = $wpdb->insert_id;
+        $data['ID'] = $data['id']; // Add uppercase ID for compatibility
         
         // Return a new instance with the created data
-        $created_data = array_merge(['id' => $id], $fillable_data);
-        return new static($created_data);
+        return new static($data);
     }
 
     public function doctor()
