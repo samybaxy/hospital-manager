@@ -22,7 +22,7 @@ class ChatMockRestApi
     /**
      * Register chat REST API routes
      */
-    public static function registerRoutes()
+    public static function register_routes()
     {
         // GET /chats - Get all chats for the current user
         register_rest_route(self::$namespace, '/chats', [

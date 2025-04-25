@@ -50,7 +50,7 @@ class DoctorPatientAccessTest extends TestCase
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
         $this->test_users['nurse'] = $this->createUserWithRole('nurse');
-        $this->test_users['lab_tech'] = $this->createUserWithRole('lab_technician');
+        $this->test_users['lab_tech'] = $this->createUserWithRole('lab_tech');
         $this->test_users['receptionist'] = $this->createUserWithRole('receptionist');
         $this->test_users['patient1'] = $this->createUserWithRole('patient');
         $this->test_users['patient2'] = $this->createUserWithRole('patient');

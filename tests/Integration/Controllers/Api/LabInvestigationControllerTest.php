@@ -49,7 +49,7 @@ class LabInvestigationControllerTest extends TestCase
         // Create test users with different roles
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
-        $this->test_users['lab_technician'] = $this->createUserWithRole('lab_technician');
+        $this->test_users['lab_tech'] = $this->createUserWithRole('lab_tech');
         $this->test_users['patient'] = $this->createUserWithRole('patient');
         
         // Create a test patient
@@ -204,10 +204,10 @@ class LabInvestigationControllerTest extends TestCase
     public function testUpdateLabInvestigation()
     {
         // Set current user as lab technician
-        wp_set_current_user($this->test_users['lab_technician']);
+        wp_set_current_user($this->test_users['lab_tech']);
         
         // Add capabilities to the role
-        $lab_tech = get_role('lab_technician');
+        $lab_tech = get_role('lab_tech');
         $lab_tech->add_cap('update_lab_results');
         
         // Create request to update the lab investigation
@@ -239,10 +239,10 @@ class LabInvestigationControllerTest extends TestCase
     public function testUpdateNonExistentLabInvestigation()
     {
         // Set current user as lab technician
-        wp_set_current_user($this->test_users['lab_technician']);
+        wp_set_current_user($this->test_users['lab_tech']);
         
         // Add capabilities to the role
-        $lab_tech = get_role('lab_technician');
+        $lab_tech = get_role('lab_tech');
         $lab_tech->add_cap('update_lab_results');
         
         // Create request with non-existent ID

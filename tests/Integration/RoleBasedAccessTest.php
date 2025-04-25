@@ -19,7 +19,7 @@ class RoleBasedAccessTest extends TestCase
         $this->assertTrue(get_role('doctor') !== null);
         $this->assertTrue(get_role('nurse') !== null);
         $this->assertTrue(get_role('receptionist') !== null);
-        $this->assertTrue(get_role('lab_technician') !== null);
+        $this->assertTrue(get_role('lab_tech') !== null);
         $this->assertTrue(get_role('patient') !== null);
         
         // Verify doctor capabilities

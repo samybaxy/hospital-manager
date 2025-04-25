@@ -1,4 +1,4 @@
-[2025-04-25 20:47:24] Creating test patient with data:
+[2025-04-25 23:14:13] Creating test patient with data:
 Array
 (
     [user_id] => 4
@@ -9,13 +9,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:47:24
-    [updated_at] => 2025-04-25 20:47:24
+    [created_at] => 2025-04-25 23:14:13
+    [updated_at] => 2025-04-25 23:14:13
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:47:24] Patient created successfully:
+[2025-04-25 23:14:13] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -31,8 +31,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:47:24
-            [updated_at] => 2025-04-25 20:47:24
+            [created_at] => 2025-04-25 23:14:13
+            [updated_at] => 2025-04-25 23:14:13
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 1
@@ -124,133 +124,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:52:19] Creating test patient with data:
-Array
-(
-    [user_id] => 4
-    [first_name] => Test
-    [last_name] => Patient
-    [phone] => 1234567890
-    [date_of_birth] => 1990-01-01
-    [gender] => Male
-    [age] => 30
-    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:52:19
-    [updated_at] => 2025-04-25 20:52:19
-    [address] => 123 Test Street
-    [hmo_id] => 1
-)
-
-[2025-04-25 20:52:19] Patient created successfully:
-HospitalManager\Models\Patient Object
-(
-    [type:protected] => post
-    [status:protected] => draft
-    [forceDelete:protected] => 
-    [attributes:protected] => Array
-        (
-            [user_id] => 4
-            [first_name] => Test
-            [last_name] => Patient
-            [phone] => 1234567890
-            [date_of_birth] => 1990-01-01
-            [gender] => Male
-            [age] => 30
-            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:52:19
-            [updated_at] => 2025-04-25 20:52:19
-            [address] => 123 Test Street
-            [hmo_id] => 1
-            [id] => 1
-            [ID] => 1
-        )
-
-    [hidden:protected] => Array
-        (
-        )
-
-    [registry:protected] => Array
-        (
-            [public] => 1
-            [publicly_queryable] => 1
-            [show_ui] => 1
-            [show_in_menu] => 1
-            [query_var] => 1
-            [capability_type] => post
-            [has_archive] => 1
-            [hierarchical] => 
-            [menu_position] => 
-        )
-
-    [registry_labels:protected] => Array
-        (
-        )
-
-    [registry_supports:protected] => Array
-        (
-            [0] => title
-            [1] => editor
-            [2] => author
-            [3] => thumbnail
-            [4] => excerpt
-            [5] => comments
-        )
-
-    [registry_rewrite:protected] => Array
-        (
-        )
-
-    [registry_metabox:protected] => 1
-    [registry_controller:protected] => 
-    [registry_taxonomies:protected] => Array
-        (
-        )
-
-    [meta:protected] => Array
-        (
-        )
-
-    [decode_json_meta:protected] => 1
-    [aliases:protected] => Array
-        (
-        )
-
-    [rel:protected] => Array
-        (
-            [has_one] => Array
-                (
-                )
-
-            [has_many] => Array
-                (
-                )
-
-            [belongs_to] => Array
-                (
-                )
-
-        )
-
-    [primaryKey:protected] => id
-    [tableName:protected] => hm_patients
-    [fillable:protected] => Array
-        (
-            [0] => user_id
-            [1] => first_name
-            [2] => last_name
-            [3] => hmo_id
-            [4] => hmo_designated_id
-            [5] => phone
-            [6] => date_of_birth
-            [7] => age
-            [8] => gender
-            [9] => address
-            [10] => bio_data
-        )
-
-)
-
-[2025-04-25 20:52:19] Creating test patient with data:
+[2025-04-25 23:14:14] Creating test patient with data:
 Array
 (
     [user_id] => 8
@@ -261,13 +135,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:52:19
-    [updated_at] => 2025-04-25 20:52:19
+    [created_at] => 2025-04-25 23:14:14
+    [updated_at] => 2025-04-25 23:14:14
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:52:19] Patient created successfully:
+[2025-04-25 23:14:14] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -283,8 +157,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:52:19
-            [updated_at] => 2025-04-25 20:52:19
+            [created_at] => 2025-04-25 23:14:14
+            [updated_at] => 2025-04-25 23:14:14
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 2
@@ -376,7 +250,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:52:19] Creating test patient with data:
+[2025-04-25 23:14:14] Creating test patient with data:
 Array
 (
     [user_id] => 12
@@ -387,13 +261,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:52:19
-    [updated_at] => 2025-04-25 20:52:19
+    [created_at] => 2025-04-25 23:14:14
+    [updated_at] => 2025-04-25 23:14:14
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:52:19] Patient created successfully:
+[2025-04-25 23:14:14] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -409,8 +283,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:52:19
-            [updated_at] => 2025-04-25 20:52:19
+            [created_at] => 2025-04-25 23:14:14
+            [updated_at] => 2025-04-25 23:14:14
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 3
@@ -502,7 +376,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:52:20] Creating test patient with data:
+[2025-04-25 23:14:14] Creating test patient with data:
 Array
 (
     [user_id] => 16
@@ -513,13 +387,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:52:20
-    [updated_at] => 2025-04-25 20:52:20
+    [created_at] => 2025-04-25 23:14:14
+    [updated_at] => 2025-04-25 23:14:14
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:52:20] Patient created successfully:
+[2025-04-25 23:14:14] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -535,8 +409,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:52:20
-            [updated_at] => 2025-04-25 20:52:20
+            [created_at] => 2025-04-25 23:14:14
+            [updated_at] => 2025-04-25 23:14:14
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 4
@@ -628,7 +502,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:52:20] Creating test patient with data:
+[2025-04-25 23:14:14] Creating test patient with data:
 Array
 (
     [user_id] => 20
@@ -639,13 +513,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:52:20
-    [updated_at] => 2025-04-25 20:52:20
+    [created_at] => 2025-04-25 23:14:14
+    [updated_at] => 2025-04-25 23:14:14
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:52:20] Patient created successfully:
+[2025-04-25 23:14:14] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -661,8 +535,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:52:20
-            [updated_at] => 2025-04-25 20:52:20
+            [created_at] => 2025-04-25 23:14:14
+            [updated_at] => 2025-04-25 23:14:14
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 5
@@ -754,7 +628,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:53:56] Creating test patient with data:
+[2025-04-25 23:31:20] Creating test patient with data:
 Array
 (
     [user_id] => 4
@@ -765,13 +639,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:53:56
-    [updated_at] => 2025-04-25 20:53:56
+    [created_at] => 2025-04-25 23:31:20
+    [updated_at] => 2025-04-25 23:31:20
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:53:56] Patient created successfully:
+[2025-04-25 23:31:20] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -787,8 +661,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:53:56
-            [updated_at] => 2025-04-25 20:53:56
+            [created_at] => 2025-04-25 23:31:20
+            [updated_at] => 2025-04-25 23:31:20
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 1
@@ -880,7 +754,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:53:56] Creating test patient with data:
+[2025-04-25 23:31:20] Creating test patient with data:
 Array
 (
     [user_id] => 8
@@ -891,13 +765,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:53:56
-    [updated_at] => 2025-04-25 20:53:56
+    [created_at] => 2025-04-25 23:31:20
+    [updated_at] => 2025-04-25 23:31:20
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:53:56] Patient created successfully:
+[2025-04-25 23:31:20] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -913,8 +787,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:53:56
-            [updated_at] => 2025-04-25 20:53:56
+            [created_at] => 2025-04-25 23:31:20
+            [updated_at] => 2025-04-25 23:31:20
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 2
@@ -1006,7 +880,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:53:56] Creating test patient with data:
+[2025-04-25 23:31:20] Creating test patient with data:
 Array
 (
     [user_id] => 12
@@ -1017,13 +891,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:53:56
-    [updated_at] => 2025-04-25 20:53:56
+    [created_at] => 2025-04-25 23:31:20
+    [updated_at] => 2025-04-25 23:31:20
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:53:56] Patient created successfully:
+[2025-04-25 23:31:20] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1039,8 +913,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:53:56
-            [updated_at] => 2025-04-25 20:53:56
+            [created_at] => 2025-04-25 23:31:20
+            [updated_at] => 2025-04-25 23:31:20
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 3
@@ -1132,7 +1006,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:53:56] Creating test patient with data:
+[2025-04-25 23:31:20] Creating test patient with data:
 Array
 (
     [user_id] => 16
@@ -1143,13 +1017,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:53:56
-    [updated_at] => 2025-04-25 20:53:56
+    [created_at] => 2025-04-25 23:31:20
+    [updated_at] => 2025-04-25 23:31:20
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:53:56] Patient created successfully:
+[2025-04-25 23:31:20] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1165,8 +1039,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:53:56
-            [updated_at] => 2025-04-25 20:53:56
+            [created_at] => 2025-04-25 23:31:20
+            [updated_at] => 2025-04-25 23:31:20
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 4
@@ -1258,7 +1132,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 20:53:57] Creating test patient with data:
+[2025-04-25 23:31:21] Creating test patient with data:
 Array
 (
     [user_id] => 20
@@ -1269,13 +1143,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 20:53:57
-    [updated_at] => 2025-04-25 20:53:57
+    [created_at] => 2025-04-25 23:31:21
+    [updated_at] => 2025-04-25 23:31:21
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 20:53:57] Patient created successfully:
+[2025-04-25 23:31:21] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1291,8 +1165,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 20:53:57
-            [updated_at] => 2025-04-25 20:53:57
+            [created_at] => 2025-04-25 23:31:21
+            [updated_at] => 2025-04-25 23:31:21
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 5
@@ -1384,7 +1258,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:01:59] Creating test patient with data:
+[2025-04-25 23:44:46] Creating test patient with data:
 Array
 (
     [user_id] => 4
@@ -1395,13 +1269,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:01:59
-    [updated_at] => 2025-04-25 21:01:59
+    [created_at] => 2025-04-25 23:44:46
+    [updated_at] => 2025-04-25 23:44:46
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:01:59] Patient created successfully:
+[2025-04-25 23:44:46] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1417,8 +1291,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:01:59
-            [updated_at] => 2025-04-25 21:01:59
+            [created_at] => 2025-04-25 23:44:46
+            [updated_at] => 2025-04-25 23:44:46
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 1
@@ -1510,133 +1384,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:04:05] Creating test patient with data:
-Array
-(
-    [user_id] => 4
-    [first_name] => Test
-    [last_name] => Patient
-    [phone] => 1234567890
-    [date_of_birth] => 1990-01-01
-    [gender] => Male
-    [age] => 30
-    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:04:05
-    [updated_at] => 2025-04-25 21:04:05
-    [address] => 123 Test Street
-    [hmo_id] => 1
-)
-
-[2025-04-25 21:04:05] Patient created successfully:
-HospitalManager\Models\Patient Object
-(
-    [type:protected] => post
-    [status:protected] => draft
-    [forceDelete:protected] => 
-    [attributes:protected] => Array
-        (
-            [user_id] => 4
-            [first_name] => Test
-            [last_name] => Patient
-            [phone] => 1234567890
-            [date_of_birth] => 1990-01-01
-            [gender] => Male
-            [age] => 30
-            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:04:05
-            [updated_at] => 2025-04-25 21:04:05
-            [address] => 123 Test Street
-            [hmo_id] => 1
-            [id] => 1
-            [ID] => 1
-        )
-
-    [hidden:protected] => Array
-        (
-        )
-
-    [registry:protected] => Array
-        (
-            [public] => 1
-            [publicly_queryable] => 1
-            [show_ui] => 1
-            [show_in_menu] => 1
-            [query_var] => 1
-            [capability_type] => post
-            [has_archive] => 1
-            [hierarchical] => 
-            [menu_position] => 
-        )
-
-    [registry_labels:protected] => Array
-        (
-        )
-
-    [registry_supports:protected] => Array
-        (
-            [0] => title
-            [1] => editor
-            [2] => author
-            [3] => thumbnail
-            [4] => excerpt
-            [5] => comments
-        )
-
-    [registry_rewrite:protected] => Array
-        (
-        )
-
-    [registry_metabox:protected] => 1
-    [registry_controller:protected] => 
-    [registry_taxonomies:protected] => Array
-        (
-        )
-
-    [meta:protected] => Array
-        (
-        )
-
-    [decode_json_meta:protected] => 1
-    [aliases:protected] => Array
-        (
-        )
-
-    [rel:protected] => Array
-        (
-            [has_one] => Array
-                (
-                )
-
-            [has_many] => Array
-                (
-                )
-
-            [belongs_to] => Array
-                (
-                )
-
-        )
-
-    [primaryKey:protected] => id
-    [tableName:protected] => hm_patients
-    [fillable:protected] => Array
-        (
-            [0] => user_id
-            [1] => first_name
-            [2] => last_name
-            [3] => hmo_id
-            [4] => hmo_designated_id
-            [5] => phone
-            [6] => date_of_birth
-            [7] => age
-            [8] => gender
-            [9] => address
-            [10] => bio_data
-        )
-
-)
-
-[2025-04-25 21:04:06] Creating test patient with data:
+[2025-04-25 23:44:46] Creating test patient with data:
 Array
 (
     [user_id] => 8
@@ -1647,13 +1395,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:04:06
-    [updated_at] => 2025-04-25 21:04:06
+    [created_at] => 2025-04-25 23:44:46
+    [updated_at] => 2025-04-25 23:44:46
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:04:06] Patient created successfully:
+[2025-04-25 23:44:46] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1669,8 +1417,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:04:06
-            [updated_at] => 2025-04-25 21:04:06
+            [created_at] => 2025-04-25 23:44:46
+            [updated_at] => 2025-04-25 23:44:46
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 2
@@ -1762,7 +1510,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:04:06] Creating test patient with data:
+[2025-04-25 23:44:46] Creating test patient with data:
 Array
 (
     [user_id] => 12
@@ -1773,13 +1521,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:04:06
-    [updated_at] => 2025-04-25 21:04:06
+    [created_at] => 2025-04-25 23:44:46
+    [updated_at] => 2025-04-25 23:44:46
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:04:06] Patient created successfully:
+[2025-04-25 23:44:46] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1795,8 +1543,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:04:06
-            [updated_at] => 2025-04-25 21:04:06
+            [created_at] => 2025-04-25 23:44:46
+            [updated_at] => 2025-04-25 23:44:46
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 3
@@ -1888,7 +1636,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:04:06] Creating test patient with data:
+[2025-04-25 23:44:46] Creating test patient with data:
 Array
 (
     [user_id] => 16
@@ -1899,13 +1647,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:04:06
-    [updated_at] => 2025-04-25 21:04:06
+    [created_at] => 2025-04-25 23:44:46
+    [updated_at] => 2025-04-25 23:44:46
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:04:06] Patient created successfully:
+[2025-04-25 23:44:46] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -1921,8 +1669,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:04:06
-            [updated_at] => 2025-04-25 21:04:06
+            [created_at] => 2025-04-25 23:44:46
+            [updated_at] => 2025-04-25 23:44:46
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 4
@@ -2014,7 +1762,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:04:06] Creating test patient with data:
+[2025-04-25 23:44:46] Creating test patient with data:
 Array
 (
     [user_id] => 20
@@ -2025,13 +1773,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:04:06
-    [updated_at] => 2025-04-25 21:04:06
+    [created_at] => 2025-04-25 23:44:46
+    [updated_at] => 2025-04-25 23:44:46
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:04:06] Patient created successfully:
+[2025-04-25 23:44:46] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2047,8 +1795,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:04:06
-            [updated_at] => 2025-04-25 21:04:06
+            [created_at] => 2025-04-25 23:44:46
+            [updated_at] => 2025-04-25 23:44:46
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 5
@@ -2140,7 +1888,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:10:59] Creating test patient with data:
+[2025-04-25 23:45:03] Creating test patient with data:
 Array
 (
     [user_id] => 4
@@ -2151,13 +1899,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:10:59
-    [updated_at] => 2025-04-25 21:10:59
+    [created_at] => 2025-04-25 23:45:03
+    [updated_at] => 2025-04-25 23:45:03
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:10:59] Patient created successfully:
+[2025-04-25 23:45:03] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2173,8 +1921,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:10:59
-            [updated_at] => 2025-04-25 21:10:59
+            [created_at] => 2025-04-25 23:45:03
+            [updated_at] => 2025-04-25 23:45:03
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 1
@@ -2266,7 +2014,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:10:59] Creating test patient with data:
+[2025-04-25 23:45:03] Creating test patient with data:
 Array
 (
     [user_id] => 8
@@ -2277,13 +2025,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:10:59
-    [updated_at] => 2025-04-25 21:10:59
+    [created_at] => 2025-04-25 23:45:03
+    [updated_at] => 2025-04-25 23:45:03
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:10:59] Patient created successfully:
+[2025-04-25 23:45:03] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2299,8 +2047,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:10:59
-            [updated_at] => 2025-04-25 21:10:59
+            [created_at] => 2025-04-25 23:45:03
+            [updated_at] => 2025-04-25 23:45:03
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 2
@@ -2392,7 +2140,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:10:59] Creating test patient with data:
+[2025-04-25 23:45:03] Creating test patient with data:
 Array
 (
     [user_id] => 12
@@ -2403,13 +2151,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:10:59
-    [updated_at] => 2025-04-25 21:10:59
+    [created_at] => 2025-04-25 23:45:03
+    [updated_at] => 2025-04-25 23:45:03
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:10:59] Patient created successfully:
+[2025-04-25 23:45:03] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2425,8 +2173,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:10:59
-            [updated_at] => 2025-04-25 21:10:59
+            [created_at] => 2025-04-25 23:45:03
+            [updated_at] => 2025-04-25 23:45:03
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 3
@@ -2518,7 +2266,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:10:59] Creating test patient with data:
+[2025-04-25 23:45:04] Creating test patient with data:
 Array
 (
     [user_id] => 16
@@ -2529,13 +2277,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:10:59
-    [updated_at] => 2025-04-25 21:10:59
+    [created_at] => 2025-04-25 23:45:04
+    [updated_at] => 2025-04-25 23:45:04
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:10:59] Patient created successfully:
+[2025-04-25 23:45:04] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2551,8 +2299,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:10:59
-            [updated_at] => 2025-04-25 21:10:59
+            [created_at] => 2025-04-25 23:45:04
+            [updated_at] => 2025-04-25 23:45:04
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 4
@@ -2644,7 +2392,7 @@ HospitalManager\Models\Patient Object
 
 )
 
-[2025-04-25 21:11:00] Creating test patient with data:
+[2025-04-25 23:45:04] Creating test patient with data:
 Array
 (
     [user_id] => 20
@@ -2655,13 +2403,13 @@ Array
     [gender] => Male
     [age] => 30
     [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-    [created_at] => 2025-04-25 21:11:00
-    [updated_at] => 2025-04-25 21:11:00
+    [created_at] => 2025-04-25 23:45:04
+    [updated_at] => 2025-04-25 23:45:04
     [address] => 123 Test Street
     [hmo_id] => 1
 )
 
-[2025-04-25 21:11:00] Patient created successfully:
+[2025-04-25 23:45:04] Patient created successfully:
 HospitalManager\Models\Patient Object
 (
     [type:protected] => post
@@ -2677,8 +2425,8 @@ HospitalManager\Models\Patient Object
             [gender] => Male
             [age] => 30
             [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
-            [created_at] => 2025-04-25 21:11:00
-            [updated_at] => 2025-04-25 21:11:00
+            [created_at] => 2025-04-25 23:45:04
+            [updated_at] => 2025-04-25 23:45:04
             [address] => 123 Test Street
             [hmo_id] => 1
             [id] => 5

@@ -21,7 +21,7 @@ class PatientMockRestApi
     /**
      * Register patient REST API routes for testing
      */
-    public static function registerRoutes() 
+    public static function register_routes() 
     {
         // GET and POST /patients
         register_rest_route(self::$namespace, '/patients', [

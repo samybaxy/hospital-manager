@@ -21,7 +21,7 @@ class AppointmentMockRestApi
     /**
      * Register appointment REST API routes for testing
      */
-    public static function registerRoutes() 
+    public static function register_routes() 
     {
         // GET and POST /appointments
         register_rest_route(self::$namespace, '/appointments', [

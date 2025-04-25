@@ -87,6 +87,7 @@ class DashboardControllerTest extends TestCase
         LabInvestigation::create([
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_users['doctor'],
+            'lab_tech_id' => $this->test_users['lab_tech'], // Assign to the lab tech
             'test_type' => 'Complete Blood Count',
             'status' => 'pending',
             'notes' => 'Test investigation',
@@ -213,8 +214,23 @@ class DashboardControllerTest extends TestCase
         
         // Lab dashboard should have specific data structure
         $data = $response->get_data();
-        // Add assertions based on the lab dashboard structure
-        // This will depend on what the get_lab_dashboard method returns
+        
+        // Verify lab dashboard structure
+        $this->assertArrayHasKey('pending_tests', $data);
+        $this->assertArrayHasKey('tests_completed_today', $data);
+        
+        // Verify pending tests data
+        $this->assertNotEmpty($data['pending_tests']);
+        
+        // Check if at least one test has the expected fields
+        if (!empty($data['pending_tests'])) {
+            $test = $data['pending_tests'][0];
+            $this->assertEquals($test->id, $test->ID);
+            $this->assertEquals('pending', $test->status);
+        }
+        
+        // Verify tests completed count is an integer
+        $this->assertIsInt($data['tests_completed_today']);
     }
     
     /**

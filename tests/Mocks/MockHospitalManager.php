@@ -28,18 +28,21 @@ class MockHospitalManager
     public static function registerTestRoutes() 
     {
         // Register Authentication API routes using the dedicated class
-        AuthMockRestApi::registerRoutes();
+        AuthMockRestApi::register_routes();
 
         // Register Patient API routes using the dedicated class
-        PatientMockRestApi::registerRoutes();
+        PatientMockRestApi::register_routes();
 
         // Register Appointment API routes using the dedicated class
-        AppointmentMockRestApi::registerRoutes();
+        AppointmentMockRestApi::register_routes();
 
         // Register audit log API routes for testing
-        AuditMockRestApi::registerRoutes();
+        AuditMockRestApi::register_routes();
 
         // Register chat API routes for testing
-        ChatMockRestApi::registerRoutes();
+        ChatMockRestApi::register_routes();
+
+        // Register Dashboard API routes for testing
+        DashboardMockRestApi::register_routes();
     }
 }

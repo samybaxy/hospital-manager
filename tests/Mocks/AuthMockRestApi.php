@@ -21,7 +21,7 @@ class AuthMockRestApi
     /**
      * Register authentication REST API routes for testing
      */
-    public static function registerRoutes() 
+    public static function register_routes() 
     {
         // Register auth/login endpoint for tests
         register_rest_route(self::$namespace, '/auth/login', [

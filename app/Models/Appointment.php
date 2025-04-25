@@ -237,16 +237,24 @@ class Appointment extends BaseModel
             "SELECT * FROM {$table} 
             WHERE patient_id = %d 
             AND status = %s 
-            AND date >= %s",
+            AND appointment_date >= %s",
             $patientId,
             'scheduled',
             current_time('Y-m-d')
         );
 
         $results = $wpdb->get_results($query, ARRAY_A);
-        return array_map(function($item) {
+        $appointments = array_map(function($item) {
+            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+            if (isset($item['id']) && !isset($item['ID'])) {
+                $item['ID'] = $item['id'];
+            } elseif (isset($item['ID']) && !isset($item['id'])) {
+                $item['id'] = $item['ID'];
+            }
             return new static($item);
         }, $results ?: []);
+        
+        return $appointments;
     }
 
     /**
@@ -270,6 +278,13 @@ class Appointment extends BaseModel
 
         $results = $wpdb->get_results($query, ARRAY_A);
         return array_map(function($item) {
+            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+            if (isset($item['id']) && !isset($item['ID'])) {
+                $item['ID'] = $item['id'];
+            } elseif (isset($item['ID']) && !isset($item['id'])) {
+                $item['id'] = $item['ID'];
+            }
+            
             $model = new static($item);
             if (isset($item['patient_name'])) {
                 $model->patient_name = $item['patient_name'];

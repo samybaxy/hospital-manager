@@ -18,7 +18,7 @@ class AuditMockRestApi
     /**
      * Register audit log REST API routes
      */
-    public static function registerRoutes()
+    public static function register_routes()
     {
         // GET /audit-logs - Get all audit logs (admin only)
         register_rest_route(self::$namespace, '/audit-logs', [

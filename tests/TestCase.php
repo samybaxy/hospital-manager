@@ -101,9 +101,9 @@ class TestCase extends \WP_UnitTestCase
         }
         
         // Lab Tech role
-        if (!get_role('lab_technician')) {
+        if (!get_role('lab_tech')) {
             add_role(
-                'lab_technician',
+                'lab_tech',
                 'Lab Technician',
                 [
                     'read' => true,
@@ -124,7 +124,7 @@ class TestCase extends \WP_UnitTestCase
         remove_role('doctor');
         remove_role('patient');
         remove_role('desk_officer');
-        remove_role('lab_technician');
+        remove_role('lab_tech');
         parent::tearDown();
     }
 

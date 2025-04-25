@@ -119,7 +119,8 @@ class HospitalManager extends Bridge
             remove_role('doctor');
             remove_role('patient');
             remove_role('receptionist');
-            remove_role('lab_technician');
+            remove_role('lab_tech');
+            remove_role('desk_officer');
             error_log('Hospital Manager: Custom roles removed successfully');
             
             error_log('Hospital Manager: Plugin deactivation completed successfully');
