@@ -35,5 +35,8 @@ class MockHospitalManager
 
         // Register Appointment API routes using the dedicated class
         AppointmentMockRestApi::registerRoutes();
+
+        // Register audit log API routes for testing
+        AuditMockRestApi::registerRoutes();
     }
 }

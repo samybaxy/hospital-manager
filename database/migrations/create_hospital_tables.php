@@ -101,6 +101,7 @@ class CreateHospitalTables
             entity_type varchar(50) NOT NULL,
             entity_id bigint(20) NOT NULL,
             changes JSON,
+            details JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY user_id (user_id),

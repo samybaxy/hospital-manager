@@ -25,11 +25,33 @@ class AuditLog extends BaseModel
     protected static $conditions = [];
     protected static $orderBy = [];
     
+    public function __construct($attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure $attributes is an array
+        if (is_string($attributes)) {
+            $attributes = json_decode($attributes, true) ?: [];
+        } elseif (!is_array($attributes)) {
+            $attributes = [];
+        }
+        
+        parent::__construct($attributes);
+    }
+    
     public static function create(array $attributes)
     {
         global $wpdb;
         
         $table = (new static)->table;
+        
+        // Ensure both uppercase 'ID' and lowercase 'id' are handled
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
         
         $result = $wpdb->insert(
             $table,
@@ -42,6 +64,10 @@ class AuditLog extends BaseModel
         if ($result === false) {
             throw new \Exception($wpdb->last_error);
         }
+        
+        // Add the generated ID to the attributes
+        $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $attributes['id']; // Ensure both ID formats are available
 
         return new static($attributes);
     }
@@ -87,8 +113,18 @@ class AuditLog extends BaseModel
         static::$conditions = [];
         static::$orderBy = [];
 
+        // Process results to ensure ID consistency
         $items = array_map(function($item) {
-            return new static((array)$item);
+            $data = (array)$item;
+            
+            // Ensure both id and ID exist
+            if (isset($data['id']) && !isset($data['ID'])) {
+                $data['ID'] = $data['id'];
+            } elseif (isset($data['ID']) && !isset($data['id'])) {
+                $data['id'] = $data['ID'];
+            }
+            
+            return new static($data);
         }, $results);
 
         return (object)[
@@ -125,8 +161,19 @@ class AuditLog extends BaseModel
         static::$orderBy = [];
 
         $results = $wpdb->get_results($query);
+        
+        // Process results to ensure ID consistency
         $items = array_map(function($item) {
-            return new static((array)$item);
+            $data = (array)$item;
+            
+            // Ensure both id and ID exist
+            if (isset($data['id']) && !isset($data['ID'])) {
+                $data['ID'] = $data['id'];
+            } elseif (isset($data['ID']) && !isset($data['id'])) {
+                $data['id'] = $data['ID'];
+            }
+            
+            return new static($data);
         }, $results);
 
         return (object)[
