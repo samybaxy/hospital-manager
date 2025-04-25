@@ -10,6 +10,29 @@ abstract class BaseModel extends PostModel
     use FindTrait;
 
     protected $primaryKey = 'id';
+    protected $tableName; // Name portion after prefix
+    
+    /**
+     * Get the table name with the correct prefix
+     */
+    public function getTable()
+    {
+        global $wpdb;
+        if (empty($this->table) && !empty($this->tableName)) {
+            $this->table = $wpdb->prefix . $this->tableName;
+        }
+        return $this->table;
+    }
+    
+    /**
+     * Set the tableName property to be used with dynamic prefix
+     */
+    public function setTableName($name)
+    {
+        $this->tableName = $name;
+        $this->table = null; // Reset table so getTable() will recompute with prefix
+        return $this;
+    }
 
     /**
      * Create table for this model

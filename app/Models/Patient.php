@@ -2,18 +2,24 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Patient extends PostModel
+class Patient extends BaseModel
 {
     use FindTrait;
     
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_patients';
+    protected $tableName = 'hm_patients';
     protected static $conditions = [];
     protected static $orderBy = [];
     protected static $queryType = 'static'; // Track if we're using static or instance query
+
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . 'hm_patients';
+        parent::__construct($attributes);
+    }
 
     protected $fillable = [
         'user_id',
@@ -21,9 +27,11 @@ class Patient extends PostModel
         'last_name',
         'hmo_id',
         'hmo_designated_id',
-        'phone_number',
+        'phone',
+        'date_of_birth',
         'age',
-        'sex',
+        'gender',
+        'address',
         'bio_data'
     ];
 
@@ -72,12 +80,20 @@ class Patient extends PostModel
             $attributes['created_at'] = $attributes['created_at'] ?? current_time('mysql');
         }
         
+        // Clone the attributes to avoid modifying the original
+        $db_attributes = $attributes;
+        
+        // Make sure bio_data is properly encoded
+        if (isset($db_attributes['bio_data']) && is_array($db_attributes['bio_data'])) {
+            $db_attributes['bio_data'] = json_encode($db_attributes['bio_data']);
+        }
+        
         $result = $wpdb->insert(
             $table,
-            $attributes,
+            $db_attributes,
             array_map(function($field) {
                 return is_numeric($field) ? '%d' : '%s';
-            }, $attributes)
+            }, $db_attributes)
         );
 
         if ($result === false) {
@@ -85,6 +101,7 @@ class Patient extends PostModel
         }
 
         $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $attributes['id']; // Add uppercase ID for compatibility
         return new static($attributes);
     }
 

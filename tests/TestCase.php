@@ -2,6 +2,8 @@
 
 namespace HospitalManager\Tests;
 
+use HospitalManager\Tests\Helpers\Debugger;
+
 /**
  * Base TestCase for Hospital Manager plugin tests
  */
@@ -79,17 +81,36 @@ class TestCase extends \WP_UnitTestCase
         $default_data = [
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'phone_number' => '08012345678',
-            'sex' => 'M',
+            'phone' => '08012345678',
+            'gender' => 'Male',
             'age' => 30,
-            'bio_data' => 'Test patient for PHPUnit tests',
+            'bio_data' => json_encode([
+                'blood_group' => 'O+',
+                'genotype' => 'AA',
+                'height' => '170',
+                'weight' => '70',
+                'allergies' => 'None',
+                'chronic_conditions' => 'None',
+                'current_medications' => 'None',
+                'emergency_contact' => '09087654321',
+                'notes' => 'Test patient for PHPUnit tests'
+            ]),
         ];
 
         $data = array_merge($default_data, $overrides);
         
         try {
-            return \HospitalManager\Models\Patient::create($data);
+            // Log the data being used for patient creation
+            \HospitalManager\Tests\Helpers\Debugger::log('Creating test patient with data:', $data);
+            
+            // Create the patient
+            $patient = \HospitalManager\Models\Patient::create($data);
+            
+            \HospitalManager\Tests\Helpers\Debugger::log('Patient created successfully:', $patient);
+            return $patient;
         } catch (\Exception $e) {
+            \HospitalManager\Tests\Helpers\Debugger::log('Error creating patient: ' . $e->getMessage());
+            \HospitalManager\Tests\Helpers\Debugger::log('Error trace:', $e->getTraceAsString());
             $this->fail('Failed to create test patient: ' . $e->getMessage());
             return null;
         }
@@ -106,7 +127,7 @@ class TestCase extends \WP_UnitTestCase
         $default_data = [
             'first_name' => 'Test',
             'last_name' => 'Doctor',
-            'phone_number' => '08012345679',
+            'phone' => '08012345679',
             'specialization' => 'General Practice',
             'status' => 'active',
         ];

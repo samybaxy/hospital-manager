@@ -2,15 +2,21 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Appointment extends PostModel
+class Appointment extends BaseModel
 {
     use FindTrait;
 
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_appointments';
+    protected $tableName = 'hm_appointments';
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . 'hm_appointments';
+        parent::__construct($attributes);
+    }
     
     protected $fillable = [
         'patient_id',
