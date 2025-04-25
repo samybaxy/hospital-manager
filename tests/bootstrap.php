@@ -32,7 +32,16 @@ if ( ! file_exists( "{$_tests_dir}/includes/functions.php" ) ) {
     $db_name = getenv('WP_TEST_DB_NAME') ?: 'wordpress_test';
     $db_user = getenv('WP_TEST_DB_USER') ?: 'root';
     $db_pass = getenv('WP_TEST_DB_PASS') ?: 'root';
-    $db_host = getenv('WP_TEST_DB_HOST') ?: 'localhost';
+    
+    // Check if we're in Local by Flywheel environment
+    $local_socket = '/home/samuel/.config/Local/run/GG3TfnWBh/mysql/mysqld.sock';
+    if (file_exists($local_socket)) {
+        $db_host = "localhost:{$local_socket}";
+        echo "Using Local by Flywheel MySQL socket: {$local_socket}" . PHP_EOL;
+    } else {
+        $db_host = getenv('WP_TEST_DB_HOST') ?: 'localhost';
+    }
+    
     $wp_version = getenv('WP_VERSION') ?: 'latest';
     $skip_db_create = getenv('SKIP_DB_CREATE') ?: false;
     
