@@ -32,5 +32,8 @@ class MockHospitalManager
 
         // Register Patient API routes using the dedicated class
         PatientMockRestApi::registerRoutes();
+
+        // Register Appointment API routes using the dedicated class
+        AppointmentMockRestApi::registerRoutes();
     }
 }

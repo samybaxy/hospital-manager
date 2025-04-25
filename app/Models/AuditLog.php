@@ -2,15 +2,14 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class AuditLog extends PostModel
+class AuditLog extends BaseModel
 {
     use FindTrait;
 
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_audit_logs';
+    protected $tableName = 'hm_audit_logs';
     
     protected $fillable = [
         'user_id',

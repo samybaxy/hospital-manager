@@ -1,15 +1,14 @@
 <?php
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class RadiologicalExam extends PostModel
+class RadiologicalExam extends BaseModel
 {
     use FindTrait;
 
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_radiological_exams';
+    protected $tableName = 'hm_radiological_exams';
     protected $fillable = [
         'visitation_id',
         'tech_id',

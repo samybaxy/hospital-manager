@@ -2,15 +2,14 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Chat extends PostModel
+class Chat extends BaseModel
 {
     use FindTrait;
 
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_chats';
+    protected $tableName = 'hm_chats';
     
     protected $fillable = [
         'doctor_id',

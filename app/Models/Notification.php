@@ -2,15 +2,14 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Notification extends PostModel
+class Notification extends BaseModel
 {
     use FindTrait;
     
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_notifications';
+    protected $tableName = 'hm_notifications';
     protected $fillable = [
         'user_id',
         'type',

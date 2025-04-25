@@ -1,15 +1,14 @@
 <?php
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Doctor extends PostModel
+class Doctor extends BaseModel
 {
     use FindTrait;
     
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_doctors';
+    protected $tableName = 'hm_doctors';
     protected $fillable = [
         'user_id',
         'first_name',

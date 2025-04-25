@@ -1,16 +1,15 @@
 <?php
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class LabInvestigation extends PostModel
+class LabInvestigation extends BaseModel
 {
     use FindTrait;
 
     protected $type = 'lab_investigation';
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_lab_investigations';
+    protected $tableName = 'hm_lab_investigations';
     protected static $conditions = [];
     protected static $orderBy = [];
     protected static $queryType = 'static';

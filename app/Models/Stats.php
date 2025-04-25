@@ -2,15 +2,14 @@
 
 namespace HospitalManager\Models;
 
-use WPMVC\MVC\Models\PostModel;
 use WPMVC\MVC\Traits\FindTrait;
 
-class Stats extends PostModel
+class Stats extends BaseModel
 {
     use FindTrait;
 
     protected $primaryKey = 'id';
-    protected $table = 'wp_hm_stats';
+    protected $tableName = 'hm_stats';
     protected static $conditions = [];
     protected static $orderBy = [];
 
