@@ -57,6 +57,7 @@ class CreateHospitalTables
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             date datetime NOT NULL,
+            time time NOT NULL,
             medical_history text,
             diagnosis text,
             treatment text,
@@ -71,8 +72,13 @@ class CreateHospitalTables
         $sql_lab_investigations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_investigations (
             id bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
+            doctor_id bigint(20) NOT NULL,
             lab_tech_id bigint(20) NOT NULL,
+            patient_id bigint(20) NOT NULL,
+            test_type text,
+            notes text,
             results text,
+            status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -174,6 +180,22 @@ class CreateHospitalTables
             KEY created_at (created_at)
         ) $charset_collate;";
 
+        // Medical Reports table
+        $sql_medical_reports = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_medical_reports (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            patient_id bigint(20) NOT NULL,
+            doctor_id bigint(20) NOT NULL,
+            visitation_id bigint(20) NOT NULL,
+            report_content text NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY  (id),
+            KEY patient_id (patient_id),
+            KEY doctor_id (doctor_id),
+            KEY visitation_id (visitation_id)
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
         dbDelta($sql_patients);
@@ -182,11 +204,12 @@ class CreateHospitalTables
         dbDelta($sql_visitations);
         dbDelta($sql_lab_investigations);
         dbDelta($sql_radiological_exams);
+        dbDelta($sql_audit_logs);
         dbDelta($sql_notifications);
         dbDelta($sql_appointments);
         dbDelta($sql_chats);
         dbDelta($sql_messages);
-        dbDelta($sql_audit_logs);
+        dbDelta($sql_medical_reports);
     }
 
     public static function down()
@@ -200,11 +223,12 @@ class CreateHospitalTables
             'hm_hmos',
             'hm_doctors',
             'hm_patients',
+            'hm_audit_logs',
             'hm_notifications',
             'hm_appointments',
-            'hm_audit_logs',
             'hm_chats',
-            'hm_chat_messages'
+            'hm_chat_messages',
+            'hm_medical_reports'
         ];
 
         foreach ($tables as $table) {

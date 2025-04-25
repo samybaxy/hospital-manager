@@ -64,8 +64,8 @@ class DashboardControllerTest extends TestCase
             'user_id' => $this->test_users['patient'],
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'phone_number' => '1234567890',
-            'sex' => 'Male',
+            'phone' => '1234567890',
+            'gender' => 'Male',
             'address' => '123 Test Street',
             'hmo_id' => 1
         ]);
@@ -77,8 +77,9 @@ class DashboardControllerTest extends TestCase
                 'doctor_id' => $this->test_users['doctor'],
                 'date' => date('Y-m-d', strtotime("-{$i} days")),
                 'time' => '09:00:00',
-                'status' => 'completed',
-                'notes' => 'Test visitation'
+                'medical_history' => 'Lorem ipsum dolor sit amet',
+                'diagnosis' => 'Test diagnosis',
+                'treatment' => 'Test treatment'
             ]);
         }
         
@@ -86,10 +87,8 @@ class DashboardControllerTest extends TestCase
         LabInvestigation::create([
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_users['doctor'],
-            'test_type' => 'Blood Test',
-            'test_name' => 'Complete Blood Count',
+            'test_type' => 'Complete Blood Count',
             'status' => 'pending',
-            'priority' => 'normal',
             'notes' => 'Test investigation',
             'created_at' => date('Y-m-d H:i:s')
         ]);

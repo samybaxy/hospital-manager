@@ -16,17 +16,31 @@ class LabInvestigation extends BaseModel
     
     protected $fillable = [
         'visitation_id',
+        'doctor_id',
         'lab_tech_id',
         'patient_id',
         'test_type',
-        'results',
-        'report_url',
-        'requested_by',
-        'notes',
         'status',
-        'completed_at',
-        'created_at'
+        'notes',
+        'results',
+        'created_at',
+        'updated_at'
     ];
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
+        parent::__construct($attributes);
+    }
 
     /**
      * Relationship with visitation
@@ -58,14 +72,6 @@ class LabInvestigation extends BaseModel
     public function patient()
     {
         return $this->belongs_to('HospitalManager\Models\Patient', 'patient_id');
-    }
-
-    /**
-     * Get table name
-     */
-    protected static function getTable()
-    {
-        return (new static)->table;
     }
 
     /**
@@ -234,7 +240,7 @@ class LabInvestigation extends BaseModel
     public static function getPendingForPatient($patientId)
     {
         global $wpdb;
-        $table = static::getTable();
+        $table = (new static)->table;
         
         $query = $wpdb->prepare(
             "SELECT * FROM {$table} 
@@ -256,7 +262,7 @@ class LabInvestigation extends BaseModel
     public static function getCompletedCountForTechToday($techId)
     {
         global $wpdb;
-        $table = static::getTable();
+        $table = (new static)->table;
         
         return (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$table} 
@@ -274,7 +280,7 @@ class LabInvestigation extends BaseModel
     public static function getPendingForTech($techId, $limit = 10)
     {
         global $wpdb;
-        $table = static::getTable();
+        $table = (new static)->table;
         
         $query = $wpdb->prepare(
             "SELECT t.*, p.display_name as patient_name 

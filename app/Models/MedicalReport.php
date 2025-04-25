@@ -23,6 +23,21 @@ class MedicalReport extends BaseModel
 
     protected static $conditions = [];
     protected static $orderBy = [];
+    
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
+        parent::__construct($attributes);
+    }
 
     /**
      * Get pending reports for a doctor
@@ -30,7 +45,7 @@ class MedicalReport extends BaseModel
     public static function getPendingForDoctor($doctorId, $limit = 5)
     {
         global $wpdb;
-        $table = static::getTable();
+        $table = (new static)->table;
         
         $query = $wpdb->prepare(
             "SELECT * FROM {$table} 
@@ -46,14 +61,6 @@ class MedicalReport extends BaseModel
         return array_map(function($item) {
             return new static($item);
         }, $results ?: []);
-    }
-
-    /**
-     * Get table name
-     */
-    protected static function getTable()
-    {
-        return (new static)->table;
     }
 
     /**
