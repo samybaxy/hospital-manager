@@ -216,11 +216,6 @@ class NotificationControllerTest extends TestCase
         $request = new WP_REST_Request('POST', "/{$this->namespace}/notifications/{$doctor_notification->id}/read");
         $response = $this->server->dispatch($request);
         
-        // Debug
-        echo "\nUser ID: " . get_current_user_id();
-        echo "\nNotification ID: " . $doctor_notification->id;
-        echo "\nResponse status: " . $response->get_status() . "\n";
-        
         // Check response status - should be 404 as it doesn't belong to user
         $this->assertEquals(404, $response->get_status());
     }
