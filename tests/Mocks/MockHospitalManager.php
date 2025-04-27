@@ -56,5 +56,8 @@ class MockHospitalManager
         
         // Register Lab Investigation API routes for testing
         LabInvestigationMockRestApi::register_routes();
+        
+        // Register Notification API routes for testing
+        NotificationMockRestApi::register_routes();
     }
 }
