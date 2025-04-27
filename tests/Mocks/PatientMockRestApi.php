@@ -63,6 +63,13 @@ class PatientMockRestApi
             'permission_callback' => [self::class, 'checkPatientSelfPermission'],
         ]);
 
+        // Patient's own record - alternative endpoint
+        register_rest_route(self::$namespace, '/patients/own', [
+            'methods' => 'GET',
+            'callback' => [self::class, 'getPatientSelf'],
+            'permission_callback' => [self::class, 'checkPatientSelfPermission'],
+        ]);
+
         // Patient search route
         register_rest_route(self::$namespace, '/patients/search', [
             'methods' => 'GET',

@@ -47,5 +47,11 @@ class MockHospitalManager
 
         // Register Dashboard API routes for testing
         DashboardMockRestApi::register_routes();
+        
+        // Register Medical Data API routes for testing
+        MedicalDataMockRestApi::register_routes();
+        
+        // Register Statistics API routes for testing
+        StatsMockRestApi::register_routes();
     }
 }

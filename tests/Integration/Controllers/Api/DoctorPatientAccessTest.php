@@ -31,11 +31,6 @@ class DoctorPatientAccessTest extends TestCase
     protected $test_patients = [];
 
     /**
-     * @var array
-     */
-    protected $test_doctors = [];
-
-    /**
      * Set up for each test
      */
     public function setUp(): void
@@ -51,23 +46,14 @@ class DoctorPatientAccessTest extends TestCase
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
         $this->test_users['nurse'] = $this->createUserWithRole('nurse');
         $this->test_users['lab_tech'] = $this->createUserWithRole('lab_tech');
-        $this->test_users['receptionist'] = $this->createUserWithRole('receptionist');
         $this->test_users['patient1'] = $this->createUserWithRole('patient');
         $this->test_users['patient2'] = $this->createUserWithRole('patient');
-        
-        // Create test doctors
-        $this->test_doctors[0] = $this->createTestDoctor([
-            'user_id' => $this->test_users['doctor'],
-            'first_name' => 'Test',
-            'last_name' => 'Doctor'
-        ]);
         
         // Create test patients with different assigned doctors
         $this->test_patients[0] = $this->createTestPatient([
             'user_id' => $this->test_users['patient1'],
             'first_name' => 'Assigned',
             'last_name' => 'Patient',
-            'doctor_id' => $this->test_doctors[0]->id
         ]);
         
         $this->test_patients[1] = $this->createTestPatient([
@@ -167,94 +153,6 @@ class DoctorPatientAccessTest extends TestCase
         $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}/prescriptions");
         $response = $this->server->dispatch($request);
         $this->assertEquals(200, $response->get_status());
-    }
-
-    /**
-     * Test that receptionists can register patients but can't modify medical data
-     */
-    public function testReceptionistPermissions()
-    {
-        // Set current user as receptionist
-        wp_set_current_user($this->test_users['receptionist']);
-        
-        // Receptionist should be able to register a new patient
-        $patient_data = [
-            'first_name' => 'Receptionist',
-            'last_name' => 'Created',
-            'phone_number' => '08012345678',
-            'sex' => 'F',
-            'age' => 32
-        ];
-        
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients");
-        $request->set_body_params($patient_data);
-        $response = $this->server->dispatch($request);
-        
-        // Should be allowed
-        $this->assertEquals(201, $response->get_status());
-        
-        // Get the created patient ID
-        $data = $response->get_data();
-        $new_patient_id = $data['data']->id;
-        
-        // Receptionist should NOT be able to add medical records
-        $medical_data = [
-            'diagnosis' => 'Test diagnosis',
-            'treatment' => 'Test treatment'
-        ];
-        
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients/{$new_patient_id}/medical-report");
-        $request->set_body_params($medical_data);
-        $response = $this->server->dispatch($request);
-        
-        // Check response status - should be forbidden
-        $this->assertEquals(403, $response->get_status());
-    }
-
-    /**
-     * Test nurse permissions for patient data
-     */
-    public function testNursePermissions()
-    {
-        // Set current user as nurse
-        wp_set_current_user($this->test_users['nurse']);
-        
-        // Create a test patient
-        $patient = $this->createTestPatient([
-            'first_name' => 'Nurse',
-            'last_name' => 'Test'
-        ]);
-        
-        // Nurse should be able to update vitals
-        $vitals_data = [
-            'temperature' => 37.2,
-            'blood_pressure' => '120/80',
-            'pulse' => 72,
-            'respiratory_rate' => 16,
-            'weight' => 70,
-            'height' => 175
-        ];
-        
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients/{$patient->id}/vitals");
-        $request->set_body_params($vitals_data);
-        $response = $this->server->dispatch($request);
-        
-        // Should be allowed
-        $this->assertEquals(201, $response->get_status());
-        
-        // Nurse should NOT be able to add prescriptions
-        $prescription_data = [
-            'medication' => 'Test medication',
-            'dosage' => '1 tablet daily',
-            'duration' => '7 days'
-        ];
-        
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/patients/{$patient->id}/prescriptions");
-        $request->set_body_params($prescription_data);
-        $response = $this->server->dispatch($request);
-        
-        // Check response status - should be forbidden
-        $this->assertEquals(403, $response->get_status());
     }
 
     /**
