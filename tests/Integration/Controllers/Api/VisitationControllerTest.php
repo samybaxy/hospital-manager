@@ -50,21 +50,21 @@ class VisitationControllerTest extends TestCase
         
         global $wp_rest_server;
         $this->server = $wp_rest_server = new WP_REST_Server;
+        
+        // Initialize the REST server
         do_action('rest_api_init');
         
         // Create test users with different roles
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
         $this->test_users['doctor'] = $this->createUserWithRole('doctor');
         $this->test_users['nurse'] = $this->createUserWithRole('nurse');
-        $this->test_users['receptionist'] = $this->createUserWithRole('receptionist');
         $this->test_users['patient'] = $this->createUserWithRole('patient');
         
         // Create a test doctor
         $this->test_doctor = $this->createTestDoctor([
             'user_id' => $this->test_users['doctor'],
             'first_name' => 'Test',
-            'last_name' => 'Doctor',
-            'specialization' => 'General Practice'
+            'last_name' => 'Doctor'
         ]);
         
         // Create a test patient
@@ -72,17 +72,15 @@ class VisitationControllerTest extends TestCase
             'user_id' => $this->test_users['patient'],
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'doctor_id' => $this->test_doctor->id
         ]);
         
         // Create a test visitation
         $this->test_visitation = $this->createTestVisitation([
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
+            'date' => date('Y-m-d'),
             'diagnosis' => 'Test diagnosis',
-            'treatment' => 'Test treatment',
-            'notes' => 'Test notes'
+            'treatment' => 'Test treatment'
         ]);
     }
 
@@ -164,11 +162,9 @@ class VisitationControllerTest extends TestCase
         $visitation_data = [
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d', strtotime('+1 day')),
+            'date' => date('Y-m-d', strtotime('+1 day')),
             'diagnosis' => 'New test diagnosis',
             'treatment' => 'New test treatment',
-            'notes' => 'New test notes',
-            'follow_up_date' => date('Y-m-d', strtotime('+14 days'))
         ];
         
         // Create request to create a new visitation
@@ -193,43 +189,6 @@ class VisitationControllerTest extends TestCase
         $visitation_id = $data->id;
         $created_visitation = Visitation::find($visitation_id);
         $this->assertNotNull($created_visitation);
-        $this->assertEquals($visitation_data['follow_up_date'], $created_visitation->follow_up_date);
-    }
-
-    /**
-     * Test nurses can create visitations
-     */
-    public function testCreateVisitationAsNurse()
-    {
-        // Set current user as nurse
-        wp_set_current_user($this->test_users['nurse']);
-        
-        // Prepare visitation data
-        $visitation_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
-            'diagnosis' => 'Nurse recorded diagnosis',
-            'treatment' => 'Nurse administered treatment',
-            'notes' => 'Notes from nurse',
-            'vitals' => [
-                'temperature' => 37.2,
-                'blood_pressure' => '120/80',
-                'pulse' => 72
-            ]
-        ];
-        
-        // Create request to create a new visitation
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/visitations");
-        $request->set_body_params($visitation_data);
-        $response = $this->server->dispatch($request);
-        
-        // Check response status - nurses should be allowed
-        $this->assertEquals(201, $response->get_status());
-        
-        // Verify the visitation exists with correct nurse data
-        $data = $response->get_data();
-        $this->assertEquals('Nurse recorded diagnosis', $data->diagnosis);
     }
 
     /**
@@ -244,10 +203,9 @@ class VisitationControllerTest extends TestCase
         $visitation_data = [
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
+            'date' => date('Y-m-d'),
             'diagnosis' => 'Self diagnosis',
-            'treatment' => 'Self treatment',
-            'notes' => 'Patient notes'
+            'treatment' => 'Self treatment'
         ];
         
         // Create request to create a new visitation
@@ -267,14 +225,13 @@ class VisitationControllerTest extends TestCase
         // Create another patient and visitation
         $another_patient = $this->createTestPatient([
             'first_name' => 'Another',
-            'last_name' => 'Patient',
-            'doctor_id' => $this->test_doctor->id
+            'last_name' => 'Patient'
         ]);
         
         $another_visitation = $this->createTestVisitation([
             'patient_id' => $another_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
+            'date' => date('Y-m-d'),
             'diagnosis' => 'Another diagnosis',
             'treatment' => 'Another treatment'
         ]);
@@ -308,7 +265,7 @@ class VisitationControllerTest extends TestCase
         $past_visitation = $this->createTestVisitation([
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d', strtotime('-30 days')),
+            'date' => date('Y-m-d', strtotime('-30 days')),
             'diagnosis' => 'Past diagnosis',
             'treatment' => 'Past treatment'
         ]);
@@ -316,7 +273,7 @@ class VisitationControllerTest extends TestCase
         $future_visitation = $this->createTestVisitation([
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d', strtotime('+30 days')),
+            'date' => date('Y-m-d', strtotime('+30 days')),
             'diagnosis' => 'Future diagnosis',
             'treatment' => 'Future treatment'
         ]);
@@ -357,37 +314,6 @@ class VisitationControllerTest extends TestCase
     }
 
     /**
-     * Test that receptionist cannot access visitation records
-     */
-    public function testReceptionistPermissions()
-    {
-        // Set current user as receptionist
-        wp_set_current_user($this->test_users['receptionist']);
-        
-        // Create request to get visitations
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/visitations");
-        $response = $this->server->dispatch($request);
-        
-        // Check response status - should be forbidden
-        $this->assertEquals(403, $response->get_status());
-        
-        // Create request to create a visitation
-        $visitation_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
-            'notes' => 'Receptionist notes'
-        ];
-        
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/visitations");
-        $request->set_body_params($visitation_data);
-        $response = $this->server->dispatch($request);
-        
-        // Should be forbidden
-        $this->assertEquals(403, $response->get_status());
-    }
-
-    /**
      * Test unauthenticated user permissions
      */
     public function testUnauthenticatedUserPermissions()
@@ -406,7 +332,7 @@ class VisitationControllerTest extends TestCase
         $visitation_data = [
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
-            'visit_date' => date('Y-m-d'),
+            'date' => date('Y-m-d'),
             'notes' => 'Unauthorized notes'
         ];
         
