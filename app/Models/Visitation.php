@@ -37,6 +37,104 @@ class Visitation extends BaseModel
         }
         
         parent::__construct($attributes);
+        
+        // Also ensure object properties have both id and ID
+        if (isset($this->id) && !isset($this->ID)) {
+            $this->ID = $this->id;
+        } elseif (isset($this->ID) && !isset($this->id)) {
+            $this->id = $this->ID;
+        }
+    }
+
+    /**
+     * Get visitations based on a field value
+     * 
+     * @param string $field Field to filter by
+     * @param mixed $value Value to match
+     * @return object Model
+     */
+    public static function where($field, $value)
+    {
+        global $wpdb;
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Create a model for chained calls
+        $model = new self();
+        $model->_where = [$field => $value];
+        
+        return $model;
+    }
+    
+    /**
+     * Get all records based on the where condition
+     * 
+     * @return array
+     */
+    public function get()
+    {
+        global $wpdb;
+        
+        if (empty($this->_where)) {
+            return [];
+        }
+        
+        // Get the first where condition
+        $field = key($this->_where);
+        $value = $this->_where[$field];
+        
+        // Prepare the query
+        $query = $wpdb->prepare(
+            "SELECT * FROM {$this->table} WHERE {$field} = %s ORDER BY id ASC",
+            $value
+        );
+        
+        // Fetch records
+        $records = $wpdb->get_results($query, ARRAY_A);
+        
+        // Convert to Visitation models
+        return array_map(function($record) {
+            return new self($record);
+        }, $records ?: []);
+    }
+
+    /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Fetch the patient record directly from the database
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $patient_visitation_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$patient_visitation_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+        if (isset($patient_visitation_data['id']) && !isset($patient_visitation_data['ID'])) {
+            $patient_visitation_data['ID'] = $patient_visitation_data['id'];
+        } elseif (isset($patient_visitation_data['ID']) && !isset($patient_visitation_data['id'])) {
+            $patient_visitation_data['id'] = $patient_visitation_data['ID'];
+        }
+        
+        // Create a new Patient instance with the fetched data
+        return new self($patient_visitation_data);
     }
 
     /**
@@ -92,6 +190,8 @@ class Visitation extends BaseModel
         }
 
         $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $attributes['id']; // Ensure both ID versions exist
+        
         return new static($attributes);
     }
 
@@ -118,75 +218,12 @@ class Visitation extends BaseModel
     }
 
     /**
-     * Query builder: where clause
-     */
-    public static function where($column, $operator = null, $value = null)
-    {
-        if ($value === null) {
-            $value = $operator;
-            $operator = '=';
-        }
-        
-        static::$conditions[] = [$column, $operator, $value];
-        return new static();
-    }
-
-    /**
      * Query builder: order by
      */
     public function orderBy($column, $direction = 'ASC')
     {
         static::$orderBy[] = [$column, strtoupper($direction)];
         return static::$queryType === 'instance' ? $this : new static();
-    }
-
-    /**
-     * Execute query and get results
-     */
-    public function get()
-    {
-        global $wpdb;
-        $table = $this->table;
-        $query = "SELECT * FROM {$table} WHERE 1=1";
-        $values = [];
-        
-        foreach (static::$conditions as $condition) {
-            $query .= $wpdb->prepare(" AND {$condition[0]} {$condition[1]} %s", $condition[2]);
-        }
-
-        if (!empty(static::$orderBy)) {
-            $query .= " ORDER BY " . implode(', ', array_map(function($order) {
-                return "{$order[0]} {$order[1]}";
-            }, static::$orderBy));
-        }
-
-        if (!empty($values)) {
-            $query = $wpdb->prepare($query, $values);
-        }
-
-        $results = $wpdb->get_results($query, ARRAY_A);
-        $items = array_map(function($item) {
-            return new static($item);
-        }, $results ?: []);
-
-        // Handle eager loading
-        if (!empty(static::$with)) {
-            foreach (static::$with as $relation) {
-                if (method_exists($this, $relation)) {
-                    foreach ($items as $item) {
-                        $item->$relation = $item->$relation()->get();
-                    }
-                }
-            }
-        }
-
-        // Reset static properties
-        static::$conditions = [];
-        static::$orderBy = [];
-        static::$with = [];
-        static::$queryType = 'static';
-
-        return $items;
     }
 
     /**
@@ -364,5 +401,47 @@ class Visitation extends BaseModel
         return array_map(function($item) use ($labInvestigation) {
             return new $labInvestigation($item);
         }, $results);
+    }
+
+    /**
+     * Convert the model to an array
+     * 
+     * @return array
+     */
+    public function toArray()
+    {
+        // Get all public properties
+        $properties = get_object_vars($this);
+        
+        // Remove any internal properties that start with underscore
+        foreach ($properties as $key => $value) {
+            if (strpos($key, '_') === 0) {
+                unset($properties[$key]);
+            }
+        }
+        
+        return $properties;
+    }
+    
+    /**
+     * Returns object converted to array.
+     * Required by Arrayable interface.
+     * 
+     * @return array
+     */
+    public function to_array()
+    {
+        return $this->toArray();
+    }
+    
+    /**
+     * Returns object converted to array.
+     * Required by Arrayable interface.
+     * 
+     * @return array
+     */
+    public function __toArray()
+    {
+        return $this->toArray();
     }
 }

@@ -21,7 +21,6 @@ class Patient extends BaseModel
         'hmo_id',
         'hmo_designated_id',
         'phone',
-        'date_of_birth',
         'age',
         'gender',
         'address',
@@ -76,6 +75,28 @@ class Patient extends BaseModel
         
         // Create a new Patient instance with the fetched data
         return new self($patient_data);
+    }
+
+    /**
+     * Get all patients
+     * 
+     * @return array
+     */
+    public static function all()
+    {
+        global $wpdb;
+        
+        // Get the table name
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        // Get all patients
+        $patients = $wpdb->get_results("SELECT * FROM $table ORDER BY id ASC", ARRAY_A);
+        
+        // Convert to Patient models
+        return array_map(function($patient) {
+            return new self($patient);
+        }, $patients ?: []);
     }
 
     /**
@@ -339,14 +360,6 @@ class Patient extends BaseModel
             $query->where($column, '=', $value);
         }
         return $query->get();
-    }
-
-    /**
-     * Get all records from the table
-     */
-    public static function all()
-    {
-        return (new static())->get();
     }
 
     /**

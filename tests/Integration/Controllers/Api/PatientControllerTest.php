@@ -51,7 +51,7 @@ class PatientControllerTest extends TestCase
             'user_id' => $this->test_users['patient'],
             'first_name' => 'Test',
             'last_name' => 'Patient',
-            'date_of_birth' => '1990-01-01',
+            'age' => '37',
             'gender' => 'Male',
             'phone' => '1234567890',
             'address' => '123 Test Street',
@@ -122,7 +122,7 @@ class PatientControllerTest extends TestCase
         $this->assertEquals($this->test_patient->id, $data['data']->id);
         $this->assertEquals('Test', $data['data']->first_name);
         $this->assertEquals('Patient', $data['data']->last_name);
-        $this->assertEquals('1990-01-01', $data['data']->date_of_birth);
+        $this->assertEquals('37', $data['data']->age);
         $this->assertEquals('Male', $data['data']->gender);
     }
 
@@ -147,7 +147,7 @@ class PatientControllerTest extends TestCase
             'user_id' => $user_id,
             'first_name' => 'New',
             'last_name' => 'Patient',
-            'date_of_birth' => '1985-05-15',
+            'age' => '37',
             'gender' => 'Female',
             'phone' => '9876543210',
             'address' => '456 New Street',

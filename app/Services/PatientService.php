@@ -29,14 +29,6 @@ class PatientService
             }
         }
         
-        // Validate data formats
-        if (isset($data['date_of_birth'])) {
-            // Check if date is in valid format (YYYY-MM-DD)
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['date_of_birth'])) {
-                throw new Exception("Invalid date format for date_of_birth. Expected YYYY-MM-DD format");
-            }
-        }
-        
         // Validate phone number format
         if (!preg_match('/^\d{10,15}$/', $data['phone'])) {
             throw new Exception("Invalid phone number format. Phone number should contain 10-15 digits only");

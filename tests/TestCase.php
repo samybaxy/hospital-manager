@@ -167,7 +167,6 @@ class TestCase extends \WP_UnitTestCase
             'first_name' => 'Test',
             'last_name' => 'Patient',
             'phone' => '08012345678',
-            'date_of_birth' => '1990-01-01',
             'gender' => 'Male',
             'age' => 30,
             'bio_data' => json_encode([
