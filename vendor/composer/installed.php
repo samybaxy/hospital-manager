@@ -3,7 +3,7 @@
         'name' => 'hospital-manager/hospital-manager',
         'pretty_version' => '1.0.x-dev',
         'version' => '1.0.9999999.9999999-dev',
-        'reference' => 'cc6ec48fb1496e53ca5e3f273c6884870a6d62f5',
+        'reference' => '01eb224f384061450b3c9296d29c8aecc9cdb4af',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -91,6 +91,24 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'antecedent/patchwork' => array(
+            'pretty_version' => '2.2.1',
+            'version' => '2.2.1.0',
+            'reference' => '1bf183a3e1bd094f231a2128b9ecc5363c269245',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../antecedent/patchwork',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
+        'brain/monkey' => array(
+            'pretty_version' => '2.6.2',
+            'version' => '2.6.2.0',
+            'reference' => 'd95a9d895352c30f47604ad1b825ab8fa9d1a373',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../brain/monkey',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
         'composer/installers' => array(
             'pretty_version' => 'v2.3.0',
             'version' => '2.3.0.0',
@@ -99,6 +117,18 @@
             'install_path' => __DIR__ . '/./installers',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'cordoval/hamcrest-php' => array(
+            'dev_requirement' => true,
+            'replaced' => array(
+                0 => '*',
+            ),
+        ),
+        'davedevelopment/hamcrest-php' => array(
+            'dev_requirement' => true,
+            'replaced' => array(
+                0 => '*',
+            ),
         ),
         'doctrine/instantiator' => array(
             'pretty_version' => '2.0.0',
@@ -154,10 +184,19 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
+        'hamcrest/hamcrest-php' => array(
+            'pretty_version' => 'v2.0.1',
+            'version' => '2.0.1.0',
+            'reference' => '8c3d0a3f6af734494ad8f6fbbee0ba92422859f3',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../hamcrest/hamcrest-php',
+            'aliases' => array(),
+            'dev_requirement' => true,
+        ),
         'hospital-manager/hospital-manager' => array(
             'pretty_version' => '1.0.x-dev',
             'version' => '1.0.9999999.9999999-dev',
-            'reference' => 'cc6ec48fb1496e53ca5e3f273c6884870a6d62f5',
+            'reference' => '01eb224f384061450b3c9296d29c8aecc9cdb4af',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -165,6 +204,12 @@
         ),
         'jakub-onderka/php-console-color' => array(
             'dev_requirement' => false,
+            'replaced' => array(
+                0 => '*',
+            ),
+        ),
+        'kodova/hamcrest-php' => array(
+            'dev_requirement' => true,
             'replaced' => array(
                 0 => '*',
             ),
@@ -177,6 +222,15 @@
             'install_path' => __DIR__ . '/../mck89/peast',
             'aliases' => array(),
             'dev_requirement' => false,
+        ),
+        'mockery/mockery' => array(
+            'pretty_version' => '1.6.12',
+            'version' => '1.6.12.0',
+            'reference' => '1f4efdd7d3beafe9807b08156dfcb176d18f1699',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../mockery/mockery',
+            'aliases' => array(),
+            'dev_requirement' => true,
         ),
         'myclabs/deep-copy' => array(
             'pretty_version' => '1.13.0',
