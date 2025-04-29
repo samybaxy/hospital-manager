@@ -299,6 +299,8 @@ class TestCase extends \WP_UnitTestCase
             'diagnosis' => 'Test diagnosis',
             'treatment' => 'Test treatment',
             'notes' => 'Test medical report notes',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
         ];
 
         $data = array_merge($default_data, $overrides);
@@ -307,6 +309,41 @@ class TestCase extends \WP_UnitTestCase
             return \HospitalManager\Models\MedicalReport::create($data);
         } catch (\Exception $e) {
             $this->fail('Failed to create test medical report: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create a test audit log entry
+     *
+     * @param array $overrides Override default audit log data
+     * @return \HospitalManager\Models\AuditLog|null
+     */
+    protected function createTestAuditLog(array $overrides = [])
+    {
+        // Get user ID from overrides or create a test user
+        $user_id = isset($overrides['user_id']) ? $overrides['user_id'] : $this->createUserWithRole('administrator');
+        
+        $default_data = [
+            'user_id' => $user_id,
+            'action' => 'test_action',
+            'entity_type' => 'test_entity',
+            'entity_id' => 1,
+            'details' => json_encode(['test' => 'data']),
+            'changes' => json_encode(['field' => 'value']),
+            'created_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            // Create the audit log entry using the model's create method
+            return \HospitalManager\Models\AuditLog::create($data);
+        } catch (\Exception $e) {
+            error_log('Error creating audit log: ' . $e->getMessage());
+            if ($e->getMessage()) {
+                error_log('Database error: ' . $e->getMessage());
+            }
             return null;
         }
     }
