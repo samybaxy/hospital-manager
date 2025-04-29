@@ -385,4 +385,67 @@ class Patient extends BaseModel
     {
         return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'id');
     }
+    
+    /**
+     * Save the model to the database.
+     * 
+     * @return bool
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        $table = $this->getTable();
+        $data = [];
+        
+        // Prepare only fillable attributes for saving
+        foreach ($this->fillable as $field) {
+            if (isset($this->attributes[$field])) {
+                $data[$field] = $this->attributes[$field];
+            }
+        }
+        
+        // Add updated_at timestamp if it's fillable
+        if (in_array('updated_at', $this->fillable)) {
+            $data['updated_at'] = current_time('mysql');
+        }
+        
+        // Make sure bio_data is properly encoded
+        if (isset($data['bio_data']) && is_array($data['bio_data'])) {
+            $data['bio_data'] = json_encode($data['bio_data']);
+        }
+        
+        // Determine if this is an update or insert
+        if (isset($this->attributes['id']) && !empty($this->attributes['id'])) {
+            // This is an update
+            $result = $wpdb->update(
+                $table,
+                $data,
+                ['id' => $this->attributes['id']],
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data),
+                ['%d']
+            );
+            
+            return $result !== false;
+        } else {
+            // This is an insert
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result !== false) {
+                $this->attributes['id'] = $wpdb->insert_id;
+                $this->attributes['ID'] = $this->attributes['id']; // For compatibility
+                return true;
+            }
+            
+            return false;
+        }
+    }
 }
