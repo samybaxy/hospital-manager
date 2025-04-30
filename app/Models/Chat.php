@@ -209,4 +209,228 @@ class Chat extends BaseModel
             ->orderBy('created_at', 'DESC')
             ->get();
     }
+
+    /**
+     * Start a new query with conditions
+     * 
+     * @param string|array $column Column name or array of conditions
+     * @param string|null $operator Operator (=, >, <, etc.) or value if third param is omitted
+     * @param mixed|null $value Value to compare against
+     * @return static
+     */
+    public static function where($column, $operator = null, $value = null)
+    {
+        $instance = new static();
+        static::$conditions = [];
+        
+        if (is_array($column)) {
+            foreach ($column as $key => $val) {
+                static::$conditions[] = [
+                    'column' => $key,
+                    'operator' => '=',
+                    'value' => $val
+                ];
+            }
+        } else {
+            // If only two parameters are provided, assume the operator is '='
+            if ($value === null) {
+                $value = $operator;
+                $operator = '=';
+            }
+            
+            static::$conditions[] = [
+                'column' => $column,
+                'operator' => $operator,
+                'value' => $value
+            ];
+        }
+        
+        return $instance;
+    }
+    
+    /**
+     * Add an AND condition to the query
+     * 
+     * @param string $column Column name
+     * @param string $operator Operator (=, >, <, etc.) or value if third param is omitted
+     * @param mixed|null $value Value to compare against
+     * @return $this
+     */
+    public function andWhere($column, $operator = null, $value = null)
+    {
+        // If only two parameters are provided, assume the operator is '='
+        if ($value === null) {
+            $value = $operator;
+            $operator = '=';
+        }
+        
+        static::$conditions[] = [
+            'column' => $column,
+            'operator' => $operator,
+            'value' => $value
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * Order the results
+     * 
+     * @param string $column Column to order by
+     * @param string $direction Direction (ASC or DESC)
+     * @return $this
+     */
+    public function orderBy($column, $direction = 'ASC')
+    {
+        static::$orderBy = [
+            'column' => $column,
+            'direction' => strtoupper($direction)
+        ];
+        
+        return $this;
+    }
+    
+    /**
+     * Get the first result
+     * 
+     * @return static|null
+     */
+    public function first()
+    {
+        global $wpdb;
+        
+        // Get the table name
+        $table = $this->getTable();
+        
+        // Build the query
+        $query = "SELECT * FROM {$table} WHERE 1=1";
+        $params = [];
+        
+        foreach (static::$conditions as $condition) {
+            $query .= " AND {$condition['column']} {$condition['operator']} %s";
+            $params[] = $condition['value'];
+        }
+        
+        if (!empty(static::$orderBy)) {
+            $query .= " ORDER BY " . static::$orderBy['column'] . " " . static::$orderBy['direction'];
+        }
+        
+        $query .= " LIMIT 1";
+        
+        // Prepare and execute the query
+        $prepared_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+        $result = $wpdb->get_row($prepared_query, ARRAY_A);
+        
+        // Reset static properties for future queries
+        static::$conditions = [];
+        static::$orderBy = [];
+        
+        return $result ? new static($result) : null;
+    }
+    
+    /**
+     * Get all results
+     * 
+     * @return array
+     */
+    public function get()
+    {
+        global $wpdb;
+        
+        // Get the table name
+        $table = $this->getTable();
+        
+        // Build the query
+        $query = "SELECT * FROM {$table} WHERE 1=1";
+        $params = [];
+        
+        foreach (static::$conditions as $condition) {
+            $query .= " AND {$condition['column']} {$condition['operator']} %s";
+            $params[] = $condition['value'];
+        }
+        
+        if (!empty(static::$orderBy)) {
+            $query .= " ORDER BY " . static::$orderBy['column'] . " " . static::$orderBy['direction'];
+        }
+        
+        // Prepare and execute the query
+        $prepared_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+        $results = $wpdb->get_results($prepared_query, ARRAY_A);
+        
+        // Reset static properties for future queries
+        static::$conditions = [];
+        static::$orderBy = [];
+        
+        $chats = [];
+        foreach ($results as $result) {
+            $chats[] = new static($result);
+        }
+        
+        return $chats;
+    }
+
+    /**
+     * Save the current chat to the database
+     * 
+     * @return bool Success status
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        // Make sure we have the correct table name
+        $table = $wpdb->prefix . $this->tableName;
+        
+        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+            // Update existing record
+            $result = $wpdb->update(
+                $table,
+                [
+                    'doctor_id' => $this->attributes['doctor_id'],
+                    'patient_id' => $this->attributes['patient_id'],
+                    'last_message_at' => $this->attributes['last_message_at'],
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $this->attributes['id']],
+                [
+                    '%d', // doctor_id
+                    '%d', // patient_id
+                    '%s', // last_message_at
+                    '%s', // updated_at
+                ],
+                ['%d'] // id
+            );
+            
+            return $result !== false;
+        } else {
+            // This should not happen as we use the create method for new records
+            return false;
+        }
+    }
+    
+    /**
+     * Delete the current chat from the database
+     * 
+     * @return bool Success status
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+            return false;
+        }
+        
+        // Make sure we have the correct table name
+        $table = $wpdb->prefix . $this->tableName;
+        
+        // Delete the record
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        return $result !== false;
+    }
 }
