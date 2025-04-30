@@ -44,6 +44,58 @@ class ChatMessageTest extends TestCase
     }
     
     /**
+     * Create a test chat 
+     *
+     * @param array $overrides Override default chat data
+     * @return Chat
+     */
+    protected function createTestChat(array $overrides = [])
+    {
+        $default_data = [
+            'doctor_id' => $this->sender_id,
+            'patient_id' => $this->recipient_id,
+            'created_at' => current_time('mysql'),
+            'last_message_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            return Chat::create($data);
+        } catch (\Exception $e) {
+            error_log('Failed to create test chat: ' . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Create a test chat message
+     *
+     * @param array $overrides Override default message data
+     * @return ChatMessage
+     */
+    protected function createTestChatMessage(array $overrides = [])
+    {
+        $default_data = [
+            'chat_id' => $this->chat->id,
+            'sender_id' => $this->sender_id,
+            'receiver_id' => $this->recipient_id,
+            'message' => 'Test message',
+            'read' => 0,
+            'created_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            return ChatMessage::create($data);
+        } catch (\Exception $e) {
+            error_log('Failed to create test chat message: ' . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
      * Test chat message creation
      */
     public function testCreateChatMessage()

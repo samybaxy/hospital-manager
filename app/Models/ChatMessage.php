@@ -39,6 +39,41 @@ class ChatMessage extends BaseModel
     }
 
     /**
+     * Override the find method from FindTrait to handle our constructor's array requirement
+     * 
+     * @param mixed $id Record ID.
+     * @return object|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
+        // Fetch the chat message record directly from the database.
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $message_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$message_data) {
+            return null;
+        }
+        
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
+        if (isset($message_data['id']) && !isset($message_data['ID'])) {
+            $message_data['ID'] = $message_data['id'];
+        }
+        
+        // Create a new chat message instance with the fetched data.
+        return new static($message_data);
+    }
+
+    /**
      * Get the sender user
      */
     public function getSender()
@@ -176,7 +211,7 @@ class ChatMessage extends BaseModel
         $query = "SELECT * FROM {$table} WHERE 1=1";
 
         foreach (static::$conditions as $condition) {
-            $query .= $wpdb->prepare(" AND {$condition[0]} = %s", $condition[2]);
+            $query .= $wpdb->prepare(" AND `{$condition[0]}` = %s", $condition[2]);
         }
 
         if (!empty(static::$orderBy)) {
@@ -204,5 +239,74 @@ class ChatMessage extends BaseModel
     public function chat()
     {
         return Chat::find($this->chat_id);
+    }
+
+    /**
+     * Save the current message to the database
+     * 
+     * @return bool Success status
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        // Make sure we have the correct table name
+        $table = $wpdb->prefix . $this->tableName;
+        
+        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+            // Update existing record
+            $result = $wpdb->update(
+                $table,
+                [
+                    'chat_id' => $this->attributes['chat_id'],
+                    'sender_id' => $this->attributes['sender_id'],
+                    'receiver_id' => $this->attributes['receiver_id'],
+                    'message' => $this->attributes['message'],
+                    'read' => $this->attributes['read'],
+                    'created_at' => $this->attributes['created_at'],
+                ],
+                ['id' => $this->attributes['id']],
+                [
+                    '%d', // chat_id
+                    '%d', // sender_id
+                    '%d', // receiver_id
+                    '%s', // message
+                    '%d', // read
+                    '%s', // created_at
+                ],
+                ['%d'] // id
+            );
+            
+            return $result !== false;
+        } else {
+            // This should not happen as we use the create method for new records
+            return false;
+        }
+    }
+    
+    /**
+     * Delete the current message from the database
+     * 
+     * @return bool Success status
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+            return false;
+        }
+        
+        // Make sure we have the correct table name
+        $table = $wpdb->prefix . $this->tableName;
+        
+        // Delete the record
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        return $result !== false;
     }
 }

@@ -185781,3 +185781,479 @@ HospitalManager\Models\Patient Object
 
 )
 
+[2025-04-30 19:26:23] Creating test patient with data:
+Array
+(
+    [user_id] => 0
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-04-30 19:26:23
+    [updated_at] => 2025-04-30 19:26:23
+)
+
+[2025-04-30 19:26:23] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 0
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-04-30 19:26:23
+            [updated_at] => 2025-04-30 19:26:23
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-04-30 19:26:23] Creating test patient with data:
+Array
+(
+    [user_id] => 0
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-04-30 19:26:23
+    [updated_at] => 2025-04-30 19:26:23
+)
+
+[2025-04-30 19:26:23] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 0
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-04-30 19:26:23
+            [updated_at] => 2025-04-30 19:26:23
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-04-30 19:26:24] Creating test patient with data:
+Array
+(
+    [user_id] => 0
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-04-30 19:26:24
+    [updated_at] => 2025-04-30 19:26:24
+)
+
+[2025-04-30 19:26:24] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 0
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-04-30 19:26:24
+            [updated_at] => 2025-04-30 19:26:24
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-04-30 19:26:24] Creating test patient with data:
+Array
+(
+    [user_id] => 0
+    [first_name] => John
+    [last_name] => Doe
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-04-30 19:26:24
+    [updated_at] => 2025-04-30 19:26:24
+)
+
+[2025-04-30 19:26:24] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 0
+            [first_name] => John
+            [last_name] => Doe
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-04-30 19:26:24
+            [updated_at] => 2025-04-30 19:26:24
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
