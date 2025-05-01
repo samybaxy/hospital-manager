@@ -16,7 +16,7 @@ class DoctorTest extends TestCase
             'user_id' => 1,
             'first_name' => 'Jane',
             'last_name' => 'Smith',
-            'phone_number' => '08098765432',
+            'phone' => '08098765432',
             'photo' => 'doctor-jane.jpg'
         ];
 
@@ -25,7 +25,7 @@ class DoctorTest extends TestCase
         $this->assertInstanceOf(Doctor::class, $doctor);
         $this->assertEquals('Jane', $doctor->first_name);
         $this->assertEquals('Smith', $doctor->last_name);
-        $this->assertEquals('08098765432', $doctor->phone_number);
+        $this->assertEquals('08098765432', $doctor->phone);
         $this->assertEquals('doctor-jane.jpg', $doctor->photo);
     }
 
@@ -90,14 +90,33 @@ class DoctorTest extends TestCase
         // Create a test doctor
         $test_doctor = $this->createTestDoctor();
         
-        // Update data
-        $test_doctor->phone_number = '07011223344';
-        $test_doctor->save();
+        // Store the original ID and get original data
+        $doctor_id = $test_doctor->id;
         
-        // Retrieve the doctor again to verify changes were saved
-        $updated_doctor = Doctor::find($test_doctor->id);
+        // Set a new phone number
+        $new_phone = '07011223344';
+        // Use proper setter method instead of directly accessing protected attributes array
+        $test_doctor->phone = $new_phone;
         
-        $this->assertEquals('07011223344', $updated_doctor->phone_number);
+        // Save the changes
+        $result = $test_doctor->save();
+
+        echo '// Debugging output\n';
+        print_r( $result );
+        
+        // Verify save was successful
+        $this->assertTrue($result, "The save operation should return true");
+        
+        // Get a fresh instance from the database to verify the update
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_doctors';
+        
+        // Use direct SQL query to check the database
+        $sql = $wpdb->prepare("SELECT phone FROM $table WHERE id = %d", $doctor_id);
+        $db_phone = $wpdb->get_var($sql);
+        
+        // Verify the phone was updated in the database
+        $this->assertEquals($new_phone, $db_phone, "The phone number should be updated in the database");
     }
 
     /**
