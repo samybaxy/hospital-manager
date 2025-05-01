@@ -347,4 +347,32 @@ class TestCase extends \WP_UnitTestCase
             return null;
         }
     }
+    
+    /**
+     * Create a test HMO
+     *
+     * @param array $overrides Override default HMO data
+     * @return \HospitalManager\Models\HMO|null
+     */
+    protected function createTestHMO(array $overrides = [])
+    {
+        $default_data = [
+            'name' => 'Test HMO',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            // Create the HMO using the model's create method
+            return \HospitalManager\Models\HMO::create($data);
+        } catch (\Exception $e) {
+            error_log('Error creating HMO: ' . $e->getMessage());
+            if ($e->getMessage()) {
+                error_log('Database error: ' . $e->getMessage());
+            }
+            return null;
+        }
+    }
 }
