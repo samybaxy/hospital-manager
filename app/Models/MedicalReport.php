@@ -215,4 +215,118 @@ class MedicalReport extends BaseModel
         $created_data = array_merge(['id' => $id], $fillable_data);
         return new static($created_data);
     }
+
+    /**
+     * Find a medical report by ID
+     * 
+     * @param int $id The medical report ID
+     * @return static|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new static();
+        $table = $instance->table;
+        
+        // Clear any potential WordPress cache for this query
+        wp_cache_delete($id, 'hm_medical_reports');
+        
+        // Add SQL_NO_CACHE to prevent MySQL query caching issues
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d LIMIT 1", $id);
+        
+        // Use no_found_rows to improve performance and suppress filters
+        $report_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$report_data) {
+            return null;
+        }
+        
+        // Create a new instance with the fetched data
+        return new static($report_data);
+    }
+
+    /**
+     * Save the current medical report to the database
+     * 
+     * @return bool Success status
+     */
+    public function save()
+    {
+        
+        global $wpdb;
+    
+        // Make sure we have a table name
+        $table = $wpdb->prefix . $this->tableName;
+
+        // Ensure timestamps are set
+        if (!isset($this->attributes['updated_at'])) {
+            $this->attributes['updated_at'] = current_time('mysql');
+        }
+        
+        // Get the primary key and value
+        $primary_key = $this->primaryKey;
+        $id = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
+        
+        // If we have an ID, update the record, otherwise insert a new one
+        if (!empty($id)) {
+            // Update existing record
+            $result = $wpdb->update(
+                $table,
+                $this->attributes,
+                array($primary_key => $id)
+            );
+            
+            return $result !== false;
+        } else {
+            // Insert new record
+            $result = $wpdb->insert($table, $this->attributes);
+            
+            if ($result) {
+                // Set the ID on the instance
+                $this->attributes[$primary_key] = $wpdb->insert_id;
+                return true;
+            }
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Delete the current medical report from the database
+     * 
+     * @return bool Success status
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+            return false;
+        }
+        
+        // Make sure we have the table name
+        if (empty($this->table)) {
+            $this->table = $wpdb->prefix . $this->tableName;
+        }
+        
+        // Delete the record
+        $result = $wpdb->delete(
+            $this->table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log('Failed to delete medical report: ' . $wpdb->last_error);
+            return false;
+        }
+        
+        return true;
+    }
 }

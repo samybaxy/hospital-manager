@@ -288,17 +288,19 @@ class TestCase extends \WP_UnitTestCase
     /**
      * Create a test medical report
      * 
-     * @param int $patient_id Patient ID
      * @param array $overrides Override default medical report data
      * @return \HospitalManager\Models\MedicalReport|null
      */
-    protected function createTestMedicalReport(int $patient_id, array $overrides = [])
+    protected function createTestMedicalReport(array $overrides = [])
     {
         $default_data = [
-            'patient_id' => $patient_id,
+            'patient_id' => isset($overrides['patient_id']) ? $overrides['patient_id'] : 0,
+            'doctor_id' => isset($overrides['doctor_id']) ? $overrides['doctor_id'] : 0,
+            'visitation_id' => isset($overrides['visitation_id']) ? $overrides['visitation_id'] : 0,
+            'report_content' => 'Test report content',
             'diagnosis' => 'Test diagnosis',
             'treatment' => 'Test treatment',
-            'notes' => 'Test medical report notes',
+            'status' => 'pending',
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
         ];
