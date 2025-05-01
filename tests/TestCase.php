@@ -375,4 +375,108 @@ class TestCase extends \WP_UnitTestCase
             return null;
         }
     }
+    
+    /**
+     * Create a test visitation
+     *
+     * @param array $overrides Override default visitation data
+     * @return \HospitalManager\Models\Visitation|null
+     */
+    protected function createTestVisitation(array $overrides = [])
+    {
+        $default_data = [
+            'patient_id' => isset($overrides['patient_id']) ? $overrides['patient_id'] : 0,
+            'doctor_id' => isset($overrides['doctor_id']) ? $overrides['doctor_id'] : 0,
+            'date' => date('Y-m-d'),
+            'time' => '10:00:00',
+            'medical_history' => 'Test medical history',
+            'diagnosis' => 'Test diagnosis',
+            'treatment' => 'Test treatment',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_visitations';
+            
+            // Insert the record
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result === false) {
+                throw new \Exception($wpdb->last_error);
+            }
+            
+            $data['id'] = $wpdb->insert_id;
+            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            
+            return new \HospitalManager\Models\Visitation($data);
+        } catch (\Exception $e) {
+            error_log('Error creating visitation: ' . $e->getMessage());
+            if ($e->getMessage()) {
+                error_log('Database error: ' . $e->getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Create a test lab investigation
+     *
+     * @param array $overrides Override default lab investigation data
+     * @return \HospitalManager\Models\LabInvestigation|null
+     */
+    protected function createTestLabInvestigation(array $overrides = [])
+    {
+        $default_data = [
+            'visitation_id' => isset($overrides['visitation_id']) ? $overrides['visitation_id'] : 0,
+            'patient_id' => isset($overrides['patient_id']) ? $overrides['patient_id'] : 0,
+            'doctor_id' => isset($overrides['doctor_id']) ? $overrides['doctor_id'] : 0,
+            'lab_tech_id' => isset($overrides['lab_tech_id']) ? $overrides['lab_tech_id'] : 0,
+            'test_type' => 'Blood Test',
+            'status' => 'pending',
+            'notes' => 'Test lab investigation',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_lab_investigations';
+            
+            // Insert the record
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result === false) {
+                throw new \Exception($wpdb->last_error);
+            }
+            
+            $data['id'] = $wpdb->insert_id;
+            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            
+            return new \HospitalManager\Models\LabInvestigation($data);
+        } catch (\Exception $e) {
+            error_log('Error creating lab investigation: ' . $e->getMessage());
+            if ($e->getMessage()) {
+                error_log('Database error: ' . $e->getMessage());
+            }
+            return null;
+        }
+    }
 }

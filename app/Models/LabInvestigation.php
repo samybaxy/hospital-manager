@@ -43,11 +43,54 @@ class LabInvestigation extends BaseModel
     }
 
     /**
+     * Find a lab investigation by ID
+     * 
+     * @param int $id The lab investigation ID
+     * @return static|null
+     */
+    public static function find($id = 0)
+    {
+        global $wpdb;
+        
+        if (empty($id)) {
+            return null;
+        }
+        
+        // Get the table name
+        $instance = new static();
+        $table = $instance->getTable();
+        
+        // Clear any potential WordPress cache for this query
+        wp_cache_delete($id, 'hm_lab_investigations');
+        
+        // Add SQL_NO_CACHE to prevent MySQL query caching issues
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d LIMIT 1", $id);
+        error_log("Finding lab investigation with query: {$query}");
+        
+        // Use no_found_rows to improve performance and suppress filters
+        $lab_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$lab_data) {
+            error_log("No lab investigation found with ID: {$id}");
+            return null;
+        }
+        
+        error_log("Lab investigation found: " . print_r($lab_data, true));
+        
+        // Create a new instance with the fetched data
+        return new static($lab_data);
+    }
+    
+    /**
      * Relationship with visitation
      */
     public function visitation()
     {
-        return $this->belongs_to('HospitalManager\Models\Visitation', 'visitation_id');
+        if (!isset($this->attributes['visitation_id'])) {
+            return null;
+        }
+        
+        return Visitation::find($this->attributes['visitation_id']);
     }
 
     /**
@@ -59,11 +102,15 @@ class LabInvestigation extends BaseModel
     }
 
     /**
-     * Relationship with requesting doctor (WordPress user)
+     * Relationship with requesting doctor (Doctor model)
      */
     public function requestedBy()
     {
-        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'requested_by');
+        if (!isset($this->attributes['doctor_id'])) {
+            return null;
+        }
+        
+        return Doctor::find($this->attributes['doctor_id']);
     }
 
     /**
@@ -316,5 +363,121 @@ class LabInvestigation extends BaseModel
             }
             return $model;
         }, $results ?: []);
+    }
+    
+    /**
+     * Save the current lab investigation to the database
+     * 
+     * @return bool Success status
+     */
+    public function save()
+    {
+        global $wpdb;
+    
+        // Make sure we have a table name
+        $table = $wpdb->prefix . $this->tableName;
+
+        // Ensure timestamps are set
+        if (!isset($this->attributes['updated_at'])) {
+            $this->attributes['updated_at'] = current_time('mysql');
+        }
+        
+        // Get the primary key and value
+        $primary_key = $this->primaryKey;
+        $id = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
+        
+        // If we have an ID, update the record, otherwise insert a new one
+        if (!empty($id)) {
+            // Update existing record
+            $result = $wpdb->update(
+                $table,
+                $this->attributes,
+                array($primary_key => $id)
+            );
+            
+            return $result !== false;
+        } else {
+            // Insert new record
+            $result = $wpdb->insert($table, $this->attributes);
+            
+            if ($result) {
+                // Set the ID on the instance
+                $this->attributes[$primary_key] = $wpdb->insert_id;
+                return true;
+            }
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Delete the current lab investigation from the database
+     * 
+     * @return bool Success status
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+            return false;
+        }
+        
+        // Make sure we have the table name
+        $table = $wpdb->prefix . $this->tableName;
+        
+        // Debug log
+        error_log('Deleting lab investigation with ID: ' . $this->attributes['id'] . ' from table: ' . $table);
+        
+        // Delete the record
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        if ($result === false) {
+            error_log('Failed to delete lab investigation: ' . $wpdb->last_error);
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Update the status of the lab investigation
+     * 
+     * @param string $status The new status
+     * @return bool Success status
+     */
+    public function updateStatus($status)
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+            return false;
+        }
+        
+        // Update both the attribute and direct property
+        $this->attributes['status'] = $status;
+        $this->status = $status;
+        
+        $result = $wpdb->update(
+            $this->table,
+            ['status' => $status],
+            ['id' => $this->attributes['id']],
+            ['%s'],
+            ['%d']
+        );
+        
+        error_log("Status update query: " . $wpdb->last_query);
+        
+        if ($result === false) {
+            error_log("Failed to update status: " . $wpdb->last_error);
+            return false;
+        }
+        
+        error_log("Status updated successfully to: {$status}");
+        return true;
     }
 }

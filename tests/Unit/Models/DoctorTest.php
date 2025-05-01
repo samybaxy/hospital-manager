@@ -100,9 +100,6 @@ class DoctorTest extends TestCase
         
         // Save the changes
         $result = $test_doctor->save();
-
-        echo '// Debugging output\n';
-        print_r( $result );
         
         // Verify save was successful
         $this->assertTrue($result, "The save operation should return true");

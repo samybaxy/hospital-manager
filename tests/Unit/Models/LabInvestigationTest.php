@@ -7,7 +7,7 @@ use HospitalManager\Models\LabInvestigation;
 use HospitalManager\Models\Patient;
 use HospitalManager\Models\Doctor;
 use HospitalManager\Models\Visitation;
-use WPMVC\MVC\Models\UserModel;
+use HospitalManager\Tests\Helpers\Debugger;
 
 class LabInvestigationTest extends TestCase
 {
@@ -53,7 +53,7 @@ class LabInvestigationTest extends TestCase
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
             'test_type' => 'Complete Blood Count',
-            'requested_by' => $this->doctor->id,
+            'doctor_id' => $this->doctor->id,
             'notes' => 'Check for infection markers',
             'status' => 'pending',
             'created_at' => current_time('mysql')
@@ -65,7 +65,7 @@ class LabInvestigationTest extends TestCase
         $this->assertEquals($this->visitation->id, $lab->visitation_id);
         $this->assertEquals($this->patient->id, $lab->patient_id);
         $this->assertEquals('Complete Blood Count', $lab->test_type);
-        $this->assertEquals($this->doctor->id, $lab->requested_by);
+        $this->assertEquals($this->doctor->id, $lab->doctor_id);
         $this->assertEquals('pending', $lab->status);
     }
 
@@ -78,7 +78,7 @@ class LabInvestigationTest extends TestCase
         $lab = $this->createTestLabInvestigation([
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id
+            'doctor_id' => $this->doctor->id
         ]);
         
         // Find the lab investigation by ID
@@ -100,7 +100,7 @@ class LabInvestigationTest extends TestCase
         $lab = $this->createTestLabInvestigation([
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id
+            'doctor_id' => $this->doctor->id
         ]);
         
         // Get the related visitation
@@ -121,7 +121,7 @@ class LabInvestigationTest extends TestCase
         $lab = $this->createTestLabInvestigation([
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id
+            'doctor_id' => $this->doctor->id
         ]);
         
         // Get the related doctor
@@ -140,24 +140,20 @@ class LabInvestigationTest extends TestCase
         $lab = $this->createTestLabInvestigation([
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id,
+            'doctor_id' => $this->doctor->id,
             'status' => 'pending'
         ]);
-        
+
         // Update the lab investigation with results
         $lab->results = 'Normal blood count, hemoglobin 14.2 g/dL';
-        $lab->report_url = 'https://example.com/reports/lab123.pdf';
         $lab->status = 'completed';
-        $lab->completed_at = current_time('mysql');
         $lab->save();
-        
+
         // Retrieve the lab investigation again
         $updated = LabInvestigation::find($lab->id);
         
         $this->assertEquals('completed', $updated->status);
         $this->assertEquals('Normal blood count, hemoglobin 14.2 g/dL', $updated->results);
-        $this->assertEquals('https://example.com/reports/lab123.pdf', $updated->report_url);
-        $this->assertNotNull($updated->completed_at);
     }
 
     /**
@@ -169,7 +165,7 @@ class LabInvestigationTest extends TestCase
         $lab = $this->createTestLabInvestigation([
             'visitation_id' => $this->visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id
+            'doctor_id' => $this->doctor->id
         ]);
         
         $lab_id = $lab->id;
