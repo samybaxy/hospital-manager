@@ -4,10 +4,7 @@ namespace HospitalManager\Tests\Unit\Models;
 
 use HospitalManager\Tests\TestCase;
 use HospitalManager\Models\Stats;
-use HospitalManager\Models\Patient;
-use HospitalManager\Models\Visitation;
 use HospitalManager\Models\Doctor;
-use HospitalManager\Models\HMO;
 
 class StatsTest extends TestCase
 {
@@ -123,10 +120,11 @@ class StatsTest extends TestCase
         // Create a map of HMO id to patient count
         $hmo_counts = [];
         foreach ($distribution as $data) {
+            // The name field is actually the hmo_id
             $hmo_counts[$data->name] = $data->value;
         }
         
-        // Verify counts
+        // Verify counts - note that name field is actually the HMO ID
         $this->assertEquals(2, $hmo_counts[$this->hmos[0]->id]); // HMO 0 should have 2 patients (index 0 and 3)
         $this->assertEquals(2, $hmo_counts[$this->hmos[1]->id]); // HMO 1 should have 2 patients (index 1 and 4)
         $this->assertEquals(1, $hmo_counts[$this->hmos[2]->id]); // HMO 2 should have 1 patient (index 2)
