@@ -132,7 +132,7 @@ class RadiologicalExamTest extends TestCase
         // Get the related technician
         $technician = $exam->technician();
         
-        $this->assertInstanceOf(UserModel::class, $technician);
+        $this->assertInstanceOf(\WP_User::class, $technician);
         $this->assertEquals($this->tech_id, $technician->ID);
     }
 

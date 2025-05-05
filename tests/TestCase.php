@@ -504,14 +504,15 @@ class TestCase extends \WP_UnitTestCase
 
     /**
      * Create a test notification
-     *
+     * 
      * @param array $overrides Override default notification data
      * @return \HospitalManager\Models\Notification|null
      */
     protected function createTestNotification(array $overrides = [])
     {
+        // Default notification data
         $default_data = [
-            'user_id' => isset($overrides['user_id']) ? $overrides['user_id'] : 0,
+            'user_id' => 0,
             'type' => 'test',
             'title' => 'Test Notification',
             'message' => 'This is a test notification',
@@ -522,8 +523,36 @@ class TestCase extends \WP_UnitTestCase
         $data = array_merge($default_data, $overrides);
         
         try {
+            // Create the notification
+            $notification = \HospitalManager\Models\Notification::create($data);
+            return $notification;
+        } catch (\Exception $e) {
+            error_log('Failed to create test notification: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create a test radiological exam
+     *
+     * @param array $overrides Override default radiological exam data
+     * @return \HospitalManager\Models\RadiologicalExam|null
+     */
+    protected function createTestRadiologicalExam(array $overrides = [])
+    {
+        $default_data = [
+            'visitation_id' => isset($overrides['visitation_id']) ? $overrides['visitation_id'] : 0,
+            'tech_id' => isset($overrides['tech_id']) ? $overrides['tech_id'] : 0,
+            'results' => 'Normal radiological findings. No abnormalities detected.',
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
             global $wpdb;
-            $table = $wpdb->prefix . 'hm_notifications';
+            $table = $wpdb->prefix . 'hm_radiological_exams';
             
             // Insert the record
             $result = $wpdb->insert(
@@ -541,12 +570,9 @@ class TestCase extends \WP_UnitTestCase
             $data['id'] = $wpdb->insert_id;
             $data['ID'] = $data['id']; // Add uppercase ID for compatibility
             
-            return new \HospitalManager\Models\Notification($data);
+            return new \HospitalManager\Models\RadiologicalExam($data);
         } catch (\Exception $e) {
-            error_log('Error creating notification: ' . $e->getMessage());
-            if ($e->getMessage()) {
-                error_log('Database error: ' . $e->getMessage());
-            }
+            error_log('Error creating radiological exam: ' . $e->getMessage());
             return null;
         }
     }
