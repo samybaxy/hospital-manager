@@ -79,7 +79,7 @@ class LabInvestigationControllerTest extends TestCase
      * @param array $data Investigation data
      * @return \stdClass Mock investigation object
      */
-    protected function createTestLabInvestigation($data)
+    protected function createTestLabInvestigation( array $data = [] )
     {
         // Create a mock investigation object for testing
         $investigation = new \stdClass();

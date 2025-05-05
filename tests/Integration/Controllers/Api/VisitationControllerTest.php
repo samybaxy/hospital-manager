@@ -87,7 +87,7 @@ class VisitationControllerTest extends TestCase
     /**
      * Helper method to create a test visitation
      */
-    protected function createTestVisitation($data)
+    protected function createTestVisitation(array $data = [])
     {
         return Visitation::create($data);
     }

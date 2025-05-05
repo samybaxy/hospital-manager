@@ -99,7 +99,7 @@ class DoctorControllerTest extends TestCase
     /**
      * Helper function to create a test visitation
      */
-    protected function createTestVisitation($patient_id, $doctor_id, $data = [])
+    protected function createTestVisitation(array $data = [])
     {
         $default_data = [
             'patient_id' => $patient_id,

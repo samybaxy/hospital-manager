@@ -63,7 +63,7 @@ class NotificationControllerTest extends TestCase
      * @param array $data Notification data
      * @return \stdClass
      */
-    protected function createTestNotification($data)
+    protected function createTestNotification(array $data = [])
     {
         // Create a mock notification object
         $notification = new \stdClass();
