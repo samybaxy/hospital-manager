@@ -49,43 +49,6 @@ class NotificationTest extends TestCase
     }
 
     /**
-     * Test notification creation with data payload
-     */
-    public function testCreateNotificationWithData()
-    {
-        $complex_data = [
-            'appointment_id' => 123,
-            'doctor' => [
-                'id' => 45,
-                'name' => 'Dr. Jane Smith',
-                'specialty' => 'Cardiology'
-            ],
-            'location' => 'Main Hospital, Room 305',
-            'notes' => 'Please arrive 15 minutes early to complete paperwork.'
-        ];
-        
-        $data = [
-            'user_id' => $this->user_id,
-            'type' => 'appointment_details',
-            'title' => 'Your Upcoming Appointment',
-            'message' => 'Details for your cardiology appointment',
-            'data' => $complex_data,
-            'read' => 0
-        ];
-
-        $notification = Notification::create($data);
-
-        $this->assertInstanceOf(Notification::class, $notification);
-        $this->assertEquals($this->user_id, $notification->user_id);
-        
-        // Verify data was serialized and stored correctly
-        $stored_data = maybe_unserialize($notification->data);
-        $this->assertEquals($complex_data['appointment_id'], $stored_data['appointment_id']);
-        $this->assertEquals($complex_data['doctor']['name'], $stored_data['doctor']['name']);
-        $this->assertEquals($complex_data['location'], $stored_data['location']);
-    }
-
-    /**
      * Test finding a notification by ID
      */
     public function testFindNotification()

@@ -481,4 +481,53 @@ class TestCase extends \WP_UnitTestCase
             return null;
         }
     }
+
+    /**
+     * Create a test notification
+     *
+     * @param array $overrides Override default notification data
+     * @return \HospitalManager\Models\Notification|null
+     */
+    protected function createTestNotification(array $overrides = [])
+    {
+        $default_data = [
+            'user_id' => isset($overrides['user_id']) ? $overrides['user_id'] : 0,
+            'type' => 'test',
+            'title' => 'Test Notification',
+            'message' => 'This is a test notification',
+            'read' => 0,
+            'created_at' => current_time('mysql')
+        ];
+
+        $data = array_merge($default_data, $overrides);
+        
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_notifications';
+            
+            // Insert the record
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result === false) {
+                throw new \Exception($wpdb->last_error);
+            }
+            
+            $data['id'] = $wpdb->insert_id;
+            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            
+            return new \HospitalManager\Models\Notification($data);
+        } catch (\Exception $e) {
+            error_log('Error creating notification: ' . $e->getMessage());
+            if ($e->getMessage()) {
+                error_log('Database error: ' . $e->getMessage());
+            }
+            return null;
+        }
+    }
 }

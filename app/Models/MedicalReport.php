@@ -258,7 +258,6 @@ class MedicalReport extends BaseModel
      */
     public function save()
     {
-        
         global $wpdb;
     
         // Make sure we have a table name
