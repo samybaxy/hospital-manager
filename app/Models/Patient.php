@@ -73,6 +73,11 @@ class Patient extends BaseModel
             $patient_data['ID'] = $patient_data['id'];
         }
         
+        // Ensure phone number has leading zero if needed
+        if (isset($patient_data['phone']) && strlen($patient_data['phone']) === 10 && substr($patient_data['phone'], 0, 1) !== '0') {
+            $patient_data['phone'] = '0' . $patient_data['phone'];
+        }
+        
         // Create a new Patient instance with the fetched data
         return new self($patient_data);
     }
@@ -165,7 +170,13 @@ class Patient extends BaseModel
             $operator = '=';
         }
         
+        // Add the condition directly - special case will be handled in get()
         static::$conditions[] = [$column, $operator, $value];
+        
+        static::$queryType = 'instance'; // Ensure we're in instance query mode
+        return static::$queryType === 'instance' ? $this : new static();
+        
+        static::$queryType = 'instance'; // Ensure we're in instance query mode
         return static::$queryType === 'instance' ? $this : new static();
     }
 
@@ -199,20 +210,50 @@ class Patient extends BaseModel
     {
         global $wpdb;
         $table = $this->table;
-        $query = "SELECT * FROM {$table} WHERE 1=1";
+        $query = "SELECT SQL_NO_CACHE * FROM {$table} WHERE 1=1";
         $values = [];
         
         // Add where conditions
         $where = [];
         $orWhere = [];
         
+        // Debug
+        error_log("Conditions: " . print_r(static::$conditions, true));
+        
         foreach (static::$conditions as $condition) {
             if (isset($condition[0]) && $condition[0] === 'OR') {
-                $orWhere[] = "{$condition[1]} {$condition[2]} %s";
-                $values[] = $condition[3];
+                if ($condition[2] === 'LIKE') {
+                    $orWhere[] = "{$condition[1]} {$condition[2]} %s";
+                    $values[] = '%' . $wpdb->esc_like($condition[3]) . '%';
+                } else if ($condition[2] === 'IN' && is_array($condition[3])) {
+                    $placeholders = array_fill(0, count($condition[3]), '%s');
+                    $orWhere[] = "({$condition[1]} IN (" . implode(', ', $placeholders) . "))";
+                    foreach ($condition[3] as $val) {
+                        $values[] = $val;
+                    }
+                } else {
+                    $orWhere[] = "{$condition[1]} {$condition[2]} %s";
+                    $values[] = $condition[3];
+                }
             } else {
-                $where[] = "{$condition[0]} {$condition[1]} %s";
-                $values[] = $condition[2];
+                if ($condition[1] === 'LIKE') {
+                    $where[] = "{$condition[0]} {$condition[1]} %s";
+                    $values[] = '%' . $wpdb->esc_like($condition[2]) . '%';
+                } else if ($condition[1] === 'IN' && is_array($condition[2])) {
+                    if (!empty($condition[2])) {
+                        $placeholders = array_fill(0, count($condition[2]), '%s');
+                        $where[] = "({$condition[0]} IN (" . implode(', ', $placeholders) . "))";
+                        foreach ($condition[2] as $val) {
+                            $values[] = $val;
+                        }
+                    } else {
+                        // Empty array, will never match
+                        $where[] = "0=1";
+                    }
+                } else {
+                    $where[] = "{$condition[0]} {$condition[1]} %s";
+                    $values[] = $condition[2];
+                }
             }
         }
         
@@ -447,5 +488,63 @@ class Patient extends BaseModel
             
             return false;
         }
+    }
+
+    /**
+     * Update the patient with the given attributes
+     *
+     * @param array $attributes
+     * @return bool
+     */
+    public function update(array $attributes)
+    {
+        // Merge the new attributes with the existing ones
+        foreach ($attributes as $key => $value) {
+            if ($key === 'phone' && !empty($value)) {
+                // Ensure phone number format consistency
+                if (substr($value, 0, 1) !== '0' && strlen($value) === 10) {
+                    $value = '0' . $value;
+                }
+            }
+            
+            $this->attributes[$key] = $value;
+            $this->$key = $value; // Also update object properties
+        }
+        
+        // Save the changes
+        return $this->save();
+    }
+
+    /**
+     * Delete the patient record from the database
+     * 
+     * @return bool
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id']) || empty($this->attributes['id'])) {
+            return false;
+        }
+        
+        $table = $this->getTable();
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        return $result !== false;
+    }
+
+    /**
+     * Convert the model to an array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return $this->attributes;
     }
 }

@@ -29,14 +29,22 @@ class PatientService
             }
         }
         
+        // Check for duplicate patients
+        self::preventDuplicates($data);
+        
         // Validate phone number format
         if (!preg_match('/^\d{10,15}$/', $data['phone'])) {
             throw new Exception("Invalid phone number format. Phone number should contain 10-15 digits only");
         }
         
+        // Ensure phone number format consistency
+        if (substr($data['phone'], 0, 1) !== '0' && strlen($data['phone']) === 10) {
+            $data['phone'] = '0' . $data['phone'];
+        }
+        
         // Validate gender field
-        if (!in_array(strtolower($data['gender']), ['male', 'female', 'other'])) {
-            throw new Exception("Invalid value for gender. Expected 'Male', 'Female', or 'Other'");
+        if (!in_array(strtolower($data['gender']), ['male', 'female', 'other', 'm', 'f'])) {
+            throw new Exception("Invalid value for gender. Expected 'Male', 'Female', 'Other', 'M', or 'F'");
         }
         
         // Validate age if provided
@@ -102,94 +110,119 @@ class PatientService
     }
     
     /**
-     * Search for patients with advanced filtering
-     *
+     * Search patients by various criteria
+     * 
      * @param array $params Search parameters
-     * @return array Paginated patients with metadata
+     * @return array Search results with metadata
      */
-    public static function searchPatients(array $params)
+    public static function searchPatients(array $params = [])
     {
-        // Always use direct database query to get all patients to avoid ORM issues
         global $wpdb;
-        $table = $wpdb->prefix . 'hm_patients';
+        $table = (new Patient())->getTable();
+        $perPage = isset($params['per_page']) ? (int)$params['per_page'] : 20;
+        $page = isset($params['page']) ? (int)$params['page'] : 1;
         
-        $query = "SELECT * FROM {$table}";
-        $where_clauses = [];
-        $query_params = [];
+        // Build the query directly for better control
+        $query = "SELECT * FROM {$table} WHERE 1=1";
+        $count_query = "SELECT COUNT(*) FROM {$table} WHERE 1=1";
+        $values = [];
         
-        // Build where clauses for filtering
+        // Apply search filters
         if (!empty($params['first_name'])) {
-            $where_clauses[] = "first_name LIKE %s";
-            $query_params[] = '%' . $wpdb->esc_like($params['first_name']) . '%';
+            $query .= " AND first_name LIKE %s";
+            $count_query .= " AND first_name LIKE %s";
+            $values[] = '%' . $wpdb->esc_like($params['first_name']) . '%';
         }
         
         if (!empty($params['last_name'])) {
-            $where_clauses[] = "last_name LIKE %s";
-            $query_params[] = '%' . $wpdb->esc_like($params['last_name']) . '%';
-        }
-        
-        if (!empty($params['hmo_id'])) {
-            $where_clauses[] = "hmo_id = %s";
-            $query_params[] = $params['hmo_id'];
+            $query .= " AND last_name LIKE %s";
+            $count_query .= " AND last_name LIKE %s";
+            $values[] = '%' . $wpdb->esc_like($params['last_name']) . '%';
         }
         
         if (!empty($params['gender'])) {
-            $where_clauses[] = "gender = %s";
-            $query_params[] = $params['gender'];
+            // Special handling for gender
+            if ($params['gender'] === 'F') {
+                $query .= " AND (gender = %s OR gender = %s)";
+                $count_query .= " AND (gender = %s OR gender = %s)";
+                $values[] = 'F';
+                $values[] = 'Female';
+            } else if ($params['gender'] === 'M') {
+                $query .= " AND (gender = %s OR gender = %s)";
+                $count_query .= " AND (gender = %s OR gender = %s)";
+                $values[] = 'M';
+                $values[] = 'Male';
+            } else {
+                $query .= " AND gender = %s";
+                $count_query .= " AND gender = %s";
+                $values[] = $params['gender'];
+            }
         }
         
-        // Apply age range filter if provided
-        if (!empty($params['age_min']) && is_numeric($params['age_min'])) {
-            $where_clauses[] = "age >= %d";
-            $query_params[] = (int)$params['age_min'];
+        if (!empty($params['age_min'])) {
+            $query .= " AND age >= %d";
+            $count_query .= " AND age >= %d";
+            $values[] = (int)$params['age_min'];
         }
         
-        if (!empty($params['age_max']) && is_numeric($params['age_max'])) {
-            $where_clauses[] = "age <= %d";
-            $query_params[] = (int)$params['age_max'];
+        if (!empty($params['age_max'])) {
+            $query .= " AND age <= %d";
+            $count_query .= " AND age <= %d";
+            $values[] = (int)$params['age_max'];
         }
         
-        // Add WHERE clause to the query if we have conditions
-        if (!empty($where_clauses)) {
-            $query .= " WHERE " . implode(" AND ", $where_clauses);
-            $query = $wpdb->prepare($query, $query_params);
+        // Count total results
+        $count_values = $values; // Copy values for count query
+        $count_sql = $wpdb->prepare($count_query, $count_values);
+        $total = (int)$wpdb->get_var($count_sql);
+        
+        // Add sorting
+        if (!empty($params['sort_by'])) {
+            $direction = !empty($params['sort_dir']) ? $params['sort_dir'] : 'ASC';
+            $allowed_columns = ['first_name', 'last_name', 'age', 'gender', 'created_at'];
+            $sort_column = in_array($params['sort_by'], $allowed_columns) ? $params['sort_by'] : 'created_at';
+            $query .= " ORDER BY {$sort_column} " . ($direction === 'DESC' ? 'DESC' : 'ASC');
+        } else {
+            // Default sorting
+            $query .= " ORDER BY created_at DESC";
         }
         
-        // Add pagination if specified
-        $per_page = !empty($params['per_page']) ? (int) $params['per_page'] : 10;
-        $page = !empty($params['page']) ? (int) $params['page'] : 1;
-        $offset = ($page - 1) * $per_page;
-        
-        // Get total count for pagination metadata
-        $total_query = "SELECT COUNT(*) FROM ({$query}) as total_count";
-        $total = $wpdb->get_var($total_query);
-        
-        // Add pagination to the main query
+        // Add pagination
+        $offset = ($page - 1) * $perPage;
         $query .= " LIMIT %d OFFSET %d";
-        $query = $wpdb->prepare($query, $per_page, $offset);
+        $values[] = $perPage;
+        $values[] = $offset;
         
         // Execute the query
-        $patients_data = $wpdb->get_results($query, ARRAY_A);
+        $prepared_query = $wpdb->prepare($query, $values);
+        $items = $wpdb->get_results($prepared_query);
         
+        // Convert results to Patient objects
         $patients = [];
-        foreach ($patients_data as $patient_data) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($patient_data['id']) && !isset($patient_data['ID'])) {
-                $patient_data['ID'] = $patient_data['id'];
+        if ($items) {
+            foreach ($items as $item) {
+                $patients[] = new Patient((array)$item);
             }
-            $patients[] = new Patient($patient_data);
         }
         
+        // Calculate pagination info
+        $last_page = ceil($total / $perPage);
+        
         return [
-            'patients' => $patients,
+            'patients' => (object)[
+                'items' => $patients,
+                'currentPage' => $page,
+                'lastPage' => $last_page,
+                'perPage' => $perPage,
+                'total' => $total
+            ],
             'meta' => [
-                'total' => (int)$total,
-                'per_page' => $per_page,
                 'current_page' => $page,
-                'last_page' => ceil((int)$total / $per_page)
+                'last_page' => $last_page,
+                'per_page' => $perPage,
+                'total' => $total
             ]
         ];
-    }
     }
     
     /**
@@ -230,5 +263,53 @@ class PatientService
             'medical_reports' => $medical_reports,
             'lab_investigations' => $lab_investigations
         ];
+    }
+
+    /**
+     * Check for duplicate patients based on identifiers
+     * 
+     * @param array $data Patient data
+     * @return bool True if this might be a duplicate
+     */
+    public static function preventDuplicates(array $data)
+    {
+        global $wpdb;
+        
+        if (empty($data['phone'])) {
+            return false;
+        }
+        
+        // Format the phone number consistently
+        $phone = $data['phone'];
+        if (substr($phone, 0, 1) !== '0' && strlen($phone) === 10) {
+            $phone = '0' . $phone;
+        }
+        
+        // Get the table name
+        $table = (new Patient())->getTable();
+        
+        // First check by phone number, which is usually unique
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE phone = %s LIMIT 1", $phone);
+        $existing = $wpdb->get_row($query);
+        
+        if ($existing) {
+            throw new Exception("A patient with this name and phone number already exists");
+        }
+        
+        // If we have first_name and last_name, check for a name match as well
+        if (!empty($data['first_name']) && !empty($data['last_name'])) {
+            $query = $wpdb->prepare(
+                "SELECT * FROM {$table} WHERE LOWER(first_name) = LOWER(%s) AND LOWER(last_name) = LOWER(%s) LIMIT 1",
+                $data['first_name'],
+                $data['last_name']
+            );
+            $existing = $wpdb->get_row($query);
+            
+            if ($existing) {
+                throw new Exception("A patient with this name and phone number already exists");
+            }
+        }
+        
+        return false;
     }
 }

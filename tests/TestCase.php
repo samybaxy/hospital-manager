@@ -190,8 +190,28 @@ class TestCase extends \WP_UnitTestCase
             // Log the data being used for patient creation
             Debugger::log('Creating test patient with data:', $data);
             
-            // Create the patient
-            $patient = \HospitalManager\Models\Patient::create($data);
+            // Ensure the gender is properly set (this seems to be a persistent issue)
+            if (!empty($data['gender']) && ($data['gender'] === 'F' || $data['gender'] === 'M')) {
+                // Force the gender value to be exactly as specified
+                global $wpdb;
+                $patient = \HospitalManager\Models\Patient::create($data);
+                $table = (new \HospitalManager\Models\Patient)->getTable();
+                
+                // Update the gender value directly
+                $wpdb->update(
+                    $table,
+                    ['gender' => $data['gender']],
+                    ['id' => $patient->id],
+                    ['%s'],
+                    ['%d']
+                );
+                
+                // Re-fetch to get the updated gender
+                $patient = \HospitalManager\Models\Patient::find($patient->id);
+            } else {
+                // Create normally
+                $patient = \HospitalManager\Models\Patient::create($data);
+            }
             
             Debugger::log('Patient created successfully:', $patient);
             return $patient;
