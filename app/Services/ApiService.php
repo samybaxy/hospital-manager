@@ -94,4 +94,19 @@ class ApiService
     {
         return self::formatResponse(null, $message, $status, false);
     }
+
+    /**
+     * Add a custom controller to the API
+     *
+     * @param object $controller Controller instance with register_routes method
+     * @return void
+     */
+    public static function addController($controller)
+    {
+        add_action('rest_api_init', function() use ($controller) {
+            if (method_exists($controller, 'register_routes')) {
+                $controller->register_routes();
+            }
+        });
+    }
 }
