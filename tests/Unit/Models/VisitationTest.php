@@ -133,10 +133,10 @@ class VisitationTest extends TestCase
         $lab = LabInvestigation::create([
             'visitation_id' => $visitation->id,
             'patient_id' => $this->patient->id,
-            'requested_by' => $this->doctor->id,
+            'doctor_id' => $this->doctor->id,
             'test_type' => 'Blood Test',
             'status' => 'pending',
-            'requested_at' => current_time('mysql'),
+            'created_at' => current_time('mysql'),
             'notes' => 'Check for anemia'
         ]);
         

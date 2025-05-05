@@ -132,6 +132,11 @@ class Visitation extends BaseModel
         } elseif (isset($patient_visitation_data['ID']) && !isset($patient_visitation_data['id'])) {
             $patient_visitation_data['id'] = $patient_visitation_data['ID'];
         }
+
+        // Format the date if it exists
+        if (isset($patient_visitation_data['date'])) {
+            $patient_visitation_data['date'] = date('Y-m-d', strtotime($patient_visitation_data['date']));
+        }
         
         // Create a new Patient instance with the fetched data
         return new self($patient_visitation_data);
@@ -142,7 +147,10 @@ class Visitation extends BaseModel
      */
     public function patient()
     {
-        return $this->belongs_to('HospitalManager\Models\Patient', 'patient_id', 'id');
+        if (!isset($this->attributes['patient_id'])) {
+            return null;
+        }
+        return \HospitalManager\Models\Patient::find($this->attributes['patient_id']);
     }
 
     /**
@@ -150,7 +158,10 @@ class Visitation extends BaseModel
      */
     public function doctor()
     {
-        return $this->belongs_to('HospitalManager\Models\Doctor', 'doctor_id', 'id');
+        if (!isset($this->attributes['doctor_id'])) {
+            return null;
+        }
+        return \HospitalManager\Models\Doctor::find($this->attributes['doctor_id']);
     }
 
     /**
@@ -158,7 +169,7 @@ class Visitation extends BaseModel
      */
     public function labInvestigations()
     {
-        return $this->has_many('HospitalManager\Models\LabInvestigation', 'visitation_id', 'id');
+        return $this->getLabInvestigations();
     }
 
     /**
@@ -421,6 +432,85 @@ class Visitation extends BaseModel
         }
         
         return $properties;
+    }
+    
+    /**
+     * Save the model to the database.
+     * 
+     * @return bool
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        $table = $this->getTable();
+        $data = [];
+        
+        // Prepare only fillable attributes for saving
+        foreach ($this->fillable as $field) {
+            if (isset($this->attributes[$field])) {
+                $data[$field] = $this->attributes[$field];
+            }
+        }
+        
+        // Add updated_at timestamp
+        $data['updated_at'] = current_time('mysql');
+        
+        // Determine if this is an update or insert
+        if (isset($this->attributes['id']) && !empty($this->attributes['id'])) {
+            // This is an update
+            $result = $wpdb->update(
+                $table,
+                $data,
+                ['id' => $this->attributes['id']],
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data),
+                ['%d']
+            );
+            
+            return $result !== false;
+        } else {
+            // This is an insert
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                array_map(function($field) {
+                    return is_numeric($field) ? '%d' : '%s';
+                }, $data)
+            );
+            
+            if ($result !== false) {
+                $this->attributes['id'] = $wpdb->insert_id;
+                $this->attributes['ID'] = $this->attributes['id']; // For compatibility
+                return true;
+            }
+            
+            return false;
+        }
+    }
+    
+    /**
+     * Delete the model from the database.
+     * 
+     * @return bool
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['id'])) {
+            return false;
+        }
+        
+        $table = $this->getTable();
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $this->attributes['id']],
+            ['%d']
+        );
+        
+        return $result !== false;
     }
     
     /**
