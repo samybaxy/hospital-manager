@@ -146456,3 +146456,2751 @@ HospitalManager\Models\Patient Object
 
 )
 
+[2025-05-05 18:43:55] Creating test patient with data:
+Array
+(
+    [user_id] => 2
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:43:55
+    [updated_at] => 2025-05-05 18:43:55
+)
+
+[2025-05-05 18:43:55] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 2
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:43:55
+            [updated_at] => 2025-05-05 18:43:55
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:43:55] Creating test doctor with data:
+Array
+(
+    [user_id] => 3
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:43:55
+    [updated_at] => 2025-05-05 18:43:55
+)
+
+[2025-05-05 18:43:55] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 3
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:43:55
+            [updated_at] => 2025-05-05 18:43:55
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:43:55] Creating test patient with data:
+Array
+(
+    [user_id] => 5
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:43:55
+    [updated_at] => 2025-05-05 18:43:55
+)
+
+[2025-05-05 18:43:55] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 5
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:43:55
+            [updated_at] => 2025-05-05 18:43:55
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:43:55] Creating test doctor with data:
+Array
+(
+    [user_id] => 6
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:43:55
+    [updated_at] => 2025-05-05 18:43:55
+)
+
+[2025-05-05 18:43:55] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 6
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:43:55
+            [updated_at] => 2025-05-05 18:43:55
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:43:56] Creating test patient with data:
+Array
+(
+    [user_id] => 8
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:43:56
+    [updated_at] => 2025-05-05 18:43:56
+)
+
+[2025-05-05 18:43:56] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 8
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:43:56
+            [updated_at] => 2025-05-05 18:43:56
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:43:56] Creating test doctor with data:
+Array
+(
+    [user_id] => 9
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:43:56
+    [updated_at] => 2025-05-05 18:43:56
+)
+
+[2025-05-05 18:43:56] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 9
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:43:56
+            [updated_at] => 2025-05-05 18:43:56
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:43:56] Creating test patient with data:
+Array
+(
+    [user_id] => 11
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:43:56
+    [updated_at] => 2025-05-05 18:43:56
+)
+
+[2025-05-05 18:43:56] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 11
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:43:56
+            [updated_at] => 2025-05-05 18:43:56
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:43:56] Creating test doctor with data:
+Array
+(
+    [user_id] => 12
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:43:56
+    [updated_at] => 2025-05-05 18:43:56
+)
+
+[2025-05-05 18:43:56] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 12
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:43:56
+            [updated_at] => 2025-05-05 18:43:56
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:44:48] Creating test patient with data:
+Array
+(
+    [user_id] => 2
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:44:48
+    [updated_at] => 2025-05-05 18:44:48
+)
+
+[2025-05-05 18:44:48] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 2
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:44:48
+            [updated_at] => 2025-05-05 18:44:48
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:44:48] Creating test doctor with data:
+Array
+(
+    [user_id] => 3
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:44:48
+    [updated_at] => 2025-05-05 18:44:48
+)
+
+[2025-05-05 18:44:48] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 3
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:44:48
+            [updated_at] => 2025-05-05 18:44:48
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test patient with data:
+Array
+(
+    [user_id] => 5
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 5
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test doctor with data:
+Array
+(
+    [user_id] => 6
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 6
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test patient with data:
+Array
+(
+    [user_id] => 8
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 8
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test doctor with data:
+Array
+(
+    [user_id] => 9
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 9
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test patient with data:
+Array
+(
+    [user_id] => 11
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 11
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:44:49] Creating test doctor with data:
+Array
+(
+    [user_id] => 12
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:44:49
+    [updated_at] => 2025-05-05 18:44:49
+)
+
+[2025-05-05 18:44:49] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 12
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:44:49
+            [updated_at] => 2025-05-05 18:44:49
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:50:41] Creating test patient with data:
+Array
+(
+    [user_id] => 2
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:50:41
+    [updated_at] => 2025-05-05 18:50:41
+)
+
+[2025-05-05 18:50:41] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 2
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:50:41
+            [updated_at] => 2025-05-05 18:50:41
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:50:41] Creating test doctor with data:
+Array
+(
+    [user_id] => 3
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:50:41
+    [updated_at] => 2025-05-05 18:50:41
+)
+
+[2025-05-05 18:50:41] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 3
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:50:41
+            [updated_at] => 2025-05-05 18:50:41
+            [id] => 1
+            [ID] => 1
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test patient with data:
+Array
+(
+    [user_id] => 5
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 5
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test doctor with data:
+Array
+(
+    [user_id] => 6
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 6
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 2
+            [ID] => 2
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test patient with data:
+Array
+(
+    [user_id] => 8
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 8
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test doctor with data:
+Array
+(
+    [user_id] => 9
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 9
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 3
+            [ID] => 3
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test patient with data:
+Array
+(
+    [user_id] => 11
+    [first_name] => Test
+    [last_name] => Patient
+    [phone] => 08012345678
+    [gender] => Male
+    [age] => 30
+    [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Patient created successfully:
+HospitalManager\Models\Patient Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 11
+            [first_name] => Test
+            [last_name] => Patient
+            [phone] => 08012345678
+            [gender] => Male
+            [age] => 30
+            [bio_data] => {"blood_group":"O+","genotype":"AA","height":"170","weight":"70","allergies":"None","chronic_conditions":"None","current_medications":"None","emergency_contact":"09087654321","notes":"Test patient for PHPUnit tests"}
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_patients
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => hmo_id
+            [4] => hmo_designated_id
+            [5] => phone
+            [6] => age
+            [7] => gender
+            [8] => address
+            [9] => bio_data
+        )
+
+)
+
+[2025-05-05 18:50:42] Creating test doctor with data:
+Array
+(
+    [user_id] => 12
+    [first_name] => Test
+    [last_name] => Doctor
+    [phone] => 08012345679
+    [photo] => 
+    [created_at] => 2025-05-05 18:50:42
+    [updated_at] => 2025-05-05 18:50:42
+)
+
+[2025-05-05 18:50:42] Doctor created successfully:
+HospitalManager\Models\Doctor Object
+(
+    [type:protected] => post
+    [status:protected] => draft
+    [forceDelete:protected] => 
+    [attributes:protected] => Array
+        (
+            [user_id] => 12
+            [first_name] => Test
+            [last_name] => Doctor
+            [phone] => 08012345679
+            [photo] => 
+            [created_at] => 2025-05-05 18:50:42
+            [updated_at] => 2025-05-05 18:50:42
+            [id] => 4
+            [ID] => 4
+        )
+
+    [hidden:protected] => Array
+        (
+        )
+
+    [registry:protected] => Array
+        (
+            [public] => 1
+            [publicly_queryable] => 1
+            [show_ui] => 1
+            [show_in_menu] => 1
+            [query_var] => 1
+            [capability_type] => post
+            [has_archive] => 1
+            [hierarchical] => 
+            [menu_position] => 
+        )
+
+    [registry_labels:protected] => Array
+        (
+        )
+
+    [registry_supports:protected] => Array
+        (
+            [0] => title
+            [1] => editor
+            [2] => author
+            [3] => thumbnail
+            [4] => excerpt
+            [5] => comments
+        )
+
+    [registry_rewrite:protected] => Array
+        (
+        )
+
+    [registry_metabox:protected] => 1
+    [registry_controller:protected] => 
+    [registry_taxonomies:protected] => Array
+        (
+        )
+
+    [meta:protected] => Array
+        (
+        )
+
+    [decode_json_meta:protected] => 1
+    [aliases:protected] => Array
+        (
+        )
+
+    [rel:protected] => Array
+        (
+            [has_one] => Array
+                (
+                )
+
+            [has_many] => Array
+                (
+                )
+
+            [belongs_to] => Array
+                (
+                )
+
+        )
+
+    [primaryKey:protected] => id
+    [tableName:protected] => hm_doctors
+    [fillable:protected] => Array
+        (
+            [0] => user_id
+            [1] => first_name
+            [2] => last_name
+            [3] => phone
+            [4] => photo
+        )
+
+)
+
