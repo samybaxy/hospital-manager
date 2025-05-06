@@ -4,9 +4,12 @@ namespace HospitalManager\Tests\Unit\Services;
 
 use HospitalManager\Tests\TestCase;
 use HospitalManager\Services\RoleManager;
-use Brain\Monkey\Functions;
 use Mockery;
 
+/**
+ * Tests for the RoleManager service which handles WordPress role creation
+ * for the hospital management system
+ */
 class RoleManagerTest extends TestCase
 {
     /**
@@ -16,78 +19,20 @@ class RoleManagerTest extends TestCase
     private $added_roles = [];
     
     /**
-     * Track capabilities that were granted
-     * @var array
-     */
-    private $granted_capabilities = [];
-    
-    /**
      * Set up before each test
      */
     public function setUp(): void
     {
         parent::setUp();
         
-        // Reset test data
-        $this->added_roles = [];
-        $this->granted_capabilities = [];
+        global $wp_roles;
         
-        // Mock the WordPress role management functions using WordPress-MVC pattern
-        Functions\when('add_role')->alias(function($role, $display_name, $capabilities) {
-            $this->added_roles[$role] = [
-                'name' => $display_name,
-                'capabilities' => $capabilities
-            ];
-            
-            // Return a WordPress role object as expected by WordPress-MVC
-            return $this->createMockRole($role, $capabilities);
-        });
-        
-        // Mock the WordPress get_role function
-        Functions\when('get_role')->alias(function($role) {
-            if (isset($this->added_roles[$role])) {
-                return $this->createMockRole(
-                    $role, 
-                    $this->added_roles[$role]['capabilities']
-                );
+        // Remove all custom roles before each test to ensure a clean state
+        foreach (['admin', 'doctor', 'patient', 'lab_tech', 'desk_officer'] as $role) {
+            if (get_role($role)) {
+                remove_role($role);
             }
-            return null;
-        });
-        
-        // Mock remove_role function
-        Functions\when('remove_role')->alias(function($role) {
-            if (isset($this->added_roles[$role])) {
-                unset($this->added_roles[$role]);
-            }
-            return true;
-        });
-        
-        // Mock WordPress add_capability function
-        Functions\when('add_capability')->alias(function($role_obj, $capability, $grant = true) {
-            if (is_object($role_obj) && isset($role_obj->name)) {
-                $role_name = $role_obj->name;
-                if (isset($this->added_roles[$role_name])) {
-                    $this->added_roles[$role_name]['capabilities'][$capability] = $grant;
-                    $role_obj->capabilities[$capability] = $grant;
-                    
-                    $this->granted_capabilities[] = [
-                        'role' => $role_name,
-                        'capability' => $capability,
-                        'grant' => $grant
-                    ];
-                }
-            }
-            return true;
-        });
-        
-        // Mock WordPress capability filtering
-        Functions\when('apply_filters')->alias(function($tag, $value, ...$args) {
-            if ($tag === 'hospital_manager_role_capabilities') {
-                // Allow filtering of role capabilities
-                return $value;
-            }
-            return $value;
-        });
+        }
     }
     
     /**
@@ -98,42 +43,20 @@ class RoleManagerTest extends TestCase
         Mockery::close();
         parent::tearDown();
     }
-    
-    /**
-     * Create a mock WordPress role object
-     * 
-     * @param string $role_name The role name
-     * @param array $capabilities The role capabilities
-     * @return object Mock role object
-     */
-    private function createMockRole($role_name, $capabilities)
-    {
-        $role = Mockery::mock('WP_Role');
-        $role->name = $role_name;
-        $role->capabilities = $capabilities;
-        
-        // Add method for adding capabilities
-        $role->shouldReceive('add_cap')
-            ->andReturnUsing(function($capability, $grant = true) use ($role) {
-                $role->capabilities[$capability] = $grant;
-                return true;
-            });
-            
-        return $role;
-    }
 
     /**
-     * Test initialization of all hospital manager roles
+     * Test the public initializeRoles method
+     * This method should create all necessary roles with appropriate capabilities
      */
     public function testInitializeRoles()
     {
         // Expected roles that should be created
         $expected_roles = [
-            'doctor',
-            'patient',
+            'admin', 
+            'doctor', 
+            'patient', 
             'lab_tech',
-            'receptionist',
-            'hospital_admin'
+            'desk_officer'
         ];
         
         // Initialize roles
@@ -141,165 +64,177 @@ class RoleManagerTest extends TestCase
         
         // Verify all expected roles were created
         foreach ($expected_roles as $role) {
-            $this->assertArrayHasKey(
-                $role, 
-                $this->added_roles,
-                "The '$role' role was not created. This role is essential for hospital operations and user permissions."
+            $this->assertNotNull(
+                get_role($role),
+                "The '$role' role was not created"
             );
         }
         
         // Verify doctor role has appropriate capabilities
-        $doctor_capabilities = $this->added_roles['doctor']['capabilities'];
-        $this->assertArrayHasKey('read_patient_records', $doctor_capabilities, "Doctors need 'read_patient_records' capability to view patient information");
-        $this->assertArrayHasKey('create_medical_reports', $doctor_capabilities, "Doctors need 'create_medical_reports' capability to document patient care");
+        $doctor_role = get_role('doctor');
+        $this->assertTrue($doctor_role->has_cap('view_patients'));
+        $this->assertTrue($doctor_role->has_cap('edit_patient'));
+        $this->assertTrue($doctor_role->has_cap('manage_medical_reports'));
+        $this->assertTrue($doctor_role->has_cap('schedule_appointments'));
+        $this->assertTrue($doctor_role->has_cap('add_visitation'));
         
         // Verify patient role has appropriate capabilities
-        $patient_capabilities = $this->added_roles['patient']['capabilities'];
-        $this->assertArrayHasKey('view_own_records', $patient_capabilities, "Patients need 'view_own_records' capability to access their medical information");
+        $patient_role = get_role('patient');
+        $this->assertTrue($patient_role->has_cap('read'));
+        $this->assertTrue($patient_role->has_cap('view_own_records'));
         
         // Verify lab_tech role has appropriate capabilities
-        $lab_tech_capabilities = $this->added_roles['lab_tech']['capabilities'];
-        $this->assertArrayHasKey('manage_lab_results', $lab_tech_capabilities, "Lab technicians need 'manage_lab_results' capability to record test results");
-        
-        // Verify receptionist role has appropriate capabilities
-        $receptionist_capabilities = $this->added_roles['receptionist']['capabilities'];
-        $this->assertArrayHasKey('schedule_appointments', $receptionist_capabilities, "Receptionists need 'schedule_appointments' capability to manage patient visits");
-        
-        // Verify hospital_admin role has appropriate capabilities
-        $admin_capabilities = $this->added_roles['hospital_admin']['capabilities'];
-        $this->assertArrayHasKey('manage_hospital', $admin_capabilities, "Hospital administrators need 'manage_hospital' capability for overall system management");
+        $lab_tech_role = get_role('lab_tech');
+        $this->assertTrue($lab_tech_role->has_cap('manage_medical_reports'));
+        $this->assertTrue($lab_tech_role->has_cap('view_lab_dashboard'));
     }
     
     /**
-     * Test adding a single role
+     * Test the private add_roles method directly using reflection
+     * This ensures the implementation properly creates each role with expected capabilities
      */
-    public function testAddRole()
+    public function testPrivateAddRolesCreatesAllRoles()
     {
-        $role_id = 'test_role';
-        $display_name = 'Test Role';
-        $capabilities = [
-            'read' => true,
-            'custom_capability' => true
-        ];
+        // Use reflection to access private method
+        $reflection = new \ReflectionClass(RoleManager::class);
+        $method = $reflection->getMethod('add_roles');
+        $method->setAccessible(true);
+        $method->invoke(null);
         
-        // Add the role
-        $result = RoleManager::addRole($role_id, $display_name, $capabilities);
+        // Verify admin role was created with correct capabilities
+        $admin_role = get_role('admin');
+        $this->assertNotNull($admin_role);
+        $this->assertTrue($admin_role->has_cap('read'));
+        $this->assertTrue($admin_role->has_cap('view_patients'));
+        $this->assertTrue($admin_role->has_cap('edit_patient'));
+        $this->assertTrue($admin_role->has_cap('delete_patients'));
+        $this->assertTrue($admin_role->has_cap('schedule_appointments'));
+        $this->assertTrue($admin_role->has_cap('add_visitation'));
+        $this->assertTrue($admin_role->has_cap('edit_visitation'));
+        $this->assertTrue($admin_role->has_cap('manage_medical_reports'));
         
-        // Verify role was added
-        $this->assertTrue($result, "addRole should return true on success");
-        $this->assertArrayHasKey($role_id, $this->added_roles, "Role '$role_id' was not added correctly");
-        $this->assertEquals($display_name, $this->added_roles[$role_id]['name'], "Role display name is incorrect");
+        // Verify doctor role was created with correct capabilities
+        $doctor_role = get_role('doctor');
+        $this->assertNotNull($doctor_role);
+        $this->assertTrue($doctor_role->has_cap('read'));
+        $this->assertTrue($doctor_role->has_cap('view_patients'));
+        $this->assertTrue($doctor_role->has_cap('edit_patient'));
+        $this->assertTrue($doctor_role->has_cap('schedule_appointments'));
+        $this->assertTrue($doctor_role->has_cap('add_visitation'));
+        $this->assertTrue($doctor_role->has_cap('edit_visitation'));
+        $this->assertTrue($doctor_role->has_cap('manage_medical_reports'));
         
-        // Verify capabilities
-        foreach ($capabilities as $cap => $grant) {
-            $this->assertArrayHasKey(
-                $cap, 
-                $this->added_roles[$role_id]['capabilities'],
-                "Role is missing the '$cap' capability"
-            );
-            $this->assertEquals(
-                $grant, 
-                $this->added_roles[$role_id]['capabilities'][$cap],
-                "Capability '$cap' has incorrect grant value"
-            );
-        }
+        // Verify patient role was created with correct capabilities
+        $patient_role = get_role('patient');
+        $this->assertNotNull($patient_role);
+        $this->assertTrue($patient_role->has_cap('read'));
+        $this->assertTrue($patient_role->has_cap('view_own_records'));
+        
+        // Verify lab_tech role was created with correct capabilities
+        $lab_tech_role = get_role('lab_tech');
+        $this->assertNotNull($lab_tech_role);
+        $this->assertTrue($lab_tech_role->has_cap('read'));
+        $this->assertTrue($lab_tech_role->has_cap('manage_medical_reports'));
+        $this->assertTrue($lab_tech_role->has_cap('view_lab_dashboard'));
+        
+        // Verify desk_officer role was created with correct capabilities
+        $desk_officer_role = get_role('desk_officer');
+        $this->assertNotNull($desk_officer_role);
+        $this->assertTrue($desk_officer_role->has_cap('read'));
+        $this->assertTrue($desk_officer_role->has_cap('view_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('create_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('edit_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('schedule_appointments'));
+        $this->assertTrue($desk_officer_role->has_cap('view_audit_log'));
     }
     
     /**
-     * Test adding a role that already exists
+     * Test that desk officer role has all necessary capabilities to perform their job duties
      */
-    public function testAddExistingRole()
+    public function testDeskOfficerHasAppropriateCapabilities()
     {
-        // First add a role
-        $role_id = 'existing_role';
-        $initial_capabilities = ['read' => true];
-        RoleManager::addRole($role_id, 'Existing Role', $initial_capabilities);
+        RoleManager::initializeRoles();
         
-        // Try to add it again with different capabilities
-        $new_capabilities = [
-            'read' => true,
-            'additional_cap' => true
-        ];
+        $desk_officer_role = get_role('desk_officer');
+        $this->assertNotNull($desk_officer_role);
         
-        $result = RoleManager::addRole($role_id, 'Updated Role', $new_capabilities);
+        // Core capabilities needed for desk officers
+        $this->assertTrue($desk_officer_role->has_cap('read'));
+        $this->assertTrue($desk_officer_role->has_cap('view_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('create_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('edit_patients'));
+        $this->assertTrue($desk_officer_role->has_cap('schedule_appointments'));
+        $this->assertTrue($desk_officer_role->has_cap('view_audit_log'));
         
-        // Should return false since role already exists
-        $this->assertFalse($result, "Adding an existing role should return false");
-        
-        // Original role should still exist with original capabilities
-        $this->assertArrayHasKey($role_id, $this->added_roles, "Original role should still exist");
-        $this->assertArrayNotHasKey(
-            'additional_cap', 
-            $this->added_roles[$role_id]['capabilities'],
-            "Existing role's capabilities should not be updated by addRole"
-        );
+        // Desk officers should not have capabilities reserved for medical staff
+        $this->assertFalse($desk_officer_role->has_cap('add_visitation'));
+        $this->assertFalse($desk_officer_role->has_cap('edit_visitation'));
+        $this->assertFalse($desk_officer_role->has_cap('manage_medical_reports'));
     }
     
     /**
-     * Test removing a role
+     * Test that patient role has appropriately limited capabilities for security
      */
-    public function testRemoveRole()
+    public function testPatientHasLimitedCapabilities()
     {
-        // First add a role
-        $role_id = 'temporary_role';
-        RoleManager::addRole($role_id, 'Temporary Role', ['read' => true]);
+        RoleManager::initializeRoles();
         
-        // Verify role was added
-        $this->assertArrayHasKey($role_id, $this->added_roles, "Role was not added correctly before removal test");
+        $patient_role = get_role('patient');
+        $this->assertNotNull($patient_role);
         
-        // Remove the role
-        $result = RoleManager::removeRole($role_id);
+        // Patients should be able to view their own records
+        $this->assertTrue($patient_role->has_cap('read'));
+        $this->assertTrue($patient_role->has_cap('view_own_records'));
         
-        // Verify role was removed
-        $this->assertTrue($result, "removeRole should return true on success");
-        $this->assertArrayNotHasKey($role_id, $this->added_roles, "Role was not correctly removed");
+        // Patients should not have access to other capabilities
+        $this->assertFalse($patient_role->has_cap('view_patients'));
+        $this->assertFalse($patient_role->has_cap('edit_patient'));
+        $this->assertFalse($patient_role->has_cap('create_patients'));
+        $this->assertFalse($patient_role->has_cap('delete_patients'));
+        $this->assertFalse($patient_role->has_cap('manage_medical_reports'));
     }
     
     /**
-     * Test adding capabilities to an existing role
+     * Test that doctor role includes all necessary medical capabilities
      */
-    public function testAddCapabilities()
+    public function testDoctorHasMedicalCapabilities()
     {
-        // First add a role with basic capabilities
-        $role_id = 'doctor';
-        $initial_capabilities = ['read' => true];
-        RoleManager::addRole($role_id, 'Doctor', $initial_capabilities);
+        RoleManager::initializeRoles();
         
-        // Add new capabilities
-        $new_capabilities = [
-            'prescribe_medication' => true,
-            'order_tests' => true
-        ];
+        $doctor_role = get_role('doctor');
+        $this->assertNotNull($doctor_role);
         
-        $result = RoleManager::addCapabilities($role_id, $new_capabilities);
+        // Essential capabilities for doctors
+        $this->assertTrue($doctor_role->has_cap('read'));
+        $this->assertTrue($doctor_role->has_cap('view_patients'));
+        $this->assertTrue($doctor_role->has_cap('edit_patient'));
+        $this->assertTrue($doctor_role->has_cap('schedule_appointments'));
+        $this->assertTrue($doctor_role->has_cap('add_visitation'));
+        $this->assertTrue($doctor_role->has_cap('edit_visitation'));
+        $this->assertTrue($doctor_role->has_cap('manage_medical_reports'));
         
-        // Verify capabilities were added
-        $this->assertTrue($result, "addCapabilities should return true on success");
-        
-        // Check all capabilities are present
-        $role_capabilities = $this->added_roles[$role_id]['capabilities'];
-        foreach (array_merge($initial_capabilities, $new_capabilities) as $cap => $grant) {
-            $this->assertArrayHasKey(
-                $cap, 
-                $role_capabilities,
-                "Role is missing the '$cap' capability after addCapabilities"
-            );
-            $this->assertEquals(
-                $grant, 
-                $role_capabilities[$cap],
-                "Capability '$cap' has incorrect grant value after addCapabilities"
-            );
-        }
+        // Doctors shouldn't have admin capabilities
+        $this->assertFalse($doctor_role->has_cap('delete_patients'));
     }
     
     /**
-     * Test adding capabilities to a non-existent role
+     * Test that lab technician role has appropriate lab-related capabilities
      */
-    public function testAddCapabilitiesToNonExistentRole()
+    public function testLabTechnicianHasLabCapabilities()
     {
-        $result = RoleManager::addCapabilities('non_existent_role', ['test' => true]);
+        RoleManager::initializeRoles();
         
-        // Should return false for non-existent role
-        $this->assertFalse($result, "Adding capabilities to a non-existent role should return false");
+        $lab_tech_role = get_role('lab_tech');
+        $this->assertNotNull($lab_tech_role);
+        
+        // Lab technicians should have these capabilities
+        $this->assertTrue($lab_tech_role->has_cap('read'));
+        $this->assertTrue($lab_tech_role->has_cap('manage_medical_reports'));
+        $this->assertTrue($lab_tech_role->has_cap('view_lab_dashboard'));
+        
+        // Lab technicians shouldn't have patient management capabilities
+        $this->assertFalse($lab_tech_role->has_cap('view_patients'));
+        $this->assertFalse($lab_tech_role->has_cap('edit_patient'));
+        $this->assertFalse($lab_tech_role->has_cap('schedule_appointments'));
     }
 }
