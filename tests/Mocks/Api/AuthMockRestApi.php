@@ -6,7 +6,7 @@
  * functionality without relying on the full WPMVC framework.
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Authentication REST API class for tests

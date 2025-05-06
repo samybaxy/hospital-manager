@@ -6,7 +6,7 @@
  * such as lab results and prescriptions.
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Medical Data REST API class for tests

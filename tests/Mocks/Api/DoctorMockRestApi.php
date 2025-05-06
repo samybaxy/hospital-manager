@@ -6,7 +6,7 @@
  * functionality without relying on the full WPMVC framework.
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 use HospitalManager\Models\Patient;
 use HospitalManager\Models\Visitation;

@@ -3,8 +3,6 @@
 namespace HospitalManager\Tests\Integration\Controllers\Api;
 
 use HospitalManager\Tests\TestCase;
-use HospitalManager\Models\Doctor;
-use HospitalManager\Models\Patient;
 use WP_REST_Request;
 use WP_REST_Server;
 

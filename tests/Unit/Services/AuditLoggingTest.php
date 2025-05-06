@@ -3,239 +3,10 @@
 namespace HospitalManager\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
+use HospitalManager\Tests\Mocks\Services\MockAuditLog;
+use HospitalManager\Tests\Mocks\Services\MockAuditLogger;
+use HospitalManager\Tests\Mocks\MockPatientService;
 use Mockery;
-
-/**
- * Mock AuditLog class for testing
- */
-class MockAuditLog 
-{
-    public static $mockLogs = [];
-    public static $nextId = 1;
-    
-    /**
-     * Create a mock audit log entry
-     */
-    public static function create($data) 
-    {
-        $id = self::$nextId++;
-        $log = (object)array_merge(['id' => $id], $data);
-        self::$mockLogs[$id] = $log;
-        return $log;
-    }
-    
-    /**
-     * Mock where method for querying logs
-     */
-    public static function where($column, $value = null) 
-    {
-        $results = [];
-        
-        // Handle different where formats
-        if (is_array($column)) {
-            // Where with array of conditions
-            foreach (self::$mockLogs as $log) {
-                $match = true;
-                foreach ($column as $key => $val) {
-                    if (!isset($log->$key) || $log->$key != $val) {
-                        $match = false;
-                        break;
-                    }
-                }
-                if ($match) {
-                    $results[] = $log;
-                }
-            }
-        } else {
-            // Simple where with column and value
-            foreach (self::$mockLogs as $log) {
-                if (isset($log->$column) && $log->$column == $value) {
-                    $results[] = $log;
-                }
-            }
-        }
-        
-        // Return a mock query builder
-        return new MockQueryBuilder($results);
-    }
-    
-    /**
-     * Find a log by ID
-     */
-    public static function find($id) 
-    {
-        return isset(self::$mockLogs[$id]) ? self::$mockLogs[$id] : null;
-    }
-}
-
-/**
- * Mock query builder for audit logs
- */
-class MockQueryBuilder 
-{
-    protected $results = [];
-    
-    public function __construct($results) 
-    {
-        $this->results = $results;
-    }
-    
-    public function get() 
-    {
-        return $this->results;
-    }
-    
-    public function first() 
-    {
-        return count($this->results) > 0 ? $this->results[0] : null;
-    }
-    
-    public function count() 
-    {
-        return count($this->results);
-    }
-    
-    public function orderBy($column, $direction = 'asc') 
-    {
-        // Just return the same query builder for chaining
-        return $this;
-    }
-}
-
-/**
- * Mock Patient class
- */
-class MockPatient 
-{
-    public $id;
-    public $first_name;
-    public $last_name;
-    public $phone_number;
-    public $sex;
-    public $age;
-    public $bio_data;
-}
-
-/**
- * Mock AuditLogger for testing
- */
-class MockAuditLogger 
-{
-    /**
-     * Log an auditable action
-     */
-    public static function log($action, $entityType, $entityId, $details = [], $userId = null) 
-    {
-        // Default user ID if not provided
-        if ($userId === null) {
-            $userId = 1; // Default admin user
-        }
-        
-        // Format details as JSON if they're an array
-        $encodedDetails = is_string($details) ? $details : json_encode($details);
-        
-        // Sanitize sensitive data
-        if (is_array($details)) {
-            if (isset($details['password'])) {
-                unset($details['password']);
-            }
-            if (isset($details['credit_card'])) {
-                unset($details['credit_card']);
-            }
-            $encodedDetails = json_encode($details);
-        }
-        
-        // Create log data
-        $data = [
-            'user_id' => $userId,
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'details' => $encodedDetails,
-            'ip_address' => '192.168.1.100',
-            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/90.0.4430.212 Safari/537.36',
-            'created_at' => '2025-04-22 10:30:00'
-        ];
-        
-        // Create the log entry using our mock
-        return MockAuditLog::create($data);
-    }
-}
-
-/**
- * Mock PatientService for testing
- */
-class MockPatientService 
-{
-    /**
-     * Create a patient
-     */
-    public static function createPatient($data) 
-    {
-        // Create a new patient
-        $patient = new MockPatient();
-        $patient->id = rand(1000, 9999);
-        
-        // Set patient properties
-        foreach ($data as $key => $value) {
-            $patient->$key = $value;
-        }
-        
-        // Log the patient creation action
-        MockAuditLogger::log(
-            'create_patient',
-            'patient',
-            $patient->id,
-            ['patient_data' => $data]
-        );
-        
-        return $patient;
-    }
-    
-    /**
-     * Update a patient
-     */
-    public static function updatePatient($id, $data) 
-    {
-        // Create a mock patient
-        $patient = new MockPatient();
-        $patient->id = $id;
-        
-        // Update patient properties
-        foreach ($data as $key => $value) {
-            $patient->$key = $value;
-        }
-        
-        // Log the patient update action
-        MockAuditLogger::log(
-            'update_patient',
-            'patient',
-            $id,
-            [
-                'before' => ['first_name' => 'Old Name'],
-                'after' => $data
-            ]
-        );
-        
-        return $patient;
-    }
-    
-    /**
-     * Delete a patient
-     */
-    public static function deletePatient($id) 
-    {
-        // Log the patient deletion
-        MockAuditLogger::log(
-            'delete_patient',
-            'patient',
-            $id,
-            ['patient_id' => $id]
-        );
-        
-        return true;
-    }
-}
 
 /**
  * Test for AuditLogging functionality
@@ -250,12 +21,12 @@ class AuditLoggingTest extends TestCase
     /**
      * @var string User IP address for testing
      */
-    protected $test_ip = '192.168.1.100';
+    protected $test_ip = '127.0.0.1';
     
     /**
      * @var string User agent for testing
      */
-    protected $test_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/90.0.4430.212 Safari/537.36';
+    protected $test_user_agent = 'PHPUnit Test';
 
     /**
      * Set up before each test
@@ -294,10 +65,10 @@ class AuditLoggingTest extends TestCase
         $patient_data = [
             'first_name' => 'Audit',
             'last_name' => 'TestCreate',
-            'phone_number' => '08055556666',
-            'sex' => 'M',
+            'phone' => '08055556666',
+            'gender' => 'M',
             'age' => 35,
-            'bio_data' => 'Test patient for audit logging'
+            'bio_data' => json_encode(['Test patient for audit logging'])
         ];
         
         // Count audit logs before
@@ -350,7 +121,7 @@ class AuditLoggingTest extends TestCase
         $patient_data = [
             'first_name' => 'Update',
             'last_name' => 'TestPatient',
-            'phone_number' => '08055557777'
+            'phone' => '08055557777'
         ];
         $patient = MockPatientService::createPatient($patient_data);
         
@@ -361,7 +132,7 @@ class AuditLoggingTest extends TestCase
         // Update the patient
         $update_data = [
             'first_name' => 'Updated',
-            'phone_number' => '08066667777'
+            'phone' => '08066667777'
         ];
         MockPatientService::updatePatient($patient->id, $update_data);
         
@@ -437,8 +208,16 @@ class AuditLoggingTest extends TestCase
         // Log an action with sensitive data
         MockAuditLogger::log('user_login', 'user', 123, $sensitive_data);
         
-        // Get the created log
-        $log = MockAuditLog::$mockLogs[1];
+        // Find the log for this action
+        $logs = MockAuditLog::where([
+            'action' => 'user_login',
+            'entity_type' => 'user',
+            'entity_id' => 123
+        ])->get();
+        
+        // Verify log exists
+        $this->assertNotEmpty($logs, "User login audit log not found");
+        $log = $logs[0];
         
         // Check that sensitive data was sanitized
         $details = json_decode($log->details, true);

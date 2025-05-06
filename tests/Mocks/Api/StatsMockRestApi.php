@@ -6,7 +6,7 @@
  * such as hospital stats and doctor stats.
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Statistics REST API class for tests

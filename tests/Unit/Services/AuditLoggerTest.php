@@ -3,66 +3,8 @@
 namespace HospitalManager\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
+use HospitalManager\Tests\Mocks\Services\MockAuditLogger;
 use Mockery;
-
-/**
- * Mock AuditLog class with static create method
- */
-class MockAuditLog {
-    public static function create($data) {
-        global $testAuditLoggerInstance;
-        $testAuditLoggerInstance->logData = $data;
-        
-        $log = new \stdClass();
-        foreach ($data as $key => $value) {
-            $log->$key = $value;
-        }
-        $log->id = 999;
-        
-        return $log;
-    }
-}
-
-/**
- * Mock AuditLogger class
- */
-class MockAuditLogger {
-    /**
-     * Log an audit entry
-     */
-    public static function log($action, $entityType, $entityId, $details = [], $userId = null) {
-        // If userId is not provided, use current user ID (1 by default)
-        if ($userId === null) {
-            $userId = 1;
-        }
-        
-        // Handle JSON string or array
-        $encodedDetails = is_string($details) ? $details : json_encode($details);
-        
-        // Remove sensitive data
-        if (is_array($details)) {
-            if (isset($details['password'])) {
-                unset($details['password']);
-            }
-            $encodedDetails = json_encode($details);
-        }
-        
-        // Create the log data
-        $logData = [
-            'user_id' => $userId,
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'details' => $encodedDetails,
-            'ip_address' => '127.0.0.1',
-            'user_agent' => 'PHPUnit Test',
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-        
-        // Create the log entry
-        return \HospitalManager\Tests\Unit\Services\MockAuditLog::create($logData);
-    }
-}
 
 /**
  * Test for AuditLogger service
@@ -87,7 +29,10 @@ class AuditLoggerTest extends TestCase
         parent::setUp();
         
         // Reset test data
-        $this->logData = null;
+        $this->logData = [];
+        
+        // Reset the MockAuditLogger static logs array
+        MockAuditLogger::reset();
         
         // Store a global reference to this test instance
         global $testAuditLoggerInstance;

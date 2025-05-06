@@ -3,9 +3,8 @@
 namespace HospitalManager\Tests\Integration\Controllers\Api;
 
 use HospitalManager\Tests\TestCase;
-use HospitalManager\Tests\Mocks\StatsMockRestApi;
+use HospitalManager\Tests\Mocks\Api\StatsMockRestApi;
 use WP_REST_Request;
-use WP_REST_Server;
 
 class StatsControllerTest extends TestCase
 {

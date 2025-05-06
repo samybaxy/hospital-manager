@@ -28,39 +28,39 @@ class MockHospitalManager
     public static function registerTestRoutes() 
     {
         // Register Authentication API routes using the dedicated class
-        AuthMockRestApi::register_routes();
+        Api\AuthMockRestApi::register_routes();
 
         // Register Patient API routes using the dedicated class
-        PatientMockRestApi::register_routes();
+        Api\PatientMockRestApi::register_routes();
 
         // Register Doctor API routes using the dedicated class
-        DoctorMockRestApi::register_routes();
+        Api\DoctorMockRestApi::register_routes();
 
         // Register Appointment API routes using the dedicated class
-        AppointmentMockRestApi::register_routes();
+        Api\AppointmentMockRestApi::register_routes();
 
         // Register Visitation API routes using the dedicated class
-        VisitationMockRestApi::register_routes();
+        Api\VisitationMockRestApi::register_routes();
 
         // Register audit log API routes for testing
-        AuditMockRestApi::register_routes();
+        Api\AuditMockRestApi::register_routes();
 
         // Register chat API routes for testing
-        ChatMockRestApi::register_routes();
+        Api\ChatMockRestApi::register_routes();
 
         // Register Dashboard API routes for testing
-        DashboardMockRestApi::register_routes();
+        Api\DashboardMockRestApi::register_routes();
         
         // Register Medical Data API routes for testing
-        MedicalDataMockRestApi::register_routes();
+        Api\MedicalDataMockRestApi::register_routes();
         
         // Register Statistics API routes for testing
-        StatsMockRestApi::register_routes();
+        Api\StatsMockRestApi::register_routes();
         
         // Register Lab Investigation API routes for testing
-        LabInvestigationMockRestApi::register_routes();
+        Api\LabInvestigationMockRestApi::register_routes();
         
         // Register Notification API routes for testing
-        NotificationMockRestApi::register_routes();
+        Api\NotificationMockRestApi::register_routes();
     }
 }

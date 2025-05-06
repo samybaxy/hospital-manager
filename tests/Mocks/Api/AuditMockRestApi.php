@@ -3,7 +3,7 @@
  * Mock implementation of Audit REST API for testing
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Audit REST API class for tests

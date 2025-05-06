@@ -3,7 +3,7 @@
  * Mock implementation of Chat REST API for testing
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 use HospitalManager\Models\Chat;
 use HospitalManager\Models\ChatMessage;

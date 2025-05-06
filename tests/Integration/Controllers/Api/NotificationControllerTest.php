@@ -4,7 +4,6 @@ namespace HospitalManager\Tests\Integration\Controllers\Api;
 
 use HospitalManager\Tests\TestCase;
 use HospitalManager\Models\Notification;
-use HospitalManager\Services\NotificationService;
 use WP_REST_Request;
 use WP_REST_Server;
 

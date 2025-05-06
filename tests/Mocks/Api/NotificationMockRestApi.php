@@ -5,7 +5,7 @@
  * This file provides test-specific implementations for notification endpoints
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Notification REST API class for tests

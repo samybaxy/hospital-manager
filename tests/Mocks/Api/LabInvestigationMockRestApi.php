@@ -5,7 +5,7 @@
  * This file provides test-specific implementations for lab investigation endpoints
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 use HospitalManager\Models\LabInvestigation;
 

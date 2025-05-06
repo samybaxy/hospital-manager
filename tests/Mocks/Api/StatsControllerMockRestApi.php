@@ -5,7 +5,7 @@
  * This file provides test-specific implementations for statistics endpoints
  */
 
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Stats REST API class for tests

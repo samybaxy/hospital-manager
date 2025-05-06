@@ -6,7 +6,7 @@
  * for unit testing purposes, allowing for controlled responses and
  * status codes.
  */
-namespace HospitalManager\Tests\Mocks;
+namespace HospitalManager\Tests\Mocks\Api;
 
 /**
  * Mock Dashboard REST API class

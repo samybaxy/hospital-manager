@@ -3,201 +3,9 @@
 namespace HospitalManager\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
+use HospitalManager\Tests\Mocks\Services\MockWebSocketService;
+use HospitalManager\Tests\Mocks\Services\MockNotificationService;
 use Mockery;
-use ReflectionClass;
-
-/**
- * Mock NotificationService for testing
- */
-class MockNotificationService
-{
-    public static $notifications = [];
-    
-    /**
-     * Create a notification
-     */
-    public static function create($user_id, $type, $title, $message, $data = null)
-    {
-        $notification = [
-            'id' => uniqid('not_'),
-            'user_id' => $user_id,
-            'type' => $type,
-            'title' => $title,
-            'message' => $message,
-            'data' => $data,
-            'created_at' => time()
-        ];
-        
-        self::$notifications[] = $notification;
-        return $notification;
-    }
-    
-    /**
-     * Reset for testing
-     */
-    public static function reset()
-    {
-        self::$notifications = [];
-    }
-}
-
-/**
- * Mock WebSocketService for testing
- */
-class MockWebSocketService
-{
-    public static $transient_storage = [];
-    public static $message_ttl = 300;
-    public static $transient_prefix = 'hm_ws_';
-    
-    /**
-     * Initialize the service
-     */
-    public static function init()
-    {
-        // In a real environment, this would register REST API routes
-        // For testing, we just return true
-        return true;
-    }
-    
-    /**
-     * Mock implementation of set_transient
-     */
-    public static function set_transient($key, $value, $ttl)
-    {
-        self::$transient_storage[$key] = [
-            'value' => $value,
-            'expiry' => time() + $ttl
-        ];
-        
-        return true;
-    }
-    
-    /**
-     * Mock implementation of get_transient
-     */
-    public static function get_transient($key)
-    {
-        if (!isset(self::$transient_storage[$key])) {
-            return false;
-        }
-        
-        $data = self::$transient_storage[$key];
-        
-        // Check if expired
-        if (time() > $data['expiry']) {
-            unset(self::$transient_storage[$key]);
-            return false;
-        }
-        
-        return $data['value'];
-    }
-    
-    /**
-     * Send a message to a user
-     */
-    public static function sendMessage($channel, $data, $user_id)
-    {
-        $message = [
-            'id' => uniqid(),
-            'channel' => $channel,
-            'data' => $data,
-            'timestamp' => time()
-        ];
-        
-        $key = self::$transient_prefix . $user_id;
-        $messages = self::get_transient($key) ?: [];
-        $messages[] = $message;
-        
-        self::set_transient($key, $messages, self::$message_ttl);
-        
-        // Also create a notification for certain message types
-        if (in_array($channel, ['chat', 'appointment', 'lab_results'])) {
-            MockNotificationService::create(
-                $user_id,
-                $channel . '_notification',
-                self::getNotificationTitle($channel, $data),
-                self::getNotificationMessage($channel, $data),
-                $data
-            );
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Get messages for a user
-     */
-    public static function getMessages($user_id)
-    {
-        $messages = self::get_transient(self::$transient_prefix . $user_id) ?: [];
-        
-        // Filter out expired messages
-        $messages = array_filter($messages, function($message) {
-            return (time() - $message['timestamp']) < self::$message_ttl;
-        });
-        
-        return $messages;
-    }
-    
-    /**
-     * Delete a message
-     */
-    public static function deleteMessage($user_id, $message_id)
-    {
-        $key = self::$transient_prefix . $user_id;
-        $messages = self::get_transient($key) ?: [];
-        
-        $messages = array_filter($messages, function($message) use ($message_id) {
-            return $message['id'] !== $message_id;
-        });
-        
-        self::set_transient($key, $messages, self::$message_ttl);
-    }
-    
-    /**
-     * Get notification title
-     */
-    public static function getNotificationTitle($channel, $data)
-    {
-        switch ($channel) {
-            case 'chat':
-                return 'New Message';
-            case 'appointment':
-                return 'Appointment Update';
-            case 'lab_results':
-                return 'Lab Results Available';
-            default:
-                return 'New Notification';
-        }
-    }
-    
-    /**
-     * Get notification message
-     */
-    public static function getNotificationMessage($channel, $data)
-    {
-        switch ($channel) {
-            case 'chat':
-                // In our mock, we'll simplify this
-                return "New message from User";
-            case 'appointment':
-                return "Your appointment status has been updated to: {$data['status']}";
-            case 'lab_results':
-                return "New lab results are available for review";
-            default:
-                return "You have a new notification";
-        }
-    }
-    
-    /**
-     * Reset the mock data
-     */
-    public static function reset()
-    {
-        self::$transient_storage = [];
-    }
-}
 
 /**
  * Test for WebSocketService
@@ -214,6 +22,17 @@ class WebSocketServiceTest extends TestCase
         // Reset mock data
         MockWebSocketService::reset();
         MockNotificationService::reset();
+        
+        // Add test users
+        \HospitalManager\Tests\Mocks\Services\MockUser::reset();
+        \HospitalManager\Tests\Mocks\Services\MockUser::addUser(1, [
+            'display_name' => 'Test User 1',
+            'user_email' => 'user1@example.com'
+        ]);
+        \HospitalManager\Tests\Mocks\Services\MockUser::addUser(2, [
+            'display_name' => 'Test User 2',
+            'user_email' => 'user2@example.com' 
+        ]);
     }
     
     /**

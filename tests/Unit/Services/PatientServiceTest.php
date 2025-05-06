@@ -3,105 +3,9 @@
 namespace HospitalManager\Tests\Unit\Services;
 
 use PHPUnit\Framework\TestCase;
+use HospitalManager\Tests\Mocks\Services\MockPatient;
+use HospitalManager\Tests\Mocks\Services\MockPatientService;
 use Mockery;
-
-/**
- * Mock Patient class for testing
- */
-class MockPatient 
-{
-    private static $patients = [];
-    private static $nextId = 1;
-    
-    /**
-     * Create a new patient
-     */
-    public static function create($data) 
-    {
-        // Validate required fields
-        $required_fields = ['first_name', 'last_name', 'phone_number', 'sex'];
-        foreach ($required_fields as $field) {
-            if (empty($data[$field])) {
-                return false;
-            }
-        }
-        
-        $id = self::$nextId++;
-        $patient = new \stdClass();
-        $patient->id = $id;
-        
-        foreach ($data as $key => $value) {
-            $patient->$key = $value;
-        }
-        
-        self::$patients[$id] = $patient;
-        return $patient;
-    }
-    
-    /**
-     * Find a patient by ID
-     */
-    public static function find($id) 
-    {
-        return isset(self::$patients[$id]) ? self::$patients[$id] : null;
-    }
-    
-    /**
-     * Where clause for finding patients
-     */
-    public static function where($column, $value = null) 
-    {
-        $results = [];
-        
-        // Check each patient
-        foreach (self::$patients as $patient) {
-            if (isset($patient->$column) && $patient->$column === $value) {
-                $results[] = $patient;
-            }
-        }
-        
-        return $results;
-    }
-    
-    /**
-     * Delete a patient
-     */
-    public static function delete($id) 
-    {
-        if (isset(self::$patients[$id])) {
-            unset(self::$patients[$id]);
-            return true;
-        }
-        return false;
-    }
-    
-    /**
-     * Reset patients for testing
-     */
-    public static function reset() 
-    {
-        self::$patients = [];
-        self::$nextId = 1;
-    }
-    
-    /**
-     * Search patients
-     */
-    public static function search($searchTerm) 
-    {
-        $results = [];
-        
-        // Case insensitive search in first and last names
-        foreach (self::$patients as $patient) {
-            if (stripos($patient->first_name, $searchTerm) !== false || 
-                stripos($patient->last_name, $searchTerm) !== false) {
-                $results[] = $patient;
-            }
-        }
-        
-        return $results;
-    }
-}
 
 /**
  * Mock AuditLogger for testing
@@ -134,116 +38,6 @@ class MockAuditLogger
     public static function reset() 
     {
         self::$logs = [];
-    }
-}
-
-/**
- * Mock PatientService class for testing
- */
-class MockPatientService 
-{
-    /**
-     * Create a new patient
-     */
-    public static function createPatient($data) 
-    {
-        // Apply pre-creation filter
-        $data = self::applyFilter('hospital_manager_before_patient_create', $data);
-        
-        // Create the patient
-        $patient = MockPatient::create($data);
-        
-        // If patient creation was successful, log it
-        if ($patient) {
-            MockAuditLogger::log(
-                'create_patient',
-                'patient',
-                $patient->id,
-                ['patient_data' => $data]
-            );
-            
-            // Apply post-creation filter
-            return self::applyFilter('hospital_manager_after_patient_create', $patient);
-        }
-        
-        return false;
-    }
-    
-    /**
-     * Update an existing patient
-     */
-    public static function updatePatient($id, $data) 
-    {
-        $patient = MockPatient::find($id);
-        if (!$patient) {
-            return false;
-        }
-        
-        // Update the patient fields
-        foreach ($data as $key => $value) {
-            $patient->$key = $value;
-        }
-        
-        // Log the update
-        MockAuditLogger::log(
-            'update_patient',
-            'patient',
-            $patient->id,
-            ['updated_data' => $data]
-        );
-        
-        return $patient;
-    }
-    
-    /**
-     * Get a patient by ID
-     */
-    public static function getPatient($id) 
-    {
-        return MockPatient::find($id);
-    }
-    
-    /**
-     * Delete a patient
-     */
-    public static function deletePatient($id) 
-    {
-        $patient = MockPatient::find($id);
-        if (!$patient) {
-            return false;
-        }
-        
-        // Delete the patient
-        $result = MockPatient::delete($id);
-        
-        // Log the deletion if successful
-        if ($result) {
-            MockAuditLogger::log(
-                'delete_patient',
-                'patient',
-                $id,
-                ['patient_id' => $id]
-            );
-        }
-        
-        return $result;
-    }
-    
-    /**
-     * Search for patients by name
-     */
-    public static function searchPatients($searchTerm) 
-    {
-        return MockPatient::search($searchTerm);
-    }
-    
-    /**
-     * Mock filter application
-     */
-    private static function applyFilter($tag, $value, ...$args) 
-    {
-        // Just return the value unchanged for testing
-        return $value;
     }
 }
 
@@ -281,8 +75,8 @@ class PatientServiceTest extends TestCase
         $patient_data = [
             'first_name' => 'John',
             'last_name' => 'Smith',
-            'phone_number' => '08012345678',
-            'sex' => 'M',
+            'phone' => '08012345678',
+            'gender' => 'M',
             'age' => 35,
             'bio_data' => 'Test patient'
         ];
@@ -294,7 +88,7 @@ class PatientServiceTest extends TestCase
         $this->assertNotNull($patient, "createPatient should return a patient object");
         $this->assertEquals($patient_data['first_name'], $patient->first_name, "Patient first name not saved correctly");
         $this->assertEquals($patient_data['last_name'], $patient->last_name, "Patient last name not saved correctly");
-        $this->assertEquals($patient_data['phone_number'], $patient->phone_number, "Patient phone number not saved correctly");
+        $this->assertEquals($patient_data['phone'], $patient->phone, "Patient phone number not saved correctly");
         
         // Verify audit logging
         $this->assertNotEmpty(MockAuditLogger::$logs, "Patient creation should be audited for compliance and security");
@@ -331,8 +125,8 @@ class PatientServiceTest extends TestCase
         $original_data = [
             'first_name' => 'Original',
             'last_name' => 'Patient',
-            'phone_number' => '08011112222',
-            'sex' => 'F',
+            'phone' => '08011112222',
+            'gender' => 'F',
             'age' => 28
         ];
         
@@ -344,7 +138,7 @@ class PatientServiceTest extends TestCase
         // Update data
         $update_data = [
             'first_name' => 'Updated',
-            'phone_number' => '08033334444'
+            'phone' => '08033334444'
         ];
         
         // Update the patient
@@ -353,7 +147,7 @@ class PatientServiceTest extends TestCase
         // Verify update was successful
         $this->assertNotNull($result, "updatePatient should return the updated patient object");
         $this->assertEquals('Updated', $result->first_name, "Patient first name was not updated");
-        $this->assertEquals('08033334444', $result->phone_number, "Patient phone number was not updated");
+        $this->assertEquals('08033334444', $result->phone, "Patient phone number was not updated");
         $this->assertEquals('Patient', $result->last_name, "Patient last name should not have changed");
         
         // Verify audit logging for update
@@ -387,8 +181,8 @@ class PatientServiceTest extends TestCase
         $patient_data = [
             'first_name' => 'Get',
             'last_name' => 'Patient',
-            'phone_number' => '08055556666',
-            'sex' => 'M'
+            'phone' => '08055556666',
+            'gender' => 'M'
         ];
         
         $created_patient = MockPatientService::createPatient($patient_data);
@@ -421,8 +215,8 @@ class PatientServiceTest extends TestCase
         $patient_data = [
             'first_name' => 'Delete',
             'last_name' => 'Patient',
-            'phone_number' => '08012345678',
-            'sex' => 'M'
+            'phone' => '08012345678',
+            'gender' => 'M'
         ];
         
         $patient = MockPatientService::createPatient($patient_data);
@@ -459,8 +253,8 @@ class PatientServiceTest extends TestCase
         
         foreach ($patients as $data) {
             MockPatientService::createPatient(array_merge($data, [
-                'phone_number' => '08011112222',
-                'sex' => 'M',
+                'phone' => '08011112222',
+                'gender' => 'M',
                 'age' => 30
             ]));
         }
