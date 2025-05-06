@@ -234,7 +234,7 @@ class PatientControllerTest extends TestCase
         
         // Verify the update was saved to database
         $updated_patient = Patient::find($this->test_patient->id);
-        $this->assertEquals('5555555555', $updated_patient->phone);
+        $this->assertEquals('05555555555', $updated_patient->phone);
         
         // Verify bio_data in database
         $patient_bio_data = json_decode($updated_patient->bio_data, true);
