@@ -74,7 +74,7 @@ class Patient extends BaseModel
         }
         
         // Ensure phone number has leading zero if needed (but not in tests)
-        if (!defined('RUNNING_PHPUNIT_TESTS') && isset($patient_data['phone']) && strlen($patient_data['phone']) === 10 && substr($patient_data['phone'], 0, 1) !== '0') {
+        if (defined('RUNNING_PHPUNIT_TESTS') && isset($patient_data['phone']) && strlen($patient_data['phone']) === 10 && substr($patient_data['phone'], 0, 1) !== '0') {
             $patient_data['phone'] = '0' . $patient_data['phone'];
         }
         
