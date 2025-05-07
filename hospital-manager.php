@@ -34,6 +34,7 @@ use WPMVC\Config;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\EventStreamService;
 use HospitalManager\Services\ApiService;
+use HospitalManager\Helpers\MenuHelper;
 
 class HospitalManager extends Bridge
 {
@@ -158,6 +159,10 @@ class HospitalManager extends Bridge
             error_log('Hospital Manager: Initializing roles');
             RoleManager::initializeRoles();
             error_log('Hospital Manager: Roles initialized successfully');
+
+            // Register Menu Helper
+            MenuHelper::createHospitalManagerMenuItem();
+            error_log('Hospital Manager: Menu item created successfully');
             
             error_log('Hospital Manager: Plugin activation completed successfully');
         } catch (\Exception $e) {
