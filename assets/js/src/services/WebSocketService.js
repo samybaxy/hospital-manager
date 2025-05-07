@@ -21,26 +21,37 @@ class WebSocketService {
         }
 
         WebSocketService.isConnecting = true;
-        WebSocketService.eventSource = new EventSource('/wp-json/hospital-manager/v1/ws/events');
+        try {
+            WebSocketService.eventSource = new EventSource('/wp-json/hospital-manager/v1/ws/events');
 
-        WebSocketService.eventSource.onopen = () => {
-            console.log('SSE connection established');
+            WebSocketService.eventSource.onopen = () => {
+                console.log('SSE connection established');
+                WebSocketService.isConnecting = false;
+                if (WebSocketService.reconnectTimeout) {
+                    clearTimeout(WebSocketService.reconnectTimeout);
+                    WebSocketService.reconnectTimeout = null;
+                }
+            };
+
+            WebSocketService.eventSource.onerror = () => {
+                console.log('SSE connection error, attempting to reconnect...');
+                this.disconnect();
+                if (!WebSocketService.reconnectTimeout) {
+                    WebSocketService.reconnectTimeout = setTimeout(() => {
+                        this.connect();
+                    }, 5000); // Reconnect after 5 seconds
+                }
+            };
+        } catch (error) {
+            console.log('Failed to establish SSE connection:', error);
             WebSocketService.isConnecting = false;
-            if (WebSocketService.reconnectTimeout) {
-                clearTimeout(WebSocketService.reconnectTimeout);
-                WebSocketService.reconnectTimeout = null;
-            }
-        };
-
-        WebSocketService.eventSource.onerror = () => {
-            console.log('SSE connection error, attempting to reconnect...');
-            this.disconnect();
+            // Set up reconnection attempt
             if (!WebSocketService.reconnectTimeout) {
                 WebSocketService.reconnectTimeout = setTimeout(() => {
                     this.connect();
-                }, 5000); // Reconnect after 5 seconds
+                }, 5000);
             }
-        };
+        }
 
         WebSocketService.eventSource.addEventListener('message', (event) => {
             try {

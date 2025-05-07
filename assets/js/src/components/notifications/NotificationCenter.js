@@ -169,18 +169,19 @@ const NotificationCenter = () => {
                     </Box>
                 ) : (
                     <List sx={{ p: 0 }}>
-                        {notifications?.data.map((notification) => (
-                            <React.Fragment key={notification.id}>
-                                <ListItem 
-                                    button
-                                    onClick={() => handleNotificationClick(notification)}
-                                    sx={{
-                                        backgroundColor: notification.read ? 'inherit' : 'action.hover'
-                                    }}
-                                >
-                                    <ListItemIcon>
-                                        {getNotificationIcon(notification.type)}
-                                    </ListItemIcon>
+                        {notifications && Array.isArray(notifications.data) ? (
+                            notifications.data.map((notification) => (
+                                <React.Fragment key={notification.id}>
+                                    <ListItem 
+                                        button
+                                        onClick={() => handleNotificationClick(notification)}
+                                        sx={{
+                                            backgroundColor: notification.read ? 'inherit' : 'action.hover'
+                                        }}
+                                    >
+                                        <ListItemIcon>
+                                            {getNotificationIcon(notification.type)}
+                                        </ListItemIcon>
                                     <ListItemText
                                         primary={notification.title}
                                         secondary={
@@ -210,11 +211,11 @@ const NotificationCenter = () => {
                                 </ListItem>
                                 <Divider />
                             </React.Fragment>
-                        ))}
-                        {notifications?.data.length === 0 && (
+                        ))
+                        ) : (
                             <ListItem>
                                 <ListItemText
-                                    secondary="No notifications"
+                                    secondary="No notifications available"
                                     sx={{ textAlign: 'center' }}
                                 />
                             </ListItem>

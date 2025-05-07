@@ -18,8 +18,16 @@ const theme = createTheme({
   },
 });
 
-// Initialize QueryClient
-const queryClient = new QueryClient();
+// Initialize QueryClient with specific configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000
+    }
+  }
+});
 
 // Initialize app once DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {

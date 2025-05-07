@@ -13,17 +13,35 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         // Check WordPress user session
         fetch('/wp-json/hospital-manager/v1/auth/me')
-            .then(res => res.json())
-            .then(data => {
+            .then(res => {
+                if (res.status === 200) {
+                    return res.json().then(data => {
+                        setAuth({
+                            isAuthenticated: true,
+                            user: data.user,
+                            role: data.role,
+                            loading: false
+                        });
+                    });
+                } else {
+                    // Handle 401 Unauthorized or other error statuses
+                    setAuth({
+                        isAuthenticated: false,
+                        user: null,
+                        role: null,
+                        loading: false
+                    });
+                    return Promise.reject('Not authenticated');
+                }
+            })
+            .catch((error) => {
+                console.log('Authentication check failed:', error);
                 setAuth({
-                    isAuthenticated: true,
-                    user: data.user,
-                    role: data.role,
+                    isAuthenticated: false,
+                    user: null,
+                    role: null,
                     loading: false
                 });
-            })
-            .catch(() => {
-                setAuth(prev => ({ ...prev, loading: false }));
             });
     }, []);
 
