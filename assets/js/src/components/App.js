@@ -22,11 +22,15 @@ import VisitationForm from './pages/VisitationForm';
 import LabResultsForm from './pages/LabResultsForm';
 import Unauthorized from './pages/Unauthorized';
 
-const App = () => {
+const App = ({ isFrontend = false }) => {
     const { auth } = useAuth();
     
     // Redirect to appropriate dashboard based on role
     const getDashboardByRole = () => {
+        if (!auth.isAuthenticated) {
+            return <Navigate to="/login" />;
+        }
+        
         switch (auth.role) {
             case 'patient':
                 return <PatientDashboard />;
@@ -52,18 +56,19 @@ const App = () => {
             <Box sx={{ display: 'flex' }}>
                 <CssBaseline />
                 <Routes>
+                    {/* Public Routes */}
                     <Route path="/login" element={
                         auth.isAuthenticated ? 
                             <Navigate to="/" replace /> : 
                             <Login />
                     } />
-
                     <Route path="/unauthorized" element={<Unauthorized />} />
 
+                    {/* Protected Routes */}
                     <Route path="/" element={
-                        <ProtectedRoute>
-                            <MainLayout />
-                        </ProtectedRoute>
+                        auth.isAuthenticated ? 
+                            <MainLayout /> : 
+                            <Navigate to="/login" replace />
                     }>
                         <Route index element={getDashboardByRole()} />
 

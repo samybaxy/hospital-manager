@@ -31,10 +31,11 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use WPMVC\Bridge;
 use WPMVC\Config;
+use HospitalManager\Controllers\FrontendController;
+use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\EventStreamService;
 use HospitalManager\Services\ApiService;
-use HospitalManager\Helpers\MenuHelper;
 
 class HospitalManager extends Bridge
 {
@@ -175,6 +176,9 @@ class HospitalManager extends Bridge
     public function init()
     {
         add_action('rest_api_init', [$this, 'register_api_routes']);
+
+        // Initialize the FrontendController
+        new FrontendController();
         
         // Initialize SSE endpoints
         EventStreamService::initEndpoints();
