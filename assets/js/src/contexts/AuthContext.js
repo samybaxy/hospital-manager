@@ -16,6 +16,9 @@ export const AuthProvider = ({ children }) => {
             .then(res => {
                 if (res.status === 200) {
                     return res.json().then(data => {
+                        // Store authentication state in localStorage for WebSocketService
+                        localStorage.setItem('isAuthenticated', 'true');
+                        
                         setAuth({
                             isAuthenticated: true,
                             user: data.user,
@@ -25,6 +28,8 @@ export const AuthProvider = ({ children }) => {
                     });
                 } else {
                     // Handle 401 Unauthorized or other error statuses
+                    localStorage.removeItem('isAuthenticated');
+                    
                     setAuth({
                         isAuthenticated: false,
                         user: null,
@@ -50,13 +55,33 @@ export const AuthProvider = ({ children }) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(credentials)
-        }).then(res => res.json());
+        }).then(res => {
+            if (!res.ok) {
+                throw new Error('Login failed');
+            }
+            return res.json();
+        }).then(data => {
+            // Store authentication state in localStorage for WebSocketService
+            localStorage.setItem('isAuthenticated', 'true');
+            
+            setAuth({
+                isAuthenticated: true,
+                user: data.user,
+                role: data.role,
+                loading: false
+            });
+            
+            return data;
+        });
     };
 
     const logout = () => {
         return fetch('/wp-json/hospital-manager/v1/auth/logout', {
             method: 'POST'
         }).then(() => {
+            // Remove authentication state from localStorage
+            localStorage.removeItem('isAuthenticated');
+            
             setAuth({
                 isAuthenticated: false,
                 user: null,

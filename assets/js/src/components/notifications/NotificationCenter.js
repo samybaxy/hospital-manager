@@ -28,16 +28,37 @@ const NotificationCenter = () => {
     const [eventSource, setEventSource] = useState(null);
     const queryClient = useQueryClient();
 
-    // Fetch notifications
+    // Get authentication status
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+
+    // Fetch notifications only if authenticated
     const { data: notifications, isLoading } = useQuery(
         'notifications',
-        () => fetch('/wp-json/hospital-manager/v1/notifications').then(res => res.json())
+        () => fetch('/wp-json/hospital-manager/v1/notifications').then(res => {
+            if (!res.ok) {
+                throw new Error('Failed to fetch notifications');
+            }
+            return res.json();
+        }),
+        {
+            enabled: isAuthenticated, // Only run query if authenticated
+            retry: false // Don't retry if it fails
+        }
     );
 
-    // Get unread count
+    // Get unread count only if authenticated
     const { data: unreadCount } = useQuery(
         'unreadNotifications',
-        () => fetch('/wp-json/hospital-manager/v1/notifications/unread').then(res => res.json())
+        () => fetch('/wp-json/hospital-manager/v1/notifications/unread').then(res => {
+            if (!res.ok) {
+                throw new Error('Failed to fetch unread count');
+            }
+            return res.json();
+        }),
+        {
+            enabled: isAuthenticated, // Only run query if authenticated
+            retry: false // Don't retry if it fails
+        }
     );
 
     // Mark as read mutation
@@ -53,39 +74,60 @@ const NotificationCenter = () => {
         }
     );
 
-    // Setup SSE connection for real-time notifications
+    // Setup SSE connection for real-time notifications - only when authenticated
     useEffect(() => {
-        const sse = new EventSource('/wp-json/hospital-manager/v1/ws/events');
+        const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+        
+        // Only connect if authenticated
+        if (!isAuthenticated) {
+            return;
+        }
+        
+        let sse;
+        try {
+            sse = new EventSource('/wp-json/hospital-manager/v1/ws/events');
 
-        sse.onopen = () => {
-            console.log('SSE connection established');
-        };
-
-        sse.addEventListener('message', (event) => {
-            const data = JSON.parse(event.data);
+            sse.onopen = () => {
+                console.log('SSE connection established');
+            };
             
-            // Handle different types of notifications
-            if (data.channel === 'lab_results') {
-                // Show lab results notification
-                queryClient.invalidateQueries('notifications');
-                queryClient.invalidateQueries('unreadNotifications');
-            } else if (data.channel === 'chat') {
-                // Handle new chat message
-                queryClient.invalidateQueries(['chatMessages', data.data.chat_id]);
-                queryClient.invalidateQueries('notifications');
-            } else if (data.channel === 'appointment') {
-                // Handle appointment updates
-                queryClient.invalidateQueries('appointments');
-                queryClient.invalidateQueries('notifications');
-            }
-        });
+            sse.onerror = () => {
+                console.log('SSE connection error');
+                sse.close();
+            };
 
-        setEventSource(sse);
+            sse.addEventListener('message', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Handle different types of notifications
+                    if (data.channel === 'lab_results') {
+                        // Show lab results notification
+                        queryClient.invalidateQueries('notifications');
+                        queryClient.invalidateQueries('unreadNotifications');
+                    } else if (data.channel === 'chat') {
+                        // Handle new chat message
+                        queryClient.invalidateQueries(['chatMessages', data.data.chat_id]);
+                        queryClient.invalidateQueries('notifications');
+                    } else if (data.channel === 'appointment') {
+                        // Handle appointment updates
+                        queryClient.invalidateQueries('appointments');
+                        queryClient.invalidateQueries('notifications');
+                    }
+                } catch (error) {
+                    console.error('Error parsing SSE message:', error);
+                }
+            });
 
-        return () => {
-            sse.close();
-        };
-    }, []);
+            setEventSource(sse);
+            
+            return () => {
+                sse.close();
+            };
+        } catch (error) {
+            console.error('Error setting up EventSource:', error);
+        }
+    }, [queryClient]);
 
     const getNotificationIcon = (type) => {
         switch (type) {

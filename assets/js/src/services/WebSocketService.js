@@ -103,11 +103,17 @@ class WebSocketService {
 
 export const useWebSocket = (channel, callback) => {
     const ws = WebSocketService.getInstance();
-
+    
+    // Get authentication status from wherever it's stored
+    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+    
     useEffect(() => {
-        const unsubscribe = ws.subscribe(channel, callback);
-        return () => unsubscribe();
-    }, [channel, callback]);
+        // Only subscribe if authenticated
+        if (isAuthenticated) {
+            const unsubscribe = ws.subscribe(channel, callback);
+            return () => unsubscribe();
+        }
+    }, [channel, callback, isAuthenticated]);
 
     return ws;
 };
