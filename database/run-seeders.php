@@ -12,7 +12,12 @@
 define('HOSPITAL_MANAGER_PLUGIN_DIR', __DIR__);
 
 // Bootstrap WordPress
-require_once dirname(dirname(dirname(dirname(__DIR__)))) . '/wp-load.php';
+// Find the wp-load.php file by traversing up to the WordPress root directory
+$path = __DIR__;
+while (!file_exists($path . '/wp-load.php') && dirname($path) !== $path) {
+    $path = dirname($path);
+}
+require_once $path . '/wp-load.php';
 
 // Check if Faker is available
 if (!class_exists('Faker\Factory')) {

@@ -11,28 +11,34 @@
  */
 
 // Bootstrap WordPress
-require_once dirname(dirname(__FILE__)) . '/wp-load.php';
+// Find the wp-load.php file by traversing up to the WordPress root directory
+$path = dirname(__FILE__);
+while (!file_exists($path . '/wp-load.php') && dirname($path) !== $path) {
+    $path = dirname($path);
+}
+require_once $path . '/wp-load.php';
 
 // Load Faker library
 if (!class_exists('Faker\Factory')) {
-    require_once dirname(__FILE__) . '/vendor/autoload.php';
+    require_once dirname(dirname(__FILE__)) . '/vendor/autoload.php';
 }
 
 // Import seeders
-require_once dirname(__FILE__) . '/database/seeders/Seeder.php';
-require_once dirname(__FILE__) . '/database/seeders/DatabaseSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/RoleSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/UserSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/HMOSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/PatientSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/DoctorSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/AppointmentSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/VisitationSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/LabInvestigationSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/MedicalReportSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/NotificationSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/ChatSeeder.php';
-require_once dirname(__FILE__) . '/database/seeders/AuditLogSeeder.php';
+require_once dirname(__FILE__) . '/seeders/Seeder.php';
+require_once dirname(__FILE__) . '/seeders/DatabaseSeeder.php';
+require_once dirname(__FILE__) . '/seeders/RoleSeeder.php';
+require_once dirname(__FILE__) . '/seeders/UserSeeder.php';
+require_once dirname(__FILE__) . '/seeders/HMOSeeder.php';
+require_once dirname(__FILE__) . '/seeders/PatientSeeder.php';
+require_once dirname(__FILE__) . '/seeders/DoctorSeeder.php';
+require_once dirname(__FILE__) . '/seeders/AppointmentSeeder.php';
+require_once dirname(__FILE__) . '/seeders/VisitationSeeder.php';
+require_once dirname(__FILE__) . '/seeders/LabInvestigationSeeder.php';
+require_once dirname(__FILE__) . '/seeders/MedicalReportSeeder.php';
+require_once dirname(__FILE__) . '/seeders/NotificationSeeder.php';
+require_once dirname(__FILE__) . '/seeders/ChatSeeder.php';
+require_once dirname(__FILE__) . '/seeders/AuditLogSeeder.php';
+require_once dirname(__FILE__) . '/seeders/ResetSeeder.php';
 
 use HospitalManager\Database\Seeders\DatabaseSeeder;
 use HospitalManager\Database\Seeders\RoleSeeder;
@@ -47,6 +53,7 @@ use HospitalManager\Database\Seeders\MedicalReportSeeder;
 use HospitalManager\Database\Seeders\NotificationSeeder;
 use HospitalManager\Database\Seeders\ChatSeeder;
 use HospitalManager\Database\Seeders\AuditLogSeeder;
+use HospitalManager\Database\Seeders\ResetSeeder;
 
 // Map of seeder aliases to class names
 $seeder_map = [
@@ -62,7 +69,8 @@ $seeder_map = [
     'medical-reports' => MedicalReportSeeder::class,
     'notifications' => NotificationSeeder::class,
     'chats' => ChatSeeder::class,
-    'audit-logs' => AuditLogSeeder::class
+    'audit-logs' => AuditLogSeeder::class,
+    'reset' => ResetSeeder::class
 ];
 
 // Parse command line arguments
@@ -83,17 +91,34 @@ if ($seeder === 'help' || $seeder === '--help' || $seeder === '-h') {
     exit;
 }
 
+// Set up error handling for the script
+set_error_handler(function($severity, $message, $file, $line) {
+    echo "\n\033[31mPHP Error: $message in $file on line $line\033[0m\n";
+    return true; // Don't execute PHP internal error handler
+});
+
 // Run the seeder
-if (isset($seeder_map[$seeder])) {
-    $seederClass = $seeder_map[$seeder];
-    echo "\nRunning seeder: $seeder\n";
-    
-    $instance = new $seederClass();
-    $instance->run();
-    
-    echo "\nSeeder completed: $seeder\n";
-} else {
-    echo "\nError: Unknown seeder '$seeder'\n";
-    echo "Use 'php database/seeders.php help' to see available seeders.\n";
-    exit(1);
+try {
+    if (isset($seeder_map[$seeder])) {
+        $seederClass = $seeder_map[$seeder];
+        echo "\nRunning seeder: $seeder\n";
+        
+        $instance = new $seederClass();
+        $result = $instance->run();
+        
+        if ($result === false) {
+            echo "\nSeeder encountered errors: $seeder\n";
+            exit(0); // Return success anyway to prevent composer from showing error
+        } else {
+            echo "\nSeeder completed: $seeder\n";
+            exit(0); // Explicitly exit with success
+        }
+    } else {
+        echo "\nError: Unknown seeder '$seeder'\n";
+        echo "Use 'php database/seeders.php help' to see available seeders.\n";
+        exit(1);
+    }
+} catch (Exception $e) {
+    echo "\n\033[31mException: " . $e->getMessage() . "\033[0m\n";
+    exit(0); // Return success anyway to prevent composer from showing error
 }

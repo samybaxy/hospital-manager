@@ -18,6 +18,7 @@ abstract class Seeder
     
     /**
      * Run the seeder
+     * @return bool True if seeding was successful, false otherwise
      */
     abstract public function run();
     

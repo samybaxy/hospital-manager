@@ -36,7 +36,9 @@
         "seed:medical-reports": "php database/seeders.php medical-reports",
         "seed:notifications": "php database/seeders.php notifications", 
         "seed:chats": "php database/seeders.php chats",
-        "seed:audit-logs": "php database/seeders.php audit-logs"
+        "seed:audit-logs": "php database/seeders.php audit-logs",
+        "seed:reset": "php database/seeders.php reset",
+        "db:reset": "php database/reset-data.php"
     },
     "config": {
         "vendor-dir": "vendor",
