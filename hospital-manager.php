@@ -36,6 +36,7 @@ use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\EventStreamService;
 use HospitalManager\Services\ApiService;
+use HospitalManager\Commands\DatabaseSeederCommand;
 
 class HospitalManager extends Bridge
 {
@@ -183,7 +184,21 @@ class HospitalManager extends Bridge
         // Initialize SSE endpoints
         EventStreamService::initEndpoints();
         
+        // Register WP-CLI commands
+        if (defined('WP_CLI') && WP_CLI) {
+            $this->register_cli_commands();
+        }
+        
         parent::init();
+    }
+    
+    /**
+     * Register WP-CLI commands
+     */
+    public function register_cli_commands()
+    {
+        $seederCommand = new DatabaseSeederCommand();
+        $seederCommand->register();
     }
 
     public function register_api_routes()

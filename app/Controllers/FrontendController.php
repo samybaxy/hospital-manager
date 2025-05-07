@@ -34,6 +34,15 @@ class FrontendController extends Controller
                 'hospital-manager-frontend',
                 plugins_url('assets/css/src/frontend.css', dirname(__DIR__))
             );
+            
+            // Add inline CSS to hide the WordPress default page title
+            wp_add_inline_style('hospital-manager-frontend', '
+                .wp-block-post-title, 
+                .entry-title, 
+                .page-title { 
+                    display: none !important; 
+                }
+            ');
 
             wp_enqueue_script(
                 'hospital-manager-app',

@@ -9,17 +9,34 @@
         "10quality/wpmvc-commands": "^1.0",
         "10quality/wpmvc-mvc": "^2.0",
         "composer/installers": "^2.0",
-        "vlucas/phpdotenv": "^5.6"
+        "vlucas/phpdotenv": "^5.6",
+        "fakerphp/faker": "^1.20"
     },
     "autoload": {
         "psr-4": {
-            "HospitalManager\\": "app/"
+            "HospitalManager\\": "app/",
+            "HospitalManager\\Database\\": "database/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "HospitalManager\\Tests\\": "tests/"
         }
+    },
+    "scripts": {
+        "seed": "php database/seeders.php all",
+        "seed:roles": "php database/seeders.php roles",
+        "seed:users": "php database/seeders.php users",
+        "seed:hmos": "php database/seeders.php hmos",
+        "seed:patients": "php database/seeders.php patients",
+        "seed:doctors": "php database/seeders.php doctors",
+        "seed:appointments": "php database/seeders.php appointments",
+        "seed:visitations": "php database/seeders.php visitations",
+        "seed:lab-investigations": "php database/seeders.php lab-investigations",
+        "seed:medical-reports": "php database/seeders.php medical-reports",
+        "seed:notifications": "php database/seeders.php notifications", 
+        "seed:chats": "php database/seeders.php chats",
+        "seed:audit-logs": "php database/seeders.php audit-logs"
     },
     "config": {
         "vendor-dir": "vendor",
