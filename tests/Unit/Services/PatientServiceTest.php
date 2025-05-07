@@ -5,41 +5,10 @@ namespace HospitalManager\Tests\Unit\Services;
 use PHPUnit\Framework\TestCase;
 use HospitalManager\Tests\Mocks\Services\MockPatient;
 use HospitalManager\Tests\Mocks\Services\MockPatientService;
+use HospitalManager\Tests\Mocks\Services\MockAuditLogger;
 use Mockery;
 
-/**
- * Mock AuditLogger for testing
- */
-class MockAuditLogger 
-{
-    public static $logs = [];
-    
-    /**
-     * Log an audit entry
-     */
-    public static function log($action, $entityType, $entityId, $details = [], $userId = null) 
-    {
-        $log = [
-            'action' => $action,
-            'entity_type' => $entityType,
-            'entity_id' => $entityId,
-            'details' => $details,
-            'user_id' => $userId ?? 1,
-            'created_at' => date('Y-m-d H:i:s')
-        ];
-        
-        self::$logs[] = $log;
-        return true;
-    }
-    
-    /**
-     * Reset logs for testing
-     */
-    public static function reset() 
-    {
-        self::$logs = [];
-    }
-}
+// Using centralized MockAuditLogger from HospitalManager\Tests\Mocks\Services namespace
 
 /**
  * Tests for PatientService
@@ -92,9 +61,9 @@ class PatientServiceTest extends TestCase
         
         // Verify audit logging
         $this->assertNotEmpty(MockAuditLogger::$logs, "Patient creation should be audited for compliance and security");
-        $this->assertEquals('create_patient', MockAuditLogger::$logs[0]['action'], "Incorrect audit action recorded");
-        $this->assertEquals('patient', MockAuditLogger::$logs[0]['entity_type'], "Incorrect audit entity type");
-        $this->assertEquals($patient->id, MockAuditLogger::$logs[0]['entity_id'], "Incorrect patient ID in audit log");
+        $this->assertEquals('create_patient', MockAuditLogger::$logs[0]->action, "Incorrect audit action recorded");
+        $this->assertEquals('patient', MockAuditLogger::$logs[0]->entity_type, "Incorrect audit entity type");
+        $this->assertEquals($patient->id, MockAuditLogger::$logs[0]->entity_id, "Incorrect patient ID in audit log");
     }
     
     /**
@@ -127,7 +96,8 @@ class PatientServiceTest extends TestCase
             'last_name' => 'Patient',
             'phone' => '08011112222',
             'gender' => 'F',
-            'age' => 28
+            'age' => 28,
+            'bio_data' => 'Original bio data'
         ];
         
         $patient = MockPatientService::createPatient($original_data);
@@ -138,7 +108,12 @@ class PatientServiceTest extends TestCase
         // Update data
         $update_data = [
             'first_name' => 'Updated',
-            'phone' => '08033334444'
+            'phone' => '08033334444',
+            // Required fields to satisfy validation
+            'last_name' => 'Patient',
+            'gender' => 'F',
+            'age' => 28,
+            'bio_data' => 'Updated bio data'
         ];
         
         // Update the patient
@@ -152,7 +127,7 @@ class PatientServiceTest extends TestCase
         
         // Verify audit logging for update
         $this->assertNotEmpty(MockAuditLogger::$logs, "Patient updates should be audited for compliance tracking");
-        $this->assertEquals('update_patient', MockAuditLogger::$logs[0]['action'], "Incorrect audit action for update");
+        $this->assertEquals('update_patient', MockAuditLogger::$logs[0]->action, "Incorrect audit action for update");
     }
     
     /**
@@ -182,7 +157,9 @@ class PatientServiceTest extends TestCase
             'first_name' => 'Get',
             'last_name' => 'Patient',
             'phone' => '08055556666',
-            'gender' => 'M'
+            'gender' => 'M',
+            'age' => 35,
+            'bio_data' => 'Get patient bio data'
         ];
         
         $created_patient = MockPatientService::createPatient($patient_data);
@@ -216,7 +193,9 @@ class PatientServiceTest extends TestCase
             'first_name' => 'Delete',
             'last_name' => 'Patient',
             'phone' => '08012345678',
-            'gender' => 'M'
+            'gender' => 'M',
+            'age' => 42,
+            'bio_data' => 'Delete patient bio data'
         ];
         
         $patient = MockPatientService::createPatient($patient_data);
@@ -236,7 +215,7 @@ class PatientServiceTest extends TestCase
         
         // Verify audit logging for deletion
         $this->assertNotEmpty(MockAuditLogger::$logs, "Patient deletion should be audited for compliance tracking");
-        $this->assertEquals('delete_patient', MockAuditLogger::$logs[0]['action'], "Incorrect audit action for deletion");
+        $this->assertEquals('delete_patient', MockAuditLogger::$logs[0]->action, "Incorrect audit action for deletion");
     }
     
     /**
@@ -255,7 +234,8 @@ class PatientServiceTest extends TestCase
             MockPatientService::createPatient(array_merge($data, [
                 'phone' => '08011112222',
                 'gender' => 'M',
-                'age' => 30
+                'age' => 30,
+                'bio_data' => 'Search patient bio data'
             ]));
         }
         

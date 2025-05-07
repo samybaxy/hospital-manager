@@ -5,7 +5,7 @@ namespace HospitalManager\Tests\Unit\Services;
 use PHPUnit\Framework\TestCase;
 use HospitalManager\Tests\Mocks\Services\MockAuditLog;
 use HospitalManager\Tests\Mocks\Services\MockAuditLogger;
-use HospitalManager\Tests\Mocks\MockPatientService;
+use HospitalManager\Tests\Mocks\Services\MockPatientService;
 use Mockery;
 
 /**
@@ -121,7 +121,10 @@ class AuditLoggingTest extends TestCase
         $patient_data = [
             'first_name' => 'Update',
             'last_name' => 'TestPatient',
-            'phone' => '08055557777'
+            'phone' => '08055557777',
+            'gender' => 'M',
+            'age' => 35,
+            'bio_data' => 'Initial bio data for update test'
         ];
         $patient = MockPatientService::createPatient($patient_data);
         
@@ -132,7 +135,12 @@ class AuditLoggingTest extends TestCase
         // Update the patient
         $update_data = [
             'first_name' => 'Updated',
-            'phone' => '08066667777'
+            'phone' => '08066667777',
+            // Required fields to satisfy validation
+            'last_name' => 'Smith',
+            'gender' => 'M',
+            'age' => 35,
+            'bio_data' => 'Updated bio data'
         ];
         MockPatientService::updatePatient($patient->id, $update_data);
         
@@ -166,7 +174,23 @@ class AuditLoggingTest extends TestCase
      */
     public function testPatientDeletionIsLogged()
     {
-        $patient_id = 5000; // Arbitrary ID for testing
+        // First create a patient that we can delete
+        $patient_data = [
+            'first_name' => 'Delete',
+            'last_name' => 'Patient',
+            'phone' => '08012345678',
+            'gender' => 'M',
+            'age' => 42,
+            'bio_data' => 'Delete patient bio data'
+        ];
+        
+        // Create and get the ID
+        $patient = MockPatientService::createPatient($patient_data);
+        $patient_id = $patient->id;
+        
+        // Reset log count after creation
+        MockAuditLog::$mockLogs = [];
+        MockAuditLog::$nextId = 1;
         
         // Delete the patient
         MockPatientService::deletePatient($patient_id);

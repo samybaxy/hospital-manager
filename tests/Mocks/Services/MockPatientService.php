@@ -49,12 +49,27 @@ class MockPatientService
             $patient->$key = $value;
         }
         
-        // Log the update
+        // Get original patient data for "before" state
+        $before = [];
+        foreach (get_object_vars($patient) as $key => $value) {
+            $before[$key] = $value;
+        }
+        
+        // Create "after" state by applying the updates
+        $after = $before;
+        foreach ($data as $key => $value) {
+            $after[$key] = $value;
+        }
+        
+        // Log the update with before/after data
         MockAuditLogger::log(
             'update_patient',
             'patient',
             $patient->id,
-            ['updated_data' => $data]
+            [
+                'before' => $before,
+                'after' => $after
+            ]
         );
         
         return $patient;
