@@ -41,6 +41,10 @@ composer seed:roles
 composer seed:users
 composer seed:patients
 # etc.
+
+# Reset/clear all seeded data
+composer seed:reset       # Using the seeder system
+composer db:reset         # Alternative reliable reset method
 ```
 
 ### Option 2: Using PHP directly
@@ -118,6 +122,44 @@ Each seeder can be customized by editing the corresponding file in the `database
 - The number of records to create
 - The specific data being generated
 - The probability distributions for various data fields
+
+## Resetting Seeded Data
+
+If you need to remove all data created by the seeders, you can use the following commands:
+
+### Using Composer
+
+```bash
+# Reset all seeded data using the seeder system
+composer seed:reset
+
+# Alternative reset method (more reliable)
+composer db:reset
+```
+
+### Using PHP directly
+
+```bash
+# Reset all seeded data
+php database/reset-data.php
+```
+
+### Using WP-CLI
+
+```bash
+# Reset all seeded data
+wp hospital-manager seed:reset
+```
+
+The reset process will:
+- Truncate all Hospital Manager database tables
+- Remove all users created by the seeders
+- Clear plugin-related user meta data
+
+This is useful for:
+- Starting with a clean slate before re-seeding
+- Cleaning up test data before deployment
+- Resolving data issues caused by incomplete seeders
 
 ## Troubleshooting
 

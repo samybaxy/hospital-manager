@@ -39,6 +39,7 @@ composer seed:medical-reports
 composer seed:notifications
 composer seed:chats
 composer seed:audit-logs
+composer seed:reset      # Clear all seeded data
 ```
 
 ### Using PHP directly
@@ -109,3 +110,25 @@ By default, the seeders create:
 - 200+ audit log entries
 
 You can modify these numbers by editing the respective seeder files.
+
+## Clearing Seeded Data
+
+If you need to remove all the seeded data from your database, you can use the reset command:
+
+```bash
+# Using Composer
+composer seed:reset
+
+# Using direct PHP script
+php database/reset-data.php
+
+# Using Composer alternative (more reliable)
+composer db:reset
+```
+
+The reset process will:
+- Truncate all Hospital Manager database tables
+- Remove all users created by the seeders
+- Clear plugin-related user meta data
+
+This is useful when you want to start with a clean slate before re-seeding the database.
