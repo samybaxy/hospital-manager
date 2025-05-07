@@ -88,11 +88,13 @@ const NotificationCenter = () => {
             sse = new EventSource('/wp-json/hospital-manager/v1/ws/events');
 
             sse.onopen = () => {
-                console.log('SSE connection established');
+                // Use debug level logging in production
+                console.debug('NotificationCenter: SSE connection established');
             };
             
             sse.onerror = () => {
-                console.log('SSE connection error');
+                // Use debug level logging in production
+                console.debug('NotificationCenter: SSE connection error');
                 sse.close();
             };
 
@@ -115,7 +117,8 @@ const NotificationCenter = () => {
                         queryClient.invalidateQueries('notifications');
                     }
                 } catch (error) {
-                    console.error('Error parsing SSE message:', error);
+                    // Use debug level logging in production
+                    console.debug('NotificationCenter: Error parsing SSE message');
                 }
             });
 
@@ -125,7 +128,8 @@ const NotificationCenter = () => {
                 sse.close();
             };
         } catch (error) {
-            console.error('Error setting up EventSource:', error);
+            // Use debug level logging in production
+            console.debug('NotificationCenter: Error setting up EventSource');
         }
     }, [queryClient]);
 

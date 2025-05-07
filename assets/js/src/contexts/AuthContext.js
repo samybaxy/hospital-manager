@@ -11,11 +11,31 @@ export const AuthProvider = ({ children }) => {
     });
 
     useEffect(() => {
-        // Check WordPress user session
-        fetch('/wp-json/hospital-manager/v1/auth/me')
-            .then(res => {
-                if (res.status === 200) {
-                    return res.json().then(data => {
+        // Check if user is likely authenticated using localStorage first
+        const wasAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+        
+        // Set up custom fetch options to avoid console errors for 401 responses
+        const checkAuth = async () => {
+            try {
+                // Create a controller to potentially abort the request
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                
+                // Check WordPress user session with credentials included to handle cookies
+                const response = await fetch('/wp-json/hospital-manager/v1/auth/me', {
+                    credentials: 'include', // Include cookies
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest' // Help identify AJAX requests
+                    },
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.status === 200) {
+                    const data = await response.json();
+                    
+                    if (data.authenticated) {
                         // Store authentication state in localStorage for WebSocketService
                         localStorage.setItem('isAuthenticated', 'true');
                         
@@ -25,9 +45,19 @@ export const AuthProvider = ({ children }) => {
                             role: data.role,
                             loading: false
                         });
-                    });
+                    } else {
+                        // User is not authenticated but we got a 200 response
+                        localStorage.removeItem('isAuthenticated');
+                        
+                        setAuth({
+                            isAuthenticated: false,
+                            user: null,
+                            role: null,
+                            loading: false
+                        });
+                    }
                 } else {
-                    // Handle 401 Unauthorized or other error statuses
+                    // Handle unexpected error status codes
                     localStorage.removeItem('isAuthenticated');
                     
                     setAuth({
@@ -36,18 +66,25 @@ export const AuthProvider = ({ children }) => {
                         role: null,
                         loading: false
                     });
-                    return Promise.reject('Not authenticated');
                 }
-            })
-            .catch((error) => {
-                console.log('Authentication check failed:', error);
+            } catch (error) {
+                // Only log unexpected errors
+                if (error.name !== 'AbortError') {
+                    // Keep this silent in production
+                    console.debug('Auth check error:', error);
+                }
+                
+                localStorage.removeItem('isAuthenticated');
                 setAuth({
                     isAuthenticated: false,
                     user: null,
                     role: null,
                     loading: false
                 });
-            });
+            }
+        };
+
+        checkAuth();
     }, []);
 
     const login = (credentials) => {

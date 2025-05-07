@@ -16,6 +16,11 @@ class WebSocketService {
     }
 
     connect() {
+        // Check if user is authenticated before trying to connect
+        if (localStorage.getItem('isAuthenticated') !== 'true') {
+            return; // Don't attempt to connect if not authenticated
+        }
+        
         if (WebSocketService.eventSource || WebSocketService.isConnecting) {
             return;
         }
@@ -25,7 +30,8 @@ class WebSocketService {
             WebSocketService.eventSource = new EventSource('/wp-json/hospital-manager/v1/ws/events');
 
             WebSocketService.eventSource.onopen = () => {
-                console.log('SSE connection established');
+                // Use debug level logging in production
+                console.debug('SSE connection established');
                 WebSocketService.isConnecting = false;
                 if (WebSocketService.reconnectTimeout) {
                     clearTimeout(WebSocketService.reconnectTimeout);
@@ -33,20 +39,25 @@ class WebSocketService {
                 }
             };
 
-            WebSocketService.eventSource.onerror = () => {
-                console.log('SSE connection error, attempting to reconnect...');
+            WebSocketService.eventSource.onerror = (event) => {
+                // Use debug level logging in production
+                console.debug('SSE connection error');
                 this.disconnect();
-                if (!WebSocketService.reconnectTimeout) {
+                
+                // Only reconnect if user is still authenticated
+                if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
                     WebSocketService.reconnectTimeout = setTimeout(() => {
                         this.connect();
                     }, 5000); // Reconnect after 5 seconds
                 }
             };
         } catch (error) {
-            console.log('Failed to establish SSE connection:', error);
+            // Use debug level logging in production
+            console.debug('Failed to establish SSE connection');
             WebSocketService.isConnecting = false;
-            // Set up reconnection attempt
-            if (!WebSocketService.reconnectTimeout) {
+            
+            // Only reconnect if user is still authenticated
+            if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
                 WebSocketService.reconnectTimeout = setTimeout(() => {
                     this.connect();
                 }, 5000);

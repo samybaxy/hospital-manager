@@ -16,7 +16,8 @@ class AuthController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_current_user'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    // Allow all requests, we'll handle authentication in the callback
+                    return true;
                 }
             ]
         ]);
@@ -46,14 +47,24 @@ class AuthController extends BaseController
     {
         $user = wp_get_current_user();
         
-        return new WP_REST_Response([
-            'user' => [
-                'id' => $user->ID,
-                'name' => $user->display_name,
-                'email' => $user->user_email
-            ],
-            'role' => $this->get_primary_role($user)
-        ]);
+        // Check if user is logged in (ID > 0 means logged in)
+        if ($user->ID > 0) {
+            return new WP_REST_Response([
+                'authenticated' => true,
+                'user' => [
+                    'id' => $user->ID,
+                    'name' => $user->display_name,
+                    'email' => $user->user_email
+                ],
+                'role' => $this->get_primary_role($user)
+            ]);
+        } else {
+            // Return a 200 status for unauthenticated users with appropriate data
+            return new WP_REST_Response([
+                'authenticated' => false,
+                'message' => 'Not authenticated'
+            ], 200); // Return 200 instead of 401
+        }
     }
 
     public function login($request)
