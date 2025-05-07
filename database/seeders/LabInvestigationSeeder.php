@@ -109,7 +109,6 @@ class LabInvestigationSeeder extends Seeder
                 $test_type = $this->testTypes[array_rand($this->testTypes)];
                 $status = $this->statuses[array_rand($this->statuses)];
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
-                $requested_by = $visitation->doctor_id;
                 
                 // Generate created_at date based on visitation date
                 $created_at = $this->wpdb->get_var("SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE id = {$visitation_id}");
@@ -119,8 +118,6 @@ class LabInvestigationSeeder extends Seeder
                 
                 // For completed tests, add results
                 $results = null;
-                $report_url = null;
-                $completed_at = null;
                 
                 if ($status === 'completed') {
                     // Get specific results for known test types, or generate generic results
@@ -131,12 +128,6 @@ class LabInvestigationSeeder extends Seeder
                     }
                     
                     $results = $result_text;
-                    $report_url = $this->faker->randomElement([
-                        '/wp-content/uploads/lab-reports/report_' . rand(1000, 9999) . '.pdf',
-                        '/wp-content/uploads/lab-reports/results_' . rand(1000, 9999) . '.pdf',
-                        null
-                    ]);
-                    $completed_at = date('Y-m-d H:i:s', strtotime($created_at . ' +1 day'));
                 }
                 
                 $data = [
@@ -147,10 +138,7 @@ class LabInvestigationSeeder extends Seeder
                     'test_type' => $test_type,
                     'notes' => $notes,
                     'results' => $results,
-                    'report_url' => $report_url,
-                    'requested_by' => $requested_by,
                     'status' => $status,
-                    'completed_at' => $completed_at,
                     'created_at' => $created_at,
                     'updated_at' => $created_at
                 ];

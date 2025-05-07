@@ -34,6 +34,7 @@ require_once dirname(__FILE__) . '/seeders/DoctorSeeder.php';
 require_once dirname(__FILE__) . '/seeders/AppointmentSeeder.php';
 require_once dirname(__FILE__) . '/seeders/VisitationSeeder.php';
 require_once dirname(__FILE__) . '/seeders/LabInvestigationSeeder.php';
+require_once dirname(__FILE__) . '/seeders/RadiologicalExamSeeder.php';
 require_once dirname(__FILE__) . '/seeders/MedicalReportSeeder.php';
 require_once dirname(__FILE__) . '/seeders/NotificationSeeder.php';
 require_once dirname(__FILE__) . '/seeders/ChatSeeder.php';
@@ -49,6 +50,7 @@ use HospitalManager\Database\Seeders\DoctorSeeder;
 use HospitalManager\Database\Seeders\AppointmentSeeder;
 use HospitalManager\Database\Seeders\VisitationSeeder;
 use HospitalManager\Database\Seeders\LabInvestigationSeeder;
+use HospitalManager\Database\Seeders\RadiologicalExamSeeder;
 use HospitalManager\Database\Seeders\MedicalReportSeeder;
 use HospitalManager\Database\Seeders\NotificationSeeder;
 use HospitalManager\Database\Seeders\ChatSeeder;
@@ -66,6 +68,7 @@ $seeder_map = [
     'appointments' => AppointmentSeeder::class,
     'visitations' => VisitationSeeder::class,
     'lab-investigations' => LabInvestigationSeeder::class,
+    'radiological-exams' => RadiologicalExamSeeder::class,
     'medical-reports' => MedicalReportSeeder::class,
     'notifications' => NotificationSeeder::class,
     'chats' => ChatSeeder::class,

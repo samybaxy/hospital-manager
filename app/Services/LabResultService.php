@@ -12,7 +12,7 @@ class LabResultService
     /**
      * Update lab results and send notifications
      */
-    public static function updateLabResults($labId, $results, $reportUrl = null)
+    public static function updateLabResults($labId, $results)
     {
         $lab = LabInvestigation::find($labId);
         if (!$lab) {
@@ -21,7 +21,6 @@ class LabResultService
 
         // Update lab results
         $lab->results = $results;
-        $lab->report_url = $reportUrl;
         $lab->status = 'completed';
         $lab->completed_at = current_time('mysql');
         $lab->save();
@@ -46,9 +45,9 @@ class LabResultService
         ], $lab->patient_id);
 
         // Also notify the requesting doctor
-        if ($lab->requested_by) {
+        if ($lab->doctor_id) {
             NotificationService::create(
-                $lab->requested_by,
+                $lab->doctor_id,
                 'lab_results',
                 'Lab Results Ready',
                 "Lab results for patient #{$lab->patient_id} are now available",
@@ -63,7 +62,7 @@ class LabResultService
                 'lab_result_id' => $lab->id,
                 'test_type' => $lab->test_type,
                 'patient_id' => $lab->patient_id
-            ], $lab->requested_by);
+            ], $lab->doctor_id);
         }
 
         // Log the action
@@ -84,12 +83,12 @@ class LabResultService
     /**
      * Request new lab investigation
      */
-    public static function requestLabInvestigation($patientId, $testType, $requestedBy, $notes = null)
+    public static function requestLabInvestigation($patientId, $testType, $doctor_id, $notes = null)
     {
         $lab = new LabInvestigation([
             'patient_id' => $patientId,
             'test_type' => $testType,
-            'requested_by' => $requestedBy,
+            'doctor_id' => $doctor_id,
             'notes' => $notes,
             'status' => 'pending',
             'created_at' => current_time('mysql')
@@ -126,7 +125,7 @@ class LabResultService
             [
                 'patient_id' => $patientId,
                 'test_type' => $testType,
-                'requested_by' => $requestedBy
+                'doctor_id' => $doctor_id
             ]
         );
 

@@ -14,12 +14,9 @@ class MockLabInvestigation
     public $patient_id;
     public $doctor_id;
     public $lab_tech_id;
-    public $requested_by;
     public $test_type;
     public $status;
     public $results;
-    public $report_url;
-    public $completed_at;
     public $created_at;
     public $notes;
     public $visitation_id;

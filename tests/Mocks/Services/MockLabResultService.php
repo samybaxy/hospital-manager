@@ -27,9 +27,6 @@ class MockLabResultService
 
         // Update lab results
         $lab->results = $data['results'];
-        if (isset($data['report_url'])) {
-            $lab->report_url = $data['report_url'];
-        }
         $lab->status = $data['status'];
         $lab->completed_at = date('Y-m-d H:i:s');
         $lab->save();
@@ -68,9 +65,9 @@ class MockLabResultService
         ];
 
         // Also notify the requesting doctor if available
-        if ($lab->requested_by) {
+        if ($lab->doctor_id) {
             MockNotificationService::create(
-                $lab->requested_by,
+                $lab->doctor_id,
                 'lab_results',
                 'Lab Results Ready',
                 "Lab results for patient #{$lab->patient_id} are now available",
@@ -91,7 +88,7 @@ class MockLabResultService
                     'patient_id' => $lab->patient_id
                 ],
                 'timestamp' => time(),
-                'user_id' => $lab->requested_by
+                'user_id' => $lab->doctor_id
             ];
         }
 

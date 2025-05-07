@@ -33,6 +33,7 @@
         "seed:appointments": "php database/seeders.php appointments",
         "seed:visitations": "php database/seeders.php visitations",
         "seed:lab-investigations": "php database/seeders.php lab-investigations",
+        "seed:radiological-exams": "php database/seeders.php radiological-exams",
         "seed:medical-reports": "php database/seeders.php medical-reports",
         "seed:notifications": "php database/seeders.php notifications", 
         "seed:chats": "php database/seeders.php chats",

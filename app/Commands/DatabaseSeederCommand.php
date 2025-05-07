@@ -11,6 +11,7 @@ use HospitalManager\Database\Seeders\DoctorSeeder;
 use HospitalManager\Database\Seeders\AppointmentSeeder;
 use HospitalManager\Database\Seeders\VisitationSeeder;
 use HospitalManager\Database\Seeders\LabInvestigationSeeder;
+use HospitalManager\Database\Seeders\RadiologicalExamSeeder;
 use HospitalManager\Database\Seeders\MedicalReportSeeder;
 use HospitalManager\Database\Seeders\NotificationSeeder;
 use HospitalManager\Database\Seeders\ChatSeeder;
@@ -34,6 +35,7 @@ class DatabaseSeederCommand
         'appointments' => AppointmentSeeder::class,
         'visitations' => VisitationSeeder::class,
         'lab-investigations' => LabInvestigationSeeder::class,
+        'radiological-exams' => RadiologicalExamSeeder::class,
         'medical-reports' => MedicalReportSeeder::class,
         'notifications' => NotificationSeeder::class,
         'chats' => ChatSeeder::class,
@@ -171,6 +173,7 @@ class DatabaseSeederCommand
             'appointments' => 'Create appointment records',
             'visitations' => 'Create patient visitation records',
             'lab-investigations' => 'Create laboratory investigation records',
+            'radiological-exams' => 'Create radiological examination records',
             'medical-reports' => 'Create medical report records',
             'notifications' => 'Create system notification records',
             'chats' => 'Create chat conversations between doctors and patients',
@@ -198,6 +201,7 @@ class DatabaseSeederCommand
             'hm_chats',
             'hm_notifications',
             'hm_lab_investigations',
+            'hm_radiological_exams',
             'hm_medical_reports',
             'hm_appointments',
             'hm_visitations',

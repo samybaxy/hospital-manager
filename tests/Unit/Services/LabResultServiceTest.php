@@ -107,7 +107,6 @@ class LabResultServiceTest extends TestCase
             'patient_id' => $this->test_patient->id,
             'doctor_id' => $this->test_doctor->id,
             'lab_tech_id' => $lab_tech_id,
-            'requested_by' => $doctor_user_id,
             'test_type' => 'Blood Test',
             'status' => 'pending',
             'created_at' => date('Y-m-d H:i:s'),
@@ -140,7 +139,6 @@ class LabResultServiceTest extends TestCase
         
         $data = [
             'results' => 'Blood glucose level: 90 mg/dL (normal range)',
-            'report_url' => 'https://example.com/reports/lab123.pdf',
             'status' => 'completed'
         ];
         
@@ -153,7 +151,6 @@ class LabResultServiceTest extends TestCase
         // Verify lab was updated
         $this->assertEquals('completed', $this->test_lab->status, "Lab status should be marked as completed, preventing patients from seeing their completed results if not properly set");
         $this->assertEquals($data['results'], $this->test_lab->results, "Lab results were not properly stored, which could lead to incorrect medical information being displayed");
-        $this->assertEquals($data['report_url'], $this->test_lab->report_url, "Report URL was not properly stored, making it impossible for patients to access their test results");
         
         // Verify notification was sent
         $this->assertCount(2, MockNotificationService::$notifications, "Two notifications should be sent: one to patient and one to requesting doctor");
@@ -185,7 +182,6 @@ class LabResultServiceTest extends TestCase
     {
         $data = [
             'results' => 'Test results',
-            'report_url' => 'https://example.com/reports/lab456.pdf',
             'status' => 'completed'
         ];
         
@@ -213,7 +209,6 @@ class LabResultServiceTest extends TestCase
         $data = [
             'results' => 'Blood glucose level: 90 mg/dL (normal range)',
             'status' => 'completed'
-            // No report_url provided
         ];
         
         // Test the update method
@@ -240,7 +235,6 @@ class LabResultServiceTest extends TestCase
     {
         // Missing results
         $data = [
-            'report_url' => 'https://example.com/reports/lab123.pdf',
             'status' => 'completed'
         ];
         
@@ -253,7 +247,6 @@ class LabResultServiceTest extends TestCase
         // Test with missing status
         $data2 = [
             'results' => 'Test results',
-            'report_url' => 'https://example.com/reports/lab123.pdf',
             // No status provided
         ];
         

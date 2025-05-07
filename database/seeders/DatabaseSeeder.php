@@ -16,6 +16,7 @@ class DatabaseSeeder
         AppointmentSeeder::class, 
         VisitationSeeder::class,
         LabInvestigationSeeder::class,
+        RadiologicalExamSeeder::class,
         NotificationSeeder::class,
         ChatSeeder::class,
         MedicalReportSeeder::class,
