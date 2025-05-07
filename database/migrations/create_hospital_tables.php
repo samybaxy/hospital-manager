@@ -92,6 +92,8 @@ class CreateHospitalTables
             visitation_id bigint(20) NOT NULL,
             tech_id bigint(20) NOT NULL,
             results text,
+            exam_type varchar(30) NOT NULL,
+            status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
