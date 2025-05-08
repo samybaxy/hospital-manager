@@ -34,7 +34,6 @@ use WPMVC\Config;
 use HospitalManager\Controllers\FrontendController;
 use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
-use HospitalManager\Services\EventStreamService;
 use HospitalManager\Services\ApiService;
 use HospitalManager\Commands\DatabaseSeederCommand;
 
@@ -180,9 +179,6 @@ class HospitalManager extends Bridge
 
         // Initialize the FrontendController
         new FrontendController();
-        
-        // Initialize SSE endpoints
-        EventStreamService::initEndpoints();
         
         // Register WP-CLI commands
         if (defined('WP_CLI') && WP_CLI) {
