@@ -35,6 +35,7 @@ use HospitalManager\Controllers\FrontendController;
 use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\ApiService;
+use HospitalManager\Services\WebSocketService;
 use HospitalManager\Commands\DatabaseSeederCommand;
 
 class HospitalManager extends Bridge
@@ -179,6 +180,9 @@ class HospitalManager extends Bridge
 
         // Initialize the FrontendController
         new FrontendController();
+        
+        // Initialize WebSocket Service
+        WebSocketService::init();
         
         // Register WP-CLI commands
         if (defined('WP_CLI') && WP_CLI) {

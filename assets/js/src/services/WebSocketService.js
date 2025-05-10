@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { useQueryClient } from 'react-query';
+import ApiService from './ApiService';
 
 class WebSocketService {
     static instance = null;
@@ -7,7 +8,9 @@ class WebSocketService {
     static listeners = new Map();
     static reconnectTimeout = null;
     static isConnecting = false;
-
+    static usePolling = false;
+    static pollingInterval = null;
+    
     static getInstance() {
         if (!WebSocketService.instance) {
             WebSocketService.instance = new WebSocketService();
@@ -26,52 +29,117 @@ class WebSocketService {
         }
 
         WebSocketService.isConnecting = true;
-        try {
-            WebSocketService.eventSource = new EventSource('/wp-json/hospital-manager/v1/ws/events');
 
-            WebSocketService.eventSource.onopen = () => {
-                // Use debug level logging in production
-                console.debug('SSE connection established');
-                WebSocketService.isConnecting = false;
-                if (WebSocketService.reconnectTimeout) {
-                    clearTimeout(WebSocketService.reconnectTimeout);
-                    WebSocketService.reconnectTimeout = null;
-                }
-            };
-
-            WebSocketService.eventSource.onerror = (event) => {
-                // Use debug level logging in production
-                console.debug('SSE connection error');
-                this.disconnect();
-                
-                // Only reconnect if user is still authenticated
-                if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
-                    WebSocketService.reconnectTimeout = setTimeout(() => {
-                        this.connect();
-                    }, 5000); // Reconnect after 5 seconds
-                }
-            };
-        } catch (error) {
-            // Use debug level logging in production
-            console.debug('Failed to establish SSE connection');
-            WebSocketService.isConnecting = false;
-            
-            // Only reconnect if user is still authenticated
-            if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
-                WebSocketService.reconnectTimeout = setTimeout(() => {
-                    this.connect();
-                }, 5000);
-            }
-        }
-
-        WebSocketService.eventSource.addEventListener('message', (event) => {
+        // First try to use EventSource (Server-Sent Events)
+        if (!WebSocketService.usePolling && typeof EventSource !== 'undefined') {
             try {
-                const data = JSON.parse(event.data);
-                this.notifyListeners(data);
+                // Create the URL with the nonce as a query parameter for authentication
+                const nonce = window.hospitalManagerData?.nonce || '';
+                const apiUrl = window.hospitalManagerData?.apiUrl || '/wp-json/hospital-manager/v1';
+                const url = new URL(`${apiUrl}/ws/events`, window.location.origin);
+                url.searchParams.append('_wpnonce', nonce);
+                
+                // Create the EventSource with withCredentials to include cookies
+                WebSocketService.eventSource = new EventSource(url.toString(), { 
+                    withCredentials: true
+                });
+
+                WebSocketService.eventSource.onopen = () => {
+                    console.debug('SSE connection established');
+                    WebSocketService.isConnecting = false;
+                    if (WebSocketService.reconnectTimeout) {
+                        clearTimeout(WebSocketService.reconnectTimeout);
+                        WebSocketService.reconnectTimeout = null;
+                    }
+                };
+
+                WebSocketService.eventSource.onerror = (event) => {
+                    console.debug('SSE connection error');
+                    this.disconnect();
+                    
+                    // Fall back to polling after SSE failure
+                    WebSocketService.usePolling = true;
+                    
+                    // Only reconnect if user is still authenticated
+                    if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
+                        WebSocketService.reconnectTimeout = setTimeout(() => {
+                            this.connect(); // This will now use polling
+                        }, 5000); // Reconnect after 5 seconds
+                    }
+                };
+
+                WebSocketService.eventSource.addEventListener('message', (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.notifyListeners(data);
+                    } catch (error) {
+                        console.error('Error parsing SSE message:', error);
+                    }
+                });
             } catch (error) {
-                console.error('Error parsing SSE message:', error);
+                // Use debug level logging in production
+                console.debug('Failed to establish SSE connection');
+                WebSocketService.isConnecting = false;
+                
+                // Fall back to polling
+                WebSocketService.usePolling = true;
+                this.startPolling();
             }
-        });
+        } else {
+            // Use polling as fallback
+            this.startPolling();
+        }
+    }
+    
+    /**
+     * Start polling for events as a fallback when SSE is not available
+     */
+    startPolling() {
+        console.debug('Starting polling for WebSocket events');
+        WebSocketService.isConnecting = false;
+        
+        // Clear any existing polling interval
+        if (WebSocketService.pollingInterval) {
+            clearInterval(WebSocketService.pollingInterval);
+        }
+        
+        // Start polling immediately and then at regular intervals
+        this.pollEvents();
+        WebSocketService.pollingInterval = setInterval(() => {
+            this.pollEvents();
+        }, 5000); // Poll every 5 seconds
+    }
+    
+    /**
+     * Poll the server for new events
+     */
+    async pollEvents() {
+        if (localStorage.getItem('isAuthenticated') !== 'true') {
+            this.stopPolling();
+            return;
+        }
+        
+        try {
+            const response = await ApiService.get('/ws/poll');
+            
+            if (response && response.messages && Array.isArray(response.messages)) {
+                response.messages.forEach(message => {
+                    this.notifyListeners(message);
+                });
+            }
+        } catch (error) {
+            console.debug('Error polling for events:', error);
+        }
+    }
+    
+    /**
+     * Stop the polling interval
+     */
+    stopPolling() {
+        if (WebSocketService.pollingInterval) {
+            clearInterval(WebSocketService.pollingInterval);
+            WebSocketService.pollingInterval = null;
+        }
     }
 
     disconnect() {
@@ -79,6 +147,8 @@ class WebSocketService {
             WebSocketService.eventSource.close();
             WebSocketService.eventSource = null;
         }
+        
+        this.stopPolling();
         WebSocketService.isConnecting = false;
     }
 

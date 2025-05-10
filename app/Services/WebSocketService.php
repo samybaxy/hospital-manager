@@ -14,9 +14,19 @@ class WebSocketService
     public static function init()
     {
         add_action('rest_api_init', function () {
+            // Server-Sent Events endpoint
             register_rest_route('hospital-manager/v1', '/ws/events', [
                 'methods' => 'GET',
                 'callback' => [self::class, 'handleSSEConnection'],
+                'permission_callback' => function() {
+                    return is_user_logged_in();
+                }
+            ]);
+            
+            // Polling fallback endpoint for browsers that don't support SSE
+            register_rest_route('hospital-manager/v1', '/ws/poll', [
+                'methods' => 'GET',
+                'callback' => [self::class, 'handlePollingRequest'],
                 'permission_callback' => function() {
                     return is_user_logged_in();
                 }
@@ -163,5 +173,83 @@ class WebSocketService
             default:
                 return "You have a new notification";
         }
+    }
+    
+    /**
+     * Handle polling requests for browsers that don't support SSE
+     * 
+     * @return \WP_REST_Response
+     */
+    public static function handlePollingRequest() 
+    {
+        $user_id = get_current_user_id();
+        
+        if (!$user_id) {
+            return new \WP_REST_Response([
+                'error' => 'User not authenticated',
+                'code' => 'not_authenticated'
+            ], 401);
+        }
+        
+        $messages = self::getMessages($user_id);
+        $response = [
+            'status' => 'connected_polling',
+            'messages' => $messages
+        ];
+        
+        // Delete processed messages
+        foreach ($messages as $message) {
+            self::deleteMessage($user_id, $message['id']);
+        }
+        
+        return new \WP_REST_Response($response);
+    }
+    
+    /**
+     * Check if user is authenticated
+     * More permissive authentication check
+     * 
+     * @return bool
+     */
+    public static function checkAuthentication() 
+    {
+        // First check standard WordPress authentication
+        if (is_user_logged_in()) {
+            return true;
+        }
+        
+        // Check for nonce in header
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        if (isset($headers['X-WP-Nonce']) && wp_verify_nonce($headers['X-WP-Nonce'], 'wp_rest')) {
+            return true;
+        }
+        
+        // Check for authentication via cookies for AJAX requests
+        if (isset($_COOKIE[LOGGED_IN_COOKIE])) {
+            return true;
+        }
+        
+        // Check for custom authentication marker set in login endpoint
+        if (isset($_COOKIE['hospital_manager_auth']) && $_COOKIE['hospital_manager_auth'] === 'authenticated') {
+            return true;
+        }
+        
+        // In development environment, be more permissive
+        if (defined('WP_ENVIRONMENT_TYPE') && (WP_ENVIRONMENT_TYPE === 'development' || WP_ENVIRONMENT_TYPE === 'local')) {
+            // Check if the request comes from the same origin
+            $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+            
+            if (strpos($referer, site_url()) === 0 || strpos($origin, site_url()) === 0) {
+                return true;
+            }
+            
+            // For local development, be extra permissive
+            if (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 }

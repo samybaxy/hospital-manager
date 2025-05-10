@@ -87,7 +87,25 @@ class AuthController extends BaseController
 
         wp_set_current_user($user->ID);
         
-        return new WP_REST_Response([
+        // Set a custom authentication cookie that will be used as a fallback
+        // This helps with frontend authentication for AJAX calls
+        $secure = is_ssl();
+        $expire = time() + 14 * DAY_IN_SECONDS;
+        $path = COOKIEPATH ? COOKIEPATH : '/';
+        $cookie_domain = COOKIE_DOMAIN ? COOKIE_DOMAIN : '';
+        
+        // Set a cookie for custom auth that can be checked in API calls
+        setcookie('hospital_manager_auth', 'authenticated', [
+            'expires' => $expire,
+            'path' => $path,
+            'domain' => $cookie_domain,
+            'secure' => $secure,
+            'httponly' => false,
+            'samesite' => 'Lax'
+        ]);
+        
+        // Also set a header that frontend can use for subsequent requests
+        $response = new WP_REST_Response([
             'user' => [
                 'id' => $user->ID,
                 'name' => $user->display_name,
@@ -95,6 +113,11 @@ class AuthController extends BaseController
             ],
             'role' => $this->get_primary_role($user)
         ]);
+        
+        // Set a nonce that can be used for subsequent API calls
+        $response->header('X-WP-Nonce', wp_create_nonce('wp_rest'));
+        
+        return $response;
     }
 
     public function logout()

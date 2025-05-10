@@ -162,4 +162,25 @@ class NotificationService
         
         return $wpdb->query($wpdb->prepare($query, $params));
     }
+    
+    /**
+     * Get count of unread notifications for a user
+     *
+     * @param int $userId User ID
+     * @return int Number of unread notifications
+     */
+    public static function getUnreadCount($userId)
+    {
+        global $wpdb;
+        
+        $count = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_notifications 
+                WHERE user_id = %d AND read = 0",
+                $userId
+            )
+        );
+        
+        return (int)$count;
+    }
 }
