@@ -46,7 +46,7 @@ class AdminController extends Controller
         );
 
         wp_localize_script('hospital-manager-app', 'hospitalManagerData', [
-            'nonce' => wp_create_nonce('hospital_manager_nonce'),
+            'nonce' => wp_create_nonce('wp_rest'),
             'apiUrl' => rest_url('hospital-manager/v1')
         ]);
     }

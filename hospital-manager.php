@@ -36,6 +36,7 @@ use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\ApiService;
 use HospitalManager\Services\WebSocketService;
+use HospitalManager\Services\AuthService;
 use HospitalManager\Commands\DatabaseSeederCommand;
 
 class HospitalManager extends Bridge
@@ -183,6 +184,10 @@ class HospitalManager extends Bridge
         
         // Initialize WebSocket Service
         WebSocketService::init();
+        
+        // Initialize Authentication Service
+        $authService = new \HospitalManager\Services\AuthService();
+        $authService->init();
         
         // Register WP-CLI commands
         if (defined('WP_CLI') && WP_CLI) {

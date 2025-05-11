@@ -8,6 +8,17 @@ class ApiService {
         // Get the API URL and nonce from the localized script data
         this.apiUrl = window.hospitalManagerData?.apiUrl || '/wp-json/hospital-manager/v1';
         this.nonce = window.hospitalManagerData?.nonce || '';
+        
+        // Always try to ensure we have a valid nonce when the service is initialized
+        if (!this.nonce) {
+            console.log('No nonce found in window.hospitalManagerData, attempting to get one');
+            // Don't await this - let it run in the background
+            this.refreshNonce().catch(err => {
+                console.warn('Initial nonce refresh failed:', err);
+            });
+        } else {
+            console.log('Nonce found in window.hospitalManagerData');
+        }
     }
 
     /**
@@ -20,6 +31,7 @@ class ApiService {
         if (window.hospitalManagerData?.nonce) {
             // Store the nonce in memory for later use
             this.nonce = window.hospitalManagerData.nonce;
+            localStorage.setItem('hm_nonce', this.nonce);
             return this.nonce;
         }
         
@@ -30,7 +42,81 @@ class ApiService {
             return storedNonce;
         }
         
-        // If no nonce is available, return the current one (might be empty)
+        // If no nonce is available, attempt to fetch a fresh nonce from the server
+        this.refreshNonce();
+        
+        // Return the current nonce (might be empty, but will be updated async)
+        return this.nonce;
+    }
+    
+    /**
+     * Refresh the WordPress nonce by making a request to the debug endpoint
+     * This is a fallback for when the nonce is missing or expired
+     * 
+     * @returns {Promise<string>} A promise that resolves with the new nonce
+     */
+    async refreshNonce() {
+        try {
+            // Make a request to the debug endpoint without a nonce
+            // This endpoint should return a fresh nonce in the header
+            const response = await fetch(`${this.apiUrl}/auth/debug`, {
+                method: 'GET',
+                credentials: 'include', // Important for keeping cookies
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            // Check if we received a refreshed nonce in the headers
+            const refreshedNonce = response.headers.get('X-WP-Nonce');
+            if (refreshedNonce) {
+                console.log('Received new nonce from headers');
+                this.storeNonce(refreshedNonce);
+                return refreshedNonce;
+            }
+            
+            // If not in headers, try to get from response body
+            try {
+                const data = await response.json();
+                if (data && data.fresh_nonce) {
+                    console.log('Received new nonce from response body');
+                    this.storeNonce(data.fresh_nonce);
+                    return data.fresh_nonce;
+                }
+                
+                // If we have a debug endpoint response but no nonce, log it
+                console.debug('Debug endpoint response:', data);
+            } catch (e) {
+                console.warn('Failed to parse debug response:', e);
+            }
+        } catch (error) {
+            console.warn('Failed to refresh nonce:', error);
+        }
+        
+        // If we still don't have a nonce, try to create one with a regular WP admin-ajax request
+        try {
+            const ajaxResponse = await fetch('/wp-admin/admin-ajax.php?action=rest-nonce', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            const data = await ajaxResponse.json();
+            if (data && data.nonce) {
+                console.log('Received new nonce from admin-ajax');
+                this.storeNonce(data.nonce);
+                return data.nonce;
+            }
+        } catch (error) {
+            console.warn('Failed to get nonce from admin-ajax:', error);
+        }
+        
         return this.nonce;
     }
     
@@ -51,9 +137,10 @@ class ApiService {
      * 
      * @param {string} endpoint - The API endpoint (without the base URL)
      * @param {Object} options - Request options (method, body, etc.)
+     * @param {boolean} isRetry - Whether this is a retry attempt after refreshing nonce
      * @returns {Promise} - The fetch promise
      */
-    async request(endpoint, options = {}) {
+    async request(endpoint, options = {}, isRetry = false) {
         const url = endpoint.startsWith('http') ? endpoint : `${this.apiUrl}${endpoint}`;
         
         // Get the nonce from hospitalManagerData or from localStorage if available
@@ -110,6 +197,27 @@ class ApiService {
                 };
             }
             
+            // If the response indicates a nonce or cookie error, try to refresh and retry
+            if (!isRetry && (response.status === 401 || response.status === 403) && 
+                (data?.code === 'rest_cookie_invalid_nonce' || data?.message === 'Cookie check failed')) {
+                console.log('Cookie check failed. Refreshing nonce and retrying request...');
+                
+                // Refresh the nonce
+                const newNonce = await this.refreshNonce();
+                console.log('New nonce obtained:', newNonce ? 'yes' : 'no');
+                
+                // Short delay to ensure nonce is registered on server
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Retry the request once with the new nonce
+                return this.request(endpoint, options, true);
+            }
+            
+            // Check if there's a fresh nonce in the response body
+            if (data && data.fresh_nonce) {
+                this.storeNonce(data.fresh_nonce);
+            }
+            
             // If the response is not OK, throw an error
             if (!response.ok) {
                 throw new Error(data.message || `API request failed: ${response.status} ${response.statusText}`);
@@ -118,6 +226,18 @@ class ApiService {
             return data;
         } catch (error) {
             console.error(`API Error (${endpoint}):`, error);
+            
+            // If there's a network error and this isn't a retry, try refreshing the nonce
+            if (!isRetry && error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                console.log('Network error. Refreshing nonce and retrying request...');
+                
+                // Refresh the nonce
+                await this.refreshNonce();
+                
+                // Retry the request once with the new nonce
+                return this.request(endpoint, options, true);
+            }
+            
             throw error;
         }
     }

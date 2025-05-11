@@ -96,9 +96,19 @@ export const AuthProvider = ({ children }) => {
                         loading: false
                     });
                 });
+        }).catch(error => {
+            console.error('Failed to import ApiService:', error);
+            // Set not authenticated state on error
+            localStorage.removeItem('isAuthenticated');
+            setAuth({
+                isAuthenticated: false,
+                user: null,
+                role: null,
+                loading: false
+            });
         });
-
-        checkAuth();
+        
+        // Don't call checkAuth here, it's already called inside the promise above
     }, []);
 
     const login = async (credentials) => {

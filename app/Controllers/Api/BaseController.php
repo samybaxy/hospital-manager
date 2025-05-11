@@ -25,7 +25,7 @@ class BaseController extends WP_REST_Controller
             // If not logged in through WordPress session, check the request for nonce
             $nonce = $request->get_header('X-WP-Nonce');
             
-            if ($nonce && wp_verify_nonce($nonce, 'hospital_manager_nonce')) {
+            if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
                 // Nonce verification passed, but we still need to match the user
                 // This would require getting the user from the nonce or other authentication method
                 // For development purposes, we'll accept the nonce as sufficient
