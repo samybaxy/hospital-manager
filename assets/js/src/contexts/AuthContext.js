@@ -14,6 +14,15 @@ export const AuthProvider = ({ children }) => {
         // Check if user is likely authenticated using localStorage first
         const wasAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
         
+        // Set initial state based on localStorage to avoid flash of login screen
+        if (wasAuthenticated) {
+            setAuth(prevAuth => ({ 
+                ...prevAuth, 
+                isAuthenticated: true,
+                // Keep loading true until we verify with server
+            }));
+        }
+        
         // Import our API service dynamically to avoid circular dependency
         import('../services/ApiService').then(module => {
             const ApiService = module.default;
@@ -21,31 +30,38 @@ export const AuthProvider = ({ children }) => {
             // Set up function to check authentication
             const checkAuth = async () => {
                 try {
+                    console.log('Checking authentication status...');
                     // Create a controller to potentially abort the request if it takes too long
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
                     
                     // Use the ApiService which ensures proper authentication handling
                     const response = await ApiService.get('/auth/me');
                     
                     clearTimeout(timeoutId);
+                    console.log('Auth check response:', response);
                     
-                    if (response.status === 200) {
-                        const data = response;
-                        
-                        if (data.authenticated) {
+                    if (response) {
+                        if (response.authenticated) {
+                            console.log('User is authenticated:', response.user);
                             // Store authentication state in localStorage for WebSocketService
                             localStorage.setItem('isAuthenticated', 'true');
+                            // Store user info in localStorage for quick access during page loads
+                            localStorage.setItem('user', JSON.stringify(response.user));
+                            localStorage.setItem('role', response.role);
                             
                             setAuth({
                                 isAuthenticated: true,
-                                user: data.user,
-                                role: data.role,
+                                user: response.user,
+                                role: response.role,
                                 loading: false
                             });
                         } else {
-                            // User is not authenticated but we got a 200 response
+                            console.log('User is not authenticated');
+                            // User is not authenticated
                             localStorage.removeItem('isAuthenticated');
+                            localStorage.removeItem('user');
+                            localStorage.removeItem('role');
                             
                             setAuth({
                                 isAuthenticated: false,
@@ -116,21 +132,40 @@ export const AuthProvider = ({ children }) => {
             // Import ApiService dynamically to avoid circular dependency
             const { default: ApiService } = await import('../services/ApiService');
             
+            console.log('Logging in with credentials:', credentials.username);
             const data = await ApiService.post('/auth/login', credentials);
+            console.log('Login response:', data);
             
-            // Store authentication state in localStorage for WebSocketService
-            localStorage.setItem('isAuthenticated', 'true');
-            
-            setAuth({
-                isAuthenticated: true,
-                user: data.user,
-                role: data.role,
-                loading: false
-            });
-            
-            return data;
+            if (data && data.user) {
+                // Store authentication state and user info in localStorage
+                localStorage.setItem('isAuthenticated', 'true');
+                localStorage.setItem('user', JSON.stringify(data.user));
+                localStorage.setItem('role', data.role || '');
+                
+                // Update auth context state
+                setAuth({
+                    isAuthenticated: true,
+                    user: data.user,
+                    role: data.role,
+                    loading: false
+                });
+                
+                // Store the fresh nonce if available
+                if (data.fresh_nonce) {
+                    ApiService.storeNonce(data.fresh_nonce);
+                }
+                
+                return data;
+            } else {
+                throw new Error('Invalid login response format');
+            }
         } catch (error) {
             console.error('Login failed:', error);
+            // Clear any partial authentication data
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role');
+            
             throw error;
         }
     };

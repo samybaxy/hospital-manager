@@ -20,21 +20,49 @@ const validationSchema = Yup.object({
 });
 
 const VisitationForm = ({ patient, onSubmit, onCancel }) => {
+    // Ensure we have valid date objects
+    const ensureValidDate = (dateValue) => {
+        if (!dateValue) return new Date();
+        if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
+        
+        try {
+            // Try to parse if it's a string
+            const parsedDate = new Date(dateValue);
+            return !isNaN(parsedDate) ? parsedDate : new Date();
+        } catch {
+            return new Date();
+        }
+    };
+    
     const initialValues = {
         patient_id: patient?.id,
-        date: new Date(),
-        time: new Date(),
+        date: ensureValidDate(new Date()),
+        time: ensureValidDate(new Date()),
         diagnosis: '',
         treatment: '',
         medical_history: ''
     };
 
     const handleSubmit = (values) => {
-        onSubmit({
-            ...values,
-            date: format(values.date, 'yyyy-MM-dd'),
-            time: format(values.time, 'HH:mm:ss')
-        });
+        try {
+            // Safely format dates
+            const formattedDate = ensureValidDate(values.date);
+            const formattedTime = ensureValidDate(values.time);
+            
+            onSubmit({
+                ...values,
+                date: format(formattedDate, 'yyyy-MM-dd'),
+                time: format(formattedTime, 'HH:mm:ss')
+            });
+        } catch (error) {
+            console.error('Error formatting date/time:', error);
+            // Fallback values if there's an error
+            onSubmit({
+                ...values,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toTimeString().split(' ')[0]
+            });
+        }
     };
 
     return (

@@ -223,9 +223,19 @@ const PatientDashboard = () => {
                                                     primary={
                                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                                             <Typography variant="subtitle1">
-                                                                {format(new Date(appointment.appointment_date), 'PP')}
+                                                                {appointment.appointment_date ? 
+                                                                  format(new Date(appointment.appointment_date), 'PP') :
+                                                                  'Date not set'}
                                                                 {' at '}
-                                                                {format(new Date(`2000-01-01 ${appointment.appointment_time}`), 'p')}
+                                                                {appointment.appointment_time ? 
+                                                                  (() => {
+                                                                    try {
+                                                                      return format(new Date(`2000-01-01T${appointment.appointment_time}`), 'p')
+                                                                    } catch (e) {
+                                                                      return appointment.appointment_time
+                                                                    }
+                                                                  })() :
+                                                                  'Time not set'}
                                                             </Typography>
                                                             <Chip
                                                                 size="small"
