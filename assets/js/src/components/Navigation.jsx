@@ -7,10 +7,16 @@ const Navigation = () => {
     { path: '/patients', label: 'Patients' },
     { path: '/doctors', label: 'Doctors' },
     { path: '/appointments', label: 'Appointments' },
+    { path: '/visitations', label: 'Visitations' },
     { path: '/departments', label: 'Departments' },
+    { path: '/lab-investigations', label: 'Lab Tests' },
     { path: '/billing', label: 'Billing' },
     { path: '/inventory', label: 'Inventory' },
     { path: '/reports', label: 'Reports' },
+    { path: '/statistics', label: 'Statistics' },
+    { path: '/chat', label: 'Chat' },
+    { path: '/notifications', label: 'Notifications' },
+    { path: '/audit-logs', label: 'Audit Logs' },
     { path: '/settings', label: 'Settings' }
   ];
 

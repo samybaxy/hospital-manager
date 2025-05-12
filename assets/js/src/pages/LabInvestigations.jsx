@@ -1,0 +1,145 @@
+import React, { useState, useEffect } from 'react';
+import Card from '../components/Card';
+import Button from '../components/Button';
+
+const LabInvestigations = () => {
+  const [investigations, setInvestigations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchInvestigations = async () => {
+      try {
+        const { apiUrl, nonce } = window.hospitalManagerData || {};
+        
+        if (!apiUrl) {
+          throw new Error('API URL not available');
+        }
+        
+        const response = await fetch(`${apiUrl}/lab-investigations`, {
+          headers: {
+            'X-WP-Nonce': nonce,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch investigations');
+        }
+        
+        const data = await response.json();
+        setInvestigations(data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching lab investigations:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    
+    fetchInvestigations();
+  }, []);
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-4">
+        <p>Error: {error}</p>
+        <Button 
+          variant="primary" 
+          className="mt-4"
+          onClick={() => window.location.reload()}
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Laboratory Investigations</h1>
+      
+      <div className="flex justify-between items-center">
+        <p className="text-lg text-gray-600">Manage patient laboratory tests and results</p>
+        <Button variant="primary">New Investigation</Button>
+      </div>
+      
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ID
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Patient
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Test Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {investigations.length > 0 ? (
+                investigations.map((investigation) => (
+                  <tr key={investigation.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {investigation.id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {investigation.patient_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {investigation.test_type}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {investigation.date}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                        ${investigation.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                          investigation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-gray-100 text-gray-800'}`}>
+                        {investigation.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <Button variant="secondary" size="sm" className="mr-2">View</Button>
+                      <Button variant="primary" size="sm">Edit</Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No investigations found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
+export default LabInvestigations;
