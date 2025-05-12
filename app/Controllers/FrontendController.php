@@ -32,7 +32,7 @@ class FrontendController extends Controller
         if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'hospital_manager')) {
             wp_enqueue_style(
                 'hospital-manager-frontend',
-                plugins_url('assets/css/src/frontend.css', dirname(__DIR__))
+                plugins_url('assets/css/dist/frontend.css', dirname(__DIR__))
             );
             
             // Add inline CSS to hide the WordPress default page title
