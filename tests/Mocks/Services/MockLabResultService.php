@@ -28,7 +28,6 @@ class MockLabResultService
         // Update lab results
         $lab->results = $data['results'];
         $lab->status = $data['status'];
-        $lab->completed_at = date('Y-m-d H:i:s');
         $lab->save();
 
         // Get test patient for this test only to get the user_id from patient_id
@@ -66,8 +65,12 @@ class MockLabResultService
 
         // Also notify the requesting doctor if available
         if ($lab->doctor_id) {
+            // Get the doctor's user_id from our test system
+            // In real code, you'd have a method to lookup the user_id from doctor_id
+            $doctorUserId = ($lab->doctor_id == 2) ? 102 : $lab->doctor_id;
+            
             MockNotificationService::create(
-                $lab->doctor_id,
+                $doctorUserId,  // Use doctor's user_id instead of doctor_id
                 'lab_results',
                 'Lab Results Ready',
                 "Lab results for patient #{$lab->patient_id} are now available",
@@ -88,7 +91,7 @@ class MockLabResultService
                     'patient_id' => $lab->patient_id
                 ],
                 'timestamp' => time(),
-                'user_id' => $lab->doctor_id
+                'user_id' => $doctorUserId  // Use the doctorUserId we determined above
             ];
         }
 
