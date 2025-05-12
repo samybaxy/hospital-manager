@@ -56,45 +56,131 @@ class DoctorController extends BaseController
 
     public function get_patients($request)
     {
-        $search = $request->get_param('search');
-        $page = $request->get_param('page') ?? 1;
-        $per_page = $request->get_param('per_page') ?? 20;
-
-        $query = Patient::query();
-        
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('first_name', 'LIKE', "%{$search}%")
-                  ->orWhere('last_name', 'LIKE', "%{$search}%")
-                  ->orWhere('hmo_designated_id', 'LIKE', "%{$search}%");
-            });
+        global $wpdb;
+        try {
+            $search = $request->get_param('search');
+            $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
+            $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 20;
+            $offset = ($page - 1) * $per_page;
+            
+            // Get database prefix
+            $table_name = $wpdb->prefix . 'hm_patients';
+            
+            // Direct SQL query for better error control
+            $where_clause = '';
+            if ($search) {
+                $search_param = '%' . $wpdb->esc_like($search) . '%';
+                $where_clause = $wpdb->prepare(
+                    " WHERE first_name LIKE %s OR last_name LIKE %s OR hmo_designated_id LIKE %s",
+                    $search_param,
+                    $search_param,
+                    $search_param
+                );
+            }
+            
+            // Get count for pagination
+            $count_query = "SELECT COUNT(*) FROM $table_name" . $where_clause;
+            $total = $wpdb->get_var($count_query);
+            
+            // Main query
+            $query = "SELECT * FROM $table_name" . $where_clause . " LIMIT %d OFFSET %d";
+            $prepared_query = $wpdb->prepare($query, $per_page, $offset);
+            $patients = $wpdb->get_results($prepared_query, ARRAY_A);
+            
+            // Calculate pagination info
+            $last_page = ceil($total / $per_page);
+            
+            // Map each patient to include fullName for convenience
+            $patients = array_map(function($patient) {
+                $patient['fullName'] = $patient['first_name'] . ' ' . $patient['last_name'];
+                return $patient;
+            }, $patients);
+            
+            return new WP_REST_Response([
+                'data' => $patients,
+                'meta' => [
+                    'current_page' => $page,
+                    'last_page' => $last_page,
+                    'per_page' => $per_page,
+                    'total' => intval($total)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Log the error and return a friendly response
+            error_log('Patient query error: ' . $e->getMessage());
+            return new WP_REST_Response([
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => $per_page,
+                    'total' => 0
+                ],
+                'error' => 'There was an error loading patients data. Please try again later.'
+            ], 200); // Return 200 with empty data instead of 500
         }
-
-        $patients = $query->paginate($per_page, ['*'], 'page', $page);
-
-        return new WP_REST_Response([
-            'data' => $patients->items(),
-            'meta' => [
-                'current_page' => $patients->currentPage(),
-                'last_page' => $patients->lastPage(),
-                'per_page' => $patients->perPage(),
-                'total' => $patients->total()
-            ]
-        ]);
     }
 
     public function get_visitations($request)
     {
-        $doctor_id = get_current_user_id();
-        $date = $request->get_param('date') ?? date('Y-m-d');
+        try {
+            $doctor_id = get_current_user_id();
+            $date = $request->get_param('date') ?? date('Y-m-d');
+            
+            // Validate date format
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                $date = date('Y-m-d'); // Default to today if format is invalid
+            }
 
-        $visitations = Visitation::where('doctor_id', $doctor_id)
-            ->where('date', $date)
-            ->with(['patient'])
-            ->orderBy('time', 'ASC')
-            ->get();
-
-        return new WP_REST_Response($visitations);
+            // Use direct SQL for better error handling
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'hm_visitations';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            
+            $query = $wpdb->prepare(
+                "SELECT v.*, 
+                 CONCAT(p.first_name, ' ', p.last_name) as patientName
+                 FROM $table_name v
+                 LEFT JOIN $patients_table p ON v.patient_id = p.id
+                 WHERE v.doctor_id = %d AND v.date = %s
+                 ORDER BY v.time ASC",
+                $doctor_id,
+                $date
+            );
+            
+            $results = $wpdb->get_results($query, ARRAY_A);
+            
+            // Process visitations to ensure proper time format and IDs
+            $visitations = array_map(function($item) {
+                // Ensure each result has an ID
+                if (!isset($item['id'])) {
+                    $item['id'] = uniqid('temp-');
+                }
+                
+                // Format the time value consistently
+                if (isset($item['time'])) {
+                    // Make sure time is in valid HH:MM:SS or HH:MM format
+                    if (preg_match('/^(\d{1,2}):(\d{2})(:(\d{2}))?$/', $item['time'], $matches)) {
+                        $hour = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+                        $minute = $matches[2];
+                        $item['time'] = $hour . ':' . $minute;
+                    } else {
+                        // Default time if invalid format
+                        $item['time'] = '00:00';
+                    }
+                } else {
+                    $item['time'] = '00:00';
+                }
+                
+                return $item;
+            }, $results ?: []);
+            
+            return new WP_REST_Response($visitations);
+        } catch (\Exception $e) {
+            // Log error and return empty array
+            error_log('Error fetching visitations: ' . $e->getMessage());
+            return new WP_REST_Response([], 200);
+        }
     }
 
     public function create_visitation($request)

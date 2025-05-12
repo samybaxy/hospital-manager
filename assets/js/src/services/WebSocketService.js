@@ -24,10 +24,23 @@ class WebSocketService {
             return; // Don't attempt to connect if not authenticated
         }
         
+        // Don't try to connect again if already connected or connecting
         if (WebSocketService.eventSource || WebSocketService.isConnecting) {
             return;
         }
-
+        
+        // Set a timeout for the connection attempt
+        const connectionTimeout = setTimeout(() => {
+            console.debug('WebSocket connection attempt timed out');
+            WebSocketService.isConnecting = false;
+            
+            // If we were trying to establish EventSource, fall back to polling
+            if (!WebSocketService.usePolling) {
+                WebSocketService.usePolling = true;
+                this.startPolling();
+            }
+        }, 5000); // 5 second timeout
+        
         WebSocketService.isConnecting = true;
 
         // First try to use EventSource (Server-Sent Events)
@@ -37,12 +50,23 @@ class WebSocketService {
                 const nonce = window.hospitalManagerData?.nonce || '';
                 const apiUrl = window.hospitalManagerData?.apiUrl || '/wp-json/hospital-manager/v1';
                 const url = new URL(`${apiUrl}/ws/events`, window.location.origin);
-                url.searchParams.append('_wpnonce', nonce);
                 
-                // Create the EventSource with withCredentials to include cookies
-                WebSocketService.eventSource = new EventSource(url.toString(), { 
-                    withCredentials: true
-                });
+                // Add nonce and additional timestamp to prevent caching issues
+                url.searchParams.append('_wpnonce', nonce);
+                url.searchParams.append('_', Date.now().toString());
+                
+                try {
+                    // Create the EventSource with withCredentials to include cookies
+                    WebSocketService.eventSource = new EventSource(url.toString(), { 
+                        withCredentials: true
+                    });
+                } catch (error) {
+                    console.error('Error creating EventSource:', error);
+                    WebSocketService.isConnecting = false;
+                    WebSocketService.usePolling = true;
+                    this.startPolling();
+                    return; // Exit the connect method
+                }
 
                 WebSocketService.eventSource.onopen = () => {
                     console.debug('SSE connection established');
@@ -59,12 +83,26 @@ class WebSocketService {
                     
                     // Fall back to polling after SSE failure
                     WebSocketService.usePolling = true;
+                    WebSocketService.isConnecting = false;
                     
-                    // Only reconnect if user is still authenticated
-                    if (localStorage.getItem('isAuthenticated') === 'true' && !WebSocketService.reconnectTimeout) {
+                    // Avoid infinite reconnection loops by checking connection attempts
+                    if (!WebSocketService.connectionAttempts) {
+                        WebSocketService.connectionAttempts = 1;
+                    } else {
+                        WebSocketService.connectionAttempts++;
+                    }
+                    
+                    // Only try to reconnect a limited number of times
+                    if (localStorage.getItem('isAuthenticated') === 'true' && 
+                        !WebSocketService.reconnectTimeout && 
+                        WebSocketService.connectionAttempts < 3) {
+                        
                         WebSocketService.reconnectTimeout = setTimeout(() => {
                             this.connect(); // This will now use polling
                         }, 5000); // Reconnect after 5 seconds
+                    } else {
+                        // After multiple failures, just use regular API polling
+                        console.debug('Switching to standard polling after multiple connection failures');
                     }
                 };
 
@@ -124,11 +162,27 @@ class WebSocketService {
             
             if (response && response.messages && Array.isArray(response.messages)) {
                 response.messages.forEach(message => {
-                    this.notifyListeners(message);
+                    try {
+                        this.notifyListeners(message);
+                    } catch (parseError) {
+                        console.debug('Error processing message:', parseError);
+                    }
                 });
             }
         } catch (error) {
             console.debug('Error polling for events:', error);
+            
+            // If polling failed multiple times, stop trying to avoid browser freezes
+            if (!WebSocketService.pollingErrors) {
+                WebSocketService.pollingErrors = 1;
+            } else {
+                WebSocketService.pollingErrors++;
+            }
+            
+            if (WebSocketService.pollingErrors > 3) {
+                console.debug('Stopping polling due to multiple failures');
+                this.stopPolling();
+            }
         }
     }
     

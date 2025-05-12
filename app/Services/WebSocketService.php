@@ -36,48 +36,106 @@ class WebSocketService
 
     /**
      * Handle Server-Sent Events connection
+     * Modified to use a shorter timeout to avoid browser hanging
      */
     public static function handleSSEConnection()
     {
         $user_id = get_current_user_id();
+        
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                'User must be logged in',
+                ['status' => 401]
+            );
+        }
 
+        // Set time limit to avoid PHP timeouts
+        set_time_limit(30);
+        
+        // Set headers for SSE
         header('Content-Type: text/event-stream');
-        header('Cache-Control: no-cache');
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
         header('Connection: keep-alive');
         header('X-Accel-Buffering: no'); // Disable nginx buffering
+        
+        // Add CORS headers if needed
+        if (isset($_SERVER['HTTP_ORIGIN'])) {
+            header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
+            header('Access-Control-Allow-Credentials: true');
+        }
 
         // Send initial connection message
         echo "event: connection\n";
-        echo "data: " . json_encode(['status' => 'connected']) . "\n\n";
+        echo "data: " . json_encode(['status' => 'connected', 'timestamp' => time()]) . "\n\n";
         flush();
 
+        // Initialize variables for connection management
         $last_check = time();
-        $check_interval = 2; // Check every 2 seconds
+        $check_interval = 1; // Check every 1 second
+        $max_execution_time = 5; // Limit execution to just 5 seconds to prevent browser hanging
+        $start_time = time();
 
-        while (true) {
-            if ((time() - $last_check) >= $check_interval) {
-                $messages = self::getMessages($user_id);
-                
-                foreach ($messages as $message) {
-                    echo "event: message\n";
-                    echo "data: " . json_encode($message) . "\n\n";
-                    flush();
+        // Set up error handling
+        set_error_handler(function($errno, $errstr) {
+            echo "event: error\n";
+            echo "data: " . json_encode(['error' => 'Server error']) . "\n\n";
+            flush();
+            return true;
+        });
+
+        try {
+            // Keep connection open for limited time
+            while ((time() - $start_time) < $max_execution_time) {
+                if ((time() - $last_check) >= $check_interval) {
+                    $messages = self::getMessages($user_id);
                     
-                    // Delete processed message
-                    self::deleteMessage($user_id, $message['id']);
+                    if (!empty($messages)) {
+                        foreach ($messages as $message) {
+                            echo "event: message\n";
+                            echo "data: " . json_encode($message) . "\n\n";
+                            flush();
+                            
+                            // Delete processed message
+                            self::deleteMessage($user_id, $message['id']);
+                        }
+                    } else {
+                        // Send a ping to keep connection alive
+                        echo "event: ping\n";
+                        echo "data: " . json_encode(['time' => time()]) . "\n\n";
+                        flush();
+                    }
+                    
+                    $last_check = time();
                 }
-                
-                $last_check = time();
-            }
 
-            // Check if client is still connected
-            if (connection_aborted()) {
-                break;
-            }
+                // Check if client is still connected
+                if (connection_aborted()) {
+                    break;
+                }
 
-            // Sleep to prevent excessive CPU usage
-            usleep(500000); // 0.5 seconds
+                // Sleep to prevent excessive CPU usage
+                usleep(500000); // 0.5 seconds
+            }
+            
+            // Send end connection message when time limit reached
+            echo "event: end\n";
+            echo "data: " . json_encode(['reason' => 'time_limit']) . "\n\n";
+            flush();
+            
+        } catch (\Exception $e) {
+            // Handle any exceptions
+            echo "event: error\n";
+            echo "data: " . json_encode(['error' => 'Connection error']) . "\n\n";
+            flush();
         }
+        
+        // Restore error handler
+        restore_error_handler();
+        
+        exit(0); // Ensure clean exit
     }
 
     /**

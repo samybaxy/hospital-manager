@@ -16,7 +16,7 @@ import {
 import { DataGrid } from '@mui/x-data-grid';
 import { DatePicker } from '@mui/x-date-pickers';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { format } from 'date-fns';
+import { format, isValid, parseISO } from 'date-fns';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -38,13 +38,97 @@ const DoctorDashboard = () => {
         ['patients', searchTerm],
         () => fetch(`/wp-json/hospital-manager/v1/doctor/patients?search=${searchTerm}`)
             .then(res => res.json())
+            .catch(error => {
+                console.error('Error fetching patients:', error);
+                return { data: [] }; // Return empty data structure to prevent errors
+            })
     );
 
+    // Safely format date for API request
+    const getFormattedDate = (date) => {
+        try {
+            if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+                console.warn('Invalid date provided, using current date');
+                return format(new Date(), 'yyyy-MM-dd');
+            }
+            return format(date, 'yyyy-MM-dd');
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return format(new Date(), 'yyyy-MM-dd');
+        }
+    };
+    
     // Fetch visitations for selected date
     const { data: visitationsData, isLoading: loadingVisitations } = useQuery(
-        ['visitations', format(selectedDate, 'yyyy-MM-dd')],
-        () => fetch(`/wp-json/hospital-manager/v1/doctor/visitations?date=${format(selectedDate, 'yyyy-MM-dd')}`)
+        ['visitations', getFormattedDate(selectedDate)],
+        () => fetch(`/wp-json/hospital-manager/v1/doctor/visitations?date=${getFormattedDate(selectedDate)}`)
             .then(res => res.json())
+            .then(data => {
+                // Process response data to ensure valid dates
+                if (Array.isArray(data)) {
+                    return data.map(item => {
+                        try {
+                            // Ensure each item has an id
+                            if (!item.id) {
+                                item.id = `temp-${Math.random().toString(36).substr(2, 9)}`;
+                            }
+                            
+                            // Completely sanitize time field to prevent invalid time errors
+                            if (typeof item.time === 'string') {
+                                // Strict format checking for time string (HH:MM or H:MM format)
+                                const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/;
+                                if (timeRegex.test(item.time)) {
+                                    const timeParts = item.time.split(':');
+                                    item.time = timeParts[0] + ':' + timeParts[1];
+                                } else {
+                                    console.warn('Invalid time format, using default:', item.time);
+                                    item.time = '00:00'; // Use default for invalid format
+                                }
+                            } else if (item.time instanceof Date && !isNaN(item.time.getTime())) {
+                                // If it's a valid Date object, format it correctly
+                                item.time = format(item.time, 'HH:mm');
+                            } else {
+                                // For any other invalid type, use default
+                                console.warn('Invalid time value type, using default');
+                                item.time = '00:00';
+                            }
+                            
+                            // Handle any date fields that might be present
+                            if (item.date) {
+                                try {
+                                    if (typeof item.date === 'string') {
+                                        const parsedDate = parseISO(item.date);
+                                        if (isValid(parsedDate)) {
+                                            item.date = parsedDate;
+                                        } else {
+                                            item.date = new Date();
+                                        }
+                                    } else if (!(item.date instanceof Date) || isNaN(item.date.getTime())) {
+                                        item.date = new Date();
+                                    }
+                                } catch (dateError) {
+                                    console.error('Error parsing date:', dateError);
+                                    item.date = new Date();
+                                }
+                            }
+                            
+                            return item;
+                        } catch (e) {
+                            console.error('Error processing visitation item:', e, item);
+                            return {
+                                ...item,
+                                id: item.id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+                                time: '00:00' // Fallback time
+                            };
+                        }
+                    });
+                }
+                return [];
+            })
+            .catch(error => {
+                console.error('Error fetching visitations:', error);
+                return [];
+            })
     );
 
     // Create visitation mutation
@@ -113,7 +197,51 @@ const DoctorDashboard = () => {
     ];
 
     const visitationColumns = [
-        { field: 'time', headerName: 'Time', width: 100 },
+        { 
+            field: 'time', 
+            headerName: 'Time', 
+            width: 100,
+            // Enhanced time rendering with comprehensive error handling
+            valueGetter: (params) => {
+                try {
+                    // If no value, return empty string
+                    if (!params.value) return '';
+                    
+                    // Handle string values - most common case
+                    if (typeof params.value === 'string') {
+                        // Check if it's a valid time string format (HH:MM or H:MM)
+                        const timeRegex = /^([0-1]?[0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$/;
+                        if (timeRegex.test(params.value)) {
+                            return params.value;
+                        }
+                        
+                        // Try to parse ISO string to date and format
+                        try {
+                            const date = new Date(params.value);
+                            if (!isNaN(date.getTime())) {
+                                return format(date, 'HH:mm');
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse time string:', params.value);
+                        }
+                        
+                        // Return as-is if nothing else works
+                        return params.value;
+                    }
+                    
+                    // Handle Date objects
+                    if (params.value instanceof Date && !isNaN(params.value.getTime())) {
+                        return format(params.value, 'HH:mm');
+                    }
+                    
+                    // For any other type, convert to string
+                    return String(params.value);
+                } catch (error) {
+                    console.error('Error formatting time value:', error);
+                    return '00:00'; // Safe fallback
+                }
+            }
+        },
         { field: 'patientName', headerName: 'Patient', width: 200 },
         { field: 'diagnosis', headerName: 'Diagnosis', width: 300 },
         { field: 'treatment', headerName: 'Treatment', width: 300 },
@@ -170,7 +298,18 @@ const DoctorDashboard = () => {
                                     <DatePicker
                                         label="Select Date"
                                         value={selectedDate}
-                                        onChange={setSelectedDate}
+                                        onChange={(newDate) => {
+                                            try {
+                                                // Validate the date before setting it
+                                                if (newDate && !isNaN(new Date(newDate).getTime())) {
+                                                    setSelectedDate(newDate);
+                                                } else {
+                                                    console.warn('Invalid date selected, keeping current date');
+                                                }
+                                            } catch (error) {
+                                                console.error('Error setting date:', error);
+                                            }
+                                        }}
                                         renderInput={(params) => <TextField {...params} />}
                                     />
                                 </Box>
