@@ -4,7 +4,7 @@
  * Plugin URI: https://github.com/AniomaHospital/hospital-manager
  * Description: A comprehensive hospital management system for Nigerian hospitals with patient, doctor, and operations management.
  * Version: 1.0.0
- * Author: Samuel Nwaokoro Idiaghe
+ * Author: Samuel N
  * Author URI: https://github.com/samybaxy
  * License: GPL-2.0+
  * License URI: http://www.gnu.org/licenses/gpl-2.0.txt
