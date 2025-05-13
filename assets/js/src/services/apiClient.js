@@ -23,8 +23,10 @@ apiClient.interceptors.request.use(
       config.headers['X-WP-Nonce'] = nonce;
     }
     
-    // Get the token from localStorage if available
-    const token = localStorage.getItem('hospital_manager_token');
+    // Check both localStorage and sessionStorage for the token
+    const token = localStorage.getItem('hospital_manager_token') || 
+                  sessionStorage.getItem('hospital_manager_token');
+                  
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }

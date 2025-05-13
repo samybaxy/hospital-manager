@@ -15,16 +15,35 @@ export function AuthProvider({ children }) {
     async function checkAuthStatus() {
       try {
         setLoading(true);
+        
+        // Check if we have a token in either localStorage or sessionStorage
+        const hasToken = localStorage.getItem('hospital_manager_token') || 
+                         sessionStorage.getItem('hospital_manager_token');
+                         
+        if (!hasToken) {
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+        
+        // We have a token, so check if it's valid
         const response = await api.get('/auth/me');
         
         if (response.data.authenticated) {
           setUser(response.data.user);
         } else {
+          // Token is invalid, clear it
+          localStorage.removeItem('hospital_manager_token');
+          sessionStorage.removeItem('hospital_manager_token');
           setUser(null);
         }
       } catch (err) {
         console.error("Authentication check failed:", err);
         setError("Failed to authenticate");
+        
+        // Clear any invalid tokens
+        localStorage.removeItem('hospital_manager_token');
+        sessionStorage.removeItem('hospital_manager_token');
         setUser(null);
       } finally {
         setLoading(false);
@@ -65,9 +84,20 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       await api.post('/auth/logout');
+      
+      // Clear tokens from both storage options
+      localStorage.removeItem('hospital_manager_token');
+      sessionStorage.removeItem('hospital_manager_token');
+      
       setUser(null);
     } catch (err) {
       console.error("Logout failed:", err);
+      
+      // Even if the API call fails, clear local tokens
+      localStorage.removeItem('hospital_manager_token');
+      sessionStorage.removeItem('hospital_manager_token');
+      
+      setUser(null);
     } finally {
       setLoading(false);
     }
