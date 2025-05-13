@@ -1,8 +1,8 @@
-const { defineConfig } = require('vite');
-const react = require('@vitejs/plugin-react');
-const { resolve } = require('path');
-const fs = require('fs');
-const path = require('path');
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
+import fs from 'fs';
+import path from 'path';
 
 // Custom plugin to move CSS files after build
 const moveCssPlugin = () => {
@@ -36,7 +36,7 @@ const moveCssPlugin = () => {
   };
 };
 
-module.exports = defineConfig({
+export default defineConfig({
   plugins: [
     react(),
     moveCssPlugin()

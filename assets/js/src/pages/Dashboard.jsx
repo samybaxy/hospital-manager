@@ -12,11 +12,10 @@ const Dashboard = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
-      <p className="text-lg text-gray-600">Welcome to the Hospital Management System</p>
+    <div className="space-y-6 px-4 md:px-6 lg:px-8">
+      {/* Welcome section and title removed as requested */}
       
-      <div className="space-y-8">
+      <div className="space-y-8 mt-6">
         <Card title="Dashboard Overview">
           <div className="bg-primary-50 p-4 rounded-md border border-primary-200">
             <h2 className="font-semibold text-primary-900">Quick Stats</h2>

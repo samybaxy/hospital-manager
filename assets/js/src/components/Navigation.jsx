@@ -1,7 +1,8 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 
 const Navigation = () => {
+  const location = useLocation();
   const navItems = [
     { path: '/', label: 'Dashboard' },
     { path: '/patients', label: 'Patients' },
@@ -20,6 +21,10 @@ const Navigation = () => {
     { path: '/settings', label: 'Settings' }
   ];
 
+  // Simpler approach without using a function that gets serialized
+  const activeClass = "bg-primary-900 text-white px-3 py-2 rounded-md text-sm font-medium";
+  const inactiveClass = "text-white hover:bg-primary-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium";
+  
   return (
     <nav className="bg-primary-700 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,11 +38,7 @@ const Navigation = () => {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  className={({ isActive }) => 
-                    isActive
-                      ? 'bg-primary-900 text-white px-3 py-2 rounded-md text-sm font-medium'
-                      : 'text-white hover:bg-primary-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium'
-                  }
+                  className={location.pathname === item.path ? activeClass : inactiveClass}
                 >
                   {item.label}
                 </NavLink>
@@ -54,11 +55,7 @@ const Navigation = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) => 
-                isActive
-                  ? 'bg-primary-900 text-white px-3 py-2 rounded-md text-sm font-medium'
-                  : 'text-white hover:bg-primary-800 hover:text-white px-3 py-2 rounded-md text-sm font-medium'
-              }
+              className={location.pathname === item.path ? activeClass : inactiveClass}
             >
               {item.label}
             </NavLink>

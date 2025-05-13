@@ -2,6 +2,7 @@
   "name": "hospital-manager",
   "version": "1.0.0",
   "description": "Hospital Manager WordPress Plugin",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
@@ -9,8 +10,9 @@
     "preview": "vite preview",
     "watch": "vite build --watch"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "Samybaxy",
+  "license": "MIT",
+  "private": true,
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

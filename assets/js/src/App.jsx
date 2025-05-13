@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import Navigation from './components/Navigation';
+import Layout from './components/Layout';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -46,27 +46,25 @@ const AppRoutes = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/patients" element={<Patients />} />
-          <Route path="/doctors" element={<Doctors />} />
-          <Route path="/appointments" element={<Appointments />} />
-          <Route path="/departments" element={<Departments />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/lab-investigations" element={<LabInvestigations />} />
-          <Route path="/visitations" element={<Visitations />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/audit-logs" element={<AuditLogs />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/statistics" element={<Statistics />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </div>
+    <div>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/patients" element={<Patients />} />
+        <Route path="/doctors" element={<Doctors />} />
+        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/departments" element={<Departments />} />
+        <Route path="/billing" element={<Billing />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/lab-investigations" element={<LabInvestigations />} />
+        <Route path="/visitations" element={<Visitations />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/audit-logs" element={<AuditLogs />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/statistics" element={<Statistics />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </div>
   );
 };
@@ -74,11 +72,10 @@ const AppRoutes = () => {
 // Main App component with router
 const App = () => {
   return (
-    <Router basename="">
-      <div className="min-h-screen bg-gray-100">
-        <Navigation />
+    <Router>
+      <Layout>
         <AppRoutes />
-      </div>
+      </Layout>
     </Router>
   );
 };
