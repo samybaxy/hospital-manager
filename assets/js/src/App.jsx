@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
+import PatientDetails from './pages/PatientDetails';
+import AddPatient from './pages/AddPatient';
+import EditPatient from './pages/EditPatient';
 import Doctors from './pages/Doctors';
 import Appointments from './pages/Appointments';
 import Departments from './pages/Departments';
@@ -13,6 +18,7 @@ import Inventory from './pages/Inventory';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
+import Login from './pages/Login';
 // Import new pages based on API controllers
 import LabInvestigations from './pages/LabInvestigations';
 import Visitations from './pages/Visitations';
@@ -48,21 +54,100 @@ const AppRoutes = () => {
   return (
     <div>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/patients" element={<Patients />} />
-        <Route path="/doctors" element={<Doctors />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/departments" element={<Departments />} />
-        <Route path="/billing" element={<Billing />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/lab-investigations" element={<LabInvestigations />} />
-        <Route path="/visitations" element={<Visitations />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/audit-logs" element={<AuditLogs />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/statistics" element={<Statistics />} />
+        {/* Public route for login */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* Protected routes that require authentication */}
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients" element={
+          <ProtectedRoute>
+            <Patients />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients/new" element={
+          <ProtectedRoute>
+            <AddPatient />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients/:id/edit" element={
+          <ProtectedRoute>
+            <EditPatient />
+          </ProtectedRoute>
+        } />
+        <Route path="/patients/:id" element={
+          <ProtectedRoute>
+            <PatientDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctors" element={
+          <ProtectedRoute>
+            <Doctors />
+          </ProtectedRoute>
+        } />
+        <Route path="/appointments" element={
+          <ProtectedRoute>
+            <Appointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/departments" element={
+          <ProtectedRoute>
+            <Departments />
+          </ProtectedRoute>
+        } />
+        <Route path="/billing" element={
+          <ProtectedRoute>
+            <Billing />
+          </ProtectedRoute>
+        } />
+        <Route path="/inventory" element={
+          <ProtectedRoute>
+            <Inventory />
+          </ProtectedRoute>
+        } />
+        <Route path="/reports" element={
+          <ProtectedRoute>
+            <Reports />
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+        <Route path="/lab-investigations" element={
+          <ProtectedRoute>
+            <LabInvestigations />
+          </ProtectedRoute>
+        } />
+        <Route path="/visitations" element={
+          <ProtectedRoute>
+            <Visitations />
+          </ProtectedRoute>
+        } />
+        <Route path="/chat" element={
+          <ProtectedRoute>
+            <Chat />
+          </ProtectedRoute>
+        } />
+        <Route path="/audit-logs" element={
+          <ProtectedRoute>
+            <AuditLogs />
+          </ProtectedRoute>
+        } />
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Notifications />
+          </ProtectedRoute>
+        } />
+        <Route path="/statistics" element={
+          <ProtectedRoute>
+            <Statistics />
+          </ProtectedRoute>
+        } />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
@@ -73,9 +158,19 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <Router>
-      <Layout>
-        <AppRoutes />
-      </Layout>
+      <AuthProvider>
+        <Routes>
+          {/* Login route outside of Layout */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* All other routes inside Layout */}
+          <Route path="*" element={
+            <Layout>
+              <AppRoutes />
+            </Layout>
+          } />
+        </Routes>
+      </AuthProvider>
     </Router>
   );
 };

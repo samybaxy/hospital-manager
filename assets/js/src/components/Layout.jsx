@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, loading } = useAuth();
+  
+  // If loading auth state, show a loading spinner
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // If not authenticated and not on login page, redirect to login
+  if (!isAuthenticated && location.pathname !== '/login') {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
   // Navigation items for sidebar
   const navItems = [

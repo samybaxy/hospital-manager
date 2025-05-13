@@ -17,6 +17,15 @@ class DashboardController extends WP_REST_Controller
                 'permission_callback' => [$this, 'check_permissions'],
             ]
         ]);
+        
+        // Add the missing stats endpoint
+        register_rest_route('hospital-manager/v1', '/dashboard/stats', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_dashboard_stats'],
+                'permission_callback' => [$this, 'check_permissions'],
+            ]
+        ]);
     }
 
     public function check_permissions() 
@@ -106,5 +115,87 @@ class DashboardController extends WP_REST_Controller
             'pending_tests' => $pending_tests,
             'tests_completed_today' => $completed_tests
         ], 200);
+    }
+
+    /**
+     * Get dashboard statistics for the admin dashboard
+     *
+     * @param WP_REST_Request $request API request object
+     * @return WP_REST_Response Response containing dashboard stats
+     */
+    public function get_dashboard_stats($request) {
+        global $wpdb;
+        
+        try {
+            // Get count of patients from the database
+            $patients_count = $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_patients"
+            ) ?: 0;
+            
+            // Get count of doctors (users with doctor role)
+            $doctors_count = count(get_users(['role' => 'doctor'])) ?: 0;
+            
+            // Get count of appointments
+            $appointments_count = $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_appointments"
+            ) ?: 0;
+            
+            // Get count of departments
+            $departments_count = $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_departments"
+            ) ?: 0;
+            
+            // Get recent activities (last 5)
+            $recent_activities = $wpdb->get_results(
+                "SELECT * FROM {$wpdb->prefix}hm_audit_logs 
+                ORDER BY created_at DESC 
+                LIMIT 5"
+            ) ?: [];
+            
+            // Get upcoming appointments (next 5)
+            $upcoming_appointments = $wpdb->get_results(
+                "SELECT a.*, p.first_name, p.last_name 
+                FROM {$wpdb->prefix}hm_appointments a
+                LEFT JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.id
+                WHERE a.appointment_date >= CURDATE()
+                ORDER BY a.appointment_date ASC, a.appointment_time ASC
+                LIMIT 5"
+            ) ?: [];
+            
+            // Format the activities and appointments if needed
+            foreach ($recent_activities as &$activity) {
+                $activity->created_at = mysql2date('F j, Y g:i a', $activity->created_at);
+            }
+            
+            foreach ($upcoming_appointments as &$appointment) {
+                if (isset($appointment->appointment_date)) {
+                    $appointment->formatted_date = mysql2date('F j, Y', $appointment->appointment_date);
+                }
+            }
+            
+            return new WP_REST_Response([
+                'patients_count' => (int)$patients_count,
+                'doctors_count' => (int)$doctors_count,
+                'appointments_count' => (int)$appointments_count,
+                'departments_count' => (int)$departments_count,
+                'recent_activities' => $recent_activities,
+                'upcoming_appointments' => $upcoming_appointments,
+            ], 200);
+            
+        } catch (\Exception $e) {
+            // Log the error
+            error_log('Dashboard stats error: ' . $e->getMessage());
+            
+            // Return a generic error response
+            return new WP_REST_Response([
+                'patients_count' => 0,
+                'doctors_count' => 0,
+                'appointments_count' => 0,
+                'departments_count' => 0,
+                'recent_activities' => [],
+                'upcoming_appointments' => [],
+                'error' => 'Failed to fetch dashboard statistics'
+            ], 500);
+        }
     }
 }

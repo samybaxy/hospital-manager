@@ -32,7 +32,9 @@ class FrontendController extends Controller
         if (is_a($post, 'WP_Post') && has_shortcode($post->post_content, 'hospital_manager')) {
             wp_enqueue_style(
                 'hospital-manager-frontend',
-                plugins_url('assets/css/dist/frontend.css', dirname(__DIR__))
+                plugins_url('assets/css/dist/frontend.css', dirname(__DIR__)),
+                [],
+                filemtime(plugin_dir_path(dirname(__DIR__)) . 'assets/css/dist/frontend.css') ?: '1.0.0'
             );
             
             // Add inline CSS to hide the WordPress default page title
@@ -48,7 +50,7 @@ class FrontendController extends Controller
                 'hospital-manager-app',
                 plugins_url('assets/js/dist/bundle.js', dirname(__DIR__)),
                 ['wp-element'],
-                '1.0.0',
+                filemtime(plugin_dir_path(dirname(__DIR__)) . 'assets/js/dist/bundle.js') ?: '1.0.0',
                 true
             );
 
