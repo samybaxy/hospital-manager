@@ -9,7 +9,7 @@ const Navigation = () => {
     { path: '/appointments', label: 'Appointments' },
     { path: '/visitations', label: 'Visitations' },
     { path: '/departments', label: 'Departments' },
-    { path: '/lab-investigations', label: 'Lab Tests' },
+    { path: '/lab-investigations', label: 'Lab' },
     { path: '/billing', label: 'Billing' },
     { path: '/inventory', label: 'Inventory' },
     { path: '/reports', label: 'Reports' },

@@ -55,7 +55,8 @@ class FrontendController extends Controller
             wp_localize_script('hospital-manager-app', 'hospitalManagerData', [
                 'nonce' => wp_create_nonce('wp_rest'),
                 'apiUrl' => rest_url('hospital-manager/v1'),
-                'isFrontend' => true
+                'isFrontend' => true,
+                'siteUrl' => site_url()
             ]);
         }
     }
