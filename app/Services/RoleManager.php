@@ -15,7 +15,7 @@ class RoleManager
     private static function add_roles()
     {
         // Update existing roles with more specific capabilities
-        add_role('admin', 'Administrator', [
+        add_role('administrator', 'Administrator', [
             'read' => true,
             'view_patients' => true,
             'edit_patient' => true,
