@@ -52,6 +52,39 @@ class AuthController extends BaseController
                 }
             ]
         ]);
+        
+        // Password reset request endpoint
+        register_rest_route($this->namespace, '/auth/reset-password', [
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'request_password_reset'],
+                'permission_callback' => function() {
+                    return !is_user_logged_in(); // Only for logged out users
+                }
+            ]
+        ]);
+        
+        // Password reset confirmation endpoint
+        register_rest_route($this->namespace, '/auth/reset-password/confirm', [
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'confirm_password_reset'],
+                'permission_callback' => function() {
+                    return !is_user_logged_in(); // Only for logged out users
+                }
+            ]
+        ]);
+        
+        // Token refresh endpoint with CSRF protection
+        register_rest_route($this->namespace, '/auth/refresh', [
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'refresh_token'],
+                'permission_callback' => function() {
+                    return true; // We'll validate in the callback
+                }
+            ]
+        ]);
     }
 
     public function get_current_user()
@@ -414,7 +447,7 @@ class AuthController extends BaseController
         $creds = [
             'user_login' => $request->get_param('username'),
             'user_password' => $request->get_param('password'),
-            'remember' => true
+            'remember' => $request->get_param('remember') ?? true // Use remember preference or default to true
         ];
 
         $user = wp_signon($creds);
@@ -432,7 +465,9 @@ class AuthController extends BaseController
         // Set a custom authentication cookie that will be used as a fallback
         // This helps with frontend authentication for AJAX calls
         $secure = is_ssl();
-        $expire = time() + 14 * DAY_IN_SECONDS;
+        $expire = $creds['remember'] 
+                ? time() + 14 * DAY_IN_SECONDS      // 2 weeks for "remember me"
+                : time() + 2 * DAY_IN_SECONDS;      // 2 days for regular login
         $path = COOKIEPATH ? COOKIEPATH : '/';
         $cookie_domain = COOKIE_DOMAIN ? COOKIE_DOMAIN : '';
         
@@ -449,8 +484,23 @@ class AuthController extends BaseController
         // Generate a fresh nonce for subsequent API calls
         $nonce = wp_create_nonce('wp_rest');
         
+        // Generate JWT token
+        $token_data = [
+            'iss' => get_bloginfo('url'),
+            'iat' => time(),
+            'exp' => $expire,
+            'user' => [
+                'id' => $user->ID,
+                'email' => $user->user_email
+            ]
+        ];
+        
+        $token = $this->generate_jwt_token($token_data);
+        
         // Also set a header that frontend can use for subsequent requests
         $response = new WP_REST_Response([
+            'authenticated' => true,
+            'token' => $token,
             'user' => [
                 'id' => $user->ID,
                 'name' => $user->display_name,
@@ -476,5 +526,350 @@ class AuthController extends BaseController
     {
         $roles = array_values($user->roles);
         return !empty($roles) ? $roles[0] : null;
+    }
+
+    /**
+     * Handle password reset requests and send reset email
+     */
+    public function request_password_reset($request) 
+    {
+        // Get email from request
+        $email = $request->get_param('email');
+        if (!$email) {
+            return new WP_Error(
+                'missing_email',
+                'Email address is required',
+                ['status' => 400]
+            );
+        }
+
+        // Verify CSRF nonce for security
+        $nonce = $request->get_param('nonce');
+        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+            return new WP_Error(
+                'invalid_nonce',
+                'Security verification failed',
+                ['status' => 403]
+            );
+        }
+
+        // Find user by email
+        $user = get_user_by('email', $email);
+        if (!$user) {
+            // For security reasons, don't reveal that the email doesn't exist
+            // Instead, pretend we sent an email
+            return new WP_REST_Response([
+                'success' => true,
+                'message' => 'If your email is registered, you will receive a password reset link shortly.'
+            ]);
+        }
+        
+        // Get the user ID
+        $user_id = $user->ID;
+        
+        // Generate a secure reset token
+        $reset_key = wp_generate_password(32, false);
+        
+        // Store token with an expiration time (24 hours)
+        $expiration = time() + (24 * HOUR_IN_SECONDS);
+        update_user_meta($user_id, 'hospital_manager_password_reset_token', [
+            'token' => $reset_key,
+            'expiration' => $expiration
+        ]);
+        
+        // Generate reset URL with the token
+        $reset_url = site_url('/reset-password?token=' . $reset_key);
+        
+        // Prepare and send email
+        $subject = sprintf('[%s] Password Reset Request', get_bloginfo('name'));
+        $message = sprintf(
+            'Hello %s,
+
+You recently requested to reset your password for your %s account. Click the link below to reset it:
+
+%s
+
+This link will expire in 24 hours. If you did not request a password reset, please ignore this email.
+
+Regards,
+%s Team',
+            $user->display_name,
+            get_bloginfo('name'),
+            $reset_url,
+            get_bloginfo('name')
+        );
+        
+        // Send the email
+        $mail_sent = wp_mail($email, $subject, $message);
+        
+        if ($mail_sent) {
+            return new WP_REST_Response([
+                'success' => true,
+                'message' => 'If your email is registered, you will receive a password reset link shortly.'
+            ]);
+        } else {
+            return new WP_Error(
+                'email_failed',
+                'Failed to send password reset email. Please try again later.',
+                ['status' => 500]
+            );
+        }
+    }
+    
+    /**
+     * Process password reset confirmation with the token
+     */
+    public function confirm_password_reset($request)
+    {
+        // Get parameters
+        $token = $request->get_param('token');
+        $password = $request->get_param('password');
+        $nonce = $request->get_param('nonce');
+        
+        // Validate inputs
+        if (!$token || !$password) {
+            return new WP_Error(
+                'missing_inputs',
+                'Token and new password are required',
+                ['status' => 400]
+            );
+        }
+        
+        // Verify CSRF nonce for security
+        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+            return new WP_Error(
+                'invalid_nonce',
+                'Security verification failed',
+                ['status' => 403]
+            );
+        }
+        
+        // Find user with this reset token
+        $user_id = $this->find_user_by_reset_token($token);
+        
+        if (!$user_id) {
+            return new WP_Error(
+                'invalid_token',
+                'Invalid or expired reset token',
+                ['status' => 400]
+            );
+        }
+        
+        // Update the user's password
+        wp_set_password($password, $user_id);
+        
+        // Delete the used token
+        delete_user_meta($user_id, 'hospital_manager_password_reset_token');
+        
+        // Generate a fresh nonce for subsequent API calls
+        $new_nonce = wp_create_nonce('wp_rest');
+        
+        // Return success
+        $response = new WP_REST_Response([
+            'success' => true,
+            'message' => 'Your password has been reset successfully. You can now login with your new password.',
+            'fresh_nonce' => $new_nonce
+        ]);
+        
+        // Set the nonce in header for subsequent API calls
+        $response->header('X-WP-Nonce', $new_nonce);
+        
+        return $response;
+    }
+    
+    /**
+     * Refresh the authentication token
+     */
+    public function refresh_token($request)
+    {
+        // Get current token and CSRF nonce
+        $current_token = $request->get_param('token');
+        $nonce = $request->get_param('nonce');
+        
+        if (!$current_token) {
+            return new WP_Error(
+                'missing_token',
+                'No token provided for refresh',
+                ['status' => 400]
+            );
+        }
+        
+        // Verify CSRF nonce for security
+        if (!wp_verify_nonce($nonce, 'wp_rest')) {
+            return new WP_Error(
+                'invalid_nonce',
+                'Security verification failed',
+                ['status' => 403]
+            );
+        }
+        
+        // Validate the token (implement your token validation logic here)
+        $user_id = $this->validate_token($current_token);
+        
+        if (!$user_id) {
+            return new WP_Error(
+                'invalid_token',
+                'Token is invalid or expired',
+                ['status' => 401]
+            );
+        }
+        
+        // Generate a fresh token
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return new WP_Error(
+                'invalid_user',
+                'User not found',
+                ['status' => 401]
+            );
+        }
+        
+        // Generate new token that expires in 12 hours
+        $issued_at = time();
+        $expiration = $issued_at + (12 * HOUR_IN_SECONDS);
+        $token_data = [
+            'iss' => get_bloginfo('url'),
+            'iat' => $issued_at,
+            'exp' => $expiration,
+            'user' => [
+                'id' => $user->ID,
+                'email' => $user->user_email
+            ]
+        ];
+        
+        // Create JWT token (using a simple implementation for the example)
+        $new_token = $this->generate_jwt_token($token_data);
+        
+        // Generate a fresh nonce for future API calls
+        $new_nonce = wp_create_nonce('wp_rest');
+        
+        // Return the new token
+        $response = new WP_REST_Response([
+            'success' => true,
+            'token' => $new_token,
+            'user' => [
+                'id' => $user->ID,
+                'name' => $user->display_name,
+                'email' => $user->user_email
+            ],
+            'role' => $this->get_primary_role($user),
+            'fresh_nonce' => $new_nonce
+        ]);
+        
+        // Set the nonce in header for subsequent API calls
+        $response->header('X-WP-Nonce', $new_nonce);
+        
+        return $response;
+    }
+    
+    /**
+     * Find a user by their password reset token
+     */
+    private function find_user_by_reset_token($token) 
+    {
+        if (empty($token)) {
+            return false;
+        }
+        
+        global $wpdb;
+        
+        // Find user with this token in their meta
+        $user_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->usermeta} 
+            WHERE meta_key = 'hospital_manager_password_reset_token'
+            AND meta_value LIKE %s",
+            '%' . $wpdb->esc_like($token) . '%'
+        ));
+        
+        if (!$user_id) {
+            return false;
+        }
+        
+        // Get token data from meta
+        $token_data = get_user_meta($user_id, 'hospital_manager_password_reset_token', true);
+        
+        // Verify token hasn't expired
+        if (!is_array($token_data) || 
+            !isset($token_data['token']) || 
+            !isset($token_data['expiration']) ||
+            $token_data['token'] !== $token ||
+            $token_data['expiration'] < time()) {
+            
+            // Token expired or invalid, clean up
+            delete_user_meta($user_id, 'hospital_manager_password_reset_token');
+            return false;
+        }
+        
+        return $user_id;
+    }
+    
+    /**
+     * Generate a JWT token
+     */
+    private function generate_jwt_token($data) 
+    {
+        // Header: algorithm & token type
+        $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+        
+        // Payload: data
+        $payload = json_encode($data);
+        
+        // Encode Header and Payload
+        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+        
+        // Get WordPress auth salt for signing
+        $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
+        
+        // Create Signature Hash
+        $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $auth_key, true);
+        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+        
+        // Create JWT
+        return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+    }
+    
+    /**
+     * Validate a JWT token and return the user ID
+     */
+    private function validate_token($token) 
+    {
+        if (empty($token)) {
+            return false;
+        }
+        
+        // Split token into 3 parts
+        $token_parts = explode('.', $token);
+        if (count($token_parts) !== 3) {
+            return false;
+        }
+        
+        list($header_encoded, $payload_encoded, $signature_encoded) = $token_parts;
+        
+        // Get WordPress auth salt for verification
+        $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
+        
+        // Verify signature
+        $signature = hash_hmac('sha256', $header_encoded . "." . $payload_encoded, $auth_key, true);
+        $signature_check = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+        
+        if ($signature_check !== $signature_encoded) {
+            return false;
+        }
+        
+        // Decode payload
+        $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload_encoded)), true);
+        
+        // Check if token is expired
+        if (!isset($payload['exp']) || $payload['exp'] < time()) {
+            return false;
+        }
+        
+        // Check if user exists
+        if (!isset($payload['user']['id'])) {
+            return false;
+        }
+        
+        return $payload['user']['id'];
     }
 }

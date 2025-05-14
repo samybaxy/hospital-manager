@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/apiClient';
+import { api } from '../services/apiService';
+import authService from '../services/authService';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -37,33 +39,25 @@ const Login = () => {
     
     try {
       // Call the login endpoint directly using the exact path specified
+      // Add CSRF protection
+      const csrfNonce = authService.getCsrfToken();
+      
       const response = await api.post('/auth/login', {
         username: email, // The backend expects 'username'
-        password: password
+        password: password,
+        remember: rememberMe, // Pass the remember me preference to the server
+        nonce: csrfNonce
       });
       
       if (response.data && response.data.authenticated) {
         // Store the token if provided by the API
         if (response.data.token) {
-          // Store token in localStorage or sessionStorage based on rememberMe option
-          if (rememberMe) {
-            localStorage.setItem('hospital_manager_token', response.data.token);
-          } else {
-            sessionStorage.setItem('hospital_manager_token', response.data.token);
-          }
-          
-          // Update the Authorization header for future requests
-          api.defaults = {
-            ...api.defaults,
-            headers: {
-              ...api.defaults?.headers,
-              'Authorization': `Bearer ${response.data.token}`
-            }
-          };
+          // Use our centralized auth service to manage the token
+          authService.setToken(response.data.token, rememberMe);
         }
         
-        // Update the auth context
-        await login(email, password);
+        // Update the auth context with the rememberMe preference
+        await login(email, password, rememberMe);
         
         // Redirect to the page they were trying to access or dashboard
         navigate(from, { replace: true });
@@ -135,7 +129,7 @@ const Login = () => {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="user@example.com"
                 disabled={isSubmitting}
                 autoFocus
@@ -157,7 +151,7 @@ const Login = () => {
                 className="text-sm text-primary-600 hover:text-primary-800"
                 onClick={(e) => {
                   e.preventDefault();
-                  alert('Password reset functionality not implemented yet.');
+                  setShowResetModal(true);
                 }}
               >
                 Forgot password?
@@ -175,7 +169,7 @@ const Login = () => {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="••••••••••••"
                 disabled={isSubmitting}
                 required
@@ -216,6 +210,19 @@ const Login = () => {
           </div>
         </form>
       </div>
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+          <div className="relative w-full max-w-md">
+            {/* Import the PasswordResetRequest component */}
+            <div className="relative">
+              {React.createElement(require('../components/PasswordResetRequest').default, {
+                onClose: () => setShowResetModal(false)
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

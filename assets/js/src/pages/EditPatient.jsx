@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import PatientForm from './PatientForm';
-import { api } from '../services/apiClient';
+import { api } from '../services/apiService';
 import Button from '../components/Button';
 
 const EditPatient = () => {

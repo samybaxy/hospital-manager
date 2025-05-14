@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { Link } from 'react-router-dom';
-import { api } from '../services/apiClient';
+import { api } from '../services/apiService';
 
 const Patients = () => {
   const [patients, setPatients] = useState([]);
