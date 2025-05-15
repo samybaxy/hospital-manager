@@ -36,33 +36,42 @@ const moveCssPlugin = () => {
   };
 };
 
-export default defineConfig({
-  plugins: [
-    react(),
-    moveCssPlugin()
-  ],
-  base: '',
-  build: {
-    outDir: 'assets/js/dist',
-    emptyOutDir: false, // Don't empty out dir as we only want to update JS files here
-    sourcemap: true,
-    rollupOptions: {
-      input: {
-        bundle: resolve(__dirname, 'assets/js/src/index.jsx'),
-      },
-      output: {
-        entryFileNames: 'bundle.js',
-        chunkFileNames: '[name]-[hash].js',
-        assetFileNames: (assetInfo) => {
-            // Place files directly in js/dist without creating an additional assets directory
-            return '[name]-[hash][extname]';
-        }
-      },
+export default defineConfig(({ mode }) => {
+  const isDev = mode === 'development';
+  
+  return {
+    plugins: [
+      react(),
+      moveCssPlugin()
+    ],
+    base: '',
+    build: {
+      outDir: 'assets/js/dist',
+      emptyOutDir: false, // Don't empty out dir as we only want to update JS files here
+      sourcemap: true,
+      minify: isDev ? false : true, // Don't minify in development mode
+      rollupOptions: {
+        input: {
+          bundle: resolve(__dirname, 'assets/js/src/index.jsx'),
+        },
+        output: {
+          entryFileNames: 'bundle.js',
+          chunkFileNames: '[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+              // Place files directly in js/dist without creating an additional assets directory
+              return '[name]-[hash][extname]';
+          }
+        },
+      }
+    },
+    define: {
+      // This ensures React runs in development mode when we use --mode development
+      'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production')
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'assets/js/src')
+      }
     }
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'assets/js/src')
-    }
-  }
+  };
 });
