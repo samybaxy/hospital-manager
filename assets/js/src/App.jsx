@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
+import { AccessProvider } from './utils/accessControl.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
+import Unauthorized from './pages/Unauthorized';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -54,8 +56,9 @@ const AppRoutes = () => {
   return (
     <div>
       <Routes>
-        {/* Public route for login */}
+        {/* Public route for login and unauthorized */}
         <Route path="/login" element={<Login />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
         
         {/* Protected routes that require authentication */}
         <Route path="/" element={
@@ -63,88 +66,90 @@ const AppRoutes = () => {
             <Dashboard />
           </ProtectedRoute>
         } />
+        
+        {/* Routes with role-based access control */}
         <Route path="/patients" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="patients">
             <Patients />
           </ProtectedRoute>
         } />
         <Route path="/patients/new" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="patients">
             <AddPatient />
           </ProtectedRoute>
         } />
         <Route path="/patients/:id/edit" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="patients">
             <EditPatient />
           </ProtectedRoute>
         } />
         <Route path="/patients/:id" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="patients">
             <PatientDetails />
           </ProtectedRoute>
         } />
         <Route path="/doctors" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="doctors">
             <Doctors />
           </ProtectedRoute>
         } />
         <Route path="/appointments" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="appointments">
             <Appointments />
           </ProtectedRoute>
         } />
         <Route path="/departments" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="departments">
             <Departments />
           </ProtectedRoute>
         } />
         <Route path="/billing" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="billing">
             <Billing />
           </ProtectedRoute>
         } />
         <Route path="/inventory" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="inventory">
             <Inventory />
           </ProtectedRoute>
         } />
         <Route path="/reports" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="reports">
             <Reports />
           </ProtectedRoute>
         } />
         <Route path="/settings" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="settings">
             <Settings />
           </ProtectedRoute>
         } />
         <Route path="/lab-investigations" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="lab_dashboard">
             <LabInvestigations />
           </ProtectedRoute>
         } />
         <Route path="/visitations" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="visitations">
             <Visitations />
           </ProtectedRoute>
         } />
         <Route path="/chat" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="chat">
             <Chat />
           </ProtectedRoute>
         } />
         <Route path="/audit-logs" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="audit_log">
             <AuditLogs />
           </ProtectedRoute>
         } />
         <Route path="/notifications" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="notifications">
             <Notifications />
           </ProtectedRoute>
         } />
         <Route path="/statistics" element={
-          <ProtectedRoute>
+          <ProtectedRoute routeName="statistics">
             <Statistics />
           </ProtectedRoute>
         } />
@@ -159,17 +164,23 @@ const App = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          {/* Login route outside of Layout */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* All other routes inside Layout */}
-          <Route path="*" element={
-            <Layout>
-              <AppRoutes />
-            </Layout>
-          } />
-        </Routes>
+        {/* Wrap the entire application with AccessProvider for permissions check */}
+        <AccessProvider>
+          <Routes>
+            {/* Login route outside of Layout */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Add an unauthorized page route */}
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* All other routes inside Layout */}
+            <Route path="*" element={
+              <Layout>
+                <AppRoutes />
+              </Layout>
+            } />
+          </Routes>
+        </AccessProvider>
       </AuthProvider>
     </Router>
   );

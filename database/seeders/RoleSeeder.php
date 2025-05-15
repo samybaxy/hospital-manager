@@ -40,7 +40,7 @@ class RoleSeeder extends Seeder
             // Add capabilities if needed
             $admin_caps = [
                 'read' => true,
-                'access_hospital_manager' => true,  // Add system access capability
+                'access_hospital_manager' => true,
                 'view_patients' => true,
                 'edit_patient' => true,
                 'delete_patients' => true,
@@ -48,41 +48,116 @@ class RoleSeeder extends Seeder
                 'add_visitation' => true,
                 'edit_visitation' => true,
                 'manage_medical_reports' => true,
+                // Route access capabilities
+                'access_patients' => true,
+                'access_doctors' => true,
+                'access_departments' => true,
+                'access_appointments' => true,
+                'access_visitations' => true,
+                'access_chat' => true,
+                'access_notifications' => true,
+                'access_audit_log' => true,
+                'access_billing' => true,
+                'access_inventory' => true,
+                'access_reports' => true,
+                'access_statistics' => true,
+                'access_settings' => true,
+                'access_lab_dashboard' => true,
             ];
             
             $doctor_caps = [
                 'read' => true,
-                'access_hospital_manager' => true,  // Add system access capability
+                'access_hospital_manager' => true,
                 'view_patients' => true,
                 'edit_patient' => true,
                 'schedule_appointments' => true,
                 'add_visitation' => true,
                 'edit_visitation' => true,
                 'manage_medical_reports' => true,
+                // Route access capabilities
+                'access_patients' => true,
+                'access_doctors' => true,
+                'access_departments' => true,
+                'access_appointments' => true,
+                'access_visitations' => true,
+                'access_chat' => true,
+                'access_notifications' => true,
+                'access_audit_log' => false, // Restricted
+                'access_billing' => false,   // Restricted
+                'access_inventory' => false, // Restricted
+                'access_reports' => true,
+                'access_statistics' => true,
+                'access_settings' => false,  // Restricted
+                'access_lab_dashboard' => true,
             ];
             
             $patient_caps = [
                 'read' => true,
-                'access_hospital_manager' => true,  // Add system access capability
-                'view_own_records' => true
+                'access_hospital_manager' => true,
+                'view_own_records' => true,
+                // Route access capabilities
+                'access_patients' => false,  // Restricted
+                'access_doctors' => false,   // Restricted
+                'access_departments' => false, // Restricted
+                'access_appointments' => true,
+                'access_visitations' => true,
+                'access_chat' => true,
+                'access_notifications' => true,
+                'access_audit_log' => false, // Restricted
+                'access_billing' => false,   // Restricted
+                'access_inventory' => false, // Restricted
+                'access_reports' => false,   // Restricted
+                'access_statistics' => false, // Restricted
+                'access_settings' => false,  // Restricted
+                'access_lab_dashboard' => false,
             ];
             
             $lab_tech_caps = [
                 'read' => true,
-                'access_hospital_manager' => true,  // Add system access capability
+                'access_hospital_manager' => true,
                 'manage_medical_reports' => true,
-                'view_lab_dashboard' => true
+                'view_lab_dashboard' => true,
+                // Route access capabilities
+                'access_patients' => false,  // Restricted
+                'access_doctors' => false,   // Restricted
+                'access_departments' => true,
+                'access_appointments' => false, // Restricted
+                'access_visitations' => false,  // Restricted
+                'access_chat' => false,      // Restricted
+                'access_notifications' => false, // Restricted
+                'access_audit_log' => false, // Restricted
+                'access_billing' => false,   // Restricted
+                'access_inventory' => false, // Restricted
+                'access_reports' => false,   // Restricted
+                'access_statistics' => false, // Restricted
+                'access_settings' => false,  // Restricted
+                'access_lab_dashboard' => true,
             ];
             
             $desk_officer_caps = [
                 'read' => true,
-                'access_hospital_manager' => true,  // Add system access capability
+                'access_hospital_manager' => true,
                 'view_patients' => true,
                 'create_patients' => true,
                 'edit_patients' => false,
                 'delete_patients' => false,
                 'schedule_appointments' => false,
                 'view_audit_log' => false,
+                // Route access capabilities
+                'access_patients' => true,
+                'access_doctors' => true,
+                'access_departments' => true,
+                'access_appointments' => true,
+                'access_visitations' => true,
+                'access_chat' => false,      // Restricted
+                'access_notifications' => true,
+                'access_audit_log' => false, // Restricted
+                'access_billing' => false,   // Restricted
+                'access_inventory' => false, // Restricted
+                'access_reports' => true,
+                'access_statistics' => false, // Restricted
+                'access_settings' => false,  // Restricted
+                'access_lab_dashboard' => false,
             ];
             
             // Add caps to roles - use the RoleManager static methods or WordPress core functions

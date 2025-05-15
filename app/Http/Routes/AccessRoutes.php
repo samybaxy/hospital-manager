@@ -1,0 +1,23 @@
+<?php
+
+namespace HospitalManager\Http\Routes;
+
+use HospitalManager\Http\Controllers\AccessController;
+
+class AccessRoutes
+{
+    /**
+     * Register the access routes for the API
+     */
+    public function register()
+    {
+        // Register route for getting user access permissions
+        register_rest_route('hospital-manager/v1', '/access', [
+            'methods' => 'GET',
+            'callback' => [new AccessController(), 'getUserRouteAccess'],
+            'permission_callback' => function () {
+                return is_user_logged_in();
+            }
+        ]);
+    }
+}
