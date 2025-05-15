@@ -17,6 +17,7 @@ class RoleManager
         // Update existing roles with more specific capabilities
         add_role('administrator', 'Administrator', [
             'read' => true,
+            'access_hospital_manager' => true,  // Add system access capability
             'view_patients' => true,
             'edit_patient' => true,
             'delete_patients' => true,
@@ -28,6 +29,7 @@ class RoleManager
 
         add_role('doctor', 'Doctor', [
             'read' => true,
+            'access_hospital_manager' => true,  // Add system access capability
             'view_patients' => true,
             'edit_patient' => true,
             'schedule_appointments' => true,
@@ -38,11 +40,13 @@ class RoleManager
 
         add_role('patient', 'Patient', [
             'read' => true,
+            'access_hospital_manager' => true,  // Add system access capability
             'view_own_records' => true
         ]);
 
         add_role('lab_tech', 'Lab Technician', [
             'read' => true,
+            'access_hospital_manager' => true,  // Add system access capability
             'manage_medical_reports' => true,
             'view_lab_dashboard' => true
         ]);
@@ -50,11 +54,13 @@ class RoleManager
         // Add new desk officer role
         add_role('desk_officer', 'Desk Officer', [
             'read' => true,
+            'access_hospital_manager' => true,  // Add system access capability
             'view_patients' => true,
             'create_patients' => true,
-            'edit_patients' => true,
-            'schedule_appointments' => true,
-            'view_audit_log' => true
+            'edit_patients' => false,
+            'delete_patients' => false,
+            'schedule_appointments' => false,
+            'view_audit_log' => false,
         ]);
     }
 }

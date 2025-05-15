@@ -20,6 +20,12 @@ class BaseController extends WP_REST_Controller
      */
     protected function check_permission($request, $required_capability) 
     {
+        // Check if this is the login endpoint
+        $current_route = $request->get_route();
+        if (strpos($current_route, '/auth/login') !== false) {
+            return true; // Always allow access to login endpoint
+        }
+        
         // First check if user is authenticated through WordPress session
         if (!is_user_logged_in()) {
             // If not logged in through WordPress session, check the request for nonce
@@ -56,6 +62,24 @@ class BaseController extends WP_REST_Controller
         if ($required_capability && !current_user_can($required_capability)) {
             // For development, accept administrator as having all capabilities
             if (current_user_can('administrator')) {
+                return true;
+            }
+            
+            // Check if the user has one of the allowed roles for this application
+            $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
+            $user = wp_get_current_user();
+            $user_roles = (array) $user->roles;
+            
+            // Check if any of the user's roles are in the allowed roles array
+            $has_allowed_role = false;
+            foreach ($user_roles as $role) {
+                if (in_array($role, $allowed_roles)) {
+                    $has_allowed_role = true;
+                    break;
+                }
+            }
+            
+            if ($has_allowed_role) {
                 return true;
             }
             

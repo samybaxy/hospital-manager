@@ -38,7 +38,8 @@ class AuthController extends BaseController
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'login'],
                 'permission_callback' => function() {
-                    return !is_user_logged_in();
+                    // Always allow access to login - we'll handle authentication inside the callback
+                    return true;
                 }
             ]
         ]);
@@ -461,6 +462,28 @@ class AuthController extends BaseController
         }
 
         wp_set_current_user($user->ID);
+        
+        // Check if the user has one of the allowed roles for this application
+        $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
+        $user_roles = (array) $user->roles;
+        
+        // Check if any of the user's roles are in the allowed roles array
+        $has_allowed_role = false;
+        foreach ($user_roles as $role) {
+            if (in_array($role, $allowed_roles)) {
+                $has_allowed_role = true;
+                break;
+            }
+        }
+        
+        if (!$has_allowed_role) {
+            wp_logout(); // Log the user out since they don't have permissions
+            return new WP_Error(
+                'insufficient_permissions',
+                'Your account does not have permission to access this system.',
+                ['status' => 403]
+            );
+        }
         
         // Set a custom authentication cookie that will be used as a fallback
         // This helps with frontend authentication for AJAX calls

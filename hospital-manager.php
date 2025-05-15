@@ -186,7 +186,7 @@ class HospitalManager extends Bridge
         WebSocketService::init();
         
         // Initialize Authentication Service
-        $authService = new \HospitalManager\Services\AuthService();
+        $authService = new AuthService();
         $authService->init();
         
         // Register WP-CLI commands

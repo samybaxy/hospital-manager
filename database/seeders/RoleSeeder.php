@@ -39,41 +39,50 @@ class RoleSeeder extends Seeder
             
             // Add capabilities if needed
             $admin_caps = [
-                'manage_hospital' => true,
-                'view_reports' => true,
-                'manage_patients' => true,
-                'manage_doctors' => true,
-                'manage_appointments' => true,
-                'view_audit_logs' => true,
+                'read' => true,
+                'access_hospital_manager' => true,  // Add system access capability
+                'view_patients' => true,
+                'edit_patient' => true,
+                'delete_patients' => true,
+                'schedule_appointments' => true,
+                'add_visitation' => true,
+                'edit_visitation' => true,
+                'manage_medical_reports' => true,
             ];
             
             $doctor_caps = [
+                'read' => true,
+                'access_hospital_manager' => true,  // Add system access capability
                 'view_patients' => true,
-                'edit_patients' => true,
-                'view_lab_results' => true,
-                'create_prescriptions' => true,
-                'view_appointments' => true,
-                'create_medical_reports' => true,
+                'edit_patient' => true,
+                'schedule_appointments' => true,
+                'add_visitation' => true,
+                'edit_visitation' => true,
+                'manage_medical_reports' => true,
             ];
             
             $patient_caps = [
-                'view_own_records' => true,
-                'book_appointments' => true,
-                'message_doctors' => true,
-                'view_own_lab_results' => true,
+                'read' => true,
+                'access_hospital_manager' => true,  // Add system access capability
+                'view_own_records' => true
             ];
             
             $lab_tech_caps = [
-                'process_lab_tests' => true,
-                'upload_lab_results' => true,
-                'view_lab_requests' => true,
+                'read' => true,
+                'access_hospital_manager' => true,  // Add system access capability
+                'manage_medical_reports' => true,
+                'view_lab_dashboard' => true
             ];
             
             $desk_officer_caps = [
-                'register_patients' => true,
-                'schedule_appointments' => true,
-                'manage_patient_records' => true,
-                'view_appointments' => true,
+                'read' => true,
+                'access_hospital_manager' => true,  // Add system access capability
+                'view_patients' => true,
+                'create_patients' => true,
+                'edit_patients' => false,
+                'delete_patients' => false,
+                'schedule_appointments' => false,
+                'view_audit_log' => false,
             ];
             
             // Add caps to roles - use the RoleManager static methods or WordPress core functions
