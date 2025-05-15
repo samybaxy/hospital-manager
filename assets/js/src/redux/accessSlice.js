@@ -31,8 +31,18 @@ export const accessSlice = createSlice({
       })
       .addCase(fetchUserAccess.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.role = action.payload.role;
-        state.permissions = action.payload.access || {};
+        // Handle API response format: { data: { role, access } }
+        if (action.payload.data) {
+          state.role = action.payload.data.role;
+          state.permissions = action.payload.data.access || {};
+          console.log('Access data loaded to Redux:', state.role, state.permissions);
+        } else if (action.payload.role) {
+          state.role = action.payload.role;
+          state.permissions = action.payload.access || {};
+          console.log('Access data loaded to Redux:', state.role, state.permissions);
+        } else {
+          console.error('Invalid payload format for access data:', action.payload);
+        }
       })
       .addCase(fetchUserAccess.rejected, (state, action) => {
         state.isLoading = false;

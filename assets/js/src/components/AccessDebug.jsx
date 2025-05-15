@@ -1,16 +1,29 @@
-import React from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect, useRef } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectRole, selectPermissions, selectAccessLoading, selectAccessError } from '../redux/accessSlice';
-import { useAuth } from '../context/AuthContext';
+import { fetchUserAccess } from '../utils/accessControl.jsx';
 
 /**
  * Debug component to display current access state
  * Only shown in development mode
  */
 const AccessDebug = () => {
+  const dispatch = useDispatch();
   const role = useSelector(selectRole);
   const permissions = useSelector(selectPermissions);
+  const isLoading = useSelector(selectAccessLoading);
+  const error = useSelector(selectAccessError);
   const [isVisible, setIsVisible] = React.useState(true);
+  const fetchedRef = useRef(false);
+  
+  // Fetch access permissions only once on mount
+  useEffect(() => {
+    // Only fetch if we haven't already and there's no data
+    if (!fetchedRef.current && !role && !isLoading) {
+      fetchedRef.current = true;
+      dispatch(fetchUserAccess());
+    }
+  }, [dispatch, role, isLoading]);
   
   // Only show in development mode or when debug is explicitly enabled
   const isDevEnv = process.env.NODE_ENV === 'development';
@@ -63,9 +76,17 @@ const AccessDebug = () => {
           fontFamily: 'monospace'
         }}>
           <h4 style={{margin: '0 0 5px 0'}}>Access Debug</h4>
-          <div><strong>Role:</strong> {role || 'undefined'}</div>
-          <div style={{marginTop: '5px'}}><strong>Permissions:</strong></div>
-          <pre>{JSON.stringify(permissions, null, 2)}</pre>
+          {isLoading ? (
+            <div>Loading access data...</div>
+          ) : error ? (
+            <div style={{color: 'red'}}>Error: {error}</div>
+          ) : (
+            <>
+              <div><strong>Role:</strong> {role || 'undefined'}</div>
+              <div style={{marginTop: '5px'}}><strong>Permissions:</strong></div>
+              <pre>{JSON.stringify(permissions, null, 2)}</pre>
+            </>
+          )}
         </div>
       )}
     </>

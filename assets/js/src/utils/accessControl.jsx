@@ -16,7 +16,6 @@ const AccessContext = createContext();
 
 // Access provider component
 export function AccessProvider({ children }) {
-  // Always call hooks in the same order
   const { user, isAuthenticated } = useAuth();
   const [permissions, setPermissions] = useState({});
   const [role, setRole] = useState(null);
@@ -128,36 +127,29 @@ export const useAccess = () => {
  * @param {string} props.redirectTo - Path to redirect to if access is denied
  * @returns {React.ReactNode}
  */
-// Separate loading component to avoid conditional hook calls
-const GuardLoadingSpinner = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
-
 export const RouteGuard = ({ routeName, children, redirectTo = '/unauthorized' }) => {
-  // Always call hooks in the same order
+  const { hasAccess, loading } = useAccess();
   const navigate = useNavigate();
   const location = useLocation();
-  const { hasAccess, loading } = useAccess();
   
-  // Use useEffect for side effects like navigation
+  // Check access when component mounts or route changes
   useEffect(() => {
     if (!loading && !hasAccess(routeName)) {
       navigate(redirectTo, { state: { from: location }, replace: true });
     }
   }, [hasAccess, loading, navigate, redirectTo, routeName, location]);
   
-  // Use a render variable pattern instead of conditional returns
-  let content = null;
-  
+  // Show loading indicator while checking permissions
   if (loading) {
-    content = <GuardLoadingSpinner />;
-  } else if (hasAccess(routeName)) {
-    content = children;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
   
-  return content;
+  // Render children only if user has access
+  return hasAccess(routeName) ? children : null;
 };
 
 /**
@@ -165,20 +157,53 @@ export const RouteGuard = ({ routeName, children, redirectTo = '/unauthorized' }
  */
 export const fetchUserAccess = createAsyncThunk(
   'access/fetchUserAccess',
-  async (_, { rejectWithValue }) => {
+  async (_, { rejectWithValue, getState }) => {
+    // Check if we already have access data to avoid unnecessary fetches
+    const state = getState();
+    if (state.access && state.access.role) {
+      return {
+        data: {
+          role: state.access.role,
+          access: state.access.permissions
+        }
+      };
+    }
+    
     try {
       const response = await api.get(API_ENDPOINT);
+      console.log('Access API response:', response.data);
       
-      if (response.data && response.data.success) {
-        return {
-          role: response.data.role,
-          access: response.data.access
-        };
+      // Handle the response based on your API format
+      if (response.data) {
+        if (response.data.data) {
+          // Format: { data: { role, access } }
+          return response.data;
+        } else {
+          // Format: direct object with role and access
+          return {
+            data: {
+              role: response.data.role,
+              access: response.data.access
+            }
+          };
+        }
       } else {
-        return rejectWithValue(response.data?.message || 'Failed to load access permissions');
+        return rejectWithValue('Invalid response format from access API');
       }
     } catch (error) {
+      console.error('Failed to fetch access permissions:', error);
       return rejectWithValue(error.response?.data?.message || 'Error loading access permissions');
+    }
+  },
+  {
+    // Only allow one pending fetchUserAccess operation at a time
+    condition: (_, { getState }) => {
+      const { access } = getState();
+      // Prevent multiple simultaneous requests
+      if (access.isLoading) {
+        return false;
+      }
+      return true;
     }
   }
 );
