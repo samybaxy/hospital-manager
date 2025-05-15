@@ -39,6 +39,29 @@ class AccessController extends BaseController
         // Get route access map for this role
         $access_map = RoleManager::getRouteAccessMap($role);
         
+        // For administrators, ensure all routes are accessible regardless of what's in the database
+        if ($role === 'administrator') {
+            $all_routes = [
+                'patients' => true,
+                'doctors' => true,
+                'appointments' => true,
+                'departments' => true,
+                'visitations' => true,
+                'chat' => true,
+                'notifications' => true,
+                'audit_log' => true,
+                'billing' => true,
+                'inventory' => true,
+                'reports' => true,
+                'statistics' => true,
+                'settings' => true,
+                'lab_dashboard' => true
+            ];
+            
+            // Merge with existing permissions, prioritizing 'true' values
+            $access_map = array_merge($access_map, $all_routes);
+        }
+        
         // Return response using BaseController's success_response method
         return $this->success_response([
             'role' => $role,

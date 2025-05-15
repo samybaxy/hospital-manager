@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
 import { selectAccessLoading } from '../redux/accessSlice';
+import AccessDebug from './AccessDebug';
 
 // Separate loading component to avoid conditional hook calls
 const LoadingSpinner = () => (
@@ -230,6 +231,9 @@ const Layout = ({ children }) => {
           </div>
         </main>
       </div>
+      
+      {/* Debug component for development */}
+      <AccessDebug />
     </div>
   );
 };

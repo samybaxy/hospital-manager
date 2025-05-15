@@ -37,7 +37,11 @@ const moveCssPlugin = () => {
 };
 
 export default defineConfig(({ mode }) => {
-  const isDev = mode === 'development';
+  // Read from .env files
+  const isDev = mode === 'development' || process.env.NODE_ENV === 'development';
+  
+  // Log environment for debugging during build
+  console.log(`Building in ${isDev ? 'development' : 'production'} mode`);
   
   return {
     plugins: [

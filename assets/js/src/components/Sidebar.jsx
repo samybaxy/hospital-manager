@@ -8,8 +8,14 @@ import { selectHasAccess, selectRole, selectAccessLoading, selectAccessError } f
  * Navigation item with access control using Redux
  */
 const NavItem = ({ route, icon, label }) => {
+  const role = useSelector(selectRole);
+  
   // Use the Redux selector to check access
-  const hasAccess = useSelector((state) => selectHasAccess(state, route));
+  // Ensure administrators always have access, even if permissions object doesn't match
+  const hasAccess = role === 'administrator' ? true : useSelector((state) => selectHasAccess(state, route));
+  
+  // For debugging
+  console.log(`NavItem ${label} (${route}): role=${role}, hasAccess=${hasAccess}`);
   
   // Don't render if no access
   if (!hasAccess) {
