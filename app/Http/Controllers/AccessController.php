@@ -11,6 +11,16 @@ use WP_REST_Response;
 class AccessController extends Controller
 {
     /**
+     * Constructor
+     * 
+     * @param object $view View object
+     */
+    public function __construct($view)
+    {
+        parent::__construct($view);
+    }
+    
+    /**
      * Get user route access permissions
      *
      * @param WP_REST_Request $request

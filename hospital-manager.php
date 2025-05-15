@@ -38,6 +38,8 @@ use HospitalManager\Services\ApiService;
 use HospitalManager\Services\WebSocketService;
 use HospitalManager\Services\AuthService;
 use HospitalManager\Commands\DatabaseSeederCommand;
+use HospitalManager\Middleware\ApiLoggingMiddleware;
+use HospitalManager\Middleware\ApiErrorMiddleware;
 
 class HospitalManager extends Bridge
 {
@@ -188,6 +190,10 @@ class HospitalManager extends Bridge
         // Initialize Authentication Service
         $authService = new AuthService();
         $authService->init();
+        
+        // Register API middleware
+        ApiLoggingMiddleware::register();
+        ApiErrorMiddleware::register();
         
         // Register WP-CLI commands
         if (defined('WP_CLI') && WP_CLI) {

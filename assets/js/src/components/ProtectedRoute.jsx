@@ -1,7 +1,15 @@
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
 import { selectHasAccess, selectAccessLoading } from '../redux/accessSlice';
+
+// Separate loading component to avoid conditional hook calls
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
 
 /**
  * ProtectedRoute component
@@ -13,35 +21,27 @@ import { selectHasAccess, selectAccessLoading } from '../redux/accessSlice';
  * @param {string} props.routeName - Name of the route (used for permission checking)
  */
 const ProtectedRoute = ({ children, routeName }) => {
+  // Always call hooks in the same order and same number on every render
+  const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const accessLoading = useSelector(selectAccessLoading);
   const hasAccess = useSelector(state => routeName ? selectHasAccess(state, routeName) : true);
-  const location = useLocation();
   
   const loading = authLoading || accessLoading;
 
-  // Show loading state while checking authentication and permissions
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
-    // Pass the current location to redirect back after login
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  // Handle different states using variables, not conditional hook calls
+  let content = children;
   
-  // Redirect to unauthorized if no access permission
-  if (routeName && !hasAccess) {
-    return <Navigate to="/unauthorized" state={{ from: location }} replace />;
+  if (loading) {
+    content = <LoadingSpinner />;
+  } else if (!isAuthenticated) {
+    content = <Navigate to="/login" state={{ from: location }} replace />;
+  } else if (routeName && !hasAccess) {
+    content = <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 
-  // Render the protected component
-  return children;
+  // Always return in a consistent way
+  return content;
 };
 
 export default ProtectedRoute;

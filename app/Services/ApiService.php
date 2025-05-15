@@ -55,11 +55,26 @@ class ApiService
      */
     public static function registerRoutes()
     {
+        // Register regular API controllers
         $controllers = self::getControllers();
-
         foreach ($controllers as $controller) {
             $controller->register_routes();
         }
+        
+        // Register Http route classes
+        self::registerHttpRoutes();
+    }
+    
+    /**
+     * Register routes defined in the Http\Routes namespace
+     * 
+     * @return void
+     */
+    private static function registerHttpRoutes()
+    {
+        // Register the AccessRoutes
+        $accessRoutes = new \HospitalManager\Http\Routes\AccessRoutes();
+        $accessRoutes->register();
     }
 
     /**

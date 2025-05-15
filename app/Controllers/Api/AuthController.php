@@ -35,12 +35,36 @@ class AuthController extends BaseController
 
         register_rest_route($this->namespace, '/auth/login', [
             [
-                'methods' => WP_REST_Server::CREATABLE,
+                'methods' => WP_REST_Server::CREATABLE, // POST method
                 'callback' => [$this, 'login'],
                 'permission_callback' => function() {
                     // Always allow access to login - we'll handle authentication inside the callback
                     return true;
-                }
+                },
+                'args' => [
+                    'username' => [
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'User login name or email address',
+                        'validate_callback' => function($param) {
+                            return is_string($param) && !empty($param);
+                        }
+                    ],
+                    'password' => [
+                        'required' => true,
+                        'type' => 'string',
+                        'description' => 'User password',
+                        'validate_callback' => function($param) {
+                            return is_string($param) && !empty($param);
+                        }
+                    ],
+                    'remember' => [
+                        'required' => false,
+                        'default' => true,
+                        'type' => 'boolean',
+                        'description' => 'Whether to remember the user session'
+                    ]
+                ]
             ]
         ]);
 
@@ -445,15 +469,51 @@ class AuthController extends BaseController
 
     public function login($request)
     {
-        $creds = [
-            'user_login' => $request->get_param('username'),
-            'user_password' => $request->get_param('password'),
-            'remember' => $request->get_param('remember') ?? true // Use remember preference or default to true
-        ];
-
-        $user = wp_signon($creds);
-
-        if (is_wp_error($user)) {
+        try {
+            // Log the login attempt
+            error_log('Hospital Manager: Login attempt initiated');
+            
+            // Validate request parameters
+            $username = $request->get_param('username');
+            $password = $request->get_param('password');
+            
+            if (empty($username) || empty($password)) {
+                error_log('Hospital Manager: Login failed - missing credentials');
+                return new WP_Error(
+                    'missing_credentials',
+                    'Username and password are required',
+                    ['status' => 400]
+                );
+            }
+            
+            $creds = [
+                'user_login' => $username,
+                'user_password' => $password,
+                'remember' => $request->get_param('remember') ?? true // Use remember preference or default to true
+            ];
+    
+            // Log if credentials are present
+            error_log('Hospital Manager: Login credentials received - username: ' . (!empty($creds['user_login']) ? 'present' : 'missing') . 
+                      ', password: ' . (!empty($creds['user_password']) ? 'present' : 'missing'));
+    
+            // Force secure cookies if site is using HTTPS
+            add_filter('secure_signon_cookie', function() {
+                return is_ssl();
+            });
+            
+            // Add debug filter to capture authentication issues
+            add_filter('authenticate', function($user, $username, $password) {
+                if (is_wp_error($user)) {
+                    error_log('Hospital Manager: Authentication error for user ' . $username . ': ' . $user->get_error_message());
+                }
+                return $user;
+            }, 9999, 3);
+    
+            // Attempt to sign on the user
+            $user = wp_signon($creds, is_ssl());
+            error_log('Hospital Manager: wp_signon result: ' . (is_wp_error($user) ? 'Error: ' . $user->get_error_message() : 'Success for user ID: ' . $user->ID));
+            
+            if (is_wp_error($user)) {
             return new WP_Error(
                 'invalid_credentials',
                 'Invalid username or password',
@@ -461,7 +521,20 @@ class AuthController extends BaseController
             );
         }
 
-        wp_set_current_user($user->ID);
+        // Set the current user
+        try {
+            $previous_user_id = get_current_user_id();
+            wp_set_current_user($user->ID);
+            $new_user_id = get_current_user_id();
+            
+            error_log('Hospital Manager: Current user set - Previous ID: ' . $previous_user_id . ', New ID: ' . $new_user_id);
+            
+            if ($new_user_id != $user->ID) {
+                error_log('Hospital Manager: Warning - wp_set_current_user did not set the expected user ID');
+            }
+        } catch (\Exception $e) {
+            error_log('Hospital Manager: Error setting current user: ' . $e->getMessage());
+        }
         
         // Check if the user has one of the allowed roles for this application
         $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
@@ -491,18 +564,38 @@ class AuthController extends BaseController
         $expire = $creds['remember'] 
                 ? time() + 14 * DAY_IN_SECONDS      // 2 weeks for "remember me"
                 : time() + 2 * DAY_IN_SECONDS;      // 2 days for regular login
-        $path = COOKIEPATH ? COOKIEPATH : '/';
-        $cookie_domain = COOKIE_DOMAIN ? COOKIE_DOMAIN : '';
+        $path = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
+        $cookie_domain = defined('COOKIE_DOMAIN') && COOKIE_DOMAIN ? COOKIE_DOMAIN : '';
         
-        // Set a cookie for custom auth that can be checked in API calls
-        setcookie('hospital_manager_auth', 'authenticated', [
-            'expires' => $expire,
-            'path' => $path,
-            'domain' => $cookie_domain,
-            'secure' => $secure,
-            'httponly' => false,
-            'samesite' => 'Lax'
-        ]);
+        // Check PHP version for setcookie array support (PHP 7.3+)
+        if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
+            // Modern PHP version: use array format
+            try {
+                $cookie_set = setcookie('hospital_manager_auth', 'authenticated', [
+                    'expires' => $expire,
+                    'path' => $path,
+                    'domain' => $cookie_domain,
+                    'secure' => $secure,
+                    'httponly' => false,
+                    'samesite' => 'Lax'
+                ]);
+                if (!$cookie_set) {
+                    error_log('Hospital Manager: Failed to set authentication cookie using array format');
+                }
+            } catch (\Exception $e) {
+                error_log('Hospital Manager: Cookie setting error: ' . $e->getMessage());
+            }
+        } else {
+            // Older PHP version: use traditional format
+            try {
+                $cookie_set = setcookie('hospital_manager_auth', 'authenticated', $expire, $path, $cookie_domain, $secure, false);
+                if (!$cookie_set) {
+                    error_log('Hospital Manager: Failed to set authentication cookie using traditional format');
+                }
+            } catch (\Exception $e) {
+                error_log('Hospital Manager: Cookie setting error: ' . $e->getMessage());
+            }
+        }
         
         // Generate a fresh nonce for subsequent API calls
         $nonce = wp_create_nonce('wp_rest');
@@ -518,10 +611,21 @@ class AuthController extends BaseController
             ]
         ];
         
-        $token = $this->generate_jwt_token($token_data);
+        try {
+            $token = $this->generate_jwt_token($token_data);
+            error_log('Hospital Manager: JWT token generated successfully');
+        } catch (\Exception $e) {
+            error_log('Hospital Manager: JWT token generation failed: ' . $e->getMessage());
+            // Provide a fallback token if JWT generation fails
+            $token = base64_encode(json_encode([
+                'user_id' => $user->ID,
+                'expires' => $expire
+            ]));
+            error_log('Hospital Manager: Using fallback token');
+        }
         
-        // Also set a header that frontend can use for subsequent requests
-        $response = new WP_REST_Response([
+        // Prepare response data for the client
+        $response_data = [
             'authenticated' => true,
             'token' => $token,
             'user' => [
@@ -531,12 +635,28 @@ class AuthController extends BaseController
             ],
             'role' => $this->get_primary_role($user),
             'fresh_nonce' => $nonce  // Include the nonce in the response body as well
-        ]);
+        ];
         
-        // Set the nonce in header for subsequent API calls
+        // Create the response with appropriate status code
+        $response = new WP_REST_Response($response_data, 200);
+        
+        // Set important headers
         $response->header('X-WP-Nonce', $nonce);
+        $response->header('Access-Control-Allow-Credentials', 'true');
+        $response->header('Cache-Control', 'no-cache, no-store, must-revalidate');
         
+        error_log('Hospital Manager: Login successful for user: ' . $user->user_login);
         return $response;
+        
+        } catch (\Exception $e) {
+            error_log('Hospital Manager: Login error: ' . $e->getMessage());
+            error_log('Hospital Manager: Login error trace: ' . $e->getTraceAsString());
+            return new WP_Error(
+                'login_error',
+                'An error occurred during login: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
     }
 
     public function logout()
@@ -831,25 +951,43 @@ Regards,
      */
     private function generate_jwt_token($data) 
     {
-        // Header: algorithm & token type
-        $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
-        
-        // Payload: data
-        $payload = json_encode($data);
-        
-        // Encode Header and Payload
-        $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
-        $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
-        
-        // Get WordPress auth salt for signing
-        $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
-        
-        // Create Signature Hash
-        $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $auth_key, true);
-        $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
-        
-        // Create JWT
-        return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+        try {
+            // Header: algorithm & token type
+            $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+            if ($header === false) {
+                error_log('Hospital Manager: JSON encode failed for JWT header');
+                throw new \Exception('Failed to encode JWT header');
+            }
+            
+            // Payload: data
+            $payload = json_encode($data);
+            if ($payload === false) {
+                error_log('Hospital Manager: JSON encode failed for JWT payload: ' . json_last_error_msg());
+                throw new \Exception('Failed to encode JWT payload: ' . json_last_error_msg());
+            }
+            
+            // Encode Header and Payload
+            $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
+            $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+            
+            // Get WordPress auth salt for signing
+            $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
+            
+            // Create Signature Hash
+            $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $auth_key, true);
+            if ($signature === false) {
+                error_log('Hospital Manager: HMAC hash generation failed');
+                throw new \Exception('Failed to generate HMAC hash for JWT');
+            }
+            
+            $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
+            
+            // Create JWT
+            return $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+        } catch (\Exception $e) {
+            error_log('Hospital Manager: JWT token generation error: ' . $e->getMessage());
+            throw $e; // Re-throw to be handled by the caller
+        }
     }
     
     /**

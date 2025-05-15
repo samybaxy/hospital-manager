@@ -16,6 +16,7 @@ const AccessContext = createContext();
 
 // Access provider component
 export function AccessProvider({ children }) {
+  // Always call hooks in the same order
   const { user, isAuthenticated } = useAuth();
   const [permissions, setPermissions] = useState({});
   const [role, setRole] = useState(null);
@@ -127,29 +128,36 @@ export const useAccess = () => {
  * @param {string} props.redirectTo - Path to redirect to if access is denied
  * @returns {React.ReactNode}
  */
+// Separate loading component to avoid conditional hook calls
+const GuardLoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
+
 export const RouteGuard = ({ routeName, children, redirectTo = '/unauthorized' }) => {
-  const { hasAccess, loading } = useAccess();
+  // Always call hooks in the same order
   const navigate = useNavigate();
   const location = useLocation();
+  const { hasAccess, loading } = useAccess();
   
-  // Check access when component mounts or route changes
+  // Use useEffect for side effects like navigation
   useEffect(() => {
     if (!loading && !hasAccess(routeName)) {
       navigate(redirectTo, { state: { from: location }, replace: true });
     }
   }, [hasAccess, loading, navigate, redirectTo, routeName, location]);
   
-  // Show loading indicator while checking permissions
+  // Use a render variable pattern instead of conditional returns
+  let content = null;
+  
   if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    content = <GuardLoadingSpinner />;
+  } else if (hasAccess(routeName)) {
+    content = children;
   }
   
-  // Render children only if user has access
-  return hasAccess(routeName) ? children : null;
+  return content;
 };
 
 /**
