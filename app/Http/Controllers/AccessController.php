@@ -3,6 +3,7 @@
 namespace HospitalManager\Http\Controllers;
 
 use HospitalManager\Services\RoleManager;
+use WPMVC\MVC\Controller as Controller;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
