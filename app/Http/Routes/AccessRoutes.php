@@ -11,9 +11,8 @@ class AccessRoutes
      */
     public function register()
     {
-        // Create a view object for the controller
-        $view = new \stdClass();
-        $accessController = new AccessController($view);
+        // Create controller instance
+        $accessController = new AccessController();
         
         // Register route for getting user access permissions
         register_rest_route('hospital-manager/v1', '/access', [

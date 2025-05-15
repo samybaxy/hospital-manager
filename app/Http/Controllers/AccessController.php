@@ -3,22 +3,13 @@
 namespace HospitalManager\Http\Controllers;
 
 use HospitalManager\Services\RoleManager;
-use WPMVC\MVC\Controller as Controller;
+use HospitalManager\Controllers\Api\BaseController;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
-class AccessController extends Controller
+class AccessController extends BaseController
 {
-    /**
-     * Constructor
-     * 
-     * @param object $view View object
-     */
-    public function __construct($view)
-    {
-        parent::__construct($view);
-    }
     
     /**
      * Get user route access permissions
@@ -28,9 +19,10 @@ class AccessController extends Controller
      */
     public function getUserRouteAccess(WP_REST_Request $request)
     {
-        // Check if user is logged in
-        if (!is_user_logged_in()) {
-            return new WP_Error('unauthorized', 'You must be logged in to access this endpoint.', ['status' => 401]);
+        // Check permissions using the BaseController method
+        $permission_check = $this->check_permission($request, 'read');
+        if (is_wp_error($permission_check)) {
+            return $permission_check;
         }
 
         // Get current user
@@ -38,7 +30,7 @@ class AccessController extends Controller
         
         // User has no role
         if (empty($user->roles)) {
-            return new WP_Error('no_role', 'User has no assigned role.', ['status' => 403]);
+            return $this->error_response('User has no assigned role', 403, ['error_code' => 'no_role']);
         }
         
         // Get the first role (primary role)
@@ -47,11 +39,10 @@ class AccessController extends Controller
         // Get route access map for this role
         $access_map = RoleManager::getRouteAccessMap($role);
         
-        // Return response
-        return new WP_REST_Response([
-            'success' => true,
+        // Return response using BaseController's success_response method
+        return $this->success_response([
             'role' => $role,
             'access' => $access_map
-        ], 200);
+        ], 'Access permissions retrieved successfully');
     }
 }
