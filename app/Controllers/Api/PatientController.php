@@ -106,6 +106,8 @@ class PatientController extends BaseController
             // Use the service to handle pagination and filtering
             $params = $request->get_params();
             $result = PatientService::searchPatients($params);
+
+            error_log('Patients retrieved: ' . print_r($result, true));
             
             return $this->success_response(
                 $result, 

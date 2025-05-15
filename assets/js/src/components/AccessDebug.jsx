@@ -13,7 +13,7 @@ const AccessDebug = () => {
   const permissions = useSelector(selectPermissions);
   const isLoading = useSelector(selectAccessLoading);
   const error = useSelector(selectAccessError);
-  const [isVisible, setIsVisible] = React.useState(true);
+  const [isVisible, setIsVisible] = React.useState(false);
   const fetchedRef = useRef(false);
   
   // Fetch access permissions only once on mount

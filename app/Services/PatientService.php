@@ -197,11 +197,30 @@ class PatientService
         $prepared_query = $wpdb->prepare($query, $values);
         $items = $wpdb->get_results($prepared_query);
         
-        // Convert results to Patient objects
+        // Convert results directly to plain arrays with accessible properties
         $patients = [];
         if ($items) {
             foreach ($items as $item) {
-                $patients[] = new Patient((array)$item);
+                // Convert the database row directly to an array
+                $patientArray = (array)$item;
+                
+                // Make sure we have consistent ID fields
+                if (isset($patientArray['id']) && !isset($patientArray['ID'])) {
+                    $patientArray['ID'] = $patientArray['id'];
+                } elseif (isset($patientArray['ID']) && !isset($patientArray['id'])) {
+                    $patientArray['id'] = $patientArray['ID'];
+                }
+                
+                // Parse JSON fields if needed
+                if (!empty($patientArray['bio_data']) && is_string($patientArray['bio_data'])) {
+                    $decoded = json_decode($patientArray['bio_data'], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $patientArray['bio_data'] = $decoded;
+                    }
+                }
+                
+                // Add the patient array to our collection
+                $patients[] = $patientArray;
             }
         }
         

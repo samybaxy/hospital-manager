@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Link, NavLink, useLocation, Navigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { Link, NavLink, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
-import { selectAccessLoading } from '../redux/accessSlice';
+import { selectAccessLoading, clearAccessData } from '../redux/accessSlice';
 import AccessDebug from './AccessDebug';
 
 // Separate loading component to avoid conditional hook calls
@@ -16,12 +16,47 @@ const Layout = ({ children }) => {
   // Call all hooks unconditionally at the top
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const accessLoading = useSelector(selectAccessLoading);
   const accessState = useSelector(state => state.access);
   const role = accessState?.role;
   const permissions = accessState?.permissions || {};
+
+  // Thorough sign out process
+  const handleSignOut = useCallback(async () => {
+    try {
+      setIsSigningOut(true);
+      
+      // Close the user menu dropdown immediately
+      setUserMenuOpen(false);
+      
+      // Use AuthContext logout function which handles tokens and API calls
+      await logout();
+      
+      // Ensure Redux state is cleared (though this should be done in logout function already)
+      dispatch(clearAccessData());
+      
+      // Short delay to ensure all state changes are processed
+      setTimeout(() => {
+        // Redirect to WordPress home page
+        window.location.href = '/'; // This will navigate to WordPress home, not the React app root
+      }, 100);
+    } catch (error) {
+      console.error("Error during sign out process:", error);
+      // Even if there's an error, try to clear everything and redirect
+      dispatch(clearAccessData());
+      
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+    } finally {
+      setIsSigningOut(false);
+    }
+  }, [logout, dispatch]);
 
   // All available navigation items
   const allNavItems = [
@@ -91,7 +126,7 @@ const Layout = ({ children }) => {
   }, []);
 
   // Handle loading and authentication states without conditional hook calls
-  if (authLoading || accessLoading) {
+  if (authLoading || accessLoading || isSigningOut) {
     return <LoadingSpinner />;
   }
 
@@ -196,7 +231,11 @@ const Layout = ({ children }) => {
                     >
                       <span className="sr-only">Open user menu</span>
                       <div className="h-8 w-8 rounded-full bg-primary-700 text-white flex items-center justify-center">
-                        <span className="text-sm font-medium">JD</span>
+                        <span className="text-sm font-medium">
+                          {user && user.name ? 
+                            user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+                            : 'U'}
+                        </span>
                       </div>
                     </button>
                   </div>
@@ -213,7 +252,10 @@ const Layout = ({ children }) => {
                       <Link to="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                         Settings
                       </Link>
-                      <button className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <button 
+                        onClick={handleSignOut} 
+                        className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
                         Sign out
                       </button>
                     </div>

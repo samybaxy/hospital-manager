@@ -1,6 +1,9 @@
 import { createContext, useState, useContext, useEffect } from 'react';
 import { api } from '../services/apiService';
 import authService from '../services/authService';
+import { useDispatch } from 'react-redux';
+import { clearAccessData } from '../redux/accessSlice';
+import { fetchUserAccess } from '../utils/accessControl.jsx';
 
 // Create authentication context
 const AuthContext = createContext();
@@ -10,6 +13,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const dispatch = useDispatch();
 
   // Check if the user is authenticated on initial load
   useEffect(() => {
@@ -22,6 +26,7 @@ export function AuthProvider({ children }) {
                          
         if (!token) {
           setUser(null);
+          dispatch(clearAccessData());
           setLoading(false);
           return;
         }
@@ -35,6 +40,7 @@ export function AuthProvider({ children }) {
             // If refresh failed, clear token and set unauthenticated
             authService.clearToken();
             setUser(null);
+            dispatch(clearAccessData());
             setLoading(false);
             return;
           }
@@ -50,10 +56,14 @@ export function AuthProvider({ children }) {
           if (response.headers['x-wp-nonce']) {
             authService.updateCsrfToken(response.headers['x-wp-nonce']);
           }
+          
+          // Fetch user access permissions
+          dispatch(fetchUserAccess());
         } else {
           // Token is invalid, clear it
           authService.clearToken();
           setUser(null);
+          dispatch(clearAccessData());
         }
       } catch (err) {
         console.error("Authentication check failed:", err);
@@ -62,13 +72,14 @@ export function AuthProvider({ children }) {
         // Clear any invalid tokens
         authService.clearToken();
         setUser(null);
+        dispatch(clearAccessData());
       } finally {
         setLoading(false);
       }
     }
 
     checkAuthStatus();
-  }, []);
+  }, [dispatch]);
 
   // Login function
   const login = async (username, password, rememberMe = false) => {
@@ -97,6 +108,9 @@ export function AuthProvider({ children }) {
         }
         
         setUser(response.data.user);
+        
+        // Fetch user access permissions after successful login
+        dispatch(fetchUserAccess());
         return true;
       } else {
         setError(response.data.message || "Invalid credentials");
@@ -124,12 +138,14 @@ export function AuthProvider({ children }) {
       // Use centralized auth service to clear tokens
       authService.clearToken();
       setUser(null);
+      dispatch(clearAccessData());
     } catch (err) {
       console.error("Logout failed:", err);
       
       // Even if the API call fails, clear tokens
       authService.clearToken();
       setUser(null);
+      dispatch(clearAccessData());
     } finally {
       setLoading(false);
     }

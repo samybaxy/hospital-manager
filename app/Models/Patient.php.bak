@@ -21,13 +21,7 @@ class Patient extends BaseModel
         'hmo_id',
         'hmo_designated_id',
         'phone',
-        'age',
-        'gender',
-        'address',
-        'bio_data'
-    ];
-    
-    /**
+        'ag    /**
      * Convert the model instance to an array
      * 
      * @return array
@@ -53,7 +47,10 @@ class Patient extends BaseModel
         }
         
         return $data;
-    }
+    }   'gender',
+        'address',
+        'bio_data'
+    ];
     
     public function __construct(array $attributes = [])
     {
@@ -200,6 +197,9 @@ class Patient extends BaseModel
         
         // Add the condition directly - special case will be handled in get()
         static::$conditions[] = [$column, $operator, $value];
+        
+        static::$queryType = 'instance'; // Ensure we're in instance query mode
+        return static::$queryType === 'instance' ? $this : new static();
         
         static::$queryType = 'instance'; // Ensure we're in instance query mode
         return static::$queryType === 'instance' ? $this : new static();
@@ -564,5 +564,15 @@ class Patient extends BaseModel
         );
         
         return $result !== false;
+    }
+
+    /**
+     * Convert the model to an array.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return $this->attributes;
     }
 }
