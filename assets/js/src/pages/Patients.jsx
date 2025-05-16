@@ -15,32 +15,9 @@ const Patients = () => {
   const [totalPatients, setTotalPatients] = useState(0);
   const [sortField, setSortField] = useState('last_name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
-  
-  // Initial API format check - run once on component mount
-  useEffect(() => {
-    const checkApiFormat = async () => {
-      try {
-        const testResponse = await api.get('/patients', { params: { page: 1, per_page: 1 } });
-        console.log('API FORMAT CHECK - Raw response:', testResponse);
-        
-        // Log the structure to help debugging
-        if (testResponse.data) {
-          console.log('API FORMAT CHECK - Response data:', {
-            hasDataProp: !!testResponse.data.data,
-            hasPatientsKey: !!(testResponse.data.patients || (testResponse.data.data && testResponse.data.data.patients)),
-            dataKeys: Object.keys(testResponse.data)
-          });
-        }
-      } catch (err) {
-        console.error('API format check error:', err);
-      }
-    };
-    
-    checkApiFormat();
-  }, []);
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -52,26 +29,17 @@ const Patients = () => {
           per_page: perPage,
           sort_by: sortField,
           sort_order: sortOrder,
-          status: statusFilter !== 'all' ? statusFilter : undefined
+          gender: genderFilter !== 'all' ? genderFilter : undefined
         }
       });
       
-      if (response.data) {
-        // Extract the correct data structure from the API response
-        console.log('Patient data:', response.data);
-        
+      if (response.data) {        
         // Check if data is inside the "data" property (common REST API pattern)
         const responseData = response.data.data || response.data;
         
         if (responseData.patients && responseData.patients.items) {
           // Extract patient items from the nested structure
           const patientItems = responseData.patients.items || [];
-          
-          // Debug each patient object
-          console.log('Patient items extracted:', patientItems);
-          patientItems.forEach((patient, index) => {
-            console.log(`Patient ${index}:`, patient);
-          });
           
           // Extract metadata for pagination
           setPatients(patientItems);
@@ -93,7 +61,7 @@ const Patients = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, perPage, sortField, sortOrder, statusFilter]);
+  }, [currentPage, searchTerm, perPage, sortField, sortOrder, genderFilter]);
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -111,18 +79,6 @@ const Patients = () => {
     
     loadPatients();
   }, [fetchPatients]);
-  
-  // Debug logging with more detailed information
-  useEffect(() => {
-    console.log('Current patients:', patients);
-    console.log('Patients array type:', Object.prototype.toString.call(patients));
-    console.log('Patients count:', patients.length);
-    
-    if (patients.length > 0) {
-      console.log('First patient keys:', Object.keys(patients[0]));
-      console.log('Sample patient data (first item):', patients[0]);
-    }
-  }, [patients]);
 
   const handleSort = (field) => {
     setSortOrder(sortField === field && sortOrder === 'asc' ? 'desc' : 'asc');
@@ -135,8 +91,8 @@ const Patients = () => {
     fetchPatients(); // Immediately fetch with new search term
   };
 
-  const handleStatusFilter = (e) => {
-    setStatusFilter(e.target.value);
+  const handleGenderFilter = (e) => {
+    setGenderFilter(e.target.value);
     setCurrentPage(1); // Reset to first page when filtering
   };
   
@@ -287,18 +243,18 @@ const Patients = () => {
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="md:w-1/4">
                 <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Status Filter
+                  Gender Filter
                 </label>
                 <select
-                  id="statusFilter"
-                  value={statusFilter}
-                  onChange={handleStatusFilter}
+                  id="genderFilter"
+                  value={genderFilter}
+                  onChange={handleGenderFilter}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
+                  <option value="all">All Genders</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
               
@@ -344,12 +300,10 @@ const Patients = () => {
                 <tr>
                   <th 
                     scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('patient_id')}
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     <div className="flex items-center">
-                      Patient ID
-                      <SortIndicator field="patient_id" />
+                      S/N
                     </div>
                   </th>
                   <th 
@@ -375,11 +329,11 @@ const Patients = () => {
                   <th 
                     scope="col" 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('status')}
+                    onClick={() => handleSort('gender')}
                   >
                     <div className="flex items-center">
-                      Status
-                      <SortIndicator field="status" />
+                      Gender
+                      <SortIndicator field="gender" />
                     </div>
                   </th>
                   <th 
@@ -417,11 +371,11 @@ const Patients = () => {
                   return (
                     <tr key={patientId} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {patient.patient_id || patient.id || patient.ID || `PATIENT-${index}`}
+                        {((currentPage - 1) * perPage) + index + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
                             {firstInitial}{lastInitial}
                           </div>
                           <div>
@@ -440,13 +394,13 @@ const Patients = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          patient.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : patient.status === 'inactive' 
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                          patient.gender?.toLowerCase() === 'male' || patient.gender?.toLowerCase() === 'm'
+                            ? 'bg-blue-100 text-blue-800' 
+                            : patient.gender?.toLowerCase() === 'female' || patient.gender?.toLowerCase() === 'f'
+                            ? 'bg-pink-100 text-pink-800'
+                            : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {patient.status || 'unknown'}
+                          {patient.gender || 'Unknown'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
