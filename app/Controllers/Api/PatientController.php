@@ -95,7 +95,7 @@ class PatientController extends BaseController
     }
 
     /**
-     * Get all patients
+     * Get all patients with HMO information and last visitation date
      *
      * @param \WP_REST_Request $request The request object
      * @return \WP_REST_Response
@@ -103,9 +103,9 @@ class PatientController extends BaseController
     public function get_patients($request) 
     {
         try {
-            // Use the service to handle pagination and filtering
+            // Use the enhanced service to handle pagination, filtering, and relationships
             $params = $request->get_params();
-            $result = PatientService::searchPatients($params);
+            $result = PatientService::getPatients($params);
 
             error_log('Patients retrieved: ' . print_r($result, true));
             

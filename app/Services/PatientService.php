@@ -331,4 +331,156 @@ class PatientService
         
         return false;
     }
+
+    /**
+     * Get patients with HMO information and last visitation date
+     * 
+     * @param array $params Query parameters including pagination, sorting, and filtering
+     * @return array Patient data with related information
+     */
+    public static function getPatients(array $params = [])
+    {
+        global $wpdb;
+        
+        // Default parameters
+        $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
+        $perPage = isset($params['per_page']) ? max(1, intval($params['per_page'])) : 10;
+        
+        // Initialize tables
+        $patient_table = $wpdb->prefix . 'hm_patients';
+        $hmo_table = $wpdb->prefix . 'hm_hmos';
+        $visitation_table = $wpdb->prefix . 'hm_visitations';
+        
+        // Base query - join with HMO table to get HMO name
+        $query = "
+            SELECT 
+                p.*,
+                h.name as hmo_name,
+                (
+                    SELECT created_at 
+                    FROM {$visitation_table} v
+                    WHERE v.patient_id = p.id
+                    ORDER BY v.created_at DESC
+                    LIMIT 1
+                ) as last_visit_date
+            FROM {$patient_table} p
+            LEFT JOIN {$hmo_table} h ON p.hmo_id = h.id
+            WHERE 1=1
+        ";
+        
+        $countQuery = "SELECT COUNT(p.id) FROM {$patient_table} p WHERE 1=1";
+        $values = [];
+        
+        // Apply filters if provided
+        if (!empty($params['search'])) {
+            $search = '%' . $wpdb->esc_like($params['search']) . '%';
+            $query .= " AND (p.first_name LIKE %s OR p.last_name LIKE %s OR p.phone LIKE %s)";
+            $countQuery .= " AND (p.first_name LIKE %s OR p.last_name LIKE %s OR p.phone LIKE %s)";
+            $values[] = $search;
+            $values[] = $search;
+            $values[] = $search;
+        }
+        
+        // Filter by gender if specified
+        if (!empty($params['gender']) && $params['gender'] !== 'all') {
+            $query .= " AND p.gender = %s";
+            $countQuery .= " AND p.gender = %s";
+            $values[] = $params['gender'];
+        }
+        
+        // Filter by HMO if specified
+        if (!empty($params['hmo_id'])) {
+            $query .= " AND p.hmo_id = %d";
+            $countQuery .= " AND p.hmo_id = %d";
+            $values[] = (int)$params['hmo_id'];
+        }
+        
+        // Get total count for pagination
+        $count_values = $values; // Copy values for count query
+        $prepared_count = $wpdb->prepare($countQuery, $count_values);
+        $total = (int)$wpdb->get_var($prepared_count);
+        
+        // Apply sorting
+        $sortField = !empty($params['sort_by']) ? $params['sort_by'] : 'last_name';
+        $sortOrder = !empty($params['sort_order']) && strtolower($params['sort_order']) === 'desc' ? 'DESC' : 'ASC';
+        
+        // Validate sort field to prevent SQL injection
+        $allowed_sort_fields = ['id', 'first_name', 'last_name', 'gender', 'age', 'hmo_name', 'last_visit_date'];
+        if (!in_array($sortField, $allowed_sort_fields)) {
+            $sortField = 'last_name'; // Default to last_name if invalid sort field
+        }
+        
+        // Special case for HMO name sorting
+        if ($sortField === 'hmo_name') {
+            $query .= " ORDER BY h.name {$sortOrder}, p.last_name ASC";
+        } 
+        // Special case for last visit date sorting
+        else if ($sortField === 'last_visit_date') {
+            $query .= " ORDER BY last_visit_date {$sortOrder}, p.last_name ASC";
+        }
+        // Standard field sorting
+        else {
+            $query .= " ORDER BY p.{$sortField} {$sortOrder}";
+        }
+        
+        // Apply pagination
+        $offset = ($page - 1) * $perPage;
+        $query .= " LIMIT %d OFFSET %d";
+        $values[] = $perPage;
+        $values[] = $offset;
+        
+        // Execute query
+        $prepared_query = $wpdb->prepare($query, $values);
+        $items = $wpdb->get_results($prepared_query);
+        
+        // Process results
+        $patients = [];
+        if ($items) {
+            foreach ($items as $item) {
+                $patientArray = (array)$item;
+                
+                // Make sure we have consistent ID fields
+                if (isset($patientArray['id']) && !isset($patientArray['ID'])) {
+                    $patientArray['ID'] = $patientArray['id'];
+                } elseif (isset($patientArray['ID']) && !isset($patientArray['id'])) {
+                    $patientArray['id'] = $patientArray['ID'];
+                }
+                
+                // Format the last visit date in a user-friendly format if it exists
+                if (!empty($patientArray['last_visit_date'])) {
+                    $patientArray['last_visit_date'] = date('Y-m-d', strtotime($patientArray['last_visit_date']));
+                }
+                
+                // Parse JSON fields if needed
+                if (!empty($patientArray['bio_data']) && is_string($patientArray['bio_data'])) {
+                    $decoded = json_decode($patientArray['bio_data'], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $patientArray['bio_data'] = $decoded;
+                    }
+                }
+                
+                $patients[] = $patientArray;
+            }
+        }
+        
+        // Calculate pagination info
+        $last_page = ceil($total / $perPage);
+        
+        // Return data in a format consistent with existing API
+        return [
+            'patients' => (object)[
+                'items' => $patients,
+                'currentPage' => (int)$page,
+            'lastPage' => $last_page,
+            'perPage' => (int)$perPage,
+            'total' => (int)$total
+            ],
+            'meta' => [
+                'current_page' => (int)$page,
+                'last_page' => $last_page,
+                'per_page' => (int)$perPage,
+                'total' => (int)$total
+            ]
+        ];
+    }
 }

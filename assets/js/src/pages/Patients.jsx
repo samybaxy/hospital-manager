@@ -29,7 +29,7 @@ const Patients = () => {
           per_page: perPage,
           sort_by: sortField,
           sort_order: sortOrder,
-          gender: genderFilter !== 'all' ? genderFilter : undefined
+          hmo_id: genderFilter !== 'all' ? genderFilter : undefined
         }
       });
       
@@ -242,19 +242,19 @@ const Patients = () => {
             
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="md:w-1/4">
-                <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender Filter
+                <label htmlFor="hmoFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                  HMO Filter
                 </label>
                 <select
-                  id="genderFilter"
-                  value={genderFilter}
-                  onChange={handleGenderFilter}
+                  id="hmoFilter"
+                  value={genderFilter} /* Keep using the same state variable for now */
+                  onChange={handleGenderFilter} /* Keep using the same handler for now */
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="all">All Genders</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="all">All HMOs</option>
+                  <option value="1">HMO Option 1</option>
+                  <option value="2">HMO Option 2</option>
+                  <option value="3">HMO Option 3</option>
                 </select>
               </div>
               
@@ -329,11 +329,11 @@ const Patients = () => {
                   <th 
                     scope="col" 
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('gender')}
+                    onClick={() => handleSort('hmo_name')}
                   >
                     <div className="flex items-center">
-                      Gender
-                      <SortIndicator field="gender" />
+                      HMO
+                      <SortIndicator field="hmo_name" />
                     </div>
                   </th>
                   <th 
@@ -394,13 +394,11 @@ const Patients = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          patient.gender?.toLowerCase() === 'male' || patient.gender?.toLowerCase() === 'm'
-                            ? 'bg-blue-100 text-blue-800' 
-                            : patient.gender?.toLowerCase() === 'female' || patient.gender?.toLowerCase() === 'f'
-                            ? 'bg-pink-100 text-pink-800'
+                          patient.hmo_name
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {patient.gender || 'Unknown'}
+                          {patient.hmo_name || 'None'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
