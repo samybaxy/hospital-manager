@@ -13,6 +13,8 @@ use HospitalManager\Controllers\Api\DoctorController;
 use HospitalManager\Controllers\Api\AuditController;
 use HospitalManager\Controllers\Api\DashboardController;
 use HospitalManager\Controllers\Api\StatsController;
+use HospitalManager\Controllers\Api\HMOController;
+use HospitalManager\Models\HMO;
 
 /**
  * Service for managing API registration and standardization
@@ -45,6 +47,7 @@ class ApiService
             new AuditController(),
             new DashboardController(),
             new StatsController(),
+            new HMOController(),
         ];
     }
 

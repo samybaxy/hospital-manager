@@ -105,8 +105,16 @@ class PatientController extends BaseController
         try {
             // Use the enhanced service to handle pagination, filtering, and relationships
             $params = $request->get_params();
+            
+            // Log the incoming parameters for debugging
+            error_log('Patient API request params: ' . print_r($params, true));
+            
+            // Check explicitly for HMO filter and ensure it's an integer
+            if (isset($params['hmo_id'])) {
+                $params['hmo_id'] = (int)$params['hmo_id']; // Force integer type
+            }
+            
             $result = PatientService::getPatients($params);
-
             error_log('Patients retrieved: ' . print_r($result, true));
             
             return $this->success_response(

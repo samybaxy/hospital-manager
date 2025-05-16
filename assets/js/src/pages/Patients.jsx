@@ -15,25 +15,31 @@ const Patients = () => {
   const [totalPatients, setTotalPatients] = useState(0);
   const [sortField, setSortField] = useState('last_name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [genderFilter, setGenderFilter] = useState('all');
+  const [hmoFilter, setHmoFilter] = useState('all');
+  const [hmoOptions, setHmoOptions] = useState([]);
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
 
   const fetchPatients = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/patients', { 
-        params: { 
-          page: currentPage,
-          search: searchTerm,
-          per_page: perPage,
-          sort_by: sortField,
-          sort_order: sortOrder,
-          hmo_id: genderFilter !== 'all' ? genderFilter : undefined
-        }
-      });
+
+      // Prepare the parameters for the API call
+      const params = { 
+        page: currentPage,
+        search: searchTerm,
+        per_page: perPage,
+        sort_by: sortField,
+        sort_order: sortOrder
+      };
       
-      if (response.data) {        
+      // Only add hmo_id if not "all"
+      if (hmoFilter !== 'all') {
+        params.hmo_id = Number(hmoFilter);
+      }
+      
+      const response = await api.get('/patients', { params }); // Corrected params format
+      if (response.data) {
         // Check if data is inside the "data" property (common REST API pattern)
         const responseData = response.data.data || response.data;
         
@@ -45,11 +51,13 @@ const Patients = () => {
           setPatients(patientItems);
           setTotalPages(responseData.patients.lastPage || 1);
           setTotalPatients(responseData.patients.total || 0);
+          console.log(`Loaded ${patientItems.length} patients (page ${currentPage}/${responseData.patients.lastPage}, total: ${responseData.patients.total})`);
         } else if (Array.isArray(responseData.patients)) {
           // Handle alternative API response format
           setPatients(responseData.patients);
           setTotalPages(responseData.total_pages || 1);
           setTotalPatients(responseData.total || 0);
+          console.log(`Loaded ${responseData.patients.length} patients (page ${currentPage}/${responseData.total_pages}, total: ${responseData.total})`);
         } else {
           console.error('Unexpected patient data format:', responseData);
           setError('Data format error. Please contact support.');
@@ -61,24 +69,69 @@ const Patients = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, perPage, sortField, sortOrder, genderFilter]);
+  }, [currentPage, searchTerm, perPage, sortField, sortOrder, hmoFilter]);
+
+  // Keep track of manual fetch requests to prevent duplicate calls
+  const [manualFetchRequested, setManualFetchRequested] = useState(false);
 
   useEffect(() => {
-    const loadPatients = async () => {
+    // Only fetch automatically if a manual fetch wasn't requested
+    if (!manualFetchRequested) {
+      const loadPatients = async () => {
+        try {
+          await fetchPatients();
+          
+          // Only show success message when we have patients
+          if (patients.length > 0) {
+            setSuccessMessage('Patient data loaded successfully');
+          }
+        } catch (error) {
+          console.error('Error in patient data loading effect:', error);
+        }
+      };
+      
+      loadPatients();
+    }
+    
+    // Reset the flag after the effect runs
+    setManualFetchRequested(false);
+  }, [fetchPatients, manualFetchRequested, patients.length]);
+  
+  // Fetch HMO options from the API
+  useEffect(() => {
+    const fetchHMOs = async () => {
       try {
-        await fetchPatients();
-        
-        // Only show success message when we have patients
-        if (patients.length > 0) {
-          setSuccessMessage('Patient data loaded successfully');
+        const response = await api.get('/hmos');
+        if (response.data && response.data.data && response.data.data.hmos) {
+          // Make sure we have proper numeric IDs for filtering
+          const formattedHMOs = response.data.data.hmos.map(hmo => ({
+            id: Number(hmo.id),
+            name: hmo.name
+          }));
+          setHmoOptions(formattedHMOs);
+        } else {
+          console.error('Unexpected HMO data format:', response.data);
         }
       } catch (error) {
-        console.error('Error in patient data loading effect:', error);
+        console.error('Error fetching HMO options:', error);
+        // Try to get more detailed error information
+        if (error.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('Error request:', error.request);
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error('Error message:', error.message);
+        }
       }
     };
     
-    loadPatients();
-  }, [fetchPatients]);
+    fetchHMOs();
+  }, []);
 
   const handleSort = (field) => {
     setSortOrder(sortField === field && sortOrder === 'asc' ? 'desc' : 'asc');
@@ -88,12 +141,32 @@ const Patients = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     setCurrentPage(1); // Reset to first page on new search
+    setManualFetchRequested(true); // Prevent duplicate fetch
     fetchPatients(); // Immediately fetch with new search term
   };
 
-  const handleGenderFilter = (e) => {
-    setGenderFilter(e.target.value);
+  const handleHmoFilter = (e) => {
+    const value = e.target.value;
+    
+    // Convert to number if it's not 'all', otherwise keep as string 'all'
+    const hmoValue = value === 'all' ? 'all' : Number(value);
+    
+    // Debug logging to verify the HMO ID type
+    console.log('Setting HMO filter to:', hmoValue, 
+      'Type:', typeof hmoValue, 
+      'Original value:', value, 
+      'Original type:', typeof value
+    );
+    
+    setHmoFilter(hmoValue);
     setCurrentPage(1); // Reset to first page when filtering
+    setLoading(true); // Show loading indicator when changing HMO filter
+    
+    // Set the flag to indicate we're manually fetching
+    setManualFetchRequested(true);
+    
+    // Immediately fetch patients with the new filter
+    fetchPatients();
   };
   
   // Function to check if data is valid for rendering
@@ -242,20 +315,39 @@ const Patients = () => {
             
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="md:w-1/4">
-                <label htmlFor="hmoFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                  HMO Filter
+                <label htmlFor="hmoFilter" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-1">
+                  <span>HMO Filter</span>
+                  {hmoFilter !== 'all' && (
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Active</span>
+                  )}
                 </label>
-                <select
-                  id="hmoFilter"
-                  value={genderFilter} /* Keep using the same state variable for now */
-                  onChange={handleGenderFilter} /* Keep using the same handler for now */
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="all">All HMOs</option>
-                  <option value="1">HMO Option 1</option>
-                  <option value="2">HMO Option 2</option>
-                  <option value="3">HMO Option 3</option>
-                </select>
+                <div className="relative">
+                  <select
+                    id="hmoFilter"
+                    value={hmoFilter}
+                    onChange={handleHmoFilter}
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      hmoFilter !== 'all' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-300'
+                    }`}
+                    disabled={!hmoOptions || hmoOptions.length === 0 || loading}
+                  >
+                    <option value="all">All HMOs</option>
+                    {hmoOptions && hmoOptions.length > 0 ? (
+                      hmoOptions.map(hmo => (
+                        <option key={hmo.id} value={hmo.id}>{hmo.name}</option>
+                      ))
+                    ) : (
+                      <option value="" disabled>Loading HMO options...</option>
+                    )}
+                  </select>
+                  {(!hmoOptions || hmoOptions.length === 0 || loading) && (
+                    <div className="absolute right-2 top-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-500"></div>
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="md:w-1/4">

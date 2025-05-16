@@ -171,8 +171,6 @@ export const fetchUserAccess = createAsyncThunk(
     
     try {
       const response = await api.get(API_ENDPOINT);
-      console.log('Access API response:', response.data);
-      
       // Handle the response based on your API format
       if (response.data) {
         if (response.data.data) {

@@ -35,11 +35,9 @@ export const accessSlice = createSlice({
         if (action.payload.data) {
           state.role = action.payload.data.role;
           state.permissions = action.payload.data.access || {};
-          console.log('Access data loaded to Redux:', state.role, state.permissions);
         } else if (action.payload.role) {
           state.role = action.payload.role;
           state.permissions = action.payload.access || {};
-          console.log('Access data loaded to Redux:', state.role, state.permissions);
         } else {
           console.error('Invalid payload format for access data:', action.payload);
         }

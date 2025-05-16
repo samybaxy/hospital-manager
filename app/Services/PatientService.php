@@ -335,12 +335,15 @@ class PatientService
     /**
      * Get patients with HMO information and last visitation date
      * 
-     * @param array $params Query parameters including pagination, sorting, and filtering
+     * @param array $query_params Query parameters including pagination, sorting, and filtering
      * @return array Patient data with related information
      */
-    public static function getPatients(array $params = [])
+    public static function getPatients(array $query_params = [])
     {
         global $wpdb;
+
+        // Initialize parameters
+        $params = $query_params['params'] ?? [];
         
         // Default parameters
         $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
@@ -379,6 +382,7 @@ class PatientService
             $values[] = $search;
             $values[] = $search;
             $values[] = $search;
+            error_log('PatientService::getPatients - Filter by search: ' . print_r($params, true));
         }
         
         // Filter by gender if specified
@@ -386,13 +390,26 @@ class PatientService
             $query .= " AND p.gender = %s";
             $countQuery .= " AND p.gender = %s";
             $values[] = $params['gender'];
+            error_log('PatientService::getPatients - Filter by gender: ' . print_r($params, true));
         }
         
         // Filter by HMO if specified
         if (!empty($params['hmo_id'])) {
-            $query .= " AND p.hmo_id = %d";
-            $countQuery .= " AND p.hmo_id = %d";
-            $values[] = (int)$params['hmo_id'];
+            $hmo_id = (int)$params['hmo_id'];
+            error_log('Filtering patients by HMO ID: ' . $hmo_id . ' (type: ' . gettype($hmo_id) . ')');
+            
+            // Handle numeric comparison and NULL values properly
+            $query .= " AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d";
+            $countQuery .= " AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d";
+            $values[] = $hmo_id;
+            
+            // Add an explicit check for NULL values to ensure accuracy
+            if ($hmo_id === 0) {
+                $query = str_replace("AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d", "AND p.hmo_id IS NULL", $query);
+                $countQuery = str_replace("AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d", "AND p.hmo_id IS NULL", $countQuery);
+                // Remove the parameter since we're not using it in the query anymore
+                array_pop($values);
+            }
         }
         
         // Get total count for pagination
@@ -431,7 +448,9 @@ class PatientService
         
         // Execute query
         $prepared_query = $wpdb->prepare($query, $values);
-        $items = $wpdb->get_results($prepared_query);
+        
+        $items = $wpdb->get_results($prepared_query);            // Log the number of results returned
+        error_log('Query returned ' . count($items) . ' patients');
         
         // Process results
         $patients = [];
@@ -466,14 +485,22 @@ class PatientService
         // Calculate pagination info
         $last_page = ceil($total / $perPage);
         
+        // Recalculate pagination info if we've applied client-side filtering
+        if (!empty($params['hmo_id'])) {
+            $last_page = $total > 0 ? ceil($total / $perPage) : 1;
+            
+            error_log('Adjusted pagination after HMO filtering: total=' . $total . 
+                ', lastPage=' . $last_page);
+        }
+        
         // Return data in a format consistent with existing API
         return [
             'patients' => (object)[
                 'items' => $patients,
                 'currentPage' => (int)$page,
-            'lastPage' => $last_page,
-            'perPage' => (int)$perPage,
-            'total' => (int)$total
+                'lastPage' => $last_page,
+                'perPage' => (int)$perPage,
+                'total' => (int)$total
             ],
             'meta' => [
                 'current_page' => (int)$page,
