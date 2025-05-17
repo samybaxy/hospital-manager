@@ -14,12 +14,14 @@ class PatientTest extends TestCase
     public function testCreatePatient()
     {
         $data = [
+            'user_id' => 1,
             'first_name' => 'John',
             'last_name' => 'Doe',
             'phone' => '08012345678',
             'gender' => 'M',
             'age' => 30,
-            'bio_data' => json_encode(['notes' => 'This is a test patient'])
+            'city' => 'Lagos',
+            'state' => 'Lagos State'
         ];
 
         $patient = Patient::create($data);
@@ -30,6 +32,8 @@ class PatientTest extends TestCase
         $this->assertEquals('08012345678', $patient->phone);
         $this->assertEquals('M', $patient->gender);
         $this->assertEquals(30, $patient->age);
+        $this->assertEquals('Lagos', $patient->city);
+        $this->assertEquals('Lagos State', $patient->state);
     }
 
     /**
@@ -97,6 +101,8 @@ class PatientTest extends TestCase
             'phone' => '08012345678',
             'gender' => 'Female', // Changed from 'F' to 'Female' to match the enum
             'age' => 25,
+            'city' => 'Lagos',
+            'state' => 'Lagos State',
             'bio_data' => json_encode(['notes' => 'Test patient']),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
@@ -110,6 +116,8 @@ class PatientTest extends TestCase
             'phone' => '08012345678',
             'gender' => 'Male', // Changed from 'M' to 'Male'
             'age' => 40,
+            'city' => 'Abuja',
+            'state' => 'Federal Capital Territory',
             'bio_data' => json_encode(['notes' => 'Test patient']),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
@@ -122,6 +130,8 @@ class PatientTest extends TestCase
             'phone' => '08012345678',
             'gender' => 'Female', // Changed from 'F' to 'Female'
             'age' => 35,
+            'city' => 'Port Harcourt',
+            'state' => 'Rivers State',
             'bio_data' => json_encode(['notes' => 'Test patient']),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
@@ -210,6 +220,8 @@ class PatientTest extends TestCase
             'phone' => '08012345678',
             'gender' => 'Male', // Changed from 'M' to 'Male'
             'age' => 20,
+            'city' => 'Kaduna',
+            'state' => 'Kaduna State',
             'bio_data' => json_encode(['notes' => 'Search test patient']),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
@@ -222,6 +234,8 @@ class PatientTest extends TestCase
             'phone' => '08012345678',
             'gender' => 'Female', // Changed from 'F' to 'Female'
             'age' => 30,
+            'city' => 'Enugu',
+            'state' => 'Enugu State',
             'bio_data' => json_encode(['notes' => 'Search test patient']),
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')

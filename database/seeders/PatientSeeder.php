@@ -43,6 +43,10 @@ class PatientSeeder extends Seeder
                 $gender = $this->faker->randomElement(['Male', 'Female']);
                 $age = $this->faker->numberBetween(18, 80);
                 $marital_status = $this->faker->randomElement(['Single', 'Married', 'Divorced', 'Widowed', 'Separated']);
+                $city = $this->faker->city();
+                // Replace state() with randomElement of states
+                $states = ['Lagos', 'Abuja', 'Rivers', 'Kano', 'Oyo', 'Enugu', 'Kaduna', 'Delta', 'Anambra', 'Imo'];
+                $state = $this->faker->randomElement($states);
                 
                 // Randomly assign an HMO or null
                 $hmo_id = $this->faker->optional(0.7)->randomElement($hmo_ids);
@@ -74,12 +78,14 @@ class PatientSeeder extends Seeder
                         'gender' => $gender,
                         'marital_status' => $marital_status,
                         'address' => $this->faker->address(),
+                        'city' => $city,
+                        'state' => $state,
                         'bio_data' => json_encode($bio_data),
                         'created_at' => $this->faker->dateTimeBetween('-6 months', 'now')->format('Y-m-d H:i:s'),
                         'updated_at' => current_time('mysql'),
                     ],
                     [
-                        '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s'
+                        '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
                     ]
                 );
                 

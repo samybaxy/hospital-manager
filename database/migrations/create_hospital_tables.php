@@ -20,6 +20,8 @@ class CreateHospitalTables
             gender ENUM('Male', 'Female', 'Other'),
             marital_status ENUM('Single', 'Married', 'Divorced', 'Widowed', 'Separated'),
             address text,
+            city varchar(100),
+            `state` varchar(100),
             bio_data JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

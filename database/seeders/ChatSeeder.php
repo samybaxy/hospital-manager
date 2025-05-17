@@ -47,7 +47,8 @@ class ChatSeeder extends Seeder
                 $doctor = $doctors[$doctor_index];
                 
                 // Create the chat
-                $created_at = $this->faker->dateTimeBetween('-3 months', '-1 day')->format('Y-m-d H:i:s');
+                $created_at_dt = $this->faker->dateTimeBetween('-3 months', '-1 day');
+                $created_at = $created_at_dt->format('Y-m-d H:i:s');
                 $chat_data = [
                     'doctor_id' => $doctor->id,
                     'patient_id' => $patient->id,
@@ -152,7 +153,7 @@ class ChatSeeder extends Seeder
             'chat_id' => $chat_id,
             'sender_id' => $patient_user_id,
             'receiver_id' => $doctor_user_id,
-            'message' => $initial_message,
+            'message' => $this->sanitizeText($initial_message),
             'read' => 1,
             'created_at' => date('Y-m-d H:i:s', $timestamp)
         ]);
@@ -165,7 +166,7 @@ class ChatSeeder extends Seeder
             'chat_id' => $chat_id,
             'sender_id' => $doctor_user_id,
             'receiver_id' => $patient_user_id,
-            'message' => $doctor_response,
+            'message' => $this->sanitizeText($doctor_response),
             'read' => 1,
             'created_at' => date('Y-m-d H:i:s', $timestamp)
         ]);
@@ -178,7 +179,7 @@ class ChatSeeder extends Seeder
             'chat_id' => $chat_id,
             'sender_id' => $patient_user_id,
             'receiver_id' => $doctor_user_id,
-            'message' => $patient_followup,
+            'message' => $this->sanitizeText($patient_followup),
             'read' => 1,
             'created_at' => date('Y-m-d H:i:s', $timestamp)
         ]);
@@ -210,7 +211,7 @@ class ChatSeeder extends Seeder
                 'chat_id' => $chat_id,
                 'sender_id' => $sender_id,
                 'receiver_id' => $receiver_id,
-                'message' => $message,
+                'message' => $this->sanitizeText($message),
                 'read' => $read,
                 'created_at' => date('Y-m-d H:i:s', $timestamp)
             ]);
@@ -245,7 +246,7 @@ class ChatSeeder extends Seeder
             "I'd like you to keep a daily log of when these symptoms occur."
         ];
         
-        return $messages[array_rand($messages)];
+        return $this->sanitizeText($messages[array_rand($messages)]);
     }
     
     /**
@@ -273,6 +274,32 @@ class ChatSeeder extends Seeder
             "The symptoms seem to be getting worse at night."
         ];
         
-        return $messages[array_rand($messages)];
+        return $this->sanitizeText($messages[array_rand($messages)]);
+    }
+
+    /**
+     * Sanitize text to ensure it contains only valid UTF-8 characters
+     * 
+     * @param string $text Text to sanitize
+     * @return string Sanitized text
+     */
+    protected function sanitizeText($text)
+    {
+        // Handle potential NULL or invalid inputs
+        if (!is_string($text) || empty($text)) {
+            return "Message content unavailable";
+        }
+        
+        // Force to ASCII only to avoid encoding issues
+        $text = preg_replace('/[^\x20-\x7E]/', '', $text);
+        
+        // Remove any control characters
+        $text = preg_replace('/[\x00-\x1F\x7F]/', '', $text);
+        
+        // Additional sanitization to be extra safe - using modern approach
+        // Use htmlspecialchars instead of deprecated FILTER_SANITIZE_STRING
+        $text = htmlspecialchars($text, ENT_QUOTES | ENT_HTML5, 'UTF-8', false);
+        
+        return $text ?: "Message content unavailable";
     }
 }

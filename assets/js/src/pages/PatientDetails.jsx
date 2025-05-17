@@ -95,13 +95,10 @@ const PatientDetails = () => {
     );
   }
   
-  console.log('Loaded patient details:', patient);
-  
   // Parse bio_data if it's a JSON string
   if (patient && patient.bio_data && typeof patient.bio_data === 'string') {
     try {
       patient.bio_data = JSON.parse(patient.bio_data);
-      console.log('Parsed bio_data:', patient.bio_data);
     } catch (e) {
       console.error('Failed to parse bio_data:', e);
     }
@@ -256,10 +253,6 @@ const PatientDetails = () => {
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">State</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{patient.state || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Postal Code</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.postal_code || '-'}</td>
                 </tr>
               </tbody>
             </table>

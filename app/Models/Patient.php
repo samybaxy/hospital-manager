@@ -24,6 +24,8 @@ class Patient extends BaseModel
         'age',
         'gender',
         'marital_status',
+        'city',
+        'state',
         'address',
         'bio_data'
     ];

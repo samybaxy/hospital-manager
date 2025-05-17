@@ -191,7 +191,7 @@ class PatientController extends BaseController
                     'Patient with medical history retrieved successfully'
                 );
             } else {
-                error_log('Patient without medical history: ' . print_r($this->success_response($patient, 'Patient retrieved successfully'), true));
+                error_log('Patient without medical history: ' . print_r($patient, true));
                 return $this->success_response(
                     $patient,
                     'Patient retrieved successfully'
