@@ -17,12 +17,31 @@ const EditPatient = () => {
         setLoading(true);
         const response = await api.get(`/patients/${id}`);
         
-        if (response.data) {
+        // Check for the structure of the response and extract the patient data properly
+        if (response.data && response.data.data) {
+          // If the API returns nested data structure
+          setPatient(response.data.data);
+        } else if (response.data) {
+          // If the API returns flat data structure
           setPatient(response.data);
         }
+
+        // For debugging
       } catch (err) {
         console.error('Error fetching patient details:', err);
-        setError('Failed to load patient details. The patient may not exist or you may not have permission to edit it.');
+        const errorMessage = err.response?.data?.message || 
+                            err.response?.statusText || 
+                            'Failed to load patient details. The patient may not exist or you may not have permission to edit it.';
+        setError(errorMessage);
+        
+        // Log additional details for debugging
+        if (err.response) {
+          console.log('API Error Response:', {
+            status: err.response.status,
+            headers: err.response.headers,
+            data: err.response.data
+          });
+        }
       } finally {
         setLoading(false);
       }

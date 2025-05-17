@@ -4,6 +4,22 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/apiService';
 
+// CSS for enhanced form styling
+const formStyles = {
+  inputField: `px-3 py-2 shadow-sm block w-full sm:text-sm border-gray-300 rounded-md 
+               transition-all duration-200 ease-in-out focus:ring-primary-500 focus:border-primary-500
+               hover:border-gray-400`,
+  errorField: `px-3 py-2 shadow-sm block w-full sm:text-sm border-red-300 rounded-md 
+               text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500
+               transition-all duration-200 ease-in-out`,
+  label: 'block text-sm font-medium text-gray-700 mb-1',
+  section: 'px-6 py-6 bg-white rounded-md shadow-md sm:overflow-hidden mb-6 border border-gray-100',
+  sectionTitle: 'text-lg font-medium text-gray-900 pb-3 border-b border-gray-200 mb-5 flex items-center',
+  sectionIcon: 'mr-2 h-5 w-5 text-primary-500',
+  fieldGroup: 'mb-4',
+  helpText: 'mt-1 text-xs text-gray-500',
+};
+
 const PatientForm = ({ patient = {}, isEditing = false }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -11,8 +27,6 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
   const [formData, setFormData] = useState({
     first_name: patient.first_name || '',
     last_name: patient.last_name || '',
-    gender: patient.gender || '',
-    date_of_birth: patient.date_of_birth || '',
     blood_group: patient.blood_group || '',
     marital_status: patient.marital_status || '',
     phone: patient.phone || '',
@@ -25,6 +39,11 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
     emergency_contact_relationship: patient.emergency_contact_relationship || '',
     emergency_contact_phone: patient.emergency_contact_phone || '',
     status: patient.status || 'active',
+    // bio_data fields
+    height: '',
+    weight: '',
+    allergies: '',
+    chronic_conditions: '',
   });
   
   const [formErrors, setFormErrors] = useState({});
@@ -33,12 +52,27 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
   // Update form data if patient prop changes
   useEffect(() => {
     if (isEditing && patient) {
+      console.log("Setting form data from patient:", patient);
+      // Handle bio_data parsing if it's a string
+      let bioData = patient.bio_data || {};
+      if (typeof bioData === 'string') {
+        try {
+          bioData = JSON.parse(bioData);
+        } catch (e) {
+          console.error('Failed to parse bio_data:', e);
+          bioData = {};
+        }
+      }
+      // Get emergency contact info from either nested bio_data or top-level properties
+      const emergencyContactName = bioData?.emergency_contact?.name || patient.emergency_contact_name || '';
+      const emergencyContactRelationship = bioData?.emergency_contact?.relationship || patient.emergency_contact_relationship || '';
+      const emergencyContactPhone = bioData?.emergency_contact?.phone || patient.emergency_contact_phone || '';
+      // Get blood group from either nested bio_data or top-level property
+      const bloodGroup = bioData?.blood_group || patient.blood_group || '';
       setFormData({
         first_name: patient.first_name || '',
         last_name: patient.last_name || '',
-        gender: patient.gender || '',
-        date_of_birth: patient.date_of_birth || '',
-        blood_group: patient.blood_group || '',
+        blood_group: bloodGroup,
         marital_status: patient.marital_status || '',
         phone: patient.phone || '',
         email: patient.email || '',
@@ -46,10 +80,15 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
         city: patient.city || '',
         state: patient.state || '',
         postal_code: patient.postal_code || '',
-        emergency_contact_name: patient.emergency_contact_name || '',
-        emergency_contact_relationship: patient.emergency_contact_relationship || '',
-        emergency_contact_phone: patient.emergency_contact_phone || '',
+        emergency_contact_name: emergencyContactName,
+        emergency_contact_relationship: emergencyContactRelationship,
+        emergency_contact_phone: emergencyContactPhone,
         status: patient.status || 'active',
+        // bio_data fields
+        height: bioData?.height || '',
+        weight: bioData?.weight || '',
+        allergies: bioData?.allergies || '',
+        chronic_conditions: bioData?.chronic_conditions || '',
       });
     }
   }, [patient, isEditing]);
@@ -119,7 +158,6 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    
     // Validate field on change if it's been touched
     if (touched[name]) {
       const error = validateField(name, value);
@@ -150,14 +188,12 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    
     // Mark all fields as touched for validation
     const allTouched = Object.keys(formData).reduce((acc, key) => {
       acc[key] = true;
       return acc;
     }, {});
     setTouched(allTouched);
-    
     // Validate entire form
     if (!validateForm()) {
       setError('Please correct the errors in the form before submitting.');
@@ -165,14 +201,42 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
       return;
     }
 
+    // Prepare bio_data
+    const bio_data = {
+      height: formData.height,
+      weight: formData.weight,
+      allergies: formData.allergies,
+      chronic_conditions: formData.chronic_conditions,
+      blood_group: formData.blood_group,
+      emergency_contact: {
+        name: formData.emergency_contact_name,
+        relationship: formData.emergency_contact_relationship,
+        phone: formData.emergency_contact_phone,
+      },
+    };
+
+    // Prepare payload
+    const payload = {
+      ...formData,
+      bio_data: JSON.stringify(bio_data),
+    };
+    // Remove direct fields that are now in bio_data
+    delete payload.height;
+    delete payload.weight;
+    delete payload.allergies;
+    delete payload.chronic_conditions;
+    delete payload.blood_group;
+    delete payload.emergency_contact_name;
+    delete payload.emergency_contact_relationship;
+    delete payload.emergency_contact_phone;
+
     try {
       setLoading(true);
-      
       if (isEditing) {
-        await api.put(`/patients/${patient.id}`, formData);
+        await api.put(`/patients/${patient.id}`, payload);
         navigate(`/patients/${patient.id}`, { replace: true });
       } else {
-        const response = await api.post('/patients', formData);
+        const response = await api.post('/patients', payload);
         navigate(`/patients/${response.data.id}`, { replace: true });
       }
     } catch (err) {
@@ -189,24 +253,32 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
         <h1 className="text-2xl font-bold">{isEditing ? 'Edit Patient' : 'Add New Patient'}</h1>
       </div>
 
-      <Card>
+      <Card className="border border-gray-200 rounded-lg shadow-lg overflow-hidden">
         {error && (
-          <div className="bg-red-50 p-4 mb-6 rounded-md border border-red-200 text-red-700">
+          <div className="bg-red-50 p-4 mb-6 rounded-md border border-red-200 text-red-700 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Personal Information */}
-            <div>
-              <h2 className="text-lg font-medium border-b pb-2">Personal Information</h2>
-              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Personal Information
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
                 <div className="sm:col-span-3">
-                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="first_name" className={formStyles.label}>
                     First name <span className="text-red-500">*</span>
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="first_name"
@@ -215,23 +287,26 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                       value={formData.first_name}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.first_name 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
+                      className={formErrors.first_name ? formStyles.errorField : formStyles.inputField}
+                      placeholder="Enter first name"
                     />
                     {formErrors.first_name && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.first_name}</p>
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.first_name}
+                      </p>
                     )}
+                    <p className={formStyles.helpText}>First name as it appears on official documents</p>
                   </div>
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="last_name" className={formStyles.label}>
                     Last name <span className="text-red-500">*</span>
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="last_name"
@@ -240,65 +315,32 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                       value={formData.last_name}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.last_name 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
+                      className={formErrors.last_name ? formStyles.errorField : formStyles.inputField}
+                      placeholder="Enter last name"
                     />
                     {formErrors.last_name && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.last_name}</p>
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.last_name}
+                      </p>
                     )}
+                    <p className={formStyles.helpText}>Last name as it appears on official documents</p>
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
-                    Gender
-                  </label>
-                  <div className="mt-1">
-                    <select
-                      id="gender"
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    >
-                      <option value="">Select gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700">
-                    Date of Birth
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      id="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                    />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="blood_group" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="blood_group" className={formStyles.label}>
                     Blood Group
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <select
                       id="blood_group"
                       name="blood_group"
                       value={formData.blood_group}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      className={formStyles.inputField}
                     >
                       <option value="">Select blood group</option>
                       <option value="A+">A+</option>
@@ -314,16 +356,16 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="marital_status" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="marital_status" className={formStyles.label}>
                     Marital Status
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <select
                       id="marital_status"
                       name="marital_status"
                       value={formData.marital_status}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      className={formStyles.inputField}
                     >
                       <option value="">Select marital status</option>
                       <option value="Single">Single</option>
@@ -336,16 +378,16 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="status" className={formStyles.label}>
                     Patient Status
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <select
                       id="status"
                       name="status"
                       value={formData.status}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      className={formStyles.inputField}
                     >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
@@ -356,15 +398,100 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
               </div>
             </div>
 
-            {/* Contact Information */}
-            <div>
-              <h2 className="text-lg font-medium border-b pb-2">Contact Information</h2>
-              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+            {/* Medical Information */}
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m9 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Medical Information
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                {/* Height */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="height" className={formStyles.label}>
+                    Height (cm)
+                  </label>
+                  <div>
+                    <input
+                      type="number"
+                      name="height"
+                      id="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      placeholder="e.g. 170"
+                      className={formStyles.inputField}
+                      min="0"
+                    />
+                  </div>
+                </div>
+                {/* Weight */}
+                <div className="sm:col-span-2">
+                  <label htmlFor="weight" className={formStyles.label}>
+                    Weight (kg)
+                  </label>
+                  <div>
+                    <input
+                      type="number"
+                      name="weight"
+                      id="weight"
+                      value={formData.weight}
+                      onChange={handleChange}
+                      placeholder="e.g. 65"
+                      className={formStyles.inputField}
+                      min="0"
+                    />
+                  </div>
+                </div>
                 <div className="sm:col-span-3">
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="allergies" className={formStyles.label}>
+                    Allergies
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="allergies"
+                      id="allergies"
+                      value={formData.allergies}
+                      onChange={handleChange}
+                      placeholder="e.g. Penicillin, Peanuts"
+                      className={formStyles.inputField}
+                    />
+                  </div>
+                </div>
+                <div className="sm:col-span-3">
+                  <label htmlFor="chronic_conditions" className={formStyles.label}>
+                    Chronic Conditions
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="chronic_conditions"
+                      id="chronic_conditions"
+                      value={formData.chronic_conditions}
+                      onChange={handleChange}
+                      placeholder="e.g. Diabetes, Hypertension"
+                      className={formStyles.inputField}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Contact Information
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                <div className="sm:col-span-3">
+                  <label htmlFor="phone" className={formStyles.label}>
                     Phone <span className="text-red-500">*</span>
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="tel"
                       name="phone"
@@ -373,23 +500,26 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                       value={formData.phone}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.phone 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
+                      placeholder="Enter phone number"
+                      className={formErrors.phone ? formStyles.errorField : formStyles.inputField}
                     />
                     {formErrors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.phone}
+                      </p>
                     )}
+                    <p className={formStyles.helpText}>Include country code if international</p>
                   </div>
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="email" className={formStyles.label}>
                     Email
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="email"
                       name="email"
@@ -397,11 +527,8 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                       value={formData.email}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.email 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
+                      placeholder="Enter email address"
+                      className={formErrors.email ? formStyles.errorField : formStyles.inputField}
                     />
                     {formErrors.email && (
                       <p className="mt-1 text-sm text-red-600">{formErrors.email}</p>
@@ -410,120 +537,106 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                 </div>
 
                 <div className="sm:col-span-6">
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="address" className={formStyles.label}>
                     Address
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="address"
                       id="address"
                       value={formData.address}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Enter full address"
+                      className={formStyles.inputField}
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="city" className={formStyles.label}>
                     City
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="city"
                       id="city"
                       value={formData.city}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Enter city"
+                      className={formStyles.inputField}
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="state" className={formStyles.label}>
                     State
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="state"
                       id="state"
                       value={formData.state}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Enter state"
+                      className={formStyles.inputField}
                     />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="postal_code" className="block text-sm font-medium text-gray-700">
-                    Postal Code
-                  </label>
-                  <div className="mt-1">
-                    <input
-                      type="text"
-                      name="postal_code"
-                      id="postal_code"
-                      value={formData.postal_code}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.postal_code 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
-                    />
-                    {formErrors.postal_code && (
-                      <p className="mt-1 text-sm text-red-600">{formErrors.postal_code}</p>
-                    )}
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Emergency Contact */}
-            <div>
-              <h2 className="text-lg font-medium border-b pb-2">Emergency Contact</h2>
-              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                Emergency Contact
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
                 <div className="sm:col-span-3">
-                  <label htmlFor="emergency_contact_name" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="emergency_contact_name" className={formStyles.label}>
                     Name
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="emergency_contact_name"
                       id="emergency_contact_name"
                       value={formData.emergency_contact_name}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Enter contact name"
+                      className={formStyles.inputField}
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="emergency_contact_relationship" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="emergency_contact_relationship" className={formStyles.label}>
                     Relationship
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="text"
                       name="emergency_contact_relationship"
                       id="emergency_contact_relationship"
                       value={formData.emergency_contact_relationship}
                       onChange={handleChange}
-                      className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Enter relationship"
+                      className={formStyles.inputField}
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="emergency_contact_phone" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="emergency_contact_phone" className={formStyles.label}>
                     Phone
                   </label>
-                  <div className="mt-1">
+                  <div>
                     <input
                       type="tel"
                       name="emergency_contact_phone"
@@ -531,11 +644,8 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                       value={formData.emergency_contact_phone}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      className={`shadow-sm block w-full sm:text-sm rounded-md ${
-                        formErrors.emergency_contact_phone 
-                          ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                          : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                      }`}
+                      placeholder="Enter emergency phone"
+                      className={formErrors.emergency_contact_phone ? formStyles.errorField : formStyles.inputField}
                     />
                     {formErrors.emergency_contact_phone && (
                       <p className="mt-1 text-sm text-red-600">{formErrors.emergency_contact_phone}</p>
@@ -546,9 +656,12 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
             </div>
           </div>
 
-          <div className="pt-5 flex justify-between">
+          <div className="pt-6 mt-6 flex justify-between border-t border-gray-200">
             <Link to="/patients">
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="secondary" className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
                 Cancel
               </Button>
             </Link>
@@ -556,7 +669,7 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
               type="submit" 
               variant="primary" 
               disabled={loading}
-              className={loading ? 'opacity-75 cursor-not-allowed' : ''}
+              className={`flex items-center ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <>
@@ -567,7 +680,12 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
                   Saving...
                 </>
               ) : (
-                'Save Patient'
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Patient
+                </>
               )}
             </Button>
           </div>
