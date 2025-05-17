@@ -43,11 +43,11 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
   const isActive = location.pathname === linkPath;
   
   return (
-    <li>
+    <li className="w-full">
       <Link 
         to={linkPath} 
         className={`
-          flex items-center px-3 py-2 text-base font-medium rounded-md group
+          flex items-center px-3 py-2 text-base font-medium rounded-md group w-full
           ${isActive 
             ? 'bg-primary-900 text-white' 
             : 'text-primary-100 hover:bg-primary-700 hover:text-white'}
@@ -56,7 +56,7 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
         title={isCollapsed ? label : ''}
       >
         <svg
-          className={`${isCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 ${isActive ? 'text-primary-300' : 'text-primary-400 group-hover:text-primary-300'}`}
+          className={`${isCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 flex-shrink-0 ${isActive ? 'text-primary-300' : 'text-primary-400 group-hover:text-primary-300'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -64,7 +64,7 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
         </svg>
-        {!isCollapsed && label}
+        {!isCollapsed && <span className="truncate">{label}</span>}
       </Link>
     </li>
   );
@@ -243,7 +243,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
   }
   
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col w-full">
       
       {/* Header container - combined user info and logo for sticky positioning */}
       <div className="sticky top-0 z-20 bg-primary-900">
@@ -267,7 +267,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
       
       {/* Navigation Menu */}
       <nav className="mt-4 flex-1">
-        
+
         {/* Toggle Collapse Button */}
         <div className="flex justify-center mt-2 mb-3">
           <button 
@@ -287,7 +287,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
           </button>
         </div>
 
-        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'}`}>
+        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (
             <NavItem 
