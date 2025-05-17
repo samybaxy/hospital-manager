@@ -92,6 +92,17 @@ class PatientController extends BaseController
                 },
             ]
         ]);
+
+        // Route for patient visitation history
+        register_rest_route($this->namespace, '/patients/(?P<id>\d+)/visitations', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'get_patient_visitations'],
+                'permission_callback' => function($request) {
+                    return $this->check_permission($request, 'view_patients');
+                },
+            ]
+        ]);
     }
 
     /**
@@ -375,6 +386,52 @@ class PatientController extends BaseController
         } catch (\Exception $e) {
             return $this->error_response(
                 'Error retrieving patient record: ' . $e->getMessage(), 
+                500
+            );
+        }
+    }
+
+    /**
+     * Get patient visitation history
+     *
+     * @param \WP_REST_Request $request The request object
+     * @return \WP_REST_Response
+     */
+    public function get_patient_visitations($request) 
+    {
+        try {
+            $patient_id = $request['id'];
+            
+            // Verify patient exists
+            $patient = Patient::find($patient_id);
+            if (!$patient) {
+                return $this->error_response('Patient not found', 404);
+            }
+            
+            // Get patient visitations
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_visitations';
+            
+            // Join with users table to get doctor name
+            $query = $wpdb->prepare(
+                "SELECT v.*, 
+                CONCAT(u.display_name) as doctor
+                FROM {$table} v
+                LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
+                WHERE v.patient_id = %d
+                ORDER BY v.date DESC, v.time DESC",
+                $patient_id
+            );
+            
+            $visitations = $wpdb->get_results($query);
+            
+            return $this->success_response(
+                $visitations,
+                'Patient visitation history retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            return $this->error_response(
+                'Error retrieving patient visitation history: ' . $e->getMessage(), 
                 500
             );
         }

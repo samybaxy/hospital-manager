@@ -1,8 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/apiService';
+
+// CSS utility for line clamping
+const lineClampStyle = {
+  display: '-webkit-box',
+  WebkitLineClamp: '2',
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden'
+};
+
+// CSS for popup animation
+const popupOverlayStyle = {
+  animation: 'fadeIn 0.3s ease-out',
+};
+
+const popupCardStyle = {
+  animation: 'scaleIn 0.3s ease-out',
+};
 
 const PatientDetails = () => {
   const { id } = useParams();
@@ -11,6 +28,105 @@ const PatientDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('profile');
+  const [visitations, setVisitations] = useState([]);
+  const [visitionsLoading, setVisitationsLoading] = useState(false);
+  const [expandedHistory, setExpandedHistory] = useState({});
+  const [popupContent, setPopupContent] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(20);
+  const [timerId, setTimerId] = useState(null);
+  const popupRef = useRef(null);
+
+  // Function to open the popup with the full text
+  const openPopup = useCallback((content, visitId) => {
+    setPopupContent({ content, visitId });
+    setTimeRemaining(20);
+    
+    // Start the countdown
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setPopupContent(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    setTimerId(timer);
+  }, []);
+  
+  // Function to close the popup
+  const closePopup = useCallback(() => {
+    if (timerId) {
+      clearInterval(timerId);
+    }
+    setPopupContent(null);
+  }, [timerId]);
+  
+  // Handle clicks outside the popup
+  const handleOutsideClick = useCallback((e) => {
+    if (popupRef.current && !popupRef.current.contains(e.target)) {
+      closePopup();
+    }
+  }, [closePopup]);
+  
+  // Add event listener for clicks outside when popup is open
+  useEffect(() => {
+    if (popupContent) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [popupContent, handleOutsideClick]);
+  
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerId) {
+        clearInterval(timerId);
+      }
+    };
+  }, [timerId]);
+
+  // Function to toggle expanded text with timeout (keeping this for compatibility)
+  const toggleExpandText = useCallback((id) => {
+    setExpandedHistory((prev) => {
+      const newState = { ...prev, [id]: !prev[id] };
+      return newState;
+    });
+  }, []);
+
+  // Function to fetch patient visitations when medical tab is clicked
+  const fetchVisitations = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setVisitationsLoading(true);
+      const response = await api.get(`/patients/${id}/visitations`);
+      
+      if (response.data && response.data.data) {
+        setVisitations(response.data.data);
+      } else if (response.data) {
+        setVisitations(response.data);
+      } else {
+        setVisitations([]);
+      }
+    } catch (err) {
+      console.error('Error fetching visitations:', err);
+      setError('Failed to load visitation history');
+    } finally {
+      setVisitationsLoading(false);
+    }
+  }, [id]);
+
+  // Effect to fetch visitations when tab changes to medical
+  useEffect(() => {
+    if (activeTab === 'medical' && visitations.length === 0) {
+      fetchVisitations();
+    }
+  }, [activeTab, fetchVisitations, visitations.length]);
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -154,26 +270,6 @@ const PatientDetails = () => {
           >
             Medical History
           </button>
-          <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
-              activeTab === 'visits'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            onClick={() => setActiveTab('visits')}
-          >
-            Visits
-          </button>
-          <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
-              activeTab === 'billing'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-            onClick={() => setActiveTab('billing')}
-          >
-            Billing
-          </button>
         </nav>
       </div>
 
@@ -313,27 +409,58 @@ const PatientDetails = () => {
       {/* Medical History Tab */}
       {activeTab === 'medical' && (
         <Card title="Medical History">
-          <div className="py-8 text-center text-gray-500">
-            Medical history will be implemented in the next phase
-          </div>
-        </Card>
-      )}
-
-      {/* Visits Tab */}
-      {activeTab === 'visits' && (
-        <Card title="Visit History">
-          <div className="py-8 text-center text-gray-500">
-            Visit history will be implemented in the next phase
-          </div>
-        </Card>
-      )}
-
-      {/* Billing Tab */}
-      {activeTab === 'billing' && (
-        <Card title="Billing Information">
-          <div className="py-8 text-center text-gray-500">
-            Billing information will be implemented in the next phase
-          </div>
+          {visitionsLoading ? (
+            <div className="py-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="mt-2 text-gray-600">Loading medical history...</p>
+            </div>
+          ) : visitations.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">
+              No medical history records found
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Treatment</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medical History</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {visitations.map((visit) => (
+                    <tr key={visit.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        <div>{visit.date || '-'}</div>
+                        <div className="text-gray-500 text-xs">{visit.time || ''}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{visit.doctor || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px]">{visit.diagnosis || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-[200px]">{visit.treatment || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 max-w-[300px]">
+                        {visit.medical_history ? (
+                          <div>
+                            <div style={lineClampStyle}>{visit.medical_history}</div>
+                            <button 
+                              onClick={() => openPopup(visit.medical_history, visit.id)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-1"
+                            >
+                              Show more
+                            </button>
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       )}
 
@@ -347,6 +474,57 @@ const PatientDetails = () => {
           </Button>
         </Link>
       </div>
+
+      {/* Medical History Popup */}
+      {popupContent && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
+          style={popupOverlayStyle}
+          onClick={handleOutsideClick}
+        >
+          <div 
+            ref={popupRef}
+            className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-auto focus:outline-none"
+            style={popupCardStyle}
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-medium text-gray-900">Medical History Details</h3>
+              <div className="flex items-center space-x-2">
+                <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{timeRemaining}s</span>
+                </div>
+                <button 
+                  onClick={closePopup}
+                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="whitespace-pre-wrap text-gray-700">
+                {popupContent.content}
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-end">
+              <button
+                type="button"
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                onClick={closePopup}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

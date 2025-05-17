@@ -33,13 +33,18 @@ const NavItemBase = ({ route, icon, label }) => {
   
   // Get the location to determine if this item is active
   const location = useLocation();
-  const isActive = location.pathname === `/${route}` || 
-                  (route === "dashboard" && location.pathname === '/');
+  
+  // Find the item in ALL_NAV_ITEMS to get the correct path
+  const navItem = ALL_NAV_ITEMS.find(item => item.route === route);
+  const linkPath = navItem ? navItem.path : '/';
+  
+  // Check if current path matches this nav item's path
+  const isActive = location.pathname === linkPath;
   
   return (
     <li>
       <Link 
-        to={`/${route}`} 
+        to={linkPath} 
         className={`
           flex items-center px-3 py-2 text-base font-medium rounded-md group
           ${isActive 

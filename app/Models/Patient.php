@@ -590,4 +590,39 @@ class Patient extends BaseModel
             )
         );
     }
+
+    /**
+     * Get visitations for this patient
+     * 
+     * @return array Array of visitations
+     */
+    public function get_visitations()
+    {
+        global $wpdb;
+        
+        $visitation_table = $wpdb->prefix . 'hm_visitations';
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        
+        $patient_id = $this->id;
+        
+        $visitations = $wpdb->get_results($wpdb->prepare(
+            "SELECT v.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name 
+             FROM {$visitation_table} v
+             LEFT JOIN {$doctor_table} d ON v.doctor_id = d.id
+             WHERE v.patient_id = %d
+             ORDER BY v.date DESC, v.time DESC",
+            $patient_id
+        ), ARRAY_A);
+        
+        // Format the visitations data
+        if ($visitations) {
+            foreach ($visitations as &$visitation) {
+                $visitation['doctor'] = $visitation['doctor_first_name'] . ' ' . $visitation['doctor_last_name'];
+                unset($visitation['doctor_first_name']);
+                unset($visitation['doctor_last_name']);
+            }
+        }
+        
+        return $visitations;
+    }
 }
