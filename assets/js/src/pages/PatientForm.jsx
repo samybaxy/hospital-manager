@@ -375,25 +375,6 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                     </select>
                   </div>
                 </div>
-
-                <div className="sm:col-span-3">
-                  <label htmlFor="status" className={formStyles.label}>
-                    Patient Status
-                  </label>
-                  <div>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className={formStyles.inputField}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="pending">Pending</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             </div>
 
