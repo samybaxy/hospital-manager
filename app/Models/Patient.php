@@ -568,4 +568,26 @@ class Patient extends BaseModel
         
         return $result !== false;
     }
+
+    /**
+     * Get the last visitation date for a patient
+     * 
+     * @param int $patient_id
+     * @return string|null
+     */
+    public static function get_last_visitation_date(int $patient_id = 0)
+    {
+        global $wpdb;
+        
+        // Ensure we have a valid patient ID
+        if (empty($patient_id)) return null;
+
+        $visitation_table = $wpdb->prefix . 'hm_visitations';
+        return $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT MAX(created_at) FROM {$visitation_table} WHERE patient_id = %d",
+                $patient_id
+            )
+        );
+    }
 }

@@ -115,8 +115,6 @@ class PatientController extends BaseController
             }
             
             $result = PatientService::getPatients($params);
-            error_log('Patients retrieved: ' . print_r($result, true));
-            
             return $this->success_response(
                 $result, 
                 'Patients retrieved successfully'
@@ -191,7 +189,21 @@ class PatientController extends BaseController
                     'Patient with medical history retrieved successfully'
                 );
             } else {
-                error_log('Patient without medical history: ' . print_r($patient, true));
+                // Get the user's email from wp_users table
+                if (isset($patient['user_id'])) {
+                    $user = get_user_by('ID', $patient['user_id']);
+                    if ($user) {
+                        $patient['email'] = $user->user_email;
+                    }
+                }
+                
+                // Get the patient's last visitation date
+                $last_visit = Patient::get_last_visitation_date($patient_id);
+                
+                if ($last_visit) {
+                    $patient['last_visit_date'] = $last_visit;
+                }
+                
                 return $this->success_response(
                     $patient,
                     'Patient retrieved successfully'
