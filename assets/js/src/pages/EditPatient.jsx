@@ -88,7 +88,7 @@ const EditPatient = () => {
     );
   }
 
-  return <PatientForm patient={patient} isEditing={true} />;
+  return <PatientForm patient={patient} isEditing={true} cancelUrl={`/patients/${id}`} />;
 };
 
 export default EditPatient;

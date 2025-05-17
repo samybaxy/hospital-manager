@@ -20,7 +20,7 @@ const formStyles = {
   helpText: 'mt-1 text-xs text-gray-500',
 };
 
-const PatientForm = ({ patient = {}, isEditing = false }) => {
+const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' }) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,7 +52,6 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
   // Update form data if patient prop changes
   useEffect(() => {
     if (isEditing && patient) {
-      console.log("Setting form data from patient:", patient);
       // Handle bio_data parsing if it's a string
       let bioData = patient.bio_data || {};
       if (typeof bioData === 'string') {
@@ -657,7 +656,7 @@ const PatientForm = ({ patient = {}, isEditing = false }) => {
           </div>
 
           <div className="pt-6 mt-6 flex justify-between border-t border-gray-200">
-            <Link to="/patients">
+            <Link to={cancelUrl}>
               <Button type="button" variant="secondary" className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
