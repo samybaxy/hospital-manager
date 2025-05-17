@@ -42,6 +42,7 @@ class PatientSeeder extends Seeder
                 
                 $gender = $this->faker->randomElement(['Male', 'Female']);
                 $age = $this->faker->numberBetween(18, 80);
+                $marital_status = $this->faker->randomElement(['Single', 'Married', 'Divorced', 'Widowed', 'Separated']);
                 
                 // Randomly assign an HMO or null
                 $hmo_id = $this->faker->optional(0.7)->randomElement($hmo_ids);
@@ -71,13 +72,14 @@ class PatientSeeder extends Seeder
                         'phone' => $this->faker->phoneNumber(),
                         'age' => $age,
                         'gender' => $gender,
+                        'marital_status' => $marital_status,
                         'address' => $this->faker->address(),
                         'bio_data' => json_encode($bio_data),
                         'created_at' => $this->faker->dateTimeBetween('-6 months', 'now')->format('Y-m-d H:i:s'),
                         'updated_at' => current_time('mysql'),
                     ],
                     [
-                        '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s'
+                        '%d', '%s', '%s', '%d', '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s'
                     ]
                 );
                 

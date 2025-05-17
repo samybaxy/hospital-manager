@@ -18,6 +18,7 @@ class CreateHospitalTables
             phone varchar(20),
             age int,
             gender ENUM('Male', 'Female', 'Other'),
+            marital_status ENUM('Single', 'Married', 'Divorced', 'Widowed', 'Separated'),
             address text,
             bio_data JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,

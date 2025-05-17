@@ -139,8 +139,8 @@ class PatientController extends BaseController
     {
         try {
             $patient_id = $request['id'];
-            $patient = Patient::find($patient_id);
-            
+            $patient = Patient::find($patient_id)->toArray();
+
             if (!$patient) {
                 return $this->error_response('Patient not found', 404);
             }
@@ -191,6 +191,7 @@ class PatientController extends BaseController
                     'Patient with medical history retrieved successfully'
                 );
             } else {
+                error_log('Patient without medical history: ' . print_r($this->success_response($patient, 'Patient retrieved successfully'), true));
                 return $this->success_response(
                     $patient,
                     'Patient retrieved successfully'

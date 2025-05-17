@@ -17,8 +17,13 @@ const PatientDetails = () => {
       try {
         setLoading(true);
         const response = await api.get(`/patients/${id}`);
-        
-        if (response.data) {
+
+        // Check for the structure of the response and extract the patient data properly
+        if (response.data && response.data.data) {
+          // If the API returns nested data structure
+          setPatient(response.data.data);
+        } else if (response.data) {
+          // If the API returns flat data structure
           setPatient(response.data);
         }
       } catch (err) {
@@ -89,6 +94,18 @@ const PatientDetails = () => {
       </div>
     );
   }
+  
+  console.log('Loaded patient details:', patient);
+  
+  // Parse bio_data if it's a JSON string
+  if (patient && patient.bio_data && typeof patient.bio_data === 'string') {
+    try {
+      patient.bio_data = JSON.parse(patient.bio_data);
+      console.log('Parsed bio_data:', patient.bio_data);
+    } catch (e) {
+      console.error('Failed to parse bio_data:', e);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -96,7 +113,7 @@ const PatientDetails = () => {
         <div>
           <h1 className="text-2xl font-bold">Patient Details</h1>
           <p className="text-gray-600">
-            Patient ID: {patient.patient_id || '-'}
+            Patient ID: {patient.id || '-'}
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
@@ -178,20 +195,40 @@ const PatientDetails = () => {
                   <td className="px-4 py-2 text-sm text-gray-700">{patient.gender || '-'}</td>
                 </tr>
                 <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Date of Birth</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.date_of_birth || '-'}</td>
-                </tr>
-                <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Age</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{patient.age ? `${patient.age} years` : '-'}</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Blood Group</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.blood_group || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.blood_group || patient.blood_group || '-'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Height</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.height ? `${patient.bio_data.height} cm` : '-'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Weight</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.weight ? `${patient.bio_data.weight} kg` : '-'}
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Marital Status</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.marital_status || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      patient.marital_status === 'Married' ? 'bg-green-100 text-green-800' : 
+                      patient.marital_status === 'Divorced' ? 'bg-red-100 text-red-800' :
+                      patient.marital_status === 'Widowed' ? 'bg-gray-100 text-gray-800' :
+                      patient.marital_status === 'Separated' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {patient.marital_status || '-'}
+                    </span>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -233,15 +270,21 @@ const PatientDetails = () => {
               <tbody className="divide-y divide-gray-200">
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Name</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.emergency_contact_name || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.emergency_contact?.name || patient.emergency_contact_name || '-'}
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Relationship</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.emergency_contact_relationship || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.emergency_contact?.relationship || patient.emergency_contact_relationship || '-'}
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Phone</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.emergency_contact_phone || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">
+                    {patient.bio_data?.emergency_contact?.phone || patient.emergency_contact_phone || '-'}
+                  </td>
                 </tr>
               </tbody>
             </table>
