@@ -379,6 +379,37 @@ const PatientDetails = () => {
             </table>
           </Card>
 
+          <Card title="Medical Information">
+            <table className="min-w-full divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200">
+                <tr>
+                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Allergies</td>
+                  <td className="px-4 py-2 text-sm">
+                    {patient.bio_data?.allergies ? (
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        {patient.bio_data.allergies}
+                      </span>
+                    ) : (
+                      <span className="text-gray-700">None reported</span>
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Chronic Conditions</td>
+                  <td className="px-4 py-2 text-sm">
+                    {patient.bio_data?.chronic_conditions ? (
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                        {patient.bio_data.chronic_conditions}
+                      </span>
+                    ) : (
+                      <span className="text-gray-700">None reported</span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Card>
+
           <Card title="Registration Information">
             <table className="min-w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
