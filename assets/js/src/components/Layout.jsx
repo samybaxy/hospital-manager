@@ -17,6 +17,7 @@ const LoadingSpinner = () => (
 const Layout = ({ children }) => {
   // Call all hooks unconditionally at the top
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
@@ -78,6 +79,11 @@ const Layout = ({ children }) => {
     setSidebarOpen(prevState => !prevState);
   }, []);
 
+  // Toggle sidebar collapsed state
+  const toggleSidebarCollapse = useCallback(() => {
+    setSidebarCollapsed(prevState => !prevState);
+  }, []);
+
   // Toggle user menu dropdown
   const toggleUserMenu = useCallback(() => {
     setUserMenuOpen(prevState => !prevState);
@@ -108,10 +114,15 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 fixed md:sticky top-0 h-screen z-50 md:z-auto left-0 w-64 
-        transition duration-300 transform bg-primary-800 overflow-y-auto
+        md:translate-x-0 fixed md:sticky top-0 h-screen z-50 md:z-auto left-0
+        ${sidebarCollapsed ? 'w-16' : 'w-64'}
+        transition-all duration-300 transform bg-primary-800 overflow-y-auto
       `}>
-        <Sidebar isOpen={sidebarOpen} />
+        <Sidebar 
+          isOpen={sidebarOpen} 
+          isCollapsed={sidebarCollapsed} 
+          onToggleCollapse={toggleSidebarCollapse} 
+        />
       </div>
 
       {/* Main Content */}

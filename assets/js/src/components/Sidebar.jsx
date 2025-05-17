@@ -10,8 +10,9 @@ import { selectHasAccess, selectRole, selectAccessLoading, selectAccessError, se
  * @param {string} props.route - Route name
  * @param {string} props.icon - Icon path for SVG
  * @param {string} props.label - Display label
+ * @param {boolean} props.isCollapsed - Whether the sidebar is collapsed
  */
-const NavItemBase = ({ route, icon, label }) => {
+const NavItemBase = ({ route, icon, label, isCollapsed }) => {
   // Get role from Redux
   const role = useSelector(selectRole);
   
@@ -50,10 +51,12 @@ const NavItemBase = ({ route, icon, label }) => {
           ${isActive 
             ? 'bg-primary-900 text-white' 
             : 'text-primary-100 hover:bg-primary-700 hover:text-white'}
+          ${isCollapsed ? 'justify-center' : ''}
         `}
+        title={isCollapsed ? label : ''}
       >
         <svg
-          className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-300' : 'text-primary-400 group-hover:text-primary-300'}`}
+          className={`${isCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 ${isActive ? 'text-primary-300' : 'text-primary-400 group-hover:text-primary-300'}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -61,7 +64,7 @@ const NavItemBase = ({ route, icon, label }) => {
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={icon} />
         </svg>
-        {label}
+        {!isCollapsed && label}
       </Link>
     </li>
   );
@@ -111,7 +114,7 @@ const checkAccess = (role, permissions, routeName) => {
 const NavItem = React.memo(NavItemBase, (prevProps, nextProps) => {
   // Custom comparison function to prevent unnecessary re-renders
   // Return true if props are equal (component should NOT re-render)
-  return prevProps.route === nextProps.route;
+  return prevProps.route === nextProps.route && prevProps.isCollapsed === nextProps.isCollapsed;
 });
 
 /**
@@ -213,7 +216,7 @@ const ALL_NAV_ITEMS = [
 /**
  * Main Sidebar Navigation with access control
  */
-const Sidebar = ({ isOpen }) => {
+const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
   const dispatch = useDispatch();
   
   // Get data from Redux state
@@ -252,19 +255,39 @@ const Sidebar = ({ isOpen }) => {
         </div>
         
         {/* App Logo and Brand */}
-        <div className="flex items-center justify-center h-16">
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-center'} h-16`}>
           <Link to="/" className="flex items-center">
             <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
             </svg>
-            <span className="ml-2 text-white font-bold text-xl">Hospital Manager</span>
+            {!isCollapsed && <span className="ml-2 text-white font-bold text-xl overflow-hidden whitespace-nowrap transition-all duration-300">Hospital Manager</span>}
           </Link>
         </div>
       </div>
       
       {/* Navigation Menu */}
       <nav className="mt-4 flex-1">
-        <ul className="space-y-1 px-2">
+        
+        {/* Toggle Collapse Button */}
+        <div className="flex justify-center mt-2 mb-3">
+          <button 
+            onClick={onToggleCollapse}
+            className="p-1 rounded-full bg-primary-700 hover:bg-primary-600 text-white transition-colors duration-200"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            <svg 
+              className="h-5 w-5" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+              style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} />
+            </svg>
+          </button>
+        </div>
+
+        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'}`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (
             <NavItem 
@@ -272,6 +295,7 @@ const Sidebar = ({ isOpen }) => {
               route={item.route} 
               icon={item.icon} 
               label={item.label}
+              isCollapsed={isCollapsed}
             />
           ))}
         </ul>
@@ -281,7 +305,8 @@ const Sidebar = ({ isOpen }) => {
 };
 
 // Final wrapper with memo for optimal performance
-// We only need to check isOpen since all other data comes from Redux now
+// We need to check isOpen and isCollapsed props 
 export default React.memo(Sidebar, (prevProps, nextProps) => {
-  return prevProps.isOpen === nextProps.isOpen;
+  return prevProps.isOpen === nextProps.isOpen && 
+         prevProps.isCollapsed === nextProps.isCollapsed;
 });
