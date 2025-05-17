@@ -245,15 +245,8 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
   return (
     <div className="h-full flex flex-col w-full">
       
-      {/* Header container - combined user info and logo for sticky positioning */}
+      {/* Header container - logo for sticky positioning */}
       <div className="sticky top-0 z-20 bg-primary-900">
-        {/* User Information */}
-        <div className="px-6 pt-5 relative">
-          <div className="text-white text-right">
-            <p className="text-xs font-medium">{role}</p>
-          </div>
-        </div>
-        
         {/* App Logo and Brand */}
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-center'} h-16`}>
           <Link to="/" className="flex items-center">
@@ -267,26 +260,6 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
       
       {/* Navigation Menu */}
       <nav className="mt-4 flex-1">
-
-        {/* Toggle Collapse Button */}
-        <div className="flex justify-center mt-2 mb-3">
-          <button 
-            onClick={onToggleCollapse}
-            className="p-1 rounded-full bg-primary-700 hover:bg-primary-600 text-white transition-colors duration-200"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            <svg 
-              className="h-5 w-5" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-              style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} />
-            </svg>
-          </button>
-        </div>
-
         <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (

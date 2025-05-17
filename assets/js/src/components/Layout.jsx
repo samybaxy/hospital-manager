@@ -131,16 +131,46 @@ const Layout = ({ children }) => {
         <header className="shadow-sm z-10 sticky top-0" style={{ backgroundColor: 'rgb(247, 251, 255)' }}>
           <div className="px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
-              {/* Mobile menu button */}
-              <button 
-                onClick={toggleSidebar}
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
-              >
-                <span className="sr-only">Open sidebar</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
+              <div className="flex items-center">
+                {/* Mobile menu button */}
+                <button 
+                  onClick={toggleSidebar}
+                  className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none"
+                >
+                  <span className="sr-only">Open sidebar</span>
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                </button>
+                
+                {/* Toggle Collapse Button */}
+                <div className="hidden md:flex items-center ml-2">
+                  <button 
+                    onClick={toggleSidebarCollapse}
+                    className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors duration-200 border border-gray-200 shadow-sm"
+                    title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                  >
+                    <svg 
+                      className="h-4 w-4" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Role information */}
+                <div className="hidden sm:flex items-center ml-3">
+                  <div className="text-gray-700" title="Your current role">
+                    <span className="text-xs uppercase tracking-wide font-semibold bg-gray-100 px-3 py-1 rounded-full border border-gray-200 shadow-sm">
+                      {role || 'Guest'}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
               {/* Empty space to replace search bar */}
               <div className="flex-1"></div>
