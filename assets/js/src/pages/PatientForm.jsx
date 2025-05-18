@@ -34,7 +34,6 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
     address: patient.address || '',
     city: patient.city || '',
     state: patient.state || '',
-    postal_code: patient.postal_code || '',
     emergency_contact_name: patient.emergency_contact_name || '',
     emergency_contact_relationship: patient.emergency_contact_relationship || '',
     emergency_contact_phone: patient.emergency_contact_phone || '',
@@ -79,7 +78,6 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         address: patient.address || '',
         city: patient.city || '',
         state: patient.state || '',
-        postal_code: patient.postal_code || '',
         emergency_contact_name: emergencyContactName,
         emergency_contact_relationship: emergencyContactRelationship,
         emergency_contact_phone: emergencyContactPhone,
@@ -118,12 +116,6 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
           error = 'Phone number is required';
         } else if (!/^[0-9+() -]{10,15}$/.test(value.trim())) {
           error = 'Phone number must be between 10-15 digits';
-        }
-        break;
-        
-      case 'postal_code':
-        if (value && !/^[0-9a-zA-Z -]{3,10}$/.test(value.trim())) {
-          error = 'Invalid postal code format';
         }
         break;
         
