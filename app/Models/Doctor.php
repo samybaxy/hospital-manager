@@ -14,7 +14,8 @@ class Doctor extends BaseModel
         'first_name',
         'last_name',
         'phone',
-        'photo'
+        'specialty',
+        'status',
     ];
     
     /**
@@ -122,7 +123,7 @@ class Doctor extends BaseModel
         try {
             // Ensure data only contains valid column names
             $filtered_data = array_intersect_key($data, array_flip([
-                'user_id', 'first_name', 'last_name', 'phone', 'photo', 'created_at', 'updated_at'
+                'user_id', 'first_name', 'last_name', 'phone', 'specialty', 'status', 'created_at', 'updated_at'
             ]));
             
             // Define format for each field

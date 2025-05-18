@@ -30,6 +30,21 @@ class Patient extends BaseModel
         'bio_data'
     ];
     
+    public function __construct(array $attributes = [])
+    {
+        global $wpdb;
+        $this->table = $wpdb->prefix . $this->tableName;
+        
+        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
+            $attributes['id'] = $attributes['ID'];
+        }
+        
+        parent::__construct($attributes);
+    }
+    
     /**
      * Convert the model instance to an array
      * 
@@ -56,21 +71,6 @@ class Patient extends BaseModel
         }
         
         return $data;
-    }
-    
-    public function __construct(array $attributes = [])
-    {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
-        
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
-        parent::__construct($attributes);
     }
 
     /**

@@ -59,7 +59,6 @@ class DoctorSeeder extends Seeder
                         'first_name' => $first_name,
                         'last_name' => $last_name,
                         'phone' => $this->faker->phoneNumber(),
-                        'photo' => null, // Would normally be a media attachment ID
                         'created_at' => $this->faker->dateTimeBetween('-1 year', '-6 months')->format('Y-m-d H:i:s'),
                         'updated_at' => current_time('mysql'),
                     ],
