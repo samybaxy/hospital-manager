@@ -74,6 +74,9 @@ class PatientService
         // Create wp_user entry: use var for debugging purposes
         $wp_user = Patient::createWpUser($data);
         
+        // Unset email field before creating the patient
+        unset($data['email']);
+
         // Create the patient
         return Patient::create($data);
     }
@@ -110,6 +113,9 @@ class PatientService
         if (isset($data['email']) && $data['email'] !== $patient->email) {
             $wp_user = Patient::updateWpUser($patient->user_id, $data);
         }
+        
+        // Unset email field before updating the patient
+        unset($data['email']);
         
         // Update the patient
         $patient->update($data);
