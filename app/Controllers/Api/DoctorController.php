@@ -2,12 +2,11 @@
 
 namespace HospitalManager\Controllers\Api;
 
+use \HospitalManager\Services\AuditLogger;
+use \HospitalManager\Models\Doctor;
 use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
-use HospitalManager\Models\Patient;
-use HospitalManager\Models\Visitation;
-use HospitalManager\Services\AuditLogger;
 
 class DoctorController extends BaseController
 {
@@ -55,50 +54,36 @@ class DoctorController extends BaseController
      */
     public function get_doctors($request)
     {
-        global $wpdb;
         try {
             $search = $request->get_param('search');
             $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
             $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 20;
-            $offset = ($page - 1) * $per_page;
             
-            // Get database prefix and table name
-            $table_name = $wpdb->prefix . 'hm_doctors';
-            
-            // Build query based on search parameters
-            $where_clause = " WHERE status = 'active'"; // Only show active doctors
-            $search_params = [];
-            
-            if ($search) {
-                $search_param = '%' . $wpdb->esc_like($search) . '%';
-                $where_clause .= " AND (first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
-                $search_params = [$search_param, $search_param, $search_param];
-            }
-            
-            // Count total for pagination
-            $count_query = "SELECT COUNT(*) FROM $table_name" . $where_clause;
-            $prepared_count = $wpdb->prepare($count_query, ...$search_params);
-            $total = $wpdb->get_var($prepared_count);
-            
-            // Get doctors with limit and offset
-            $query = "SELECT * FROM $table_name" . $where_clause . " ORDER BY last_name ASC LIMIT %d OFFSET %d";
-            $prepared_query = $wpdb->prepare($query, array_merge($search_params, [$per_page, $offset]));
-            $doctors = $wpdb->get_results($prepared_query, ARRAY_A);
+            // Use Doctor model to fetch paginated results with search
+            $results = Doctor::searchAndPaginate(
+                $search,
+                $page,
+                $per_page,
+                'active'
+            );
             
             // Format doctors to include fullName
             $doctors = array_map(function($doctor) {
-                $doctor['fullName'] = $doctor['first_name'] . ' ' . $doctor['last_name'];
-                return $doctor;
-            }, $doctors);
+                $doctor_array = $doctor->attributes;
+                $doctor_array['fullName'] = $doctor->first_name . ' ' . $doctor->last_name;
+                return $doctor_array;
+            }, $results['data']);
+            
+            error_log('Doctors fetched: ' . print_r($doctors, true));
             
             // Return paginated response
             return new WP_REST_Response([
                 'data' => $doctors,
                 'meta' => [
-                    'current_page' => $page,
-                    'last_page' => ceil($total / $per_page),
-                    'per_page' => $per_page,
-                    'total' => intval($total)
+                    'current_page' => $results['current_page'],
+                    'last_page' => $results['last_page'],
+                    'per_page' => $results['per_page'],
+                    'total' => $results['total']
                 ]
             ]);
         } catch (\Exception $e) {
@@ -123,7 +108,7 @@ class DoctorController extends BaseController
     {
         try {
             $doctor_id = $request->get_param('id');
-            $doctor = \HospitalManager\Models\Doctor::find($doctor_id);
+            $doctor = Doctor::find($doctor_id);
             
             if (!$doctor || $doctor->status !== 'active') {
                 return new WP_Error(
@@ -162,13 +147,10 @@ class DoctorController extends BaseController
         try {
             $user_id = get_current_user_id();
             
-            // Find doctor by user_id
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'hm_doctors';
-            $query = $wpdb->prepare("SELECT * FROM $table_name WHERE user_id = %d", $user_id);
-            $doctor = $wpdb->get_row($query, ARRAY_A);
+            // Find doctor by user_id using the Doctor model
+            $doctors = Doctor::where('user_id', $user_id);
             
-            if (!$doctor) {
+            if (empty($doctors)) {
                 return new WP_Error(
                     'profile_not_found',
                     'Doctor profile not found',
@@ -176,11 +158,14 @@ class DoctorController extends BaseController
                 );
             }
             
+            $doctor = $doctors[0];
+            
             // Get user information
             $user = get_userdata($user_id);
-            $doctor['email'] = $user->user_email;
+            $response = $doctor->attributes;
+            $response['email'] = $user->user_email;
             
-            return new WP_REST_Response($doctor);
+            return new WP_REST_Response($response);
         } catch (\Exception $e) {
             error_log('Error getting doctor profile: ' . $e->getMessage());
             return new WP_Error(
@@ -200,7 +185,7 @@ class DoctorController extends BaseController
             $user_id = get_current_user_id();
             
             // Find doctor by user_id
-            $doctor = \HospitalManager\Models\Doctor::where('user_id', $user_id)[0] ?? null;
+            $doctor = Doctor::where('user_id', $user_id)[0] ?? null;
             
             if (!$doctor) {
                 return new WP_Error(
@@ -221,7 +206,7 @@ class DoctorController extends BaseController
             $doctor->save();
             
             // Log the update
-            \HospitalManager\Services\AuditLogger::log(
+            AuditLogger::log(
                 'update_doctor_profile',
                 'doctor',
                 $doctor->id,
@@ -232,7 +217,7 @@ class DoctorController extends BaseController
             );
             
             // Return the updated profile
-            $updated_doctor = \HospitalManager\Models\Doctor::find($doctor->id);
+            $updated_doctor = Doctor::find($doctor->id);
             $user = get_userdata($user_id);
             $response = $updated_doctor->attributes;
             $response['email'] = $user->user_email;

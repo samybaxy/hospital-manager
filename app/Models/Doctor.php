@@ -26,9 +26,6 @@ class Doctor extends BaseModel
      */
     public function &__get($property)
     {
-        // For debugging
-        error_log("Doctor::__get called for property: $property");
-        
         // For phone property, handle it specially for the test
         if ($property === 'phone' && isset($this->attributes['id'])) {
             global $wpdb;
@@ -244,32 +241,32 @@ class Doctor extends BaseModel
     /**
      * Get all doctors with pagination
      */
-    public static function paginate($perPage = 10, $page = 1)
-    {
-        global $wpdb;
-        $offset = ($page - 1) * $perPage;
-        $table = (new static)->table;
+    // public static function paginate($perPage = 10, $page = 1)
+    // {
+    //     global $wpdb;
+    //     $offset = ($page - 1) * $perPage;
+    //     $table = (new static)->table;
         
-        $total = $wpdb->get_var("SELECT COUNT(*) FROM $table");
-        $items = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM $table LIMIT %d OFFSET %d",
-                $perPage,
-                $offset
-            ),
-            ARRAY_A
-        );
+    //     $total = $wpdb->get_var("SELECT COUNT(*) FROM $table");
+    //     $items = $wpdb->get_results(
+    //         $wpdb->prepare(
+    //             "SELECT * FROM $table LIMIT %d OFFSET %d",
+    //             $perPage,
+    //             $offset
+    //         ),
+    //         ARRAY_A
+    //     );
         
-        return [
-            'data' => array_map(function($item) {
-                return new static($item);
-            }, $items),
-            'total' => (int)$total,
-            'per_page' => $perPage,
-            'current_page' => $page,
-            'last_page' => ceil($total / $perPage)
-        ];
-    }
+    //     return [
+    //         'data' => array_map(function($item) {
+    //             return new static($item);
+    //         }, $items),
+    //         'total' => (int)$total,
+    //         'per_page' => $perPage,
+    //         'current_page' => $page,
+    //         'last_page' => ceil($total / $perPage)
+    //     ];
+    // }
 
     /**
      * Find doctors by specific conditions
@@ -307,21 +304,77 @@ class Doctor extends BaseModel
     /**
      * Search doctors by name
      */
-    public static function search($term)
+    // public static function search($term)
+    // {
+    //     global $wpdb;
+    //     $table = (new static)->table;
+        
+    //     $results = $wpdb->get_results(
+    //         $wpdb->prepare(
+    //             "SELECT * FROM $table WHERE first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s",
+    //             "%$term%",
+    //             "%$term%",
+    //             "%$term%"
+    //         ),
+    //         ARRAY_A
+    //     );
+        
+    //     return array_map(function($item) {
+    //         // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
+    //         if (isset($item['id']) && !isset($item['ID'])) {
+    //             $item['ID'] = $item['id'];
+    //         } elseif (isset($item['ID']) && !isset($item['id'])) {
+    //             $item['id'] = $item['ID'];
+    //         }
+    //         return new static($item);
+    //     }, $results);
+    // }
+
+    /**
+     * Search doctors and return paginated results
+     * 
+     * @param string $search Search term for name or specialty
+     * @param int $page Current page number
+     * @param int $perPage Items per page
+     * @param string $status Filter by doctor status (default: all)
+     * @return array Paginated results with metadata
+     */
+    public static function searchAndPaginate($search = null, $page = 1, $perPage = 20, $status = null)
     {
         global $wpdb;
         $table = (new static)->table;
+        $offset = ($page - 1) * $perPage;
         
-        $results = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM $table WHERE first_name LIKE %s OR last_name LIKE %s",
-                "%$term%",
-                "%$term%"
-            ),
-            ARRAY_A
-        );
+        // Build where clause
+        $where_parts = [];
+        $values = [];
         
-        return array_map(function($item) {
+        if (!empty($status)) {
+            $where_parts[] = "status = %s";
+            $values[] = $status;
+        }
+        
+        if (!empty($search)) {
+            $search_param = '%' . $wpdb->esc_like($search) . '%';
+            $where_parts[] = "(first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
+            $values = array_merge($values, [$search_param, $search_param, $search_param]);
+        }
+        
+        $where_clause = !empty($where_parts) ? "WHERE " . implode(' AND ', $where_parts) : '';
+        
+        // Count total records for pagination
+        $count_query = "SELECT COUNT(*) FROM $table $where_clause";
+        $prepared_count = !empty($values) ? $wpdb->prepare($count_query, $values) : $count_query;
+        $total = (int)$wpdb->get_var($prepared_count);
+        
+        // Get the actual records
+        $query = "SELECT * FROM $table $where_clause ORDER BY last_name ASC LIMIT %d OFFSET %d";
+        $all_values = array_merge($values, [$perPage, $offset]);
+        $prepared_query = $wpdb->prepare($query, $all_values);
+        $results = $wpdb->get_results($prepared_query, ARRAY_A);
+        
+        // Convert to Doctor model instances
+        $doctors = array_map(function($item) {
             // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
             if (isset($item['id']) && !isset($item['ID'])) {
                 $item['ID'] = $item['id'];
@@ -330,34 +383,14 @@ class Doctor extends BaseModel
             }
             return new static($item);
         }, $results);
-    }
-
-    /**
-     * Get WordPress user associated with this doctor
-     */
-    public function getUser()
-    {
-        return get_user_by('ID', $this->user_id);
-    }
-
-    /**
-     * Get all visitations for this doctor
-     */
-    public function getVisitations()
-    {
-        global $wpdb;
-        $visitation = new \HospitalManager\Models\Visitation();
-        $results = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM {$visitation->table} WHERE doctor_id = %d",
-                $this->id
-            ),
-            ARRAY_A
-        );
         
-        return array_map(function($item) use ($visitation) {
-            return new $visitation($item);
-        }, $results);
+        return [
+            'data' => $doctors,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage)
+        ];
     }
 
     /**
