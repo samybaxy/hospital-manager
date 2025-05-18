@@ -630,7 +630,7 @@ class Patient extends BaseModel
      * Create a new WordPress user for the patient
      * 
      * @param array $attributes Patient attributes
-     * @return \WP_User|null
+     * @return int|string|null WordPress user ID or error message
      */
     public static function createWPUser($attributes)
     {
@@ -642,9 +642,6 @@ class Patient extends BaseModel
             return null; // Email already exists
         }
 
-        $user = new \WP_User();
-        $user->set_role('patient');
-
         // Generate a username from email
         $username = sanitize_user(substr($attributes['email'], 0, strpos($attributes['email'], '@')));
         
@@ -655,16 +652,24 @@ class Patient extends BaseModel
             $username = $original_username . $suffix;
             $suffix++;
         }
-        
-        $user->set_username($username);
-        $user->set_email($attributes['email']);
-        $user->set_password(wp_generate_password());
-        
-        if ($user->save()) {
-            return $user;
+
+        $user_data = [
+            'user_login'   => $username,                 // Username (sanitized)
+            'user_email'   => sanitize_email($attributes['email']), // Email (sanitized)
+            'user_pass'    => wp_generate_password(),    // Password (hashed)
+            'role'         => 'patient',                 // User role
+            'user_registered' => current_time('mysql'),  // Registration date
+        ];
+
+        $user_id = wp_insert_user($user_data);
+
+        // Check for errors
+        if ( is_wp_error( $user_id ) ) {
+            // Handle error (e.g., log or return error message)
+            return $user_id->get_error_message();
         }
         
-        return null;
+        return $user_id;
     }
 
     /**
@@ -676,12 +681,17 @@ class Patient extends BaseModel
      */
     public static function updateWPUser($user_id, $attributes)
     {
-        $user = new \WP_User($user_id);
-        
+        if (empty($user_id) || empty($attributes)) {
+            return false;
+        }
+
         if (isset($attributes['email'])) {
-            $user->set_email($attributes['email']);
+            return wp_update_user([
+                'ID' => $user_id,
+                'user_email' => sanitize_email($attributes['email']),
+            ]);
         }
         
-        return $user->save();
+        return false;
     }
 }

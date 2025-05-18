@@ -24,6 +24,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [hmos, setHmos] = useState([]);
   const [formData, setFormData] = useState({
     first_name: patient.first_name || '',
     last_name: patient.last_name || '',
@@ -37,8 +38,9 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
     emergency_contact_name: patient.emergency_contact_name || '',
     emergency_contact_relationship: patient.emergency_contact_relationship || '',
     emergency_contact_phone: patient.emergency_contact_phone || '',
-    status: patient.status || 'active',
     gender: patient.gender || '',
+    hmo_id: patient.hmo_id || '',
+    hmo_designated_id: patient.hmo_designated_id || '',
     // bio_data fields
     height: '',
     weight: '',
@@ -81,8 +83,9 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         emergency_contact_name: emergencyContactName,
         emergency_contact_relationship: emergencyContactRelationship,
         emergency_contact_phone: emergencyContactPhone,
-        status: patient.status || 'active',
         gender: patient.gender || '',
+        hmo_id: patient.hmo_id || '',
+        hmo_designated_id: patient.hmo_designated_id || '',
         // bio_data fields
         height: bioData?.height || '',
         weight: bioData?.weight || '',
@@ -91,6 +94,21 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
       });
     }
   }, [patient, isEditing]);
+
+  // Fetch HMOs for dropdown
+  useEffect(() => {
+    const fetchHMOs = async () => {
+      try {
+        const response = await api.get('/hmos');
+        if (response.data && response.data.data && response.data.data.hmos) {
+          setHmos(Array.isArray(response.data.data.hmos) ? response.data.data.hmos : []);
+        }
+      } catch (err) {
+        console.error('Error fetching HMOs:', err);
+      }
+    };
+    fetchHMOs();
+  }, []);
 
   const validateField = (name, value) => {
     let error = '';
@@ -464,6 +482,43 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       value={formData.chronic_conditions}
                       onChange={handleChange}
                       placeholder="e.g. Diabetes, Hypertension"
+                      className={formStyles.inputField}
+                    />
+                  </div>
+                </div>
+                <div className="sm:col-span-3">
+                  <label htmlFor="hmo_id" className={formStyles.label}>
+                    HMO
+                  </label>
+                  <div>
+                    <select
+                      id="hmo_id"
+                      name="hmo_id"
+                      value={formData.hmo_id}
+                      onChange={handleChange}
+                      className={formStyles.inputField}
+                    >
+                      <option value="">Select HMO</option>
+                      {hmos.map((hmo) => (
+                        <option key={hmo.id} value={hmo.id}>
+                          {hmo.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="sm:col-span-3">
+                  <label htmlFor="hmo_designated_id" className={formStyles.label}>
+                    HMO Designated ID
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="hmo_designated_id"
+                      id="hmo_designated_id"
+                      value={formData.hmo_designated_id}
+                      onChange={handleChange}
+                      placeholder="Enter HMO designated ID"
                       className={formStyles.inputField}
                     />
                   </div>
