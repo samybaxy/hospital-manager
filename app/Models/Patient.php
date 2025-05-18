@@ -245,9 +245,6 @@ class Patient extends BaseModel
         $where = [];
         $orWhere = [];
         
-        // Debug
-        error_log("Conditions: " . print_r(static::$conditions, true));
-        
         foreach (static::$conditions as $condition) {
             if (isset($condition[0]) && $condition[0] === 'OR') {
                 if ($condition[2] === 'LIKE') {

@@ -28,6 +28,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
   const [formData, setFormData] = useState({
     first_name: patient.first_name || '',
     last_name: patient.last_name || '',
+    age: patient.age || '',
     blood_group: patient.blood_group || '',
     marital_status: patient.marital_status || '',
     phone: patient.phone || '',
@@ -73,6 +74,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
       setFormData({
         first_name: patient.first_name || '',
         last_name: patient.last_name || '',
+        age: patient.age ,
         blood_group: bloodGroup,
         marital_status: patient.marital_status || '',
         phone: patient.phone || '',
@@ -80,9 +82,6 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         address: patient.address || '',
         city: patient.city || '',
         state: patient.state || '',
-        emergency_contact_name: emergencyContactName,
-        emergency_contact_relationship: emergencyContactRelationship,
-        emergency_contact_phone: emergencyContactPhone,
         gender: patient.gender || '',
         hmo_id: patient.hmo_id || '',
         hmo_designated_id: patient.hmo_designated_id || '',
@@ -91,6 +90,9 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         weight: bioData?.weight || '',
         allergies: bioData?.allergies || '',
         chronic_conditions: bioData?.chronic_conditions || '',
+        emergency_contact_name: emergencyContactName,
+        emergency_contact_relationship: emergencyContactRelationship,
+        emergency_contact_phone: emergencyContactPhone,
       });
     }
   }, [patient, isEditing]);
@@ -100,13 +102,36 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
     const fetchHMOs = async () => {
       try {
         const response = await api.get('/hmos');
+        
+        // Handle different response structures
+        let hmoData = [];
+        
+        // Based on the API response you provided, the correct path is response.data.data.hmos
         if (response.data && response.data.data && response.data.data.hmos) {
-          setHmos(Array.isArray(response.data.data.hmos) ? response.data.data.hmos : []);
+          hmoData = response.data.data.hmos;
+        } else if (response.data && Array.isArray(response.data)) {
+          hmoData = response.data;
+        } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+          hmoData = response.data.data;
+        } else if (response.data) {
+          // If data is in some other structure, log it but don't show warning in production
+          console.debug('HMO response structure:', response.data);
+          
+          // Try several common paths that might contain the HMO array
+          if (response.data.hmos && Array.isArray(response.data.hmos)) {
+            hmoData = response.data.hmos;
+          } else {
+            // Fallback - if we can't find the array, make our best guess
+            hmoData = Array.isArray(response.data) ? response.data : [response.data];
+          }
         }
+        
+        setHmos(hmoData);
       } catch (err) {
         console.error('Error fetching HMOs:', err);
       }
     };
+    
     fetchHMOs();
   }, []);
 
@@ -123,6 +148,12 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         }
         break;
       
+      case 'age':
+        if (value && (isNaN(value) || parseInt(value) < 0 || parseInt(value) > 120)) {
+          error = 'Age must be a number between 0 and 120';
+        }
+        break;
+        
       case 'email':
         if (value && !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(value)) {
           error = 'Invalid email address';
@@ -248,7 +279,18 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         navigate(`/patients/${patient.id}`, { replace: true });
       } else {
         const response = await api.post('/patients', payload);
-        navigate(`/patients/${response.data.id}`, { replace: true });
+        // Debug the response
+        console.log('Create patient response:', response);
+        
+        // Since the patient is successfully created but we don't have the ID in the response,
+        // we'll redirect to the patient list instead of attempting to extract an ID
+        if (response && response.status === 201) {
+          console.log('Patient created successfully. Redirecting to patient list.');
+          navigate('/patients', { replace: true });
+        } else {
+          // Something unexpected happened
+          throw new Error('Unexpected response from server');
+        }
       }
     } catch (err) {
       console.error('Error saving patient:', err);
@@ -353,10 +395,38 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       onChange={handleChange}
                       className={formStyles.inputField}
                     >
-                      <option value="">Select gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
+                      <option key="gender-none" value="">Select gender</option>
+                      <option key="gender-male" value="Male">Male</option>
+                      <option key="gender-female" value="Female">Female</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-1">
+                  <label htmlFor="age" className={formStyles.label}>
+                    Age
+                  </label>
+                  <div>
+                    <input
+                      type="number"
+                      name="age"
+                      id="age"
+                      value={formData.age}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Years"
+                      className={formErrors.age ? formStyles.errorField : formStyles.inputField}
+                      min="0"
+                      max="120"
+                    />
+                    {formErrors.age && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.age}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -372,15 +442,15 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       onChange={handleChange}
                       className={formStyles.inputField}
                     >
-                      <option value="">Select blood group</option>
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="AB+">AB+</option>
-                      <option value="AB-">AB-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
+                      <option key="blood-none" value="">Select blood group</option>
+                      <option key="blood-aplus" value="A+">A+</option>
+                      <option key="blood-aminus" value="A-">A-</option>
+                      <option key="blood-bplus" value="B+">B+</option>
+                      <option key="blood-bminus" value="B-">B-</option>
+                      <option key="blood-abplus" value="AB+">AB+</option>
+                      <option key="blood-abminus" value="AB-">AB-</option>
+                      <option key="blood-oplus" value="O+">O+</option>
+                      <option key="blood-ominus" value="O-">O-</option>
                     </select>
                   </div>
                 </div>
@@ -397,12 +467,12 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       onChange={handleChange}
                       className={formStyles.inputField}
                     >
-                      <option value="">Select marital status</option>
-                      <option value="Single">Single</option>
-                      <option value="Married">Married</option>
-                      <option value="Divorced">Divorced</option>
-                      <option value="Widowed">Widowed</option>
-                      <option value="Separated">Separated</option>
+                      <option key="marital-none" value="">Select marital status</option>
+                      <option key="marital-single" value="Single">Single</option>
+                      <option key="marital-married" value="Married">Married</option>
+                      <option key="marital-divorced" value="Divorced">Divorced</option>
+                      <option key="marital-widowed" value="Widowed">Widowed</option>
+                      <option key="marital-separated" value="Separated">Separated</option>
                     </select>
                   </div>
                 </div>
@@ -498,9 +568,9 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       onChange={handleChange}
                       className={formStyles.inputField}
                     >
-                      <option value="">Select HMO</option>
+                      <option key="hmo-none" value="">Select HMO</option>
                       {hmos.map((hmo) => (
-                        <option key={hmo.id} value={hmo.id}>
+                        <option key={`hmo-${hmo.id}`} value={hmo.id}>
                           {hmo.name}
                         </option>
                       ))}

@@ -239,7 +239,7 @@ class PatientController extends BaseController
         try {
             $patient = PatientService::createPatient($request->get_params());
             return $this->success_response(
-                $patient, 
+                $patient->toArray(),
                 'Patient created successfully', 
                 201
             );
