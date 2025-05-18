@@ -363,9 +363,23 @@ class Doctor extends BaseModel
         }
         
         if (!empty($search)) {
+            // Properly escape search terms for LIKE queries
             $search_param = '%' . $wpdb->esc_like($search) . '%';
             $where_parts[] = "(first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
-            $values = array_merge($values, [$search_param, $search_param, $search_param]);
+            
+            // Make sure we're not modifying the existing $values array directly
+            // This can cause issues with parameter ordering
+            $values[] = $search_param;
+            $values[] = $search_param;
+            $values[] = $search_param;
+            
+            // Add detailed debug logging
+            error_log("Doctor search query with params: " . print_r([
+                'search' => $search,
+                'search_param' => $search_param,
+                'where_clause' => implode(' AND ', $where_parts),
+                'values' => $values
+            ], true));
         }
         
         $where_clause = !empty($where_parts) ? "WHERE " . implode(' AND ', $where_parts) : '';
@@ -388,6 +402,9 @@ class Doctor extends BaseModel
         $query = "SELECT * FROM $table $where_clause ORDER BY $orderby $order LIMIT %d OFFSET %d";
         $all_values = array_merge($values, [$perPage, $offset]);
         $prepared_query = $wpdb->prepare($query, $all_values);
+        
+        error_log("Final SQL query: " . $prepared_query);
+        
         $results = $wpdb->get_results($prepared_query, ARRAY_A);
         
         // Convert to Doctor model instances

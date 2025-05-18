@@ -26,23 +26,22 @@ const Doctors = () => {
     setError(null);
 
     try {
-      const response = await api.get('/doctors', {
-        params: {
-          page: currentPage,
-          per_page: perPage,
-          search: searchTerm,
-          orderby: sortField,
-          order: sortOrder,
-          specialty: specialtyFilter,
+        const params = {
+            page: currentPage,
+            per_page: perPage,
+            search: searchTerm,
+            orderby: sortField,
+            order: sortOrder,
+            specialty: specialtyFilter,
         }
-      });
-
-      // Extract data and metadata from response
-      const { data, meta } = response.data;
-      setDoctors(data || []);
-      setTotalDoctors(meta?.total || 0);
-      setTotalPages(meta?.last_page || 1);
-      setCurrentPage(meta?.current_page || 1);
+        
+        const response = await api.get('/doctors', { params });
+        // Extract data and metadata from response
+        const { data, meta } = response.data;
+        setDoctors(data || []);
+        setTotalDoctors(meta?.total || 0);
+        setTotalPages(meta?.last_page || 1);
+        setCurrentPage(meta?.current_page || 1);
     } catch (err) {
       console.error('Error fetching doctors:', err);
       setError('Failed to fetch doctors. Please try again.');
@@ -63,7 +62,7 @@ const Doctors = () => {
       const timer = setTimeout(() => setSuccessMessage(''), 3000);
       return () => clearTimeout(timer);
     }
-  }, [fetchDoctors, manualFetchRequested, doctors.length, successMessage]);
+  }, [fetchDoctors, manualFetchRequested, successMessage]);
 
   // Fetch specialty options from API
   useEffect(() => {
@@ -98,7 +97,18 @@ const Doctors = () => {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1); // Reset to first page when searching
+    
+    // If we have a debounce timer already, clear it
+    if (window.searchTimer) {
+      clearTimeout(window.searchTimer);
+    }
+    
+    // Set a new debounce timer to trigger fetch after user stops typing
+    window.searchTimer = setTimeout(() => {
+      console.log('Search triggered for term:', value);
+      setManualFetchRequested(prev => !prev); // Toggle to trigger refetch
+    }, 500); // 500ms debounce
   };
 
   // Handle specialty filter

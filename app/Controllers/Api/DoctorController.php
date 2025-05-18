@@ -64,12 +64,20 @@ class DoctorController extends BaseController
     public function get_doctors($request)
     {
         try {
-            $search = $request->get_param('search');
-            $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
-            $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 20;
-            $specialty = $request->get_param('specialty') !== 'all' ? $request->get_param('specialty') : null;
-            $orderby = $request->get_param('orderby') ? $request->get_param('orderby') : 'last_name';
-            $order = $request->get_param('order') ? $request->get_param('order') : 'asc';
+            $params = $request->get_params()['params'] ?? [];
+            // Get the search parameter - ensuring it's properly sanitized
+            $search = $params['search'];
+            $search = is_string($search) ? sanitize_text_field(trim($search)) : '';
+            $page = $params['page'] ? intval($params['page']) : 1;
+            $per_page = $params['per_page'] ? intval($params['per_page']) : 20;
+            $specialty = $params['specialty'] !== 'all' ? sanitize_text_field($params['specialty']) : null;
+            $orderby = $params['orderby'] ? sanitize_text_field($params['orderby']) : 'last_name';
+            $order = $params['order'] ? sanitize_text_field($params['order']) : 'asc';
+            
+            // For debugging purposes
+            error_log("Doctor search parameters: " . 
+                      "search='$search', page=$page, per_page=$per_page, " . 
+                      "specialty='$specialty', orderby='$orderby', order='$order'");
             
             // Use Doctor model to fetch paginated results with search
             $results = Doctor::searchAndPaginate(
@@ -98,7 +106,7 @@ class DoctorController extends BaseController
                 ];
                 return $formatted_doctor;
             }, $results['data']);
-
+            
             // Return paginated response
             return new WP_REST_Response([
                 'data' => $doctors,
