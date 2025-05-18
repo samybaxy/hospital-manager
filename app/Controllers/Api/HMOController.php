@@ -31,10 +31,9 @@ class HMOController extends BaseController
     /**
      * Get all HMOs
      *
-     * @param \WP_REST_Request $request The request object
      * @return \WP_REST_Response
      */
-    public function get_hmos($request) 
+    public function get_hmos() 
     {
         try {
             global $wpdb;
