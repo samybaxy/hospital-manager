@@ -337,9 +337,12 @@ class Doctor extends BaseModel
      * @param int $page Current page number
      * @param int $perPage Items per page
      * @param string $status Filter by doctor status (default: all)
+     * @param string $specialty Filter by doctor specialty (default: null)
+     * @param string $orderby Field to order by (default: last_name)
+     * @param string $order Sort order: asc or desc (default: asc)
      * @return array Paginated results with metadata
      */
-    public static function searchAndPaginate($search = null, $page = 1, $perPage = 20, $status = null)
+    public static function searchAndPaginate($search = null, $page = 1, $perPage = 20, $status = null, $specialty = null, $orderby = 'last_name', $order = 'asc')
     {
         global $wpdb;
         $table = (new static)->table;
@@ -354,6 +357,11 @@ class Doctor extends BaseModel
             $values[] = $status;
         }
         
+        if (!empty($specialty)) {
+            $where_parts[] = "specialty = %s";
+            $values[] = $specialty;
+        }
+        
         if (!empty($search)) {
             $search_param = '%' . $wpdb->esc_like($search) . '%';
             $where_parts[] = "(first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
@@ -362,13 +370,22 @@ class Doctor extends BaseModel
         
         $where_clause = !empty($where_parts) ? "WHERE " . implode(' AND ', $where_parts) : '';
         
+        // Validate orderby to prevent SQL injection
+        $allowed_order_fields = ['id', 'first_name', 'last_name', 'specialty', 'created_at', 'updated_at'];
+        if (!in_array($orderby, $allowed_order_fields)) {
+            $orderby = 'last_name';
+        }
+        
+        // Validate order direction
+        $order = strtolower($order) === 'desc' ? 'DESC' : 'ASC';
+        
         // Count total records for pagination
         $count_query = "SELECT COUNT(*) FROM $table $where_clause";
         $prepared_count = !empty($values) ? $wpdb->prepare($count_query, $values) : $count_query;
         $total = (int)$wpdb->get_var($prepared_count);
         
         // Get the actual records
-        $query = "SELECT * FROM $table $where_clause ORDER BY last_name ASC LIMIT %d OFFSET %d";
+        $query = "SELECT * FROM $table $where_clause ORDER BY $orderby $order LIMIT %d OFFSET %d";
         $all_values = array_merge($values, [$perPage, $offset]);
         $prepared_query = $wpdb->prepare($query, $all_values);
         $results = $wpdb->get_results($prepared_query, ARRAY_A);
@@ -393,6 +410,27 @@ class Doctor extends BaseModel
         ];
     }
 
+    /**
+     * Get a list of all unique specialties currently in use
+     * 
+     * @return array List of specialty names
+     */
+    public static function getUniqueSpecialties() 
+    {
+        global $wpdb;
+        $table = (new static)->table;
+        
+        // Query to get distinct specialties from active doctors
+        $specialties = $wpdb->get_col("
+            SELECT DISTINCT specialty 
+            FROM $table 
+            WHERE status = 'active' AND specialty IS NOT NULL AND specialty != ''
+            ORDER BY specialty ASC
+        ");
+        
+        return $specialties;
+    }
+    
     /**
      * Save the current doctor to the database
      * 

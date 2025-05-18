@@ -37,9 +37,12 @@ const Doctors = () => {
         }
       });
 
-      setDoctors(response.data);
-      setTotalDoctors(parseInt(response.headers['x-wp-total'] || 0));
-      setTotalPages(parseInt(response.headers['x-wp-totalpages'] || 1));
+      // Extract data and metadata from response
+      const { data, meta } = response.data;
+      setDoctors(data || []);
+      setTotalDoctors(meta?.total || 0);
+      setTotalPages(meta?.last_page || 1);
+      setCurrentPage(meta?.current_page || 1);
     } catch (err) {
       console.error('Error fetching doctors:', err);
       setError('Failed to fetch doctors. Please try again.');
@@ -330,7 +333,7 @@ const Doctors = () => {
                       <div className="flex items-center">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {doctor.first_name} {doctor.last_name}
+                            {doctor.fullName || `${doctor.first_name} ${doctor.last_name}`}
                           </div>
                         </div>
                       </div>

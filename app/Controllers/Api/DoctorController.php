@@ -21,6 +21,15 @@ class DoctorController extends BaseController
             ]
         ]);
 
+        // Get doctor specialties (public endpoint)
+        register_rest_route($this->namespace, '/doctors/specialties', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_specialties'],
+                'permission_callback' => '__return_true'
+            ]
+        ]);
+
         // Get single doctor (public endpoint)
         register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
             [
@@ -58,24 +67,38 @@ class DoctorController extends BaseController
             $search = $request->get_param('search');
             $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
             $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 20;
+            $specialty = $request->get_param('specialty') !== 'all' ? $request->get_param('specialty') : null;
+            $orderby = $request->get_param('orderby') ? $request->get_param('orderby') : 'last_name';
+            $order = $request->get_param('order') ? $request->get_param('order') : 'asc';
             
             // Use Doctor model to fetch paginated results with search
             $results = Doctor::searchAndPaginate(
                 $search,
                 $page,
                 $per_page,
-                'active'
+                'active',
+                $specialty,
+                $orderby,
+                $order
             );
             
-            // Format doctors to include fullName
+            // Format doctors to include all required fields and fullName
             $doctors = array_map(function($doctor) {
-                $doctor_array = $doctor->attributes;
-                $doctor_array['fullName'] = $doctor->first_name . ' ' . $doctor->last_name;
-                return $doctor_array;
+                $formatted_doctor = [
+                    'id' => $doctor->id,
+                    'user_id' => $doctor->user_id,
+                    'first_name' => $doctor->first_name,
+                    'last_name' => $doctor->last_name,
+                    'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
+                    'phone' => $doctor->phone,
+                    'specialty' => $doctor->specialty,
+                    'status' => $doctor->status,
+                    'created_at' => $doctor->created_at,
+                    'updated_at' => $doctor->updated_at
+                ];
+                return $formatted_doctor;
             }, $results['data']);
-            
-            error_log('Doctors fetched: ' . print_r($doctors, true));
-            
+
             // Return paginated response
             return new WP_REST_Response([
                 'data' => $doctors,
@@ -98,6 +121,22 @@ class DoctorController extends BaseController
                 ],
                 'error' => 'Failed to load doctors. Please try again.'
             ], 200); // Return 200 with empty data
+        }
+    }
+
+    /**
+     * Get all available doctor specialties
+     */
+    public function get_specialties($request)
+    {
+        try {
+            // Get unique specialties from Doctor model
+            $specialties = Doctor::getUniqueSpecialties();
+            
+            return new WP_REST_Response($specialties);
+        } catch (\Exception $e) {
+            error_log('Error fetching doctor specialties: ' . $e->getMessage());
+            return new WP_REST_Response([], 200);
         }
     }
 
