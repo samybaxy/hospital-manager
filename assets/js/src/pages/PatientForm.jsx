@@ -39,6 +39,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
     emergency_contact_relationship: patient.emergency_contact_relationship || '',
     emergency_contact_phone: patient.emergency_contact_phone || '',
     status: patient.status || 'active',
+    gender: patient.gender || '',
     // bio_data fields
     height: '',
     weight: '',
@@ -83,6 +84,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
         emergency_contact_relationship: emergencyContactRelationship,
         emergency_contact_phone: emergencyContactPhone,
         status: patient.status || 'active',
+        gender: patient.gender || '',
         // bio_data fields
         height: bioData?.height || '',
         weight: bioData?.weight || '',
@@ -326,6 +328,25 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                       </p>
                     )}
                     <p className={formStyles.helpText}>Last name as it appears on official documents</p>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label htmlFor="gender" className={formStyles.label}>
+                    Gender
+                  </label>
+                  <div>
+                    <select
+                      id="gender"
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className={formStyles.inputField}
+                    >
+                      <option value="">Select gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
                   </div>
                 </div>
 

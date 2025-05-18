@@ -17,7 +17,7 @@ class CreateHospitalTables
             hmo_designated_id varchar(100) UNIQUE,
             phone varchar(20),
             age int,
-            gender ENUM('Male', 'Female', 'Other'),
+            gender ENUM('Male', 'Female'),
             marital_status ENUM('Single', 'Married', 'Divorced', 'Widowed', 'Separated'),
             address text,
             city varchar(100),

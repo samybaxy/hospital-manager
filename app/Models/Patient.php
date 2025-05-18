@@ -625,4 +625,63 @@ class Patient extends BaseModel
         
         return $visitations;
     }
+
+    /**
+     * Create a new WordPress user for the patient
+     * 
+     * @param array $attributes Patient attributes
+     * @return \WP_User|null
+     */
+    public static function createWPUser($attributes)
+    {
+        if (empty($attributes['email'])) {
+            return null;
+        }
+
+        if (email_exists($attributes['email'])) {
+            return null; // Email already exists
+        }
+
+        $user = new \WP_User();
+        $user->set_role('patient');
+
+        // Generate a username from email
+        $username = sanitize_user(substr($attributes['email'], 0, strpos($attributes['email'], '@')));
+        
+        // Check if username exists, append numbers if needed
+        $suffix = 1;
+        $original_username = $username;
+        while (username_exists($username)) {
+            $username = $original_username . $suffix;
+            $suffix++;
+        }
+        
+        $user->set_username($username);
+        $user->set_email($attributes['email']);
+        $user->set_password(wp_generate_password());
+        
+        if ($user->save()) {
+            return $user;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Update the WordPress user associated with the patient
+     * 
+     * @param int $user_id WordPress user ID
+     * @param array $attributes Attributes to update
+     * @return bool
+     */
+    public static function updateWPUser($user_id, $attributes)
+    {
+        $user = new \WP_User($user_id);
+        
+        if (isset($attributes['email'])) {
+            $user->set_email($attributes['email']);
+        }
+        
+        return $user->save();
+    }
 }

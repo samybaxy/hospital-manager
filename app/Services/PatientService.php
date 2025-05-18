@@ -70,6 +70,9 @@ class PatientService
         if (!empty($existing)) {
             throw new Exception("A patient with this name and phone number already exists");
         }
+
+        // Create wp_user entry: use var for debugging purposes
+        $wp_user = Patient::createWpUser($data);
         
         // Create the patient
         return Patient::create($data);
@@ -101,6 +104,11 @@ class PatientService
             if (!empty($existing)) {
                 throw new Exception("Another patient is already using this phone number");
             }
+        }
+
+        // Update wp_user entry
+        if (isset($data['email']) && $data['email'] !== $patient->email) {
+            $wp_user = Patient::updateWpUser($patient->user_id, $data);
         }
         
         // Update the patient
