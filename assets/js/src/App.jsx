@@ -13,6 +13,8 @@ import PatientDetails from './pages/PatientDetails';
 import AddPatient from './pages/AddPatient';
 import EditPatient from './pages/EditPatient';
 import Doctors from './pages/Doctors';
+import AddDoctor from './pages/AddDoctor.jsx';
+import EditDoctor from './pages/EditDoctor.jsx';
 import Appointments from './pages/Appointments';
 import Departments from './pages/Departments';
 import Billing from './pages/Billing';
@@ -91,6 +93,16 @@ const AppRoutes = () => {
         <Route path="/doctors" element={
           <ProtectedRoute routeName="doctors">
             <Doctors />
+          </ProtectedRoute>
+        } />
+         <Route path="/doctors/new" element={
+          <ProtectedRoute routeName="doctors">
+            <AddDoctor />
+          </ProtectedRoute>
+        } />
+        <Route path="/doctors/:id/edit" element={
+          <ProtectedRoute routeName="doctors">
+            <EditDoctor />
           </ProtectedRoute>
         } />
         <Route path="/appointments" element={

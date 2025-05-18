@@ -21,6 +21,15 @@ class DoctorController extends BaseController
             ]
         ]);
 
+        // Create doctor (admin only)
+        register_rest_route($this->namespace, '/doctors', [
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'create_doctor'],
+                'permission_callback' => [$this, 'check_doctor_permission']
+            ]
+        ]);
+
         // Get doctor specialties (public endpoint)
         register_rest_route($this->namespace, '/doctors/specialties', [
             [
@@ -36,6 +45,15 @@ class DoctorController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctor'],
                 'permission_callback' => '__return_true'
+            ]
+        ]);
+
+        // Update doctor (admin only)
+        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
+            [
+                'methods' => WP_REST_Server::EDITABLE,
+                'callback' => [$this, 'update_doctor'],
+                'permission_callback' => [$this, 'check_doctor_permission']
             ]
         ]);
 
@@ -172,6 +190,8 @@ class DoctorController extends BaseController
                 'last_name' => $doctor->last_name,
                 'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
                 'specialty' => $doctor->specialty,
+                'phone' => $doctor->phone,
+                'status' => $doctor->status,
                 // Don't include personal contact info in public endpoint
             ];
             
@@ -181,6 +201,152 @@ class DoctorController extends BaseController
             return new WP_Error(
                 'server_error',
                 'Failed to retrieve doctor information',
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Create a new doctor record
+     */
+    public function create_doctor($request)
+    {
+        try {
+            $params = $request->get_params();
+            
+            // Validate required fields
+            $required_fields = ['first_name', 'last_name', 'phone', 'specialty'];
+            foreach ($required_fields as $field) {
+                if (empty($params[$field])) {
+                    return new WP_Error(
+                        'missing_required_field',
+                        "Field '{$field}' is required",
+                        ['status' => 400]
+                    );
+                }
+            }
+            
+            // Sanitize and prepare data for database
+            $doctor_data = [
+                'first_name' => sanitize_text_field($params['first_name']),
+                'last_name' => sanitize_text_field($params['last_name']),
+                'phone' => sanitize_text_field($params['phone']),
+                'specialty' => sanitize_text_field($params['specialty']),
+                'status' => !empty($params['status']) ? sanitize_text_field($params['status']) : 'active',
+            ];
+            
+            // Create new doctor record
+            $doctor = Doctor::create($doctor_data);
+            
+            // Log the creation
+            AuditLogger::log(
+                'create_doctor',
+                'doctor',
+                $doctor->id,
+                [
+                    'user_id' => get_current_user_id(),
+                    'doctor_data' => $doctor_data
+                ]
+            );
+            
+            // Return the created doctor
+            return new WP_REST_Response([
+                'message' => 'Doctor created successfully',
+                'doctor' => [
+                    'id' => $doctor->id,
+                    'first_name' => $doctor->first_name,
+                    'last_name' => $doctor->last_name,
+                    'phone' => $doctor->phone,
+                    'specialty' => $doctor->specialty,
+                    'status' => $doctor->status,
+                ]
+            ], 201); // Created
+            
+        } catch (\Exception $e) {
+            error_log('Error creating doctor: ' . $e->getMessage());
+            return new WP_Error(
+                'create_failed',
+                'Failed to create doctor: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Update an existing doctor record
+     */
+    public function update_doctor($request)
+    {
+        try {
+            $doctor_id = $request->get_param('id');
+            $params = $request->get_params();
+            
+            // Find the doctor to update
+            $doctor = Doctor::find($doctor_id);
+            
+            if (!$doctor) {
+                return new WP_Error(
+                    'doctor_not_found',
+                    'Doctor not found',
+                    ['status' => 404]
+                );
+            }
+            
+            // Update doctor fields
+            if (isset($params['first_name'])) {
+                $doctor->first_name = sanitize_text_field($params['first_name']);
+            }
+            
+            if (isset($params['last_name'])) {
+                $doctor->last_name = sanitize_text_field($params['last_name']);
+            }
+            
+            if (isset($params['phone'])) {
+                $doctor->phone = sanitize_text_field($params['phone']);
+            }
+            
+            if (isset($params['specialty'])) {
+                $doctor->specialty = sanitize_text_field($params['specialty']);
+            }
+            
+            if (isset($params['status'])) {
+                $doctor->status = sanitize_text_field($params['status']);
+            }
+            
+            // Save updated doctor
+            $doctor->save();
+            
+            // Log the update
+            AuditLogger::log(
+                'update_doctor',
+                'doctor',
+                $doctor->id,
+                [
+                    'user_id' => get_current_user_id(),
+                    'updated_fields' => array_keys($request->get_params())
+                ]
+            );
+            
+            // Return the updated doctor
+            $updated_doctor = Doctor::find($doctor->id);
+            
+            return new WP_REST_Response([
+                'message' => 'Doctor updated successfully',
+                'doctor' => [
+                    'id' => $updated_doctor->id,
+                    'first_name' => $updated_doctor->first_name,
+                    'last_name' => $updated_doctor->last_name,
+                    'phone' => $updated_doctor->phone,
+                    'specialty' => $updated_doctor->specialty,
+                    'status' => $updated_doctor->status,
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log('Error updating doctor: ' . $e->getMessage());
+            return new WP_Error(
+                'update_failed',
+                'Failed to update doctor: ' . $e->getMessage(),
                 ['status' => 500]
             );
         }
