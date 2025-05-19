@@ -51,6 +51,21 @@ class DoctorSeeder extends Seeder
                 $specialty = $this->faker->randomElement($this->specialties);
                 update_user_meta($user->ID, 'specialty', $specialty);
                 
+                // Generate additional doctor information
+                $officeNumber = 'Room ' . $this->faker->numberBetween(100, 500);
+                $boardCertification = $this->faker->randomElement(['Board Certified', 'Board Eligible', 'Fellowship Trained']);
+                $education = $this->faker->randomElement([
+                    'MD, Harvard Medical School',
+                    'MD, Johns Hopkins University',
+                    'MD, Stanford University',
+                    'MBBS, University of Lagos',
+                    'MD, University of California',
+                    'MBBS, University of Ibadan',
+                    'MD, Yale University School of Medicine'
+                ]);
+                $yearsExperience = $this->faker->numberBetween(1, 30);
+                $licenseNumber = 'MD' . $this->faker->randomNumber(6, true);
+                
                 // Insert doctor record
                 $result = $this->wpdb->insert(
                     $doctors_table,
@@ -59,11 +74,17 @@ class DoctorSeeder extends Seeder
                         'first_name' => $first_name,
                         'last_name' => $last_name,
                         'phone' => $this->faker->phoneNumber(),
+                        'specialty' => $specialty,
+                        'office' => $officeNumber,
+                        'board_certification' => $boardCertification,
+                        'education' => $education,
+                        'years_experience' => $yearsExperience,
+                        'license_number' => $licenseNumber,
                         'created_at' => $this->faker->dateTimeBetween('-1 year', '-6 months')->format('Y-m-d H:i:s'),
                         'updated_at' => current_time('mysql'),
                     ],
                     [
-                        '%d', '%s', '%s', '%s', '%d', '%s', '%s'
+                        '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s'
                     ]
                 );
                 
