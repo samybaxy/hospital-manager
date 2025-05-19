@@ -5,6 +5,7 @@ namespace HospitalManager\Controllers\Api;
 use WP_REST_Response;
 use HospitalManager\Models\Patient;
 use HospitalManager\Services\PatientService;
+use WP_REST_Server;
 
 class PatientController extends BaseController 
 {
@@ -18,14 +19,14 @@ class PatientController extends BaseController
         // Route for listing and creating patients
         register_rest_route($this->namespace, '/patients', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patients'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'view_patients');
                 },
             ],
             [
-                'methods' => 'POST',
+                'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'create_patient'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'manage_patient_records');
@@ -36,21 +37,21 @@ class PatientController extends BaseController
         // Routes for individual patient operations
         register_rest_route($this->namespace, '/patients/(?P<id>\d+)', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'view_patients');
                 },
             ],
             [
-                'methods' => 'PUT',
+                'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'update_patient'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'manage_patient_records');
                 },
             ],
             [
-                'methods' => 'DELETE',
+                'methods' => WP_REST_Server::DELETABLE,
                 'callback' => [$this, 'delete_patient'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'manage_patient_records');
@@ -61,7 +62,7 @@ class PatientController extends BaseController
         // Route for patient search
         register_rest_route($this->namespace, '/patients/search', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'search_patients'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'view_patients');
@@ -72,7 +73,7 @@ class PatientController extends BaseController
         // Route for patients to view their own records
         register_rest_route($this->namespace, '/patients/me', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_own_patient_record'],
                 'permission_callback' => function($request) {
                     // Only needs to be logged in (no special capability required)
@@ -84,7 +85,7 @@ class PatientController extends BaseController
         // Route for a patient to view their own record
         register_rest_route($this->namespace, '/patients/me', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_own_patient_record'],
                 'permission_callback' => function($request) {
                     // Only logged-in users can access their own records
@@ -96,7 +97,7 @@ class PatientController extends BaseController
         // Route for patient visitation history
         register_rest_route($this->namespace, '/patients/(?P<id>\d+)/visitations', [
             [
-                'methods' => 'GET',
+                'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient_visitations'],
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'view_patients');

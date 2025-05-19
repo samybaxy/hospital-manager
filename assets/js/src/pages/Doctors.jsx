@@ -392,7 +392,7 @@ const Doctors = () => {
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
                     Actions
                   </th>
@@ -419,7 +419,7 @@ const Doctors = () => {
                       {doctor.phone}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-center space-x-2">
                         <Link
                           to={`/doctors/${doctor.id}`}
                           className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

@@ -57,6 +57,15 @@ class DoctorController extends BaseController
             ]
         ]);
 
+        // Delete doctor (admin only)
+        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
+            [
+                'methods' => WP_REST_Server::DELETABLE,
+                'callback' => [$this, 'delete_doctor'],
+                'permission_callback' => [$this, 'check_doctor_permission']
+            ]
+        ]);
+
         // Get current doctor profile
         register_rest_route($this->namespace, '/doctor/profile', [
             [
@@ -182,6 +191,8 @@ class DoctorController extends BaseController
                     ['status' => 404]
                 );
             }
+
+            $user = get_userdata($doctor->user_id);
             
             // Format the response
             $response = [
@@ -191,7 +202,13 @@ class DoctorController extends BaseController
                 'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
                 'specialty' => $doctor->specialty,
                 'phone' => $doctor->phone,
+                'email' => $user->user_email,
                 'status' => $doctor->status,
+                'license_number' => $doctor->license_number,
+                'board_certification' => $doctor->board_certification,
+                'education' => $doctor->education,
+                'years_experience' => $doctor->years_experience,
+                'office' => $doctor->office,
                 // Don't include personal contact info in public endpoint
             ];
             
@@ -347,6 +364,78 @@ class DoctorController extends BaseController
             return new WP_Error(
                 'update_failed',
                 'Failed to update doctor: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Delete a doctor
+     *
+     * @param \WP_REST_Request $request The request object
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function delete_doctor($request) 
+    {
+        try {
+            $doctor_id = (int) $request['id'];
+            $doctor = Doctor::find($doctor_id);
+            
+            if (!$doctor) {
+                return new WP_Error(
+                    'doctor_not_found',
+                    'Doctor not found',
+                    ['status' => 404]
+                );
+            }
+            
+            // Check if it's safe to delete 
+            // Following PatientController approach - check appointments via model method
+            $has_appointments = method_exists($doctor, 'appointments') && 
+                               $doctor->appointments()->count() > 0;
+                
+            if ($has_appointments) {
+                return new WP_Error(
+                    'doctor_has_appointments',
+                    'Cannot delete doctor with existing appointments. Consider deactivating instead.',
+                    ['status' => 400]
+                );
+            }
+            
+            // Proceed with deletion using the Doctor model's delete method
+            $deleted = $doctor->delete();
+            
+            if (!$deleted) {
+                return new WP_Error(
+                    'delete_failed',
+                    'Failed to delete doctor',
+                    ['status' => 500]
+                );
+            }
+            
+            // Log the deletion
+            AuditLogger::log(
+                'delete_doctor',
+                'doctor',
+                $doctor_id,
+                [
+                    'user_id' => get_current_user_id(),
+                    'doctor_data' => [
+                        'id' => $doctor_id,
+                        'first_name' => $doctor->first_name,
+                        'last_name' => $doctor->last_name
+                    ]
+                ]
+            );
+            
+            return new WP_REST_Response([
+                'message' => 'Doctor deleted successfully'
+            ], 200);
+        } catch (\Exception $e) {
+            error_log('Error deleting doctor: ' . $e->getMessage());
+            return new WP_Error(
+                'delete_error',
+                'Error deleting doctor: ' . $e->getMessage(), 
                 ['status' => 500]
             );
         }
