@@ -154,63 +154,125 @@ const Doctors = () => {
   const renderPagination = () => {
     if (totalPages <= 1) return null;
     
-    const pageNumbers = [];
-    const maxPagesToShow = 5;
+    const pagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
     
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
-    if (endPage - startPage + 1 < maxPagesToShow) {
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    if (endPage - startPage + 1 < pagesToShow) {
+      startPage = Math.max(1, endPage - pagesToShow + 1);
     }
     
     for (let i = startPage; i <= endPage; i++) {
-      pageNumbers.push(i);
+      pages.push(i);
     }
     
     return (
-      <div className="flex justify-between items-center mt-6">
-        <div className="text-sm text-gray-600">
-          Showing {doctors.length} of {totalDoctors} doctors
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+        <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+          <p>
+            Showing <span className="font-semibold">{((currentPage - 1) * perPage) + 1}</span>{' '}
+            to <span className="font-semibold">{Math.min(currentPage * perPage, totalDoctors)}</span>{' '}
+            of <span className="font-semibold">{totalDoctors}</span> doctors
+          </p>
         </div>
-        <div className="flex space-x-1">
-          <button
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
-            className={`px-3 py-1 rounded ${
-              currentPage === 1
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Previous
-          </button>
-          
-          {pageNumbers.map(number => (
-            <button
-              key={number}
-              onClick={() => handlePageChange(number)}
-              className={`px-3 py-1 rounded ${
-                currentPage === number
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {number}
-            </button>
-          ))}
-          
-          <button
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className={`px-3 py-1 rounded ${
-              currentPage === totalPages
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Next
-          </button>
+        
+        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
+          <div className="flex items-center justify-center w-full sm:w-auto">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <Button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                variant="secondary"
+                size="sm"
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                variant="secondary"
+                size="sm"
+              >
+                Next
+              </Button>
+            </div>
+            
+            <div className="hidden sm:flex">
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {/* First page and ellipsis */}
+                {startPage > 1 && (
+                  <>
+                    <button 
+                      onClick={() => handlePageChange(1)}
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                      1
+                    </button>
+                    {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                  </>
+                )}
+                
+                {/* Page numbers */}
+                {pages.map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`relative inline-flex items-center px-3 py-2 border ${
+                      currentPage === page
+                        ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                        : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                    } text-sm font-medium`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                {/* Last page and ellipsis */}
+                {endPage < totalPages && (
+                  <>
+                    {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+                
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
     );

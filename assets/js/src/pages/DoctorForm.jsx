@@ -64,7 +64,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
       case 'phone':
         if (!value.trim()) {
           error = 'Phone number is required';
-        } else if (!/^[0-9+() -]{10,15}$/.test(value.trim())) {
+        } else if (!/^[0-9+() -]{10,20}$/.test(value.trim())) {
           error = 'Phone number must be between 10-15 digits';
         }
         break;

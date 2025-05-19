@@ -163,13 +163,13 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
       case 'phone':
         if (!value.trim()) {
           error = 'Phone number is required';
-        } else if (!/^[0-9+() -]{10,15}$/.test(value.trim())) {
+        } else if (!/^[0-9+() -]{10,20}$/.test(value.trim())) {
           error = 'Phone number must be between 10-15 digits';
         }
         break;
         
       case 'emergency_contact_phone':
-        if (value && !/^[0-9+() -]{10,15}$/.test(value.trim())) {
+        if (value && !/^[0-9+() -]{10,20}$/.test(value.trim())) {
           error = 'Phone number must be between 10-15 digits';
         }
         break;
