@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { api } from '../services/apiService';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import StatusMessage from '../../components/StatusMessage';
+import { api } from '../../services/apiService';
 
 const Doctors = () => {
   // State management
@@ -55,14 +56,29 @@ const Doctors = () => {
 
   // Initial load and refetch on dependency changes
   useEffect(() => {
-    fetchDoctors();
+    const loadDoctors = async () => {
+      try {
+        await fetchDoctors();
+        
+        // Only show success message once after data is loaded
+        if (doctors.length > 0) {
+          setSuccessMessage('Doctors data loaded successfully');
+        }
+      } catch (error) {
+        console.error('Error in doctor data loading effect:', error);
+      }
+    };
     
-    // Clear any success message after 3 seconds
-    if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(''), 3000);
-      return () => clearTimeout(timer);
+    // Only fetch if not manual request
+    if (!manualFetchRequested) {
+      loadDoctors();
     }
-  }, [fetchDoctors, manualFetchRequested, successMessage]);
+    
+    // Reset the flag after the effect runs
+    setManualFetchRequested(false);
+    
+    // We don't need a return function here as we're not setting up any timers or subscriptions
+  }, [fetchDoctors, manualFetchRequested, doctors.length]);
 
   // Fetch specialty options from API
   useEffect(() => {
@@ -295,9 +311,12 @@ const Doctors = () => {
       </div>
 
       {successMessage && (
-        <div className="bg-green-50 text-green-800 p-4 rounded-lg border border-green-200">
-          {successMessage}
-        </div>
+        <StatusMessage 
+          type="success"
+          message={successMessage}
+          duration={5000}
+          onDismiss={() => setSuccessMessage('')}
+        />
       )}
 
       <Card>

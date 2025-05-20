@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { api } from '../services/apiService';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import { api } from '../../services/apiService';
 
 // CSS for enhanced form styling
 const formStyles = {

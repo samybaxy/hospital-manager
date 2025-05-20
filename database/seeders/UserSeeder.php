@@ -5,11 +5,11 @@ namespace HospitalManager\Database\Seeders;
 class UserSeeder extends Seeder
 {
     protected $counts = [
-        'doctor' => 10,
-        'patient' => 50,
+        'doctor' => 25,
+        'patient' => 100,
         'lab_tech' => 5,
         'desk_officer' => 3,
-        'administrator' => 2,
+        'administrator' => 1,
     ];
     
     public function run()

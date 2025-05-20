@@ -8,14 +8,14 @@ import Unauthorized from './pages/Unauthorized';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
-import Patients from './pages/Patients';
-import PatientDetails from './pages/PatientDetails';
-import AddPatient from './pages/AddPatient';
-import EditPatient from './pages/EditPatient';
-import Doctors from './pages/Doctors';
-import AddDoctor from './pages/AddDoctor.jsx';
-import EditDoctor from './pages/EditDoctor.jsx';
-import DoctorDetails from './pages/DoctorDetails';
+import Patients from './pages/patients/Patients';
+import PatientDetails from './pages/patients/PatientDetails';
+import AddPatient from './pages/patients/AddPatient';
+import EditPatient from './pages/patients/EditPatient';
+import Doctors from './pages/doctors/Doctors';
+import AddDoctor from './pages/doctors/AddDoctor';
+import EditDoctor from './pages/doctors/EditDoctor';
+import DoctorDetails from './pages/doctors/DoctorDetails';
 import Appointments from './pages/Appointments';
 import Departments from './pages/Departments';
 import Billing from './pages/Billing';

@@ -1,35 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import DoctorForm from './DoctorForm';
-import { api } from '../services/apiService';
-import Button from '../components/Button';
+import PatientForm from './PatientForm';
+import { api } from '../../services/apiService';
+import Button from '../../components/Button';
 
-const EditDoctor = () => {
+const EditPatient = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [doctor, setDoctor] = useState(null);
+  const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchDoctor = async () => {
+    const fetchPatient = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/doctors/${id}`);
+        const response = await api.get(`/patients/${id}`);
         
-        // Check for the structure of the response and extract the doctor data properly
+        // Check for the structure of the response and extract the patient data properly
         if (response.data && response.data.data) {
           // If the API returns nested data structure
-          setDoctor(response.data.data);
+          setPatient(response.data.data);
         } else if (response.data) {
           // If the API returns flat data structure
-          setDoctor(response.data);
+          setPatient(response.data);
         }
+
+        // For debugging
       } catch (err) {
-        console.error('Error fetching doctor details:', err);
+        console.error('Error fetching patient details:', err);
         const errorMessage = err.response?.data?.message || 
                             err.response?.statusText || 
-                            'Failed to load doctor details. The doctor may not exist or you may not have permission to edit it.';
+                            'Failed to load patient details. The patient may not exist or you may not have permission to edit it.';
         setError(errorMessage);
         
         // Log additional details for debugging
@@ -45,7 +47,7 @@ const EditDoctor = () => {
       }
     };
     
-    fetchDoctor();
+    fetchPatient();
   }, [id]);
 
   if (loading) {
@@ -63,30 +65,30 @@ const EditDoctor = () => {
           {error}
         </div>
         <div className="mt-4">
-          <Link to="/doctors">
-            <Button variant="secondary">Return to Doctors</Button>
+          <Link to="/patients">
+            <Button variant="secondary">Return to Patients</Button>
           </Link>
         </div>
       </div>
     );
   }
 
-  if (!doctor) {
+  if (!patient) {
     return (
       <div className="mt-8">
         <div className="text-center p-8">
-          <p className="text-gray-600">Doctor not found</p>
+          <p className="text-gray-600">Patient not found</p>
         </div>
         <div className="mt-4">
-          <Link to="/doctors">
-            <Button variant="secondary">Return to Doctors</Button>
+          <Link to="/patients">
+            <Button variant="secondary">Return to Patients</Button>
           </Link>
         </div>
       </div>
     );
   }
 
-  return <DoctorForm doctor={doctor} isEditing={true} cancelUrl={`/doctors/${id}`} />;
+  return <PatientForm patient={patient} isEditing={true} cancelUrl={`/patients/${id}`} />;
 };
 
-export default EditDoctor;
+export default EditPatient;

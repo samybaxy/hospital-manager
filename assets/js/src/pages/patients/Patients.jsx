@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import StatusMessage from '../components/StatusMessage';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import StatusMessage from '../../components/StatusMessage';
 import { Link } from 'react-router-dom';
-import { api } from '../services/apiService';
+import { api } from '../../services/apiService';
 
 const Patients = () => {
   const [patients, setPatients] = useState([]);
@@ -83,7 +83,7 @@ const Patients = () => {
           
           // Only show success message when we have patients
           if (patients.length > 0) {
-            setSuccessMessage('Patient data loaded successfully');
+            setSuccessMessage('Patients data loaded successfully');
           }
         } catch (error) {
           console.error('Error in patient data loading effect:', error);
@@ -326,7 +326,7 @@ const Patients = () => {
                     id="hmoFilter"
                     value={hmoFilter}
                     onChange={handleHmoFilter}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    className={`w-full pl-3 pr-10 py-2 border rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
                       hmoFilter !== 'all' 
                         ? 'border-blue-500 bg-blue-50' 
                         : 'border-gray-300'
@@ -361,7 +361,7 @@ const Patients = () => {
                     setPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
