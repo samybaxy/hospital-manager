@@ -28,8 +28,15 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
     first_name: doctor.first_name || '',
     last_name: doctor.last_name || '',
     phone: doctor.phone || '',
+    email: doctor.email || '',
     specialty: doctor.specialty || '',
     status: doctor.status || 'active',
+    license_number: doctor.license_number || doctor.licenseNumber || '',
+    years_experience: doctor.years_experience || '',
+    education: doctor.education || '',
+    certification: doctor.certification || '',
+    office: doctor.office || '',
+    department: doctor.department || '',
   });
   
   const [formErrors, setFormErrors] = useState({});
@@ -42,8 +49,15 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         first_name: doctor.first_name || '',
         last_name: doctor.last_name || '',
         phone: doctor.phone || '',
+        email: doctor.email || '',
         specialty: doctor.specialty || '',
         status: doctor.status || 'active',
+        license_number: doctor.license_number || doctor.licenseNumber || '',
+        years_experience: doctor.years_experience || '',
+        education: doctor.education || '',
+        certification: doctor.certification || '',
+        office: doctor.office || '',
+        department: doctor.department || '',
       });
     }
   }, [doctor, isEditing]);
@@ -69,9 +83,21 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         }
         break;
         
+      case 'email':
+        if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          error = 'Please enter a valid email address';
+        }
+        break;
+
       case 'specialty':
         if (!value.trim()) {
           error = 'Specialty is required';
+        }
+        break;
+
+      case 'license_number':
+        if (!value.trim()) {
+          error = 'License number is required';
         }
         break;
         
@@ -146,11 +172,17 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
 
     try {
       setLoading(true);
+      
+      // Create a copy of the form data without the email field
+      // since it's managed by WordPress users table, not the doctors table
+      const dataToSubmit = { ...formData };
+      delete dataToSubmit.email;
+      
       if (isEditing) {
-        await api.put(`/doctors/${doctor.id}`, formData);
+        await api.put(`/doctors/${doctor.id}`, dataToSubmit);
         navigate(`/doctors/${doctor.id}`, { replace: true });
       } else {
-        const response = await api.post('/doctors', formData);
+        const response = await api.post('/doctors', dataToSubmit);
         
         // Debug the response
         console.log('Create doctor response:', response);
@@ -254,27 +286,27 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label htmlFor="phone" className={formStyles.label}>
-                    Phone <span className="text-red-500">*</span>
+                  <label htmlFor="license_number" className={formStyles.label}>
+                    License Number <span className="text-red-500">*</span>
                   </label>
                   <div>
                     <input
-                      type="tel"
-                      name="phone"
-                      id="phone"
+                      type="text"
+                      name="license_number"
+                      id="license_number"
                       required
-                      value={formData.phone}
+                      value={formData.license_number}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Enter phone number"
-                      className={formErrors.phone ? formStyles.errorField : formStyles.inputField}
+                      className={formErrors.license_number ? formStyles.errorField : formStyles.inputField}
+                      placeholder="Enter license number"
                     />
-                    {formErrors.phone && (
+                    {formErrors.license_number && (
                       <p className="mt-1 text-sm text-red-600 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        {formErrors.phone}
+                        {formErrors.license_number}
                       </p>
                     )}
                   </div>
@@ -308,6 +340,69 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                 </div>
 
                 <div className="sm:col-span-3">
+                  <label htmlFor="years_experience" className={formStyles.label}>
+                    Years of Experience
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="years_experience"
+                      id="years_experience"
+                      value={formData.years_experience}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="e.g. 5+"
+                      className={formErrors.years_experience ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.years_experience && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.years_experience}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="education" className={formStyles.label}>
+                    Education
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="education"
+                      id="education"
+                      value={formData.education}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="e.g. MD, University Medical School"
+                      className={formErrors.education ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.education && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.education}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="certification" className={formStyles.label}>
+                    Board Certification
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="certification"
+                      id="certification"
+                      value={formData.certification}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="e.g. Board Certified in Cardiology"
+                      className={formErrors.certification ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.certification && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.certification}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
                   <label htmlFor="status" className={formStyles.label}>
                     Status
                   </label>
@@ -323,6 +418,122 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                       <option key="status-inactive" value="inactive">Inactive</option>
                       <option key="status-onleave" value="on_leave">On Leave</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact Information
+              </h2>
+              <div className="mt-4 grid grid-cols-1 gap-y-6 gap-x-6 sm:grid-cols-6">
+                <div className="sm:col-span-3">
+                  <label htmlFor="phone" className={formStyles.label}>
+                    Phone <span className="text-red-500">*</span>
+                  </label>
+                  <div>
+                    <input
+                      type="tel"
+                      name="phone"
+                      id="phone"
+                      required
+                      value={formData.phone}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Enter phone number"
+                      className={formErrors.phone ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.phone && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="email" className={formStyles.label}>
+                    Email <span className="text-xs text-gray-500">(WordPress User)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      name="email"
+                      id="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Email address from WordPress user"
+                      className={`${formErrors.email ? formStyles.errorField : formStyles.inputField} pl-10 bg-gray-50 border-gray-300 text-gray-500`}
+                      disabled
+                      readOnly
+                    />
+                    <div className="mt-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-md">
+                      <p className="text-xs text-amber-700 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Email is linked to WordPress user account and cannot be modified here</span>
+                      </p>
+                    </div>
+                    {formErrors.email && (
+                      <p className="mt-1 text-sm text-red-600 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {formErrors.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="office" className={formStyles.label}>
+                    Office
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="office"
+                      id="office"
+                      value={formData.office}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="e.g. Room 101"
+                      className={formErrors.office ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.office && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.office}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-3">
+                  <label htmlFor="department" className={formStyles.label}>
+                    Department
+                  </label>
+                  <div>
+                    <input
+                      type="text"
+                      name="department"
+                      id="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="e.g. Cardiology Department"
+                      className={formErrors.department ? formStyles.errorField : formStyles.inputField}
+                    />
+                    {formErrors.department && (
+                      <p className="mt-1 text-sm text-red-600">{formErrors.department}</p>
+                    )}
                   </div>
                 </div>
               </div>
