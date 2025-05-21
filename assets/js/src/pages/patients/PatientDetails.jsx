@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
@@ -24,6 +24,9 @@ const popupCardStyle = {
 const PatientDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Check if we came from a doctor's page
+  const fromDoctor = location.state?.fromDoctor || null;
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -185,9 +188,15 @@ const PatientDetails = () => {
             {error}
           </div>
           <div className="mt-4">
-            <Link to="/patients">
-              <Button variant="secondary">Return to Patients</Button>
-            </Link>
+            {fromDoctor ? (
+              <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+                <Button variant="secondary">Return to Doctor</Button>
+              </Link>
+            ) : (
+              <Link to="/patients">
+                <Button variant="secondary">Return to Patients</Button>
+              </Link>
+            )}
           </div>
         </Card>
       </div>
@@ -202,9 +211,15 @@ const PatientDetails = () => {
             <p className="text-gray-600">Patient not found</p>
           </div>
           <div className="mt-4">
-            <Link to="/patients">
-              <Button variant="secondary">Return to Patients</Button>
-            </Link>
+            {fromDoctor ? (
+              <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+                <Button variant="secondary">Return to Doctor</Button>
+              </Link>
+            ) : (
+              <Link to="/patients">
+                <Button variant="secondary">Return to Patients</Button>
+              </Link>
+            )}
           </div>
         </Card>
       </div>
@@ -496,14 +511,25 @@ const PatientDetails = () => {
       )}
 
       <div className="mt-4">
-        <Link to="/patients">
-          <Button variant="secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-            Back to Patients
-          </Button>
-        </Link>
+        {fromDoctor ? (
+          <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+            <Button variant="secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              Back to Doctor
+            </Button>
+          </Link>
+        ) : (
+          <Link to="/patients">
+            <Button variant="secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              Back to Patients
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Medical History Popup */}

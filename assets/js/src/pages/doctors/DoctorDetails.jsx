@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
@@ -15,10 +15,11 @@ const lineClampStyle = {
 const DoctorDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
   const [patientStats, setPatientStats] = useState({
@@ -32,12 +33,16 @@ const DoctorDetails = () => {
     completedAppointments: 0
   });
 
+  // State for patient-specific errors that won't affect the main doctor view
+  const [patientsError, setPatientsError] = useState(null);
+  
   // Function to fetch doctor's patients when patients tab is clicked
   const fetchPatients = useCallback(async () => {
     if (!id) return;
     
     try {
       setPatientsLoading(true);
+      setPatientsError(null);
       const response = await api.get(`/doctors/${id}/patients`);
       
       if (response.data && response.data.data) {
@@ -48,15 +53,16 @@ const DoctorDetails = () => {
         setPatients([]);
       }
 
-      // Set mock patient statistics for UI demonstration
+      // Set patient statistics based on the API response or generate mock data
       setPatientStats({
-        total: response.data?.meta?.total || Math.floor(Math.random() * 50) + 10,
-        active: Math.floor(Math.random() * 20) + 5,
-        recentVisits: Math.floor(Math.random() * 10) + 1
+        total: response.data?.meta?.total || 0,
+        active: response.data?.meta?.active || 0,
+        recentVisits: response.data?.meta?.recent_visits || 0
       });
     } catch (err) {
       console.error('Error fetching patients:', err);
-      setError('Failed to load patients list');
+      setPatientsError('Unable to load patients data. Please try again later.');
+      setPatients([]);
     } finally {
       setPatientsLoading(false);
     }
@@ -366,6 +372,26 @@ const DoctorDetails = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading patients...</p>
             </div>
+          ) : patientsError ? (
+            <div className="py-8">
+              <div className="bg-amber-50 p-4 rounded-md border border-amber-200 text-amber-700">
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {patientsError}
+                </div>
+                <button 
+                  className="mt-3 text-sm font-medium text-amber-800 hover:text-amber-900 flex items-center"
+                  onClick={() => fetchPatients()}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Try again
+                </button>
+              </div>
+            </div>
           ) : patients.length === 0 ? (
             <div className="py-8 text-center text-gray-500">
               No patients found for this doctor
@@ -390,15 +416,14 @@ const DoctorDetails = () => {
                     const visitDate = patient.last_visit_date || new Date(Date.now() - Math.random() * 10000000000).toISOString().split('T')[0];
                     
                     // Random status for visualization
-                    const statuses = ['Active', 'Follow-up', 'Recovered', 'Pending'];
+                    const statuses = ['confirmed', 'completed', 'cancelled', 'pending'];
                     const statusColors = {
-                      'Active': 'bg-green-100 text-green-800',
-                      'Follow-up': 'bg-yellow-100 text-yellow-800',
-                      'Recovered': 'bg-blue-100 text-blue-800',
-                      'Pending': 'bg-gray-100 text-gray-800'
+                      'confirmed': 'bg-green-100 text-green-800',
+                      'pending': 'bg-yellow-100 text-yellow-800',
+                      'completed': 'bg-blue-100 text-blue-800',
+                      'cancelled': 'bg-gray-100 text-gray-800'
                     };
                     const status = patient.status || statuses[Math.floor(Math.random() * statuses.length)];
-                    
                     return (
                       <tr key={patientId} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
@@ -426,6 +451,7 @@ const DoctorDetails = () => {
                           <div className="flex space-x-2">
                             <Link 
                               to={`/patients/${patientId}`} 
+                              state={{ fromDoctor: { id, name: fullName, specialty: specialty } }}
                               className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
                             >
                               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

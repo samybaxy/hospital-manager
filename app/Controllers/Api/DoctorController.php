@@ -48,6 +48,15 @@ class DoctorController extends BaseController
             ]
         ]);
 
+        // Get doctor's patients
+        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)/patients', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_doctor_patients'],
+                'permission_callback' => '__return_true'
+            ]
+        ]);
+
         // Update doctor (admin only)
         register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
             [
@@ -530,6 +539,80 @@ class DoctorController extends BaseController
             return new WP_Error(
                 'update_failed',
                 'Failed to update profile: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Get patients associated with a specific doctor
+     * 
+     * @param \WP_REST_Request $request The request object containing the doctor ID
+     * @return \WP_REST_Response|\WP_Error
+     */
+    public function get_doctor_patients($request)
+    {
+        try {
+            $doctor_id = $request->get_param('id');
+            
+            // Validate doctor exists
+            $doctor = Doctor::find($doctor_id);
+            if (!$doctor || $doctor->status !== 'active') {
+                return new WP_Error(
+                    'not_found',
+                    'Doctor not found or inactive',
+                    ['status' => 404]
+                );
+            }
+
+            // Get params for pagination if provided
+            $params = $request->get_params();
+            $page = isset($params['page']) ? intval($params['page']) : 1;
+            $per_page = isset($params['per_page']) ? intval($params['per_page']) : 20;
+            
+            // Get patients from the Doctor model
+            $results = Doctor::getPatients($doctor_id, $page, $per_page);
+            
+            if (!$results || empty($results['data'])) {
+                return new WP_REST_Response([
+                    'data' => [],
+                    'meta' => [
+                        'total' => 0,
+                        'per_page' => $per_page,
+                        'current_page' => $page,
+                        'last_page' => 0
+                    ]
+                ]);
+            }
+            
+            // Format the response data
+            $patients = array_map(function($patient) {
+                return [
+                    'id' => $patient->id,
+                    'first_name' => $patient->first_name,
+                    'last_name' => $patient->last_name,
+                    'phone' => $patient->phone,
+                    'email' => $patient->email,
+                    'status' => $patient->status,
+                    'last_visit_date' => $patient->last_visit_date
+                ];
+            }, $results['data']);
+            
+            return new WP_REST_Response([
+                'data' => $patients,
+                'meta' => [
+                    'total' => $results['total'],
+                    'per_page' => $per_page,
+                    'current_page' => $page,
+                    'last_page' => $results['last_page']
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            error_log('Error fetching doctor patients: ' . $e->getMessage());
+            return new WP_Error(
+                'server_error',
+                'Failed to retrieve patients for this doctor',
                 ['status' => 500]
             );
         }

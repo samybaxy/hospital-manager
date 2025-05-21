@@ -2,6 +2,7 @@
 namespace HospitalManager\Models;
 
 use WPMVC\MVC\Traits\FindTrait;
+use  \HospitalManager\Models\Patient;
 
 class Doctor extends BaseModel
 {
@@ -239,36 +240,6 @@ class Doctor extends BaseModel
     }
 
     /**
-     * Get all doctors with pagination
-     */
-    // public static function paginate($perPage = 10, $page = 1)
-    // {
-    //     global $wpdb;
-    //     $offset = ($page - 1) * $perPage;
-    //     $table = (new static)->table;
-        
-    //     $total = $wpdb->get_var("SELECT COUNT(*) FROM $table");
-    //     $items = $wpdb->get_results(
-    //         $wpdb->prepare(
-    //             "SELECT * FROM $table LIMIT %d OFFSET %d",
-    //             $perPage,
-    //             $offset
-    //         ),
-    //         ARRAY_A
-    //     );
-        
-    //     return [
-    //         'data' => array_map(function($item) {
-    //             return new static($item);
-    //         }, $items),
-    //         'total' => (int)$total,
-    //         'per_page' => $perPage,
-    //         'current_page' => $page,
-    //         'last_page' => ceil($total / $perPage)
-    //     ];
-    // }
-
-    /**
      * Find doctors by specific conditions
      */
     public static function findWhere(array $conditions)
@@ -300,35 +271,6 @@ class Doctor extends BaseModel
             return new static($item);
         }, $results);
     }
-
-    /**
-     * Search doctors by name
-     */
-    // public static function search($term)
-    // {
-    //     global $wpdb;
-    //     $table = (new static)->table;
-        
-    //     $results = $wpdb->get_results(
-    //         $wpdb->prepare(
-    //             "SELECT * FROM $table WHERE first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s",
-    //             "%$term%",
-    //             "%$term%",
-    //             "%$term%"
-    //         ),
-    //         ARRAY_A
-    //     );
-        
-    //     return array_map(function($item) {
-    //         // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-    //         if (isset($item['id']) && !isset($item['ID'])) {
-    //             $item['ID'] = $item['id'];
-    //         } elseif (isset($item['ID']) && !isset($item['id'])) {
-    //             $item['id'] = $item['ID'];
-    //         }
-    //         return new static($item);
-    //     }, $results);
-    // }
 
     /**
      * Search doctors and return paginated results
@@ -402,8 +344,6 @@ class Doctor extends BaseModel
         $query = "SELECT * FROM $table $where_clause ORDER BY $orderby $order LIMIT %d OFFSET %d";
         $all_values = array_merge($values, [$perPage, $offset]);
         $prepared_query = $wpdb->prepare($query, $all_values);
-        
-        error_log("Final SQL query: " . $prepared_query);
         
         $results = $wpdb->get_results($prepared_query, ARRAY_A);
         
@@ -525,5 +465,85 @@ class Doctor extends BaseModel
         return $result !== false;
     }
 
+    /**
+     * Get patients assigned to a specific doctor with pagination
+     * 
+     * @param int $doctor_id The doctor's ID
+     * @param int $page Current page number
+     * @param int $perPage Items per page
+     * @return array Paginated results with patient data and metadata
+     */
+    public static function getPatients($doctor_id, $page = 1, $perPage = 20)
+    {
+        global $wpdb;
+        $doctor_id = intval($doctor_id);
+        $offset = ($page - 1) * $perPage;
+        
+        // Get the patient table name
+        $patient_table = $wpdb->prefix . 'hm_patients';
+        
+        // Get the appointments table name
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        
+        // Query to get patients who have appointments with this doctor
+        $query = $wpdb->prepare(
+            "SELECT DISTINCT p.*, a.status  
+            FROM $patient_table p
+            INNER JOIN $appointments_table a ON p.id = a.patient_id
+            WHERE a.doctor_id = %d AND a.status = 'pending'
+            ORDER BY p.last_name, p.first_name
+            LIMIT %d OFFSET %d",
+            $doctor_id,
+            $perPage,
+            $offset
+        );
+        
+        // Get count query for pagination
+        $count_query = $wpdb->prepare(
+            "SELECT COUNT(DISTINCT p.id)
+            FROM $patient_table p
+            INNER JOIN $appointments_table a ON p.id = a.patient_id
+            WHERE a.doctor_id = %d AND a.status = 'pending'",
+            $doctor_id
+        );
+        
+        // Execute the queries
+        $patients_data = $wpdb->get_results($query, ARRAY_A);
+        $total = (int)$wpdb->get_var($count_query);
+        
+        // If no patients found, return empty array
+        if (empty($patients_data)) {
+            return [
+                'data' => [],
+                'total' => 0,
+                'per_page' => $perPage,
+                'current_page' => $page,
+                'last_page' => 0
+            ];
+        }
+        
+        // Load the Patient model and create instances
+        $patients = [];
+        foreach ($patients_data as $patient_data) {
+            // If we have a Patient model class, use it
+            if (class_exists('\\HospitalManager\\Models\\Patient')) {
+                $patients[] = new Patient($patient_data);
+            } else {
+                // Otherwise just return the raw data as a stdClass object
+                $patient_obj = new \stdClass();
+                foreach ($patient_data as $key => $value) {
+                    $patient_obj->$key = $value;
+                }
+                $patients[] = $patient_obj;
+            }
+        }
 
+        return [
+            'data' => $patients,
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage)
+        ];
+    }
 }
