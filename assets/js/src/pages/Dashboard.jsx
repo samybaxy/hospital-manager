@@ -3,6 +3,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { Link } from 'react-router-dom';
 import { api } from '../services/apiService';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({

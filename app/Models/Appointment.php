@@ -38,6 +38,11 @@ class Appointment extends BaseModel
             $attributes = [];
         }
         
+        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
+        if (isset($attributes['id']) && !isset($attributes['ID'])) {
+            $attributes['ID'] = $attributes['id'];
+        }
+        
         parent::__construct($attributes);
     }
 
@@ -107,9 +112,20 @@ class Appointment extends BaseModel
         }
 
         $results = $wpdb->get_results($query);
-        return array_map(function($data) {
-            return new static((array)$data);
-        }, $results);
+        
+        // Convert results to array of appointment objects
+        // Make sure each result has both 'id' and 'ID' for compatibility
+        $formatted_results = [];
+        foreach ($results as $data) {
+            $data = (array)$data;
+            // Ensure both lowercase and uppercase ID exist
+            if (isset($data['id'])) {
+                $data['ID'] = $data['id']; // Add uppercase ID for PostModel compatibility
+            }
+            $formatted_results[] = new static($data);
+        }
+        
+        return $formatted_results;
     }
 
     public function exists()

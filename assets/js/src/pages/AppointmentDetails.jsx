@@ -6,10 +6,12 @@ import StatusMessage from '../components/StatusMessage';
 import DateTimeSelector from '../components/DateTimeSelector';
 import appointmentService from '../services/appointmentService';
 import { api } from '../services/apiService';
+import { useAuth } from '../context/AuthContext';
 
 const AppointmentDetails = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [doctor, setDoctor] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -91,7 +93,13 @@ const AppointmentDetails = () => {
     setSuccessMessage('');
 
     try {
-      const response = await appointmentService.createAppointment(appointmentData);
+      // Create a copy of the appointment data with the patient ID if available
+      const appointmentPayload = {
+        ...appointmentData,
+        patient_id: user?.id // Include patient ID if available from context
+      };
+      
+      const response = await appointmentService.createAppointment(appointmentPayload);
       setSuccessMessage('Your appointment was booked successfully! You will receive a confirmation soon.');
       
       // Reset form

@@ -79,7 +79,12 @@ class AppointmentController extends BaseController
             ->orderBy('appointment_time', 'ASC')
             ->get();
 
-        return new WP_REST_Response($appointments);
+        // Convert appointments to array format to avoid any ID issues with the PostModel
+        $appointments_array = array_map(function($appointment) {
+            return $appointment->toArray();
+        }, $appointments);
+        
+        return new WP_REST_Response($appointments_array);
     }
 
     public function create_appointment($request)

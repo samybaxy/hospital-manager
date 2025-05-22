@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import appointmentService from '../services/appointmentService';
-import authService from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 const Appointments = () => {
+  const { user, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -22,12 +23,12 @@ const Appointments = () => {
   });
 
   useEffect(() => {
-    // Get user role and load appointments
-    const user = authService.getCurrentUser();
-    setUserRole(user?.role);
-    
-    fetchAppointments();
-  }, []);
+    // Wait for auth to complete before setting user role
+    if (!authLoading) {
+      setUserRole(user?.role);
+      fetchAppointments();
+    }
+  }, [user, authLoading]);
 
   const fetchAppointments = async () => {
     setLoading(true);
