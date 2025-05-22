@@ -44,6 +44,7 @@ class CreateHospitalTables
             education varchar(255),
             years_experience int,
             license_number varchar(100),
+            appointment_availability JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),

@@ -66,6 +66,9 @@ class DoctorSeeder extends Seeder
                 $yearsExperience = $this->faker->numberBetween(1, 30);
                 $licenseNumber = 'MD' . $this->faker->randomNumber(6, true);
                 
+                // Generate working hours availability
+                $availability = $this->generateAvailability();
+                
                 // Insert doctor record
                 $result = $this->wpdb->insert(
                     $doctors_table,
@@ -80,11 +83,12 @@ class DoctorSeeder extends Seeder
                         'education' => $education,
                         'years_experience' => $yearsExperience,
                         'license_number' => $licenseNumber,
+                        'appointment_availability' => json_encode($availability),
                         'created_at' => $this->faker->dateTimeBetween('-1 year', '-6 months')->format('Y-m-d H:i:s'),
                         'updated_at' => current_time('mysql'),
                     ],
                     [
-                        '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s'
+                        '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s'
                     ]
                 );
                 
@@ -95,5 +99,50 @@ class DoctorSeeder extends Seeder
         }
         
         $this->log("Created {$created} doctor records");
+    }
+
+    /**
+     * Generate a random working hours availability schedule for a doctor
+     * 
+     * @return array Working hours for each day of the week
+     */
+    protected function generateAvailability()
+    {
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        $availability = [];
+        
+        // Randomly select 4-6 working days
+        $workingDaysCount = rand(4, 6);
+        $workingDays = (array) array_rand(array_flip($days), $workingDaysCount);
+        
+        foreach ($days as $day) {
+            // If it's a working day, generate time slots
+            if (in_array($day, $workingDays)) {
+                // Morning slot (8 AM - 12 PM)
+                $morningStart = rand(8, 10);
+                $morningEnd = rand($morningStart + 2, 12);
+                
+                // Afternoon slot (1 PM - 6 PM)
+                $afternoonStart = rand(13, 15);
+                $afternoonEnd = rand($afternoonStart + 2, 18);
+                
+                // Format as 24-hour time for storage in JSON
+                $availability[$day] = [
+                    [
+                        'start' => sprintf('%02d:00', $morningStart),
+                        'end' => sprintf('%02d:00', $morningEnd)
+                    ],
+                    [
+                        'start' => sprintf('%02d:00', $afternoonStart),
+                        'end' => sprintf('%02d:00', $afternoonEnd)
+                    ]
+                ];
+            } else {
+                // Not a working day
+                $availability[$day] = [];
+            }
+        }
+        
+        return $availability;
     }
 }

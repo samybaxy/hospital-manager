@@ -31,6 +31,7 @@ import Chat from './pages/Chat';
 import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
+import AppointmentDetails from './pages/AppointmentDetails';
 
 // Main content component with routes
 const AppRoutes = () => {
@@ -114,6 +115,11 @@ const AppRoutes = () => {
         <Route path="/appointments" element={
           <ProtectedRoute routeName="appointments">
             <Appointments />
+          </ProtectedRoute>
+        } />
+        <Route path="/appointments/doctor/:doctorId" element={
+          <ProtectedRoute routeName="appointments">
+            <AppointmentDetails />
           </ProtectedRoute>
         } />
         <Route path="/departments" element={

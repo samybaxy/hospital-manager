@@ -126,37 +126,62 @@ const Dashboard = () => {
             <Link to="/patients">
               <Button variant="secondary">View All Patients</Button>
             </Link>
-            <Link to="/appointments/new">
+            <Link to="/doctors">
               <Button variant="secondary">Schedule Appointment</Button>
             </Link>
           </div>
         </Card>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Recent Appointments">
-            <div className="space-y-4">
-              <div className="flex justify-between p-2 bg-gray-50 rounded">
-                <div>
-                  <p className="font-medium">John Doe</p>
-                  <p className="text-sm text-gray-600">General Checkup</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-primary-700">Today, 2:00 PM</p>
-                  <p className="text-xs text-gray-500">Dr. Smith</p>
+          <Card title="Upcoming Appointments">
+            {loading ? (
+              <div className="flex justify-center p-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : upcomingAppointments.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {upcomingAppointments.map((appointment) => (
+                  <div key={appointment.id} className="py-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">
+                        {appointment.first_name} {appointment.last_name}
+                      </p>
+                      <div className="flex items-center mt-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm text-gray-600">{appointment.formatted_date}</span>
+                        <span className="text-sm text-gray-600 mx-1">•</span>
+                        <span className="text-sm text-gray-600">
+                          {new Date(`2000-01-01T${appointment.appointment_time}`).toLocaleTimeString('en-US', { 
+                            hour: 'numeric', 
+                            minute: 'numeric',
+                            hour12: true 
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <Link to={`/appointments/${appointment.id}`}>
+                      <Button variant="secondary" className="text-xs px-3 py-1">
+                        Details
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+                <div className="pt-3 text-right">
+                  <Link to="/appointments" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View all appointments →
+                  </Link>
                 </div>
               </div>
-              
-              <div className="flex justify-between p-2 bg-gray-50 rounded">
-                <div>
-                  <p className="font-medium">Jane Smith</p>
-                  <p className="text-sm text-gray-600">Follow-up</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-primary-700">Tomorrow, 10:00 AM</p>
-                  <p className="text-xs text-gray-500">Dr. Johnson</p>
-                </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500 mb-4">No upcoming appointments</p>
+                <Link to="/doctors">
+                  <Button variant="primary" className="text-sm">Schedule Appointment</Button>
+                </Link>
               </div>
-            </div>
+            )}
           </Card>
           
           <Card title="Hospital Resources">

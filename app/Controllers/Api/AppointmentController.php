@@ -98,6 +98,18 @@ class AppointmentController extends BaseController
                 ['status' => 400]
             );
         }
+        
+        // Validate that the appointment date is in the future
+        $appointment_datetime = strtotime("$date $time");
+        $current_datetime = current_time('timestamp');
+        
+        if ($appointment_datetime <= $current_datetime) {
+            return new WP_Error(
+                'invalid_appointment_time',
+                'Appointment time must be in the future',
+                ['status' => 400]
+            );
+        }
 
         // Check if slot is available
         if (!$this->is_slot_available($doctor_id, $date, $time)) {
@@ -107,16 +119,79 @@ class AppointmentController extends BaseController
                 ['status' => 400]
             );
         }
-
-        $appointment = new Appointment([
-            'patient_id' => $patient_id,
-            'doctor_id' => $doctor_id,
-            'appointment_date' => $date,
-            'appointment_time' => $time,
-            'reason' => $reason,
-            'status' => 'pending'
-        ]);
-        $appointment->save();
+        
+        // Create the appointment
+        try {
+            $appointment_data = [
+                'patient_id' => $patient_id,
+                'doctor_id' => $doctor_id,
+                'appointment_date' => $date,
+                'appointment_time' => $time,
+                'reason' => sanitize_text_field($reason),
+                'status' => 'pending'
+            ];
+            
+            $appointment = Appointment::create($appointment_data);
+            
+            // Get patient name for notification
+            $patient = get_userdata($patient_id);
+            $patient_name = $patient ? trim($patient->first_name . ' ' . $patient->last_name) : 'A patient';
+            if (empty(trim($patient_name))) {
+                $patient_name = $patient->display_name;
+            }
+            
+            // Get doctor's user ID for notification
+            global $wpdb;
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $doctor_user_id = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT user_id FROM {$doctors_table} WHERE id = %d",
+                    $doctor_id
+                )
+            );
+            
+            if ($doctor_user_id) {
+                // Create notification for doctor
+                $notification_title = 'New Appointment';
+                $notification_message = sprintf(
+                    '%s has booked an appointment with you on %s at %s.',
+                    $patient_name,
+                    date('F j, Y', strtotime($date)),
+                    date('g:i A', strtotime($time))
+                );
+                
+                NotificationService::create(
+                    $doctor_user_id,
+                    'appointment',
+                    $notification_title,
+                    $notification_message,
+                    [
+                        'appointment_id' => $appointment->id,
+                        'patient_id' => $patient_id,
+                        'appointment_date' => $date,
+                        'appointment_time' => $time
+                    ]
+                );
+            }
+            
+            return new WP_REST_Response([
+                'message' => 'Appointment booked successfully',
+                'appointment' => [
+                    'id' => $appointment->id,
+                    'doctor_id' => $appointment->doctor_id,
+                    'patient_id' => $appointment->patient_id,
+                    'date' => $appointment->appointment_date,
+                    'time' => $appointment->appointment_time,
+                    'status' => $appointment->status
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            return new WP_Error(
+                'appointment_creation_failed',
+                'Failed to create appointment: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
 
         // Notify doctor about new appointment
         NotificationService::create(
@@ -176,44 +251,157 @@ class AppointmentController extends BaseController
             );
         }
 
-        // Get doctor's working hours (assume 9 AM to 5 PM)
+        // Get the day of the week from the date
+        $day_of_week = strtolower(date('l', strtotime($date)));
+        
+        // Get doctor's availability from the database
+        global $wpdb;
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                $doctor_id
+            )
+        );
+        
+        // Default working hours if no custom availability set
         $working_hours = [
             'start' => '09:00:00',
             'end' => '17:00:00',
             'slot_duration' => 30 // minutes
         ];
-
-        // Get existing appointments
-        $existing_appointments = Appointment::query()
-            ->where('doctor_id', $doctor_id)
-            ->where('appointment_date', $date)
-            ->pluck('appointment_time');
-
-        // Generate available slots
+        
         $available_slots = [];
-        $current_time = strtotime($working_hours['start']);
-        $end_time = strtotime($working_hours['end']);
-
-        while ($current_time < $end_time) {
-            $time_slot = date('H:i:s', $current_time);
-            if (!in_array($time_slot, $existing_appointments)) {
-                $available_slots[] = $time_slot;
+        
+        // If doctor has custom availability
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+            
+            // Check if doctor works on this day
+            if (isset($availability[$day_of_week]) && !empty($availability[$day_of_week])) {
+                foreach ($availability[$day_of_week] as $time_slot) {
+                    // Generate 30-minute slots between start and end times
+                    // Ensure time format is correct (may be stored as HH:MM or HH:MM:SS)
+                    $start_time = $this->ensure_time_format($time_slot['start']);
+                    $end_time = $this->ensure_time_format($time_slot['end']);
+                    
+                    for ($time = strtotime($start_time); $time < strtotime($end_time); $time += 30 * 60) {
+                        $available_slots[] = date('H:i:s', $time);
+                    }
+                }
+            } else {
+                // Doctor doesn't work on this day
+                return new WP_REST_Response([
+                    'available_slots' => [],
+                    'message' => 'The doctor is not available on this day.'
+                ]);
             }
-            $current_time += ($working_hours['slot_duration'] * 60);
+        } else {
+            // Use default working hours
+            $start_time = strtotime($working_hours['start']);
+            $end_time = strtotime($working_hours['end']);
+            
+            for ($time = $start_time; $time < $end_time; $time += $working_hours['slot_duration'] * 60) {
+                $available_slots[] = date('H:i:s', $time);
+            }
         }
+
+        // Get existing appointments for this doctor on this date
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $booked_times = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT appointment_time FROM {$appointments_table} 
+                WHERE doctor_id = %d AND appointment_date = %s AND status != 'cancelled'",
+                $doctor_id, $date
+            )
+        );
+
+        // Remove already booked slots
+        $available_slots = array_filter($available_slots, function($slot) use ($booked_times) {
+            return !in_array($slot, $booked_times);
+        });
 
         return new WP_REST_Response([
             'date' => $date,
-            'available_slots' => $available_slots
+            'available_slots' => array_values($available_slots) // Reset array indexes
         ]);
+    }
+    
+    /**
+     * Ensure time is in HH:MM:SS format
+     * 
+     * @param string $time Time string
+     * @return string Formatted time
+     */
+    private function ensure_time_format($time) {
+        // If time is in HH:MM format, convert to HH:MM:SS
+        if (preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+            return $time . ':00';
+        }
+        return $time;
     }
 
     private function is_slot_available($doctor_id, $date, $time)
     {
-        return !Appointment::query()
-            ->where('doctor_id', $doctor_id)
-            ->where('appointment_date', $date)
-            ->where('appointment_time', $time)
-            ->exists();
+        // Check if requested time is within doctor's availability hours
+        $day_of_week = strtolower(date('l', strtotime($date)));
+        
+        // Get doctor's availability
+        global $wpdb;
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                $doctor_id
+            )
+        );
+        
+        // First check if the doctor works on this day/time
+        $is_available = false;
+        
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+            
+            if (isset($availability[$day_of_week]) && !empty($availability[$day_of_week])) {
+                $request_time = strtotime($time);
+                
+                // Check each time slot for this day
+                foreach ($availability[$day_of_week] as $time_slot) {
+                    $start_time = strtotime($this->ensure_time_format($time_slot['start']));
+                    $end_time = strtotime($this->ensure_time_format($time_slot['end']));
+                    
+                    if ($request_time >= $start_time && $request_time < $end_time) {
+                        $is_available = true;
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Default working hours if no custom availability (9 AM to 5 PM)
+            $request_hour = (int)date('H', strtotime($time));
+            if ($request_hour >= 9 && $request_hour < 17) {
+                $is_available = true;
+            }
+        }
+        
+        // If not available based on schedule, return false immediately
+        if (!$is_available) {
+            return false;
+        }
+        
+        // Check if the slot is already booked
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $existing_appointment = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$appointments_table} 
+                WHERE doctor_id = %d 
+                AND appointment_date = %s 
+                AND appointment_time = %s 
+                AND status != 'cancelled'",
+                $doctor_id, $date, $time
+            )
+        );
+        
+        return $existing_appointment == 0;
     }
 }

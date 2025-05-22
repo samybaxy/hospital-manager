@@ -17,6 +17,12 @@ class Doctor extends BaseModel
         'phone',
         'specialty',
         'status',
+        'office',
+        'board_certification',
+        'education',
+        'years_experience',
+        'license_number',
+        'appointment_availability',
     ];
     
     /**
