@@ -128,7 +128,7 @@ const Dashboard = () => {
               <Button variant="secondary">View All Patients</Button>
             </Link>
             <Link to="/doctors">
-              <Button variant="secondary">Schedule Appointment</Button>
+              <Button variant="secondary">Book Appointment</Button>
             </Link>
           </div>
         </Card>

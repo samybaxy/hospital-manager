@@ -122,6 +122,11 @@ const AppRoutes = () => {
             <AppointmentDetails />
           </ProtectedRoute>
         } />
+        <Route path="/appointments/:id" element={
+          <ProtectedRoute routeName="appointments">
+            <AppointmentDetails />
+          </ProtectedRoute>
+        } />
         <Route path="/departments" element={
           <ProtectedRoute routeName="departments">
             <Departments />

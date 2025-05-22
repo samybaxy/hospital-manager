@@ -37,6 +37,15 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
     certification: doctor.certification || '',
     office: doctor.office || '',
     department: doctor.department || '',
+    appointment_availability: doctor.appointment_availability || {
+      monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      saturday: { enabled: false, start_time: '09:00', end_time: '13:00' },
+      sunday: { enabled: false, start_time: '09:00', end_time: '13:00' }
+    },
   });
   
   const [formErrors, setFormErrors] = useState({});
@@ -58,6 +67,15 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         certification: doctor.certification || '',
         office: doctor.office || '',
         department: doctor.department || '',
+        appointment_availability: doctor.appointment_availability || {
+          monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+          saturday: { enabled: false, start_time: '09:00', end_time: '13:00' },
+          sunday: { enabled: false, start_time: '09:00', end_time: '13:00' }
+        },
       });
     }
   }, [doctor, isEditing]);
@@ -120,6 +138,19 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
       }
     });
     
+    // Validate working hours
+    let hasWorkingHoursError = false;
+    
+    Object.entries(formData.appointment_availability).forEach(([day, hours]) => {
+      if (hours.enabled && hours.start_time >= hours.end_time) {
+        hasWorkingHoursError = true;
+      }
+    });
+    
+    if (hasWorkingHoursError) {
+      errors.appointment_availability = 'One or more working days have end time earlier than or equal to start time';
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -135,6 +166,39 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         [name]: error
       }));
     }
+  };
+
+  // Handle working hours changes
+  const handleWorkingHoursChange = (day, field, value) => {
+    // Validate time format for start_time and end_time fields
+    if ((field === 'start_time' || field === 'end_time') && value) {
+      const isValidTime = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+      if (!isValidTime) {
+        console.warn(`Invalid time format for ${day} ${field}: ${value}`);
+        // Don't return early - still update the state with the invalid value
+        // The browser's time input validation will handle most cases
+      }
+      
+      // Check if end time is after start time when both are set
+      if (field === 'end_time') {
+        const startTime = formData.appointment_availability[day].start_time;
+        if (startTime && value && startTime >= value) {
+          console.warn(`End time must be later than start time for ${day}`);
+          // Show a warning but still allow it to be set
+        }
+      }
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      appointment_availability: {
+        ...prev.appointment_availability,
+        [day]: {
+          ...prev.appointment_availability[day],
+          [field]: value
+        }
+      }
+    }));
   };
   
   const handleBlur = (e) => {
@@ -180,7 +244,10 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
       
       if (isEditing) {
         await api.put(`/doctors/${doctor.id}`, dataToSubmit);
-        navigate(`/doctors/${doctor.id}`, { replace: true });
+        navigate(`/doctors/${doctor.id}`, { 
+          replace: true, 
+          state: { success: 'Doctor information updated successfully!' } 
+        });
       } else {
         const response = await api.post('/doctors', dataToSubmit);
         
@@ -190,7 +257,10 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         // Handle the response and redirect
         if (response && response.status === 201) {
           console.log('Doctor created successfully. Redirecting to doctor list.');
-          navigate('/doctors', { replace: true });
+          navigate('/doctors', { 
+            replace: true, 
+            state: { success: 'New doctor added successfully!' } 
+          });
         } else {
           // Something unexpected happened
           throw new Error('Unexpected response from server');
@@ -534,6 +604,103 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                     {formErrors.department && (
                       <p className="mt-1 text-sm text-red-600">{formErrors.department}</p>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Working Hours Section */}
+            <div className={formStyles.section}>
+              <h2 className={formStyles.sectionTitle}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={formStyles.sectionIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Working Hours & Availability
+              </h2>
+              <p className="text-sm text-gray-600 mb-6">
+                Set the doctor's working hours for each day of the week. This will be used for appointment scheduling.
+              </p>
+              
+              {formErrors.appointment_availability && (
+                <div className="mb-4 p-3 bg-red-50 rounded-md border border-red-200 text-sm text-red-700">
+                  <div className="flex items-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>{formErrors.appointment_availability}</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {Object.entries(formData.appointment_availability).map(([day, hours]) => (
+                  <div key={day} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
+                    <div className="flex items-center min-w-0 flex-1">
+                      <input
+                        type="checkbox"
+                        id={`${day}_enabled`}
+                        checked={hours.enabled}
+                        onChange={(e) => handleWorkingHoursChange(day, 'enabled', e.target.checked)}
+                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mr-3"
+                      />
+                      <label htmlFor={`${day}_enabled`} className="text-sm font-medium text-gray-900 capitalize min-w-0 flex-1">
+                        {day.charAt(0).toUpperCase() + day.slice(1)}
+                      </label>
+                    </div>
+                    
+                    {hours.enabled && (
+                      <div className="flex items-center space-x-2">
+                        <div>
+                          <label htmlFor={`${day}_start`} className="sr-only">Start time for {day}</label>
+                          <input
+                            type="time"
+                            id={`${day}_start`}
+                            value={hours.start_time}
+                            onChange={(e) => handleWorkingHoursChange(day, 'start_time', e.target.value)}
+                            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm"
+                          />
+                        </div>
+                        <span className="text-gray-500">to</span>
+                        <div>
+                          <label htmlFor={`${day}_end`} className="sr-only">End time for {day}</label>
+                          <input
+                            type="time"
+                            id={`${day}_end`}
+                            value={hours.end_time}
+                            onChange={(e) => handleWorkingHoursChange(day, 'end_time', e.target.value)}
+                            className={`px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${
+                              hours.start_time >= hours.end_time ? 'border-red-300' : ''
+                            }`}
+                          />
+                        </div>
+                        {hours.start_time >= hours.end_time && (
+                          <span className="text-xs text-red-500">
+                            End time must be later than start time
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!hours.enabled && (
+                      <span className="text-sm text-gray-500 px-4 py-2 bg-gray-50 rounded">Off duty</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-start">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400 mt-0.5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm text-blue-700">
+                    <p className="font-medium mb-1">Working Hours Guidelines:</p>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Unchecked days will be marked as "Off duty"</li>
+                      <li>These hours will be used for appointment scheduling</li>
+                      <li>Patients can only book appointments during working hours</li>
+                      <li>Weekend availability can be enabled as needed</li>
+                    </ul>
                   </div>
                 </div>
               </div>

@@ -32,6 +32,13 @@ class AppointmentController extends BaseController
 
         register_rest_route($this->namespace, '/appointments/(?P<id>\d+)', [
             [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_appointment'],
+                'permission_callback' => function() {
+                    return is_user_logged_in();
+                }
+            ],
+            [
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'update_appointment'],
                 'permission_callback' => function() {
@@ -465,5 +472,89 @@ class AppointmentController extends BaseController
         );
         
         return $existing_appointment == 0;
+    }
+
+    /**
+     * Get a single appointment by ID
+     * 
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function get_appointment($request)
+    {
+        $appointment_id = $request->get_param('id');
+        $user_id = get_current_user_id();
+        $user = wp_get_current_user();
+
+        // Find the appointment
+        $appointment = Appointment::find($appointment_id);
+        
+        if (!$appointment) {
+            return new WP_Error(
+                'appointment_not_found',
+                'Appointment not found',
+                ['status' => 404]
+            );
+        }
+        
+        // Security check: Only allow users to view their own appointments
+        // unless they are an admin or desk officer
+        if (!in_array('administrator', $user->roles) && 
+            !in_array('desk_officer', $user->roles)) {
+            
+            if (in_array('doctor', $user->roles) && $appointment->doctor_id != $user_id) {
+                return new WP_Error(
+                    'permission_denied',
+                    'You do not have permission to view this appointment',
+                    ['status' => 403]
+                );
+            }
+            
+            if (in_array('patient', $user->roles) && $appointment->patient_id != $user_id) {
+                return new WP_Error(
+                    'permission_denied',
+                    'You do not have permission to view this appointment',
+                    ['status' => 403]
+                );
+            }
+        }
+        
+        // Convert appointment to array format and add additional data
+        $appointment_data = $appointment->toArray();
+        
+        // Add patient and doctor names to the array for display
+        if (isset($appointment_data['patient_id'])) {
+            $patient = get_user_by('id', $appointment_data['patient_id']);
+            $appointment_data['patient_name'] = $patient ? $patient->display_name : 'Unknown Patient';
+            
+            // Get additional patient data if needed
+            $patient_meta = get_user_meta($appointment_data['patient_id']);
+            $appointment_data['patient_details'] = [
+                'email' => $patient ? $patient->user_email : '',
+                'phone' => isset($patient_meta['phone']) ? $patient_meta['phone'][0] : '',
+            ];
+        }
+        
+        if (isset($appointment_data['doctor_id'])) {
+            $doctor = get_user_by('id', $appointment_data['doctor_id']);
+            $appointment_data['doctor_name'] = $doctor ? $doctor->display_name : 'Unknown Doctor';
+            
+            // Get doctor's specialty and other details if available
+            global $wpdb;
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $doctor_details = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT specialty, education, years_experience FROM {$doctors_table} WHERE user_id = %d",
+                    $appointment_data['doctor_id']
+                ),
+                ARRAY_A
+            );
+            
+            if ($doctor_details) {
+                $appointment_data['doctor_details'] = $doctor_details;
+            }
+        }
+        
+        return new WP_REST_Response($appointment_data);
     }
 }

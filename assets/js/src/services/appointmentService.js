@@ -41,6 +41,15 @@ const appointmentService = {
   },
 
   /**
+   * Get a single appointment by ID
+   * @param {number} id - Appointment ID
+   * @returns {Promise} Promise with appointment data
+   */
+  getAppointment: (id) => {
+    return api.get(`/appointments/${id}`);
+  },
+
+  /**
    * Get available appointment slots for a doctor on a specific date
    * @param {number} doctorId - Doctor ID
    * @param {string} date - Date in YYYY-MM-DD format

@@ -12,6 +12,16 @@ const lineClampStyle = {
   overflow: 'hidden'
 };
 
+// CSS animation for fadeout
+const fadeOutAnimation = {
+  '@keyframes fadeOut': {
+    '0%': { opacity: 1 },
+    '75%': { opacity: 1 },
+    '100%': { opacity: 0 }
+  },
+  animation: 'fadeOut 5s forwards'
+};
+
 const DoctorDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,6 +29,7 @@ const DoctorDetails = () => {
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
@@ -32,9 +43,49 @@ const DoctorDetails = () => {
     upcomingAppointments: 0,
     completedAppointments: 0
   });
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
 
   // State for patient-specific errors that won't affect the main doctor view
   const [patientsError, setPatientsError] = useState(null);
+
+  // Check for success messages from edit form
+  useEffect(() => {
+    if (location.state?.success) {
+      // Flash a success message briefly then clear it
+      setSuccess(location.state.success);
+      setTimeout(() => {
+        setSuccess(null);
+        // Clear the state so refreshing doesn't show the message again
+        navigate(location.pathname, { replace: true });
+      }, 5000);
+    }
+  }, [location.state, navigate, location.pathname]);
+
+  // Helper function to format time from 24-hour to 12-hour format
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    
+    // Handle different time formats (HH:MM, HH:MM:SS)
+    let hours, minutes;
+    
+    if (typeof timeString === 'string' && timeString.includes(':')) {
+      const timeParts = timeString.split(':');
+      hours = parseInt(timeParts[0], 10);
+      minutes = timeParts[1];
+      
+      // Ensure minutes is always two digits
+      if (minutes && minutes.length === 1) {
+        minutes = `0${minutes}`;
+      }
+    } else {
+      return 'N/A';
+    }
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
   
   // Function to fetch doctor's patients when patients tab is clicked
   const fetchPatients = useCallback(async () => {
@@ -68,12 +119,49 @@ const DoctorDetails = () => {
     }
   }, [id]);
 
+  // Function to fetch doctor's appointments
+  const fetchAppointments = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      setAppointmentsLoading(true);
+      const response = await api.get(`/appointments?doctor_id=${id}&status=confirmed&upcoming=true`);
+      
+      if (response.data && response.data.data) {
+        setUpcomingAppointments(response.data.data);
+        
+        // Update schedule stats based on real data
+        setScheduleStats(prev => ({
+          ...prev,
+          upcomingAppointments: response.data.data.length,
+          totalAppointments: response.data.meta?.total || prev.totalAppointments
+        }));
+      } else if (response.data) {
+        setUpcomingAppointments(response.data);
+      } else {
+        setUpcomingAppointments([]);
+      }
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setUpcomingAppointments([]);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  }, [id]);
+
   // Effect to fetch patients when tab changes to patients
   useEffect(() => {
     if (activeTab === 'patients' && patients.length === 0) {
       fetchPatients();
     }
   }, [activeTab, fetchPatients, patients.length]);
+
+  // Effect to fetch appointments when tab changes to schedule
+  useEffect(() => {
+    if (activeTab === 'schedule' && upcomingAppointments.length === 0) {
+      fetchAppointments();
+    }
+  }, [activeTab, fetchAppointments, upcomingAppointments.length]);
 
   useEffect(() => {
     const fetchDoctor = async () => {
@@ -90,12 +178,34 @@ const DoctorDetails = () => {
           setDoctor(response.data);
         }
 
-        // Set mock schedule statistics for UI demonstration
+        // Initialize default schedule statistics
         setScheduleStats({
-          totalAppointments: Math.floor(Math.random() * 100) + 20,
-          upcomingAppointments: Math.floor(Math.random() * 15) + 2,
-          completedAppointments: Math.floor(Math.random() * 80) + 10
+          totalAppointments: 0,
+          upcomingAppointments: 0,
+          completedAppointments: 0
         });
+
+        // Fetch real appointment statistics
+        try {
+          const statsResponse = await api.get(`/appointments/stats?doctor_id=${id}`);
+          if (statsResponse.data) {
+            setScheduleStats(statsResponse.data);
+          }
+        } catch (statsErr) {
+          console.warn('Could not fetch appointment statistics:', statsErr);
+          // Try to get upcoming appointments count to at least show accurate data
+          try {
+            const upcomingResponse = await api.get(`/appointments?doctor_id=${id}&status=confirmed&upcoming=true`);
+            if (upcomingResponse.data && upcomingResponse.data.meta) {
+              setScheduleStats(prev => ({
+                ...prev,
+                upcomingAppointments: upcomingResponse.data.meta.total || 0
+              }));
+            }
+          } catch (err) {
+            console.warn('Could not fetch upcoming appointments:', err);
+          }
+        }
       } catch (err) {
         console.error('Error fetching doctor details:', err);
         setError('Failed to load doctor details. The doctor may not exist or you may not have permission to view it.');
@@ -106,6 +216,19 @@ const DoctorDetails = () => {
     
     fetchDoctor();
   }, [id]);
+
+  // Check for success messages from edit form
+  useEffect(() => {
+    if (location.state?.success) {
+      // Flash a success message briefly then clear it
+      setSuccess(location.state.success);
+      setTimeout(() => {
+        setSuccess(null);
+        // Clear the state so refreshing doesn't show the message again
+        navigate(location.pathname, { replace: true });
+      }, 5000);
+    }
+  }, [location.state, navigate, location.pathname]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this doctor? This action cannot be undone.')) {
@@ -206,6 +329,16 @@ const DoctorDetails = () => {
           </Button>
         </div>
       </div>
+
+      {/* Success message */}
+      {success && (
+        <div className="mb-6 bg-green-50 p-4 rounded-md border border-green-200 text-green-700 flex items-center" style={fadeOutAnimation}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {success}
+        </div>
+      )}
 
       {/* Doctor Header Card with Photo */}
       <Card>
@@ -336,38 +469,76 @@ const DoctorDetails = () => {
           </Card>
 
           <Card title="Working Hours">
-            <table className="min-w-full divide-y divide-gray-200">
-              <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Monday</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.work_hours?.monday || '8:00 AM - 5:00 PM'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Tuesday</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.work_hours?.tuesday || '8:00 AM - 5:00 PM'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Wednesday</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.work_hours?.wednesday || '8:00 AM - 5:00 PM'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Thursday</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.work_hours?.thursday || '8:00 AM - 5:00 PM'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Friday</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.work_hours?.friday || '8:00 AM - 5:00 PM'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Weekend</td>
-                  <td className="px-4 py-2 text-sm">
-                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                      {doctor.work_hours?.weekend || 'Off duty'}
+            <div className="space-y-3">
+              {doctor.appointment_availability && typeof doctor.appointment_availability === 'object' ? (
+                Object.entries(doctor.appointment_availability).map(([day, hours]) => (
+                  <div key={day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                    <span className="text-sm font-medium text-gray-900 capitalize">
+                      {day.charAt(0).toUpperCase() + day.slice(1)}
                     </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <div className="flex items-center">
+                      {hours && typeof hours === 'object' && hours.enabled ? (
+                        <span className="text-sm text-gray-700">
+                          {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                          Off duty
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : doctor.appointment_availability && typeof doctor.appointment_availability === 'string' ? (
+                // Handle case where appointment_availability is stored as a JSON string
+                (() => {
+                  try {
+                    const parsedAvailability = JSON.parse(doctor.appointment_availability);
+                    return Object.entries(parsedAvailability).map(([day, hours]) => (
+                      <div key={day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                        <span className="text-sm font-medium text-gray-900 capitalize">
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </span>
+                        <div className="flex items-center">
+                          {hours && typeof hours === 'object' && hours.enabled ? (
+                            <span className="text-sm text-gray-700">
+                              {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                              Off duty
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ));
+                  } catch (e) {
+                    console.error('Error parsing appointment availability', e);
+                    return (
+                      <div className="text-center py-6 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm">Working hours format error</p>
+                        <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                          Update working hours
+                        </Link>
+                      </div>
+                    );
+                  }
+                })()
+              ) : (
+                <div className="text-center py-6 text-gray-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm">Working hours not set</p>
+                  <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                    Set working hours
+                  </Link>
+                </div>
+              )}
+            </div>
           </Card>
         </div>
       )}
@@ -540,92 +711,142 @@ const DoctorDetails = () => {
           </div>
 
           <Card title="Upcoming Appointments">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {/* Generate some mock appointments for display purposes */}
-                  {Array.from({ length: 5 }).map((_, index) => {
-                    // Generate random dates in the future for upcoming appointments
-                    const today = new Date();
-                    const futureDate = new Date();
-                    futureDate.setDate(today.getDate() + Math.floor(Math.random() * 14) + 1);
-                    
-                    // Set random times
-                    const hours = Math.floor(Math.random() * 8) + 9; // 9 AM to 5 PM
-                    const minutes = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
-                    futureDate.setHours(hours, minutes);
-                    
-                    // Format date and time for display
-                    const dateStr = futureDate.toISOString().split('T')[0];
-                    const timeStr = futureDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                    
-                    // Random appointment purposes
-                    const purposes = ['Checkup', 'Follow-up', 'Consultation', 'Lab Results', 'Treatment'];
-                    const purpose = purposes[Math.floor(Math.random() * purposes.length)];
-                    
-                    // Random status
-                    const statuses = ['Confirmed', 'Pending', 'Rescheduled'];
-                    const statusColors = {
-                      'Confirmed': 'bg-green-100 text-green-800',
-                      'Pending': 'bg-yellow-100 text-yellow-800',
-                      'Rescheduled': 'bg-blue-100 text-blue-800'
-                    };
-                    const status = statuses[Math.floor(Math.random() * statuses.length)];
-                    
-                    return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">{dateStr}</div>
-                          <div className="text-sm text-gray-500">{timeStr}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
-                              P{index + 1}
+            {appointmentsLoading ? (
+              <div className="py-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-gray-600">Loading appointments...</p>
+              </div>
+            ) : upcomingAppointments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {upcomingAppointments.map((appointment) => {
+                      // Format date for display
+                      const formattedDate = appointment.date || appointment.appointment_date;
+                      const formattedTime = appointment.time || appointment.appointment_time;
+                      
+                      // Define status color mappings
+                      const statusColors = {
+                        'confirmed': 'bg-green-100 text-green-800',
+                        'pending': 'bg-yellow-100 text-yellow-800',
+                        'rescheduled': 'bg-blue-100 text-blue-800',
+                        'cancelled': 'bg-red-100 text-red-800',
+                        'completed': 'bg-gray-100 text-gray-800'
+                      };
+                      
+                      // Get status from appointment, default to pending if not set
+                      const status = appointment.status || 'pending';
+                      
+                      return (
+                        <tr key={appointment.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{formattedDate}</div>
+                            <div className="text-sm text-gray-500">
+                              {formattedTime ? (
+                                formatTime(formattedTime)
+                              ) : 'No time specified'}
                             </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">Patient {index + 1}</div>
-                              <div className="text-sm text-gray-500">ID: {1000 + index}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
+                                {appointment.patient_name ? appointment.patient_name.charAt(0) : 'P'}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{appointment.patient_name || 'Unknown Patient'}</div>
+                                <div className="text-sm text-gray-500">ID: {appointment.patient_id || 'N/A'}</div>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{purpose}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[status]}`}>
-                            {status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <button className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              Confirm
-                            </button>
-                            <button className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                              Cancel
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{appointment.reason || 'No reason specified'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            <div className="flex space-x-2">
+                              {status === 'pending' && (
+                                <button 
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100"
+                                  onClick={() => {
+                                    // Add logic to confirm appointment
+                                    // You can call the API endpoint to update the appointment status
+                                    api.put(`/appointments/${appointment.id}`, { status: 'confirmed' })
+                                      .then(() => fetchAppointments())
+                                      .catch(err => console.error('Error confirming appointment:', err));
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  Confirm
+                                </button>
+                              )}
+                              {(status === 'confirmed' || status === 'pending' || status === 'rescheduled') && (
+                                <button 
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
+                                  onClick={() => {
+                                    // Add logic to cancel appointment
+                                    if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                                      api.put(`/appointments/${appointment.id}`, { status: 'cancelled' })
+                                        .then(() => fetchAppointments())
+                                        .catch(err => console.error('Error cancelling appointment:', err));
+                                    }
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  Cancel
+                                </button>
+                              )}
+                              {status === 'confirmed' && (
+                                <Link to={`/appointments/${appointment.id}`}>
+                                  <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View
+                                  </button>
+                                </Link>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-600 mb-2">No upcoming appointments found</p>
+                <p className="text-sm text-gray-500 mb-4">This doctor currently has no scheduled appointments.</p>
+                <button 
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                  onClick={fetchAppointments}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+            )}
           </Card>
         </div>
       )}

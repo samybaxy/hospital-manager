@@ -9,15 +9,17 @@ import { api } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 
 const AppointmentDetails = () => {
-  const { doctorId } = useParams();
+  const { id, doctorId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [doctor, setDoctor] = useState(null);
+  const [patient, setPatient] = useState(null);
+  const [appointment, setAppointment] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [appointmentData, setAppointmentData] = useState({
-    doctor_id: doctorId,
+    doctor_id: doctorId || '',
     date: '',
     time: '',
     reason: '',
@@ -27,38 +29,90 @@ const AppointmentDetails = () => {
     data: [],
     error: '',
   });
+  
+  const viewMode = !!id; // If we have an ID, we're viewing an existing appointment
+  const bookingMode = !!doctorId && !id; // If we have a doctorId but no id, we're booking a new appointment
 
-  // Fetch doctor details on component mount
+  // Fetch appointment details if we're in view mode
   useEffect(() => {
-    if (!doctorId) {
-      setError('Doctor ID is required');
-      setIsLoading(false);
-      return;
-    }
-
-    const fetchDoctorDetails = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get(`/doctors/${doctorId}`);
-        
-        // Handle different API response formats (may be nested under data)
-        if (response.data && response.data.data) {
-          setDoctor(response.data.data);
-        } else {
-          setDoctor(response.data);
+    if (viewMode) {
+      const fetchAppointmentDetails = async () => {
+        try {
+          setIsLoading(true);
+          const response = await appointmentService.getAppointment(id);
+          
+          // Handle different API response formats
+          const appointmentData = response.data;
+          setAppointment(appointmentData);
+          
+          // If we have doctor_id in the appointment data, fetch doctor details
+          if (appointmentData.doctor_id) {
+            try {
+              const doctorResponse = await api.get(`/doctors/${appointmentData.doctor_id}`);
+              if (doctorResponse.data && doctorResponse.data.data) {
+                setDoctor(doctorResponse.data.data);
+              } else {
+                setDoctor(doctorResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching doctor details:', err);
+            }
+          }
+          
+          // If we have patient_id in the appointment data, fetch patient details
+          if (appointmentData.patient_id) {
+            try {
+              const patientResponse = await api.get(`/patients/${appointmentData.patient_id}`);
+              if (patientResponse.data && patientResponse.data.data) {
+                setPatient(patientResponse.data.data);
+              } else {
+                setPatient(patientResponse.data);
+              }
+            } catch (err) {
+              console.error('Error fetching patient details:', err);
+            }
+          }
+          
+          setError('');
+        } catch (err) {
+          console.error('Error fetching appointment details:', err);
+          setError('Failed to load appointment information. Please try again.');
+        } finally {
+          setIsLoading(false);
         }
-        
-        setError('');
-      } catch (err) {
-        console.error('Error fetching doctor details:', err);
-        setError('Failed to load doctor information. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      };
+      
+      fetchAppointmentDetails();
+    }
+  }, [id, viewMode]);
 
-    fetchDoctorDetails();
-  }, [doctorId]);
+  // Fetch doctor details if we're in booking mode
+  useEffect(() => {
+    if (bookingMode && doctorId) {
+      const fetchDoctorDetails = async () => {
+        try {
+          setIsLoading(true);
+          const response = await api.get(`/doctors/${doctorId}`);
+          
+          // Handle different API response formats (may be nested under data)
+          if (response.data && response.data.data) {
+            setDoctor(response.data.data);
+          } else {
+            setDoctor(response.data);
+          }
+          
+          setError('');
+        } catch (err) {
+          console.error('Error fetching doctor details:', err);
+          setError('Failed to load doctor information. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      fetchDoctorDetails();
+    }
+  }, [doctorId, bookingMode]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -123,7 +177,30 @@ const AppointmentDetails = () => {
     }
   };
 
-  if (isLoading && !doctor) {
+  // Handle cancelling an appointment
+  const handleCancelAppointment = async () => {
+    if (!confirm('Are you sure you want to cancel this appointment?')) {
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      await appointmentService.cancelAppointment(id);
+      setSuccessMessage('Appointment cancelled successfully');
+      
+      // Redirect to appointments page after short delay
+      setTimeout(() => {
+        navigate('/appointments');
+      }, 2000);
+    } catch (err) {
+      console.error('Error cancelling appointment:', err);
+      setError('Failed to cancel appointment. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading && !doctor && !appointment) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -136,16 +213,55 @@ const AppointmentDetails = () => {
     `Dr. ${doctor.first_name || ''} ${doctor.last_name || ''}`.trim() : 
     'the doctor';
 
+  // Format date and time for display in view mode
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+  
+  const formatTime = (timeString) => {
+    if (!timeString) return 'N/A';
+    
+    // If timeString is just a time (HH:MM:SS)
+    if (timeString.length <= 8) {
+      const date = new Date(`2000-01-01T${timeString}`);
+      return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', hour12: true });
+    }
+    
+    // If timeString is a full datetime
+    const date = new Date(timeString);
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', hour12: true });
+  };
+
+  // Get status badge color based on appointment status
+  const getStatusBadgeColor = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      case 'completed':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Book Appointment</h1>
-        <Link to="/doctors">
+        <h1 className="text-2xl font-bold">
+          {viewMode ? 'Appointment Details' : 'Book Appointment'}
+        </h1>
+        <Link to={viewMode ? "/appointments" : "/doctors"}>
           <Button variant="secondary">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
-            Back to Doctors
+            Back to {viewMode ? 'Appointments' : 'Doctors'}
           </Button>
         </Link>
       </div>
@@ -173,7 +289,89 @@ const AppointmentDetails = () => {
         </div>
       )}
 
-      {doctor && !successMessage && (
+      {/* View mode - show appointment details */}
+      {viewMode && appointment && !successMessage && (
+        <Card>
+          <div className="flex flex-col md:flex-row">
+            <div className="md:w-1/3 p-4 border-r">
+              {doctor && (
+                <>
+                  <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center mb-4 text-2xl font-bold text-gray-500">
+                    {doctor.first_name?.[0]}{doctor.last_name?.[0]}
+                  </div>
+                  <h2 className="text-xl font-semibold mb-2">{doctorName}</h2>
+                  <p className="font-semibold text-blue-700 mb-1">{doctor.specialty}</p>
+                  <p className="text-gray-600 mb-1">{doctor.education}</p>
+                  <p className="text-gray-600 mb-1">Experience: {doctor.years_experience || 'N/A'}</p>
+                  <p className="text-gray-500 text-sm">Office: {doctor.office || 'N/A'}</p>
+                </>
+              )}
+            </div>
+
+            <div className="md:w-2/3 p-4">
+              <div className="mb-6">
+                <span className={`px-2 py-1 text-sm font-semibold inline-block rounded-md ${getStatusBadgeColor(appointment.status)}`}>
+                  {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Unknown'}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Date</h3>
+                  <p className="font-medium">{formatDate(appointment.date)}</p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Time</h3>
+                  <p className="font-medium">{formatTime(appointment.time)}</p>
+                </div>
+                
+                {patient && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-500">Patient</h3>
+                    <p className="font-medium">{patient.first_name} {patient.last_name}</p>
+                  </div>
+                )}
+                
+                <div className="md:col-span-2">
+                  <h3 className="text-sm font-medium text-gray-500">Reason for Visit</h3>
+                  <p>{appointment.reason || 'No reason provided'}</p>
+                </div>
+                
+                {appointment.notes && (
+                  <div className="md:col-span-2">
+                    <h3 className="text-sm font-medium text-gray-500">Additional Notes</h3>
+                    <p>{appointment.notes}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Actions */}
+              <div className="flex justify-end space-x-2 mt-6">
+                {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={handleCancelAppointment}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Processing...' : 'Cancel Appointment'}
+                  </Button>
+                )}
+                
+                <Link to="/appointments">
+                  <Button variant="secondary">
+                    Back to Appointments
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Booking mode - show appointment booking form */}
+      {bookingMode && doctor && !successMessage && (
         <Card>
           <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-start">
