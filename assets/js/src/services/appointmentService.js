@@ -11,7 +11,14 @@ const appointmentService = {
    * @returns {Promise} Promise with appointments data
    */
   getAppointments: (params = {}) => {
-    return api.get('/appointments', { params });
+    // Ensure we have defaults for pagination parameters
+    const requestParams = {
+      page: params.page || 1,
+      per_page: params.per_page || 10,
+      ...params
+    };
+    
+    return api.get('/appointments', { params: requestParams });
   },
 
   /**

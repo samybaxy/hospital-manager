@@ -225,13 +225,30 @@ class Appointment extends BaseModel
 
     public function toArray()
     {
+        // Get the actual status from attributes if it exists, 
+        // otherwise try to get it from direct property access
+        $status = null;
+        if (isset($this->attributes['status'])) {
+            $status = $this->attributes['status'];
+        } elseif (isset($this->attributes['post_status'])) {
+            $status = $this->attributes['post_status']; 
+        } elseif (property_exists($this, 'status') && $this->status !== 'draft') {
+            // Only use the property if it's not the default 'draft'
+            $status = $this->status;
+        }
+        
+        // If no status was found or it's 'draft' from PostModel default, use 'pending' as fallback
+        if (empty($status) || $status === 'draft') {
+            $status = 'pending';
+        }
+        
         return [
             'id' => $this->id,
             'patient_id' => $this->patient_id,
             'doctor_id' => $this->doctor_id,
             'appointment_date' => $this->appointment_date,
             'appointment_time' => $this->appointment_time,
-            'status' => $this->status,
+            'status' => $status,
             'reason' => $this->reason,
             'notes' => $this->notes,
             'created_at' => $this->created_at,

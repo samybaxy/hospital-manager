@@ -29,42 +29,92 @@ const Appointments = () => {
     reason: '',
   });
 
+// Update the useEffect to initialize from URL parameters
   useEffect(() => {
     // Wait for auth to complete before setting user role
     if (!authLoading) {
       setUserRole(user?.role);
-      fetchAppointments();
+      
+      // Get initial parameters from URL if available
+      const urlParams = getUrlParams();
+      
+      // Set initial state from URL parameters
+      if (urlParams.page) {
+        setCurrentPage(parseInt(urlParams.page, 10));
+      }
+      
+      if (urlParams.per_page) {
+        setPerPage(parseInt(urlParams.per_page, 10));
+      }
+      
+      if (urlParams.status) {
+        setFilterStatus(urlParams.status);
+      }
+      
+      // Fetch appointments with these parameters, ensuring we get all appointments if no status specified
+      fetchAppointments(urlParams.status ? urlParams : {...urlParams, status: null});
     }
-  }, [user, authLoading, currentPage, perPage, filterStatus]);
+  }, [user, authLoading]);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = async (paramsOverride = null) => {
     setLoading(true);
+    setError('');
+    
     try {
-      // Prepare query parameters
-      const params = {
+      // Use provided parameters or build from state
+      const params = paramsOverride || {
         page: currentPage,
-        per_page: perPage
+        per_page: perPage,
+        status: filterStatus !== 'all' ? filterStatus : null
       };
       
-      // Add status filter if not "all"
-      if (filterStatus !== 'all') {
-        params.status = filterStatus;
+      // Make sure we have reasonable values
+      const apiParams = {
+        page: params.page || 1,
+        per_page: params.per_page || 10
+      };
+      
+      // Only add status filter if explicitly set and not 'all'
+      if (params.status && params.status !== 'all') {
+        apiParams.status = params.status;
       }
       
-      const response = await appointmentService.getAppointments(params);
-      
-      // Handle the new response format with pagination metadata
-      if (response.data && response.data.data) {
-        setAppointments(response.data.data);
-        
-        // Set pagination data
-        const meta = response.data.meta || {};
-        setTotalPages(meta.last_page || 1);
-        setTotalAppointments(meta.total || 0);
-      } else {
-        setAppointments(response.data || []);
+      // Update URL parameters but don't include status=all
+      const urlParams = {...apiParams};
+      if (urlParams.status === 'all') {
+        delete urlParams.status;
       }
-      setError('');
+      updateUrlParams(urlParams);
+      
+      const response = await appointmentService.getAppointments(apiParams);
+      
+      // Handle the response format with pagination metadata
+      if (response.data) {
+        if (response.data.data) {
+          // We have a paginated response
+          setAppointments(response.data.data);
+          
+          // Set pagination data
+          const meta = response.data.meta || {};
+          setTotalPages(meta.last_page || 1);
+          setTotalAppointments(meta.total || 0);
+          
+          // Update current page if it's provided in the response and different
+          if (meta.current_page && Number(meta.current_page) !== currentPage) {
+            setCurrentPage(Number(meta.current_page));
+          }
+          
+          // Update per_page if it's provided and different
+          if (meta.per_page && Number(meta.per_page) !== perPage) {
+            setPerPage(Number(meta.per_page));
+          }
+        } else {
+          // Legacy response format without pagination
+          setAppointments(response.data);
+          setTotalPages(1);
+          setTotalAppointments(response.data.length);
+        }
+      }
     } catch (err) {
       console.error('Error fetching appointments:', err);
       setError('Failed to load appointments. Please try again later.');
@@ -171,48 +221,131 @@ const Appointments = () => {
     return appointments.filter(app => app.status === filterStatus);
   };
 
-  // Sort appointments based on selected criteria
-  const getSortedAppointments = () => {
-    const filtered = getFilteredAppointments();
-    
-    return [...filtered].sort((a, b) => {
-      let valueA, valueB;
-      
-      if (sortBy === 'date') {
-        const dateTimeA = new Date(`${a.appointment_date}T${a.appointment_time}`);
-        const dateTimeB = new Date(`${b.appointment_date}T${b.appointment_time}`);
-        valueA = dateTimeA.getTime();
-        valueB = dateTimeB.getTime();
-      } else if (sortBy === 'status') {
-        valueA = a.status;
-        valueB = b.status;
-      } else if (sortBy === 'doctor') {
-        valueA = a.doctor_name || '';
-        valueB = b.doctor_name || '';
-      } else {
-        valueA = a[sortBy];
-        valueB = b[sortBy];
-      }
-      
-      // For string comparison
-      if (typeof valueA === 'string') {
-        valueA = valueA.toLowerCase();
-        valueB = valueB.toLowerCase();
-      }
-      
-      // Apply sort direction
-      const direction = sortDirection === 'asc' ? 1 : -1;
-      
-      if (valueA < valueB) return -1 * direction;
-      if (valueA > valueB) return 1 * direction;
-      return 0;
-    });
-  };
+// Make getSortedAppointments simpler to avoid potential filtering issues
+const getSortedAppointments = () => {
+  // We don't need filtering or sorting logic here anymore
+  // as we get paginated data from the backend
+  return appointments;
+};
 
-  // Handle page change
-  const handlePageChange = (page) => {
+// Handle page navigation
+const handlePageChange = (page) => {
+  // Only change the page if it's different from the current page and within range
+  if (page !== currentPage && page >= 1 && page <= totalPages) {
     setCurrentPage(page);
+    
+    // Show loading spinner
+    setLoading(true);
+    
+    // Create parameters for the API call
+    const params = {
+      page: page,
+      per_page: perPage
+    };
+    
+    // Only add status filter if not 'all'
+    if (filterStatus !== 'all') {
+      params.status = filterStatus;
+    }
+    
+    // Fetch appointments with the new page
+    fetchAppointments(params);
+    
+    // Scroll to top of the table for better UX
+    window.scrollTo({
+      top: document.querySelector('table')?.getBoundingClientRect().top + window.pageYOffset - 100,
+      behavior: 'smooth'
+    });
+  }
+};
+
+// Handle filter status changes
+const handleFilterChange = (newStatus) => {
+  // Update the filter status state
+  setFilterStatus(newStatus);
+  
+  // Always reset to page 1 when changing filters
+  setCurrentPage(1); 
+  
+  // Create new parameters for the API call
+  const params = {
+    page: 1,
+    per_page: perPage
   };
+  
+  // Only add status if not 'all'
+  if (newStatus !== 'all') {
+    params.status = newStatus;
+  }
+  
+  // Fetch appointments with the new filter
+  fetchAppointments(params);
+};
+
+// Handle per page selection changes
+const handlePerPageChange = (newPerPage) => {
+  // Convert to number and update state
+  const perPageValue = Number(newPerPage);
+  setPerPage(perPageValue);
+  
+  // Always reset to page 1 when changing items per page
+  setCurrentPage(1); 
+  
+  // Create new parameters for the API call
+  const params = {
+    page: 1,
+    per_page: perPageValue
+  };
+  
+  // Only add status filter if not 'all'
+  if (filterStatus !== 'all') {
+    params.status = filterStatus;
+  }
+  
+  // Fetch appointments with the new per_page
+  fetchAppointments(params);
+};
+
+// Function to update URL parameters without page reload
+const updateUrlParams = (params) => {
+  const url = new URL(window.location.href);
+  const previousParams = new URLSearchParams(url.search).toString();
+  
+  // Update or add each parameter
+  Object.keys(params).forEach(key => {
+    if (params[key] !== null && params[key] !== undefined) {
+      url.searchParams.set(key, params[key]);
+    } else {
+      url.searchParams.delete(key);
+    }
+  });
+  
+  const newParams = url.searchParams.toString();
+  
+  // Replace current URL without reloading the page
+  window.history.replaceState({}, '', url.toString());
+};
+
+// Function to read URL parameters
+const getUrlParams = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const params = {};
+  
+  // Get pagination parameters from URL if they exist
+  if (searchParams.has('page')) {
+    params.page = parseInt(searchParams.get('page'), 10);
+  }
+  
+  if (searchParams.has('per_page')) {
+    params.per_page = parseInt(searchParams.get('per_page'), 10);
+  }
+  
+  if (searchParams.has('status')) {
+    params.status = searchParams.get('status');
+  }
+  
+  return params;
+};
 
   // Toggle sort direction and set the sort field
   const handleSort = (field) => {
@@ -226,100 +359,125 @@ const Appointments = () => {
     }
   };
 
-  // Render pagination component
-  const renderPagination = () => {
-    if (!totalPages || totalPages <= 1) return null;
-    
-    const pagesToShow = 5;
-    const pages = [];
-    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
-    
-    if (endPage - startPage + 1 < pagesToShow) {
-      startPage = Math.max(1, endPage - pagesToShow + 1);
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(i);
-    }
-    
-    return (
-      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{appointments.length > 0 ? (currentPage - 1) * perPage + 1 : 0}</span> to{' '}
-              <span className="font-medium">{Math.min(currentPage * perPage, totalAppointments)}</span> of{' '}
-              <span className="font-medium">{totalAppointments}</span> appointments
-            </p>
+  // Fix the renderPagination method for better visibility and clarity
+const renderPagination = () => {
+  // Don't render pagination if there's only one page or no pages
+  if (!totalPages || totalPages <= 1) return null;
+  
+  const pagesToShow = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+  let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+  
+  // Adjust startPage if we can't show enough pages
+  if (endPage - startPage + 1 < pagesToShow) {
+    startPage = Math.max(1, endPage - pagesToShow + 1);
+  }
+  
+  // Generate array of page numbers to show
+  const pages = [];
+  for (let i = startPage; i <= endPage; i++) {
+    pages.push(i);
+  }
+  
+  return (
+    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+      <div className="flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-gray-700">
+            Showing <span className="font-medium">{totalAppointments > 0 ? (currentPage - 1) * perPage + 1 : 0}</span> to{' '}
+            <span className="font-medium">{Math.min(currentPage * perPage, totalAppointments)}</span> of{' '}
+            <span className="font-medium">{totalAppointments}</span> appointments
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-1 mt-3 sm:mt-0">
+          {/* Per page selector */}
+          <div className="mr-4">
+            <select
+              value={perPage}
+              onChange={(e) => {
+                handlePerPageChange(e.target.value);
+              }}
+              className="border border-gray-300 rounded-md text-sm p-1"
+            >
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
           </div>
-          <div className="flex space-x-1">
-            {currentPage > 1 && (
+          
+          {/* Previous page button */}
+          {currentPage > 1 && (
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              <span className="sr-only">Previous</span>
+              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+          
+          {/* First page + ellipsis */}
+          {startPage > 1 && (
+            <>
               <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                onClick={() => handlePageChange(1)}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
+                1
               </button>
-            )}
-            
-            {startPage > 1 && (
-              <>
-                <button
-                  onClick={() => handlePageChange(1)}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  1
-                </button>
-                {startPage > 2 && <span className="px-2">...</span>}
-              </>
-            )}
-            
-            {pages.map(page => (
+              {startPage > 2 && <span className="px-2 text-gray-500">...</span>}
+            </>
+          )}
+          
+          {/* Page numbers */}
+          {pages.map(page => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                page === currentPage
+                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+          
+          {/* Last page + ellipsis */}
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && <span className="px-2 text-gray-500">...</span>}
               <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
-                  page === currentPage
-                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                onClick={() => handlePageChange(totalPages)}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                {page}
+                {totalPages}
               </button>
-            ))}
-            
-            {endPage < totalPages && (
-              <>
-                {endPage < totalPages - 1 && <span className="px-2">...</span>}
-                <button
-                  onClick={() => handlePageChange(totalPages)}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
-            
-            {currentPage < totalPages && (
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-              >
-                <span className="sr-only">Next</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            )}
-          </div>
+            </>
+          )}
+          
+          {/* Next page button */}
+          {currentPage < totalPages && (
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              <span className="sr-only">Next</span>
+              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const renderCancellationConfirmation = () => {
     if (!cancellationState.showConfirmation) return null;
@@ -383,32 +541,65 @@ const Appointments = () => {
     );
   };
 
-  const renderAppointmentList = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+// Make the appointment list component simpler and ensure the pagination is visible
+const renderAppointmentList = () => {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700">
+        <div className="flex">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          {error}
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    if (error) {
-      return (
-        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700">
-          <div className="flex">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            {error}
-          </div>
+  return (
+    <>
+      <div className="flex flex-wrap gap-4 mb-4">
+        <div>
+          <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+          <select
+            id="statusFilter"
+            value={filterStatus}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          >
+            <option value="all">All Appointments</option>
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
         </div>
-      );
-    }
+        
+        <div>
+          <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+          <select
+            id="perPage"
+            value={perPage}
+            onChange={(e) => handlePerPageChange(e.target.value)}
+            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
+        </div>
+      </div>
 
-    const sortedAppointments = getSortedAppointments();
-
-    if (sortedAppointments.length === 0) {
-      return (
+      {appointments.length === 0 ? (
         <div className="text-center py-8">
           <p className="text-gray-500 mb-4">
             {filterStatus !== 'all' 
@@ -426,46 +617,10 @@ const Appointments = () => {
             </Link>
           )}
         </div>
-      );
-    }
-
-    return (
-      <>
-        <div className="flex flex-wrap gap-4 mb-4">
-          <div>
-            <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
-            <select
-              id="statusFilter"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="all">All Appointments</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
-            <select
-              id="perPage"
-              value={perPage}
-              onChange={(e) => setPerPage(Number(e.target.value))}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-        </div>
-
+      ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
+            {/* ... table header and content remain unchanged ... */}
             <thead className="bg-gray-50">
               <tr>
                 <th 
@@ -487,6 +642,7 @@ const Appointments = () => {
                     )}
                   </div>
                 </th>
+                {/* ...rest of table header remains the same... */}
                 {userRole !== 'patient' && (
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Patient
@@ -541,7 +697,7 @@ const Appointments = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedAppointments.map((appointment) => (
+              {appointments.map((appointment) => (
                 <tr key={appointment.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
@@ -603,9 +759,34 @@ const Appointments = () => {
             </tbody>
           </table>
         </div>
-      </>
-    );
-  };
+      )}
+      
+      {/* Always render pagination component for consistency */}
+      {renderPagination()}
+    </>
+  );
+};
+
+// Add a dedicated useEffect for pagination monitoring
+useEffect(() => {
+  // This effect will run whenever pagination state changes
+  // to help with debugging and ensuring everything is in sync
+  
+  // Skip during initial load or when auth is still loading
+  if (authLoading || loading) {
+    return;
+  }
+  
+  // Optional: Add analytics tracking for pagination events
+  // if (window.analytics) {
+  //   window.analytics.track('Pagination Changed', {
+  //     currentPage,
+  //     perPage,
+  //     totalPages,
+  //     statusFilter: filterStatus
+  //   });
+  // }
+}, [currentPage, totalPages, perPage, totalAppointments, appointments.length, filterStatus]);
 
   return (
     <div className="space-y-6">

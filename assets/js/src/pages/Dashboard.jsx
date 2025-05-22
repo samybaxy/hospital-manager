@@ -259,51 +259,6 @@ const Dashboard = () => {
               </Link>
             </div>
           </Card>
-          
-          {/* Upcoming Appointments */}
-          <Card title="Upcoming Appointments">
-            {loading ? (
-              <div className="flex justify-center p-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : upcomingAppointments.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {upcomingAppointments.map((appointment) => (
-                  <li key={appointment.id} className="py-3">
-                    <div className="flex justify-between">
-                      <div className="flex-grow">
-                        <p className="text-sm font-medium text-gray-800">{appointment.patient_name}</p>
-                        <p className="text-xs text-gray-500">with Dr. {appointment.doctor_name}</p>
-                        <p className="text-xs text-gray-500 mt-1">{appointment.service}</p>
-                      </div>
-                      <div className="flex-shrink-0 text-right">
-                        <p className="text-sm font-medium text-gray-800">{appointment.date}</p>
-                        <p className="text-xs text-gray-500">{appointment.time}</p>
-                        <span 
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            appointment.status === 'confirmed' 
-                              ? 'bg-green-100 text-green-800' 
-                              : appointment.status === 'pending' 
-                              ? 'bg-yellow-100 text-yellow-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {appointment.status}
-                        </span>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="py-8 text-center text-gray-500">No upcoming appointments</div>
-            )}
-            
-            <div className="mt-4 text-right">
-              <Link to="/appointments" className="text-sm text-blue-600 hover:text-blue-800">
-                Manage appointments →
-              </Link>
-            </div>
-          </Card>
         </div>
       </div>
     </div>

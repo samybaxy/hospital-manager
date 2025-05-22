@@ -2,6 +2,7 @@
 
 namespace HospitalManager\Controllers\Api;
 
+use Error;
 use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
@@ -54,8 +55,16 @@ class AppointmentController extends BaseController
     {
         $user_id = get_current_user_id();
         $user = wp_get_current_user();
-        $date = $request->get_param('date');
-        $status = $request->get_param('status');
+        $params = $request->get_params()['params'];
+        $date = isset( $params['date'] ) ?$params['date']  : null;
+        $status = isset( $params['status'] ) ? $params['status']  : null;
+
+        // Pagination parameters
+        $page = $params['page'] ? intval($params['page'] ) : 1;
+        $per_page = $params['per_page'] ? intval($params['per_page']) : 10;
+        
+        // Ensure per_page has a reasonable value
+        $per_page = min(max($per_page, 5), 100); // Min 5, max 100
 
         $query = Appointment::query();
 
@@ -75,14 +84,14 @@ class AppointmentController extends BaseController
         }
 
         $appointments = $query
-            ->orderBy('appointment_date', 'ASC')
-            ->orderBy('appointment_time', 'ASC')
+            ->orderBy('appointment_date', 'DESC')
+            ->orderBy('appointment_time', 'DESC')
             ->get();
 
         // Convert appointments to array format to avoid any ID issues with the PostModel
         $appointments_array = array_map(function($appointment) {
             $appointment_data = $appointment->toArray();
-            
+            error_log('Appointment Data: ' . print_r($appointment_data, true));
             // Add patient and doctor names to the array for display
             if (isset($appointment_data['patient_id'])) {
                 $patient = get_user_by('id', $appointment_data['patient_id']);
@@ -95,20 +104,21 @@ class AppointmentController extends BaseController
             }
             
             // Ensure status is standardized
-            if (empty($appointment_data['status']) || $appointment_data['status'] === 'draft') {
-                $appointment_data['status'] = 'pending';
-            }
+            // if (empty($appointment_data['status']) || $appointment_data['status'] === 'draft') {
+            //     $appointment_data['status'] = 'pending';
+            // }
             
             return $appointment_data;
         }, $appointments);
-        
-        // Pagination parameters
-        $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
-        $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 10;
+
+        // error_log('Appointments: ' . print_r($appointments_array, true));
         
         // Calculate pagination
         $total_items = count($appointments_array);
-        $total_pages = ceil($total_items / $per_page);
+        $total_pages = max(1, ceil($total_items / $per_page));
+        
+        // Ensure current page is valid
+        $page = min(max(1, $page), $total_pages);
         
         // Apply pagination
         $offset = ($page - 1) * $per_page;
@@ -118,9 +128,12 @@ class AppointmentController extends BaseController
             'data' => $appointments_page,
             'meta' => [
                 'total' => $total_items,
+                'count' => count($appointments_page),
                 'per_page' => $per_page,
                 'current_page' => $page,
-                'last_page' => $total_pages
+                'last_page' => $total_pages,
+                'first_page' => 1,
+                'has_more_pages' => ($page < $total_pages)
             ]
         ]);
         
