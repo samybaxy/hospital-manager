@@ -14,12 +14,19 @@ const Appointments = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortDirection, setSortDirection] = useState('asc');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalAppointments, setTotalAppointments] = useState(0);
+  const [perPage, setPerPage] = useState(10);
 
   const [cancellationState, setCancellationState] = useState({
     showConfirmation: false,
     appointmentId: null,
     isLoading: false,
     error: '',
+    reason: '',
   });
 
   useEffect(() => {
@@ -28,13 +35,35 @@ const Appointments = () => {
       setUserRole(user?.role);
       fetchAppointments();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, currentPage, perPage, filterStatus]);
 
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      const response = await appointmentService.getAppointments();
-      setAppointments(response.data);
+      // Prepare query parameters
+      const params = {
+        page: currentPage,
+        per_page: perPage
+      };
+      
+      // Add status filter if not "all"
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
+      }
+      
+      const response = await appointmentService.getAppointments(params);
+      
+      // Handle the new response format with pagination metadata
+      if (response.data && response.data.data) {
+        setAppointments(response.data.data);
+        
+        // Set pagination data
+        const meta = response.data.meta || {};
+        setTotalPages(meta.last_page || 1);
+        setTotalAppointments(meta.total || 0);
+      } else {
+        setAppointments(response.data || []);
+      }
       setError('');
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -50,6 +79,7 @@ const Appointments = () => {
       appointmentId,
       isLoading: false,
       error: '',
+      reason: '',
     });
   };
 
@@ -61,15 +91,22 @@ const Appointments = () => {
     }));
 
     try {
-      await appointmentService.cancelAppointment(cancellationState.appointmentId);
+      // Include cancellation reason in the update
+      await appointmentService.updateAppointment(cancellationState.appointmentId, { 
+        status: 'cancelled',
+        notes: cancellationState.reason || 'No reason provided'
+      });
+      
       // Refresh the appointments list
       fetchAppointments();
+      
       // Reset cancellation state
       setCancellationState({
         showConfirmation: false,
         appointmentId: null,
         isLoading: false,
         error: '',
+        reason: '',
       });
     } catch (err) {
       console.error('Error cancelling appointment:', err);
@@ -87,7 +124,15 @@ const Appointments = () => {
       appointmentId: null,
       isLoading: false,
       error: '',
+      reason: '',
     });
+  };
+
+  const handleReasonChange = (e) => {
+    setCancellationState(prev => ({
+      ...prev,
+      reason: e.target.value
+    }));
   };
 
   const formatDateTime = (date, time) => {
@@ -164,6 +209,11 @@ const Appointments = () => {
     });
   };
 
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   // Toggle sort direction and set the sort field
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -174,6 +224,101 @@ const Appointments = () => {
       setSortBy(field);
       setSortDirection('asc');
     }
+  };
+
+  // Render pagination component
+  const renderPagination = () => {
+    if (!totalPages || totalPages <= 1) return null;
+    
+    const pagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+    
+    if (endPage - startPage + 1 < pagesToShow) {
+      startPage = Math.max(1, endPage - pagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return (
+      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{appointments.length > 0 ? (currentPage - 1) * perPage + 1 : 0}</span> to{' '}
+              <span className="font-medium">{Math.min(currentPage * perPage, totalAppointments)}</span> of{' '}
+              <span className="font-medium">{totalAppointments}</span> appointments
+            </p>
+          </div>
+          <div className="flex space-x-1">
+            {currentPage > 1 && (
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+            
+            {startPage > 1 && (
+              <>
+                <button
+                  onClick={() => handlePageChange(1)}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  1
+                </button>
+                {startPage > 2 && <span className="px-2">...</span>}
+              </>
+            )}
+            
+            {pages.map(page => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
+                  page === currentPage
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            
+            {endPage < totalPages && (
+              <>
+                {endPage < totalPages - 1 && <span className="px-2">...</span>}
+                <button
+                  onClick={() => handlePageChange(totalPages)}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+            
+            {currentPage < totalPages && (
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderCancellationConfirmation = () => {
@@ -187,6 +332,20 @@ const Appointments = () => {
           <p className="mb-4 text-gray-700">
             Are you sure you want to cancel this appointment? This action cannot be undone.
           </p>
+          
+          <div className="mb-4">
+            <label htmlFor="cancel-reason" className="block text-sm font-medium text-gray-700 mb-1">
+              Reason for cancellation
+            </label>
+            <textarea
+              id="cancel-reason"
+              rows={3}
+              className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Please provide a reason for cancelling this appointment"
+              value={cancellationState.reason}
+              onChange={handleReasonChange}
+            ></textarea>
+          </div>
           
           {cancellationState.error && (
             <div className="bg-red-50 p-3 rounded-md border border-red-200 mb-4 text-red-700 text-sm">
@@ -288,6 +447,21 @@ const Appointments = () => {
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
+          
+          <div>
+            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -295,7 +469,7 @@ const Appointments = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('date')}
                 >
                   <div className="flex items-center">
@@ -314,13 +488,13 @@ const Appointments = () => {
                   </div>
                 </th>
                 {userRole !== 'patient' && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Patient
                   </th>
                 )}
                 {userRole !== 'doctor' && (
                   <th 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('doctor')}
                   >
                     <div className="flex items-center">
@@ -340,7 +514,7 @@ const Appointments = () => {
                   </th>
                 )}
                 <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center">
@@ -358,10 +532,10 @@ const Appointments = () => {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reason
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -369,32 +543,32 @@ const Appointments = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedAppointments.map((appointment) => (
                 <tr key={appointment.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
                   </td>
                   {userRole !== 'patient' && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {appointment.patient_name}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {appointment.patient_name || "Unknown Patient"}
                     </td>
                   )}
                   {userRole !== 'doctor' && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      Dr. {appointment.doctor_name}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : "Unknown Doctor"}
                     </td>
                   )}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                      {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                      {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3 text-sm">
                     <div className="max-w-xs truncate">{appointment.reason || 'No reason provided'}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                     {appointment.status === 'pending' && userRole === 'patient' && (
                       <button
                         onClick={() => handleCancelClick(appointment.id)}
-                        className="text-red-600 hover:text-red-900 mr-4"
+                        className="text-red-600 hover:text-red-900 text-sm font-medium"
                       >
                         Cancel
                       </button>
@@ -403,13 +577,13 @@ const Appointments = () => {
                       <div className="space-x-3">
                         <button
                           onClick={() => appointmentService.updateAppointment(appointment.id, { status: 'confirmed' }).then(fetchAppointments)}
-                          className="text-green-600 hover:text-green-900"
+                          className="text-green-600 hover:text-green-900 text-sm font-medium"
                         >
                           Confirm
                         </button>
                         <button
                           onClick={() => handleCancelClick(appointment.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 text-sm font-medium"
                         >
                           Decline
                         </button>
@@ -418,7 +592,7 @@ const Appointments = () => {
                     {userRole === 'doctor' && appointment.status === 'confirmed' && (
                       <button
                         onClick={() => appointmentService.updateAppointment(appointment.id, { status: 'completed' }).then(fetchAppointments)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
                       >
                         Mark Completed
                       </button>

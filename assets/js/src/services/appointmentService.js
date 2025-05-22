@@ -7,7 +7,7 @@ import { api } from './apiService';
 const appointmentService = {
   /**
    * Get all appointments for the current user
-   * @param {Object} params - Query parameters
+   * @param {Object} params - Query parameters (page, per_page, status, etc.)
    * @returns {Promise} Promise with appointments data
    */
   getAppointments: (params = {}) => {
@@ -48,10 +48,14 @@ const appointmentService = {
   /**
    * Cancel an appointment
    * @param {number} id - Appointment ID
+   * @param {string} reason - Reason for cancellation
    * @returns {Promise} Promise with result
    */
-  cancelAppointment: (id) => {
-    return api.put(`/appointments/${id}`, { status: 'cancelled' });
+  cancelAppointment: (id, reason = '') => {
+    return api.put(`/appointments/${id}`, { 
+      status: 'cancelled',
+      notes: reason
+    });
   }
 };
 

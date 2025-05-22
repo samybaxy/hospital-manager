@@ -81,10 +81,54 @@ class AppointmentController extends BaseController
 
         // Convert appointments to array format to avoid any ID issues with the PostModel
         $appointments_array = array_map(function($appointment) {
-            return $appointment->toArray();
+            $appointment_data = $appointment->toArray();
+            
+            // Add patient and doctor names to the array for display
+            if (isset($appointment_data['patient_id'])) {
+                $patient = get_user_by('id', $appointment_data['patient_id']);
+                $appointment_data['patient_name'] = $patient ? $patient->display_name : 'Unknown Patient';
+            }
+            
+            if (isset($appointment_data['doctor_id'])) {
+                $doctor = get_user_by('id', $appointment_data['doctor_id']);
+                $appointment_data['doctor_name'] = $doctor ? $doctor->display_name : 'Unknown Doctor';
+            }
+            
+            // Ensure status is standardized
+            if (empty($appointment_data['status']) || $appointment_data['status'] === 'draft') {
+                $appointment_data['status'] = 'pending';
+            }
+            
+            return $appointment_data;
         }, $appointments);
         
-        return new WP_REST_Response($appointments_array);
+        // Pagination parameters
+        $page = $request->get_param('page') ? intval($request->get_param('page')) : 1;
+        $per_page = $request->get_param('per_page') ? intval($request->get_param('per_page')) : 10;
+        
+        // Calculate pagination
+        $total_items = count($appointments_array);
+        $total_pages = ceil($total_items / $per_page);
+        
+        // Apply pagination
+        $offset = ($page - 1) * $per_page;
+        $appointments_page = array_slice($appointments_array, $offset, $per_page);
+        
+        $response = new WP_REST_Response([
+            'data' => $appointments_page,
+            'meta' => [
+                'total' => $total_items,
+                'per_page' => $per_page,
+                'current_page' => $page,
+                'last_page' => $total_pages
+            ]
+        ]);
+        
+        // Set X-WP-Total and X-WP-TotalPages headers for compatibility
+        $response->header('X-WP-Total', $total_items);
+        $response->header('X-WP-TotalPages', $total_pages);
+        
+        return $response;
     }
 
     public function create_appointment($request)
