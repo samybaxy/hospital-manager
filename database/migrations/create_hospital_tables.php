@@ -65,6 +65,7 @@ class CreateHospitalTables
             id bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
+            appointment_id bigint(20) DEFAULT NULL,
             date date NOT NULL,
             time time NOT NULL,
             medical_history text,
@@ -75,7 +76,8 @@ class CreateHospitalTables
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY patient_id (patient_id),
-            KEY doctor_id (doctor_id)
+            KEY doctor_id (doctor_id),
+            KEY appointment_id (appointment_id)
         ) $charset_collate;";
 
         // Lab Investigations table

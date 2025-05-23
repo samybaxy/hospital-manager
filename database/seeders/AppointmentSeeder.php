@@ -4,102 +4,160 @@ namespace HospitalManager\Database\Seeders;
 
 class AppointmentSeeder extends Seeder
 {
-    protected $appointment_statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
-    protected $appointment_reasons = [
-        'Regular check-up',
-        'Acute illness',
-        'Follow-up appointment',
-        'Vaccination',
-        'Chronic condition management',
-        'Prescription renewal',
-        'Medical certificate',
-        'Pre-operative assessment',
-        'Post-operative check-up',
-        'Test results discussion'
-    ];
-    
     public function run()
     {
-        // Get patient IDs
+        $this->log("Creating appointment records...");
+        
+        // Get patient and doctor IDs
         $patients_table = $this->wpdb->prefix . 'hm_patients';
         $patient_ids = $this->wpdb->get_col("SELECT id FROM {$patients_table}");
         
-        if (empty($patient_ids)) {
-            $this->log("No patients found. Make sure PatientSeeder was run before this seeder.");
-            return;
-        }
-        
-        // Get doctor IDs
         $doctors_table = $this->wpdb->prefix . 'hm_doctors';
         $doctor_ids = $this->wpdb->get_col("SELECT id FROM {$doctors_table}");
         
-        if (empty($doctor_ids)) {
-            $this->log("No doctors found. Make sure DoctorSeeder was run before this seeder.");
+        if (empty($patient_ids) || empty($doctor_ids)) {
+            $this->log("No patients or doctors found. Cannot create appointments.");
             return;
         }
         
         $appointments_table = $this->wpdb->prefix . 'hm_appointments';
         $count = 0;
-        $target = min(count($patient_ids) * 2, 100); // Create up to 2 appointments per patient, max 100
+        $target = 150; // Increased from 100 to create more appointments
         
-        $this->log("Creating appointments");
+        $statuses = ['pending', 'confirmed', 'completed', 'cancelled'];
+        $reasons = [
+            'General checkup',
+            'Follow-up consultation',
+            'Routine examination',
+            'Symptoms evaluation',
+            'Prescription renewal',
+            'Lab results review',
+            'Vaccination',
+            'Physical therapy',
+            'Specialist consultation',
+            'Emergency consultation',
+            'Preventive care',
+            'Chronic disease management',
+            'Pre-operative assessment',
+            'Post-operative follow-up',
+            'Health screening'
+        ];
         
-        // Create past appointments (mostly completed)
-        for ($i = 0; $i < $target / 2; $i++) {
+        for ($i = 0; $i < $target; $i++) {
             $patient_id = $this->faker->randomElement($patient_ids);
             $doctor_id = $this->faker->randomElement($doctor_ids);
-            $status = $this->faker->randomElement(['completed', 'cancelled']);
-            $past_date = $this->faker->dateTimeBetween('-6 months', '-1 day');
             
-            $this->wpdb->insert(
+            // Create appointments across different time ranges
+            if ($i < 60) {
+                // Past appointments (60 appointments) - higher chance of completion
+                $appointment_date = $this->faker->dateTimeBetween('-6 months', '-1 day');
+                $status_weights = [
+                    'completed' => 60,  // 60% completed (these will likely have visitations)
+                    'cancelled' => 20,  // 20% cancelled
+                    'confirmed' => 15,  // 15% confirmed but no visitation yet
+                    'pending' => 5      // 5% still pending
+                ];
+            } elseif ($i < 90) {
+                // Recent appointments (30 appointments)
+                $appointment_date = $this->faker->dateTimeBetween('-7 days', 'now');
+                $status_weights = [
+                    'completed' => 40,
+                    'confirmed' => 35,
+                    'pending' => 15,
+                    'cancelled' => 10
+                ];
+            } else {
+                // Future appointments (60 appointments)
+                $appointment_date = $this->faker->dateTimeBetween('tomorrow', '+3 months');
+                $status_weights = [
+                    'pending' => 50,
+                    'confirmed' => 45,
+                    'cancelled' => 5,
+                    'completed' => 0
+                ];
+            }
+            
+            // Select status based on weights
+            $status = $this->weightedRandomSelection($status_weights);
+            
+            $appointment_time = $this->faker->time('H:i:s', '17:00:00');
+            $reason = $this->faker->randomElement($reasons);
+            
+            // Check for duplicates
+            $exists = $this->wpdb->get_var($this->wpdb->prepare(
+                "SELECT COUNT(*) FROM {$appointments_table} 
+                 WHERE patient_id = %d AND doctor_id = %d AND appointment_date = %s AND appointment_time = %s",
+                $patient_id, $doctor_id, $appointment_date->format('Y-m-d'), $appointment_time
+            ));
+            
+            if ($exists) {
+                continue;
+            }
+            
+            // Insert appointment
+            $result = $this->wpdb->insert(
                 $appointments_table,
                 [
                     'patient_id' => $patient_id,
                     'doctor_id' => $doctor_id,
-                    'appointment_date' => $past_date->format('Y-m-d'),
-                    'appointment_time' => $past_date->format('H:i:s'),
+                    'appointment_date' => $appointment_date->format('Y-m-d'),
+                    'appointment_time' => $appointment_time,
+                    'reason' => $reason,
                     'status' => $status,
-                    'reason' => $this->faker->randomElement($this->appointment_reasons),
-                    'notes' => $this->faker->optional(0.7)->text(100),
-                    'created_at' => $this->faker->dateTimeBetween('-7 months', '-6 months')->format('Y-m-d H:i:s'),
-                    'updated_at' => $past_date->format('Y-m-d H:i:s'),
+                    'notes' => $status === 'cancelled' ? 'Patient cancelled due to emergency' : null,
+                    'created_at' => (clone $appointment_date)->modify('-' . rand(1, 30) . ' days')->format('Y-m-d H:i:s'),
+                    'updated_at' => $appointment_date->format('Y-m-d H:i:s'),
                 ],
                 [
                     '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
                 ]
             );
             
-            $count++;
-        }
-        
-        // Create future appointments (pending or confirmed)
-        for ($i = 0; $i < $target / 2; $i++) {
-            $patient_id = $this->faker->randomElement($patient_ids);
-            $doctor_id = $this->faker->randomElement($doctor_ids);
-            $status = $this->faker->randomElement(['pending', 'confirmed']);
-            $future_date = $this->faker->dateTimeBetween('tomorrow', '+3 months');
-            
-            $this->wpdb->insert(
-                $appointments_table,
-                [
+            if ($result) {
+                $count++;
+                // Store appointment info for visitation seeder
+                $this->storeAppointmentForVisitation([
+                    'appointment_id' => $this->wpdb->insert_id,
                     'patient_id' => $patient_id,
                     'doctor_id' => $doctor_id,
-                    'appointment_date' => $future_date->format('Y-m-d'),
-                    'appointment_time' => $future_date->format('H:i:s'),
+                    'date' => $appointment_date->format('Y-m-d'),
+                    'time' => $appointment_time,
                     'status' => $status,
-                    'reason' => $this->faker->randomElement($this->appointment_reasons),
-                    'notes' => $this->faker->optional(0.3)->text(100),
-                    'created_at' => $this->faker->dateTimeBetween('-1 month', 'now')->format('Y-m-d H:i:s'),
-                    'updated_at' => current_time('mysql'),
-                ],
-                [
-                    '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
-                ]
-            );
-            
-            $count++;
+                    'reason' => $reason
+                ]);
+            }
         }
         
-        $this->log("Created {$count} appointments");
+        $this->log("Created {$count} appointment records");
+    }
+    
+    /**
+     * Weighted random selection
+     */
+    private function weightedRandomSelection($weights)
+    {
+        $total = array_sum($weights);
+        $random = rand(1, $total);
+        $current = 0;
+        
+        foreach ($weights as $item => $weight) {
+            $current += $weight;
+            if ($random <= $current) {
+                return $item;
+            }
+        }
+        
+        return array_keys($weights)[0]; // fallback
+    }
+    
+    /**
+     * Store appointment data for use by VisitationSeeder
+     */
+    private function storeAppointmentForVisitation($appointment_data)
+    {
+        // Store in WordPress transient for use by VisitationSeeder
+        $existing = get_transient('hm_appointments_for_visitations') ?: [];
+        $existing[] = $appointment_data;
+        set_transient('hm_appointments_for_visitations', $existing, HOUR_IN_SECONDS);
     }
 }

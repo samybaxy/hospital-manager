@@ -119,7 +119,7 @@ class PatientController extends BaseController
             $params = $request->get_params();
             
             // Log the incoming parameters for debugging
-            error_log('Patient API request params: ' . print_r($params, true));
+            // error_log('Patient API request params: ' . print_r($params, true));
             
             // Check explicitly for HMO filter and ensure it's an integer
             if (isset($params['hmo_id'])) {

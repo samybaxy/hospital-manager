@@ -142,7 +142,7 @@ class AppointmentController extends BaseController
         // Convert appointments to array format to avoid any ID issues with the PostModel
         $appointments_array = array_map(function($appointment) {
             $appointment_data = $appointment->toArray();
-            error_log('Appointment Data: ' . print_r($appointment_data, true));
+            // error_log('Appointment Data: ' . print_r($appointment_data, true));
             // Add patient and doctor names to the array for display
             if (isset($appointment_data['patient_id'])) {
                 $patient = Patient::find( $appointment_data['patient_id'] );
