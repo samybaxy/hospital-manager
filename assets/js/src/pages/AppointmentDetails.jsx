@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import StatusMessage from '../components/StatusMessage';
@@ -11,7 +11,14 @@ import { useAuth } from '../context/AuthContext';
 const AppointmentDetails = () => {
   const { id, doctorId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  
+  // Get the source page information from the location state
+  const returnTo = location.state?.returnTo || 'appointments';
+  const returnPath = location.state?.returnPath || '/appointments';
+  const sourceDoctorName = location.state?.doctorName;
+  
   const [doctor, setDoctor] = useState(null);
   const [patient, setPatient] = useState(null);
   const [appointment, setAppointment] = useState(null);
@@ -164,9 +171,9 @@ const AppointmentDetails = () => {
         reason: '',
       });
       
-      // Redirect to appointments page after short delay
+      // Redirect to the source page after short delay
       setTimeout(() => {
-        navigate('/appointments');
+        navigate(returnPath);
       }, 3000);
     } catch (err) {
       console.error('Error booking appointment:', err);
@@ -188,9 +195,9 @@ const AppointmentDetails = () => {
       await appointmentService.cancelAppointment(id);
       setSuccessMessage('Appointment cancelled successfully');
       
-      // Redirect to appointments page after short delay
+      // Redirect to the source page after short delay
       setTimeout(() => {
-        navigate('/appointments');
+        navigate(returnPath);
       }, 2000);
     } catch (err) {
       console.error('Error cancelling appointment:', err);
@@ -256,12 +263,16 @@ const AppointmentDetails = () => {
         <h1 className="text-2xl font-bold">
           {viewMode ? 'Appointment Details' : 'Book Appointment'}
         </h1>
-        <Link to={viewMode ? "/appointments" : "/doctors"}>
+        <Link to={returnPath}>
           <Button variant="secondary">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
-            Back to {viewMode ? 'Appointments' : 'Doctors'}
+            {returnTo === 'doctor' && sourceDoctorName ? 
+              `Back to Dr. ${sourceDoctorName}` : 
+              returnTo === 'dashboard' ? 
+                'Back to Dashboard' : 
+                'Back to Appointments'}
           </Button>
         </Link>
       </div>
@@ -285,7 +296,13 @@ const AppointmentDetails = () => {
             </svg>
             {successMessage}
           </div>
-          <p className="text-sm mt-2">Redirecting to appointments page...</p>
+          <p className="text-sm mt-2">
+            {returnTo === 'doctor' ? 
+              `Redirecting back to doctor's page...` : 
+              returnTo === 'dashboard' ? 
+                'Redirecting back to dashboard...' : 
+                'Redirecting to appointments page...'}
+          </p>
         </div>
       )}
 
@@ -359,9 +376,13 @@ const AppointmentDetails = () => {
                   </Button>
                 )}
                 
-                <Link to="/appointments">
+                <Link to={returnPath}>
                   <Button variant="secondary">
-                    Back to Appointments
+                    {returnTo === 'doctor' && sourceDoctorName ? 
+                      `Back to Dr. ${sourceDoctorName}` : 
+                      returnTo === 'dashboard' ? 
+                        'Back to Dashboard' : 
+                        'Back to Appointments'}
                   </Button>
                 </Link>
               </div>
@@ -431,7 +452,7 @@ const AppointmentDetails = () => {
                 </div>
 
                 <div className="flex justify-end space-x-2">
-                  <Link to="/doctors">
+                  <Link to={returnPath}>
                     <Button
                       type="button"
                       variant="secondary"

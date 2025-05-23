@@ -724,6 +724,7 @@ const renderAppointmentList = () => {
                     <div className="flex justify-end space-x-2">
                       <Link 
                         to={`/appointments/${appointment.id}`} 
+                        state={{ returnTo: 'appointments', returnPath: '/appointments' }}
                         className="inline-flex items-center px-2 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

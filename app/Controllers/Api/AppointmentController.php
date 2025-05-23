@@ -645,9 +645,6 @@ class AppointmentController extends BaseController
             
             error_log("Found " . count($appointments) . " total appointments for doctor $doctor_id");
             
-            // Count total appointments
-            $stats['totalAppointments'] = count($appointments);
-            
             // Get today's date for comparison
             $today = date('Y-m-d');
             error_log("Today's date for comparison: $today");
@@ -663,10 +660,15 @@ class AppointmentController extends BaseController
                 // Count by status
                 if ($status === 'completed') {
                     $stats['completedAppointments']++;
+                    // Include completed in total count
+                    $stats['totalAppointments']++;
                 } elseif ($status === 'cancelled') {
                     $stats['cancelledAppointments']++;
+                    // We don't include cancelled in the total count
                 } elseif ($status === 'pending') {
                     $stats['pendingAppointments']++;
+                    // Include pending in total count
+                    $stats['totalAppointments']++;
                     
                     // Count pending appointments in upcoming if date is in the future
                     if ($date >= $today) {
@@ -675,6 +677,8 @@ class AppointmentController extends BaseController
                     }
                 } elseif ($status === 'confirmed') {
                     $stats['confirmedAppointments']++;
+                    // Include confirmed in total count
+                    $stats['totalAppointments']++;
                     
                     // Count confirmed appointments in upcoming if date is in the future
                     if ($date >= $today) {

@@ -162,7 +162,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <Link to={`/appointments/${appointment.id}`}>
+                    <Link to={`/appointments/${appointment.id}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
                       <Button variant="secondary" className="text-xs px-3 py-1">
                         Details
                       </Button>

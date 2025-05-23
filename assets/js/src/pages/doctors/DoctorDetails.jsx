@@ -33,10 +33,12 @@ const DoctorDetails = () => {
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'profile');
   const [patients, setPatients] = useState([]);
   const [patientsLoading, setPatientsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [patientStats, setPatientStats] = useState({
     total: 0,
     active: 0,
-    recentVisits: 0
+    recentVisits: 0,
+    last_page: 1
   });
   const [scheduleStats, setScheduleStats] = useState({
     totalAppointments: 0,
@@ -90,13 +92,13 @@ const DoctorDetails = () => {
   };
   
   // Function to fetch doctor's patients when patients tab is clicked
-  const fetchPatients = useCallback(async () => {
+  const fetchPatients = useCallback(async (page = 1) => {
     if (!id) return;
     
     try {
       setPatientsLoading(true);
       setPatientsError(null);
-      const response = await api.get(`/doctors/${id}/patients`);
+      const response = await api.get(`/doctors/${id}/patients?page=${page}&per_page=20`);
       
       if (response.data && response.data.data) {
         setPatients(response.data.data);
@@ -106,11 +108,17 @@ const DoctorDetails = () => {
         setPatients([]);
       }
 
-      // Set patient statistics based on the API response or generate mock data
-      setPatientStats({
-        total: response.data?.meta?.total || 0,
-        active: response.data?.meta?.active || 0,
-        recentVisits: response.data?.meta?.recent_visits || 0
+      // Set patient statistics based on the API response
+      // Only update the statistics if we don't already have a value or if the new one is different
+      setPatientStats(prevStats => {
+        // If we already have stats from initial load, keep the total count consistent
+        return {
+          total: response.data?.meta?.total || prevStats.total || 0,
+          active: response.data?.meta?.active || prevStats.active || 0,
+          recentVisits: response.data?.meta?.recent_visits || prevStats.recentVisits || 0,
+          last_page: response.data?.meta?.last_page || 1,
+          current_page: response.data?.meta?.current_page || page
+        };
       });
     } catch (err) {
       console.error('Error fetching patients:', err);
@@ -127,15 +135,12 @@ const DoctorDetails = () => {
     
     try {
       setAppointmentsLoading(true);
-      console.log(`Fetching appointments for doctor ID: ${id}`);
-      
+
       // Get all upcoming appointments (both pending and confirmed)
       const response = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
       
-      console.log('Raw appointments response:', response);
-      
       if (response.data && response.data.data) {
-        console.log('Found nested data structure with appointments:', response.data.data);
+        // console.log('Found nested data structure with appointments:', response.data.data);
         // Set the upcoming appointments from the response data
         setUpcomingAppointments(response.data.data);
         
@@ -177,12 +182,12 @@ const DoctorDetails = () => {
     }
   }, [id]);
 
-  // Effect to fetch patients when tab changes to patients
+  // Effect to fetch patients when tab changes to patients or page changes
   useEffect(() => {
-    if (activeTab === 'patients' && patients.length === 0) {
-      fetchPatients();
+    if (activeTab === 'patients') {
+      fetchPatients(currentPage);
     }
-  }, [activeTab, fetchPatients, patients.length]);
+  }, [activeTab, fetchPatients, currentPage]);
 
   // Effect to fetch appointments when tab changes to schedule
   useEffect(() => {
@@ -212,6 +217,21 @@ const DoctorDetails = () => {
           upcomingAppointments: 0,
           completedAppointments: 0
         });
+
+        // Fetch patient count and statistics early, regardless of tab
+        try {
+          const patientResponse = await api.get(`/doctors/${id}/patients`);
+          if (patientResponse.data) {
+            // Set patient statistics based on the API response
+            setPatientStats({
+              total: patientResponse.data.meta?.total || 0,
+              active: patientResponse.data.meta?.active || 0,
+              recentVisits: patientResponse.data.meta?.recent_visits || 0
+            });
+          }
+        } catch (patientErr) {
+          console.warn('Could not fetch patient statistics:', patientErr);
+        }
 
         // Fetch real appointment statistics
         try {
@@ -626,77 +646,137 @@ const DoctorDetails = () => {
               No patients found for this doctor
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {patients.map((patient, index) => {
-                    // Since we might not have real patient data, we'll generate some for demo
-                    const patientId = patient.id || index + 1;
-                    const firstName = patient.first_name || `Patient`;
-                    const lastName = patient.last_name || `${index + 1}`;
-                    const visitDate = patient.last_visit_date || new Date(Date.now() - Math.random() * 10000000000).toISOString().split('T')[0];
-                    
-                    // Random status for visualization
-                    const statuses = ['confirmed', 'completed', 'cancelled', 'pending'];
-                    const statusColors = {
-                      'confirmed': 'bg-green-100 text-green-800',
-                      'pending': 'bg-yellow-100 text-yellow-800',
-                      'completed': 'bg-blue-100 text-blue-800',
-                      'cancelled': 'bg-gray-100 text-gray-800'
-                    };
-                    const status = patient.status || statuses[Math.floor(Math.random() * statuses.length)];
-                    return (
-                      <tr key={patientId} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center">
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
-                              {firstName[0]}{lastName[0]}
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {firstName} {lastName}
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit Date</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Time</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {patients.map((patient, index) => {
+                      const patientId = patient.id || index + 1;
+                      const firstName = patient.first_name || `Patient`;
+                      const lastName = patient.last_name || `${index + 1}`;
+                      const visitDate = patient.last_visit_date || new Date(Date.now() - Math.random() * 10000000000).toISOString().split('T')[0];
+                      const visitTime = patient.last_visit_time ? formatTime(patient.last_visit_time) : 'N/A';
+                      
+                      return (
+                        <tr key={patientId} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center">
+                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
+                                {firstName[0]}{lastName[0]}
                               </div>
-                              <div className="text-sm text-gray-500">
-                                ID: {patientId}
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {firstName} {lastName}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  ID: {patientId}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">{visitDate}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[status]}`}>
-                            {status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-medium">
-                          <div className="flex space-x-2">
-                            <Link 
-                              to={`/patients/${patientId}`} 
-                              state={{ fromDoctor: { id, name: fullName, specialty: specialty } }}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{visitDate}</td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                              {visitTime}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            <div className="flex space-x-2">
+                              <Link 
+                                to={`/patients/${patientId}`} 
+                                state={{ fromDoctor: { id, name: fullName, specialty: specialty } }}
+                                className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                View
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination Controls */}
+              {patientStats.total > 0 && (
+                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
+                  <div className="flex flex-1 justify-between sm:hidden">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className={`relative inline-flex items-center rounded-md border ${currentPage === 1 ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-gray-300 bg-white text-gray-700'} px-4 py-2 text-sm font-medium hover:bg-gray-50`}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(prev => prev < patientStats.last_page ? prev + 1 : prev)}
+                      disabled={currentPage >= patientStats.last_page}
+                      className={`relative ml-3 inline-flex items-center rounded-md border ${currentPage >= patientStats.last_page ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-gray-300 bg-white text-gray-700'} px-4 py-2 text-sm font-medium hover:bg-gray-50`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                  <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Showing <span className="font-medium">{((currentPage - 1) * 20) + 1}</span> to <span className="font-medium">{Math.min(currentPage * 20, patientStats.total)}</span> of{' '}
+                        <span className="font-medium">{patientStats.total}</span> patients
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className={`relative inline-flex items-center rounded-l-md px-2 py-2 ${currentPage === 1 ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          <span className="sr-only">Previous</span>
+                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                        {/* Page numbers */}
+                        {Array.from({ length: Math.min(5, patientStats.last_page) }).map((_, idx) => {
+                          const pageNumber = idx + 1;
+                          return (
+                            <button
+                              key={pageNumber}
+                              onClick={() => setCurrentPage(pageNumber)}
+                              className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === pageNumber ? 'bg-primary-600 text-white focus-visible:outline-offset-2' : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'}`}
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
-                              View
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              {pageNumber}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => setCurrentPage(prev => prev < patientStats.last_page ? prev + 1 : prev)}
+                          disabled={currentPage >= patientStats.last_page}
+                          className={`relative inline-flex items-center rounded-r-md px-2 py-2 ${currentPage >= patientStats.last_page ? 'text-gray-300' : 'text-gray-500 hover:bg-gray-50'}`}
+                        >
+                          <span className="sr-only">Next</span>
+                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </Card>
       )}
@@ -717,6 +797,7 @@ const DoctorDetails = () => {
                     <dt className="text-sm font-medium text-gray-500 truncate">Total Appointments</dt>
                     <dd className="flex items-baseline">
                       <div className="text-2xl font-semibold text-gray-900">{scheduleStats.totalAppointments}</div>
+                      <div className="text-xs text-gray-500 ml-2">(confirmed, pending, completed)</div>
                     </dd>
                   </dl>
                 </div>
@@ -860,7 +941,7 @@ const DoctorDetails = () => {
                                   Cancel
                                 </button>
                               )}
-                              <Link to={`/appointments/${appointment.id}`}>
+                              <Link to={`/appointments/${appointment.id}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${id}`, doctorName: fullName }}>
                                 <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

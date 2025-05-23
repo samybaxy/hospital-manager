@@ -488,28 +488,37 @@ class Doctor extends BaseModel
         // Get the patient table name
         $patient_table = $wpdb->prefix . 'hm_patients';
         
-        // Get the appointments table name
-        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        // Get the visitations table name
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
         
-        // Query to get patients who have appointments with this doctor
+        // Query to get patients who have visitations with this doctor, including time
         $query = $wpdb->prepare(
-            "SELECT DISTINCT p.*, a.status  
+            "SELECT DISTINCT p.*, 
+                MAX(v.date) as last_visit_date,
+                (SELECT v2.time 
+                 FROM $visitations_table v2 
+                 WHERE v2.patient_id = p.id 
+                 AND v2.doctor_id = %d 
+                 AND v2.date = MAX(v.date) 
+                 LIMIT 1) as last_visit_time  
             FROM $patient_table p
-            INNER JOIN $appointments_table a ON p.id = a.patient_id
-            WHERE a.doctor_id = %d AND a.status = 'pending'
-            ORDER BY p.last_name, p.first_name
+            INNER JOIN $visitations_table v ON p.id = v.patient_id
+            WHERE v.doctor_id = %d
+            GROUP BY p.id
+            ORDER BY MAX(v.date) DESC, p.last_name, p.first_name
             LIMIT %d OFFSET %d",
+            $doctor_id,
             $doctor_id,
             $perPage,
             $offset
         );
         
-        // Get count query for pagination
+        // Get count query for pagination - count distinct patients
         $count_query = $wpdb->prepare(
             "SELECT COUNT(DISTINCT p.id)
             FROM $patient_table p
-            INNER JOIN $appointments_table a ON p.id = a.patient_id
-            WHERE a.doctor_id = %d AND a.status = 'pending'",
+            INNER JOIN $visitations_table v ON p.id = v.patient_id
+            WHERE v.doctor_id = %d",
             $doctor_id
         );
         

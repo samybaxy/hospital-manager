@@ -569,15 +569,42 @@ class DoctorController extends BaseController
             $params = $request->get_params();
             $page = isset($params['page']) ? intval($params['page']) : 1;
             $per_page = isset($params['per_page']) ? intval($params['per_page']) : 20;
-            
-            // Get patients from the Doctor model
+
+            // Get patients from the Doctor model - now based on visitations
             $results = Doctor::getPatients($doctor_id, $page, $per_page);
+            
+            // Get additional patient statistics
+            global $wpdb;
+            $visitations_table = $wpdb->prefix . 'hm_visitations';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            
+            // Get total number of unique patients this doctor has seen
+            $total_patients = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(DISTINCT patient_id) FROM $visitations_table WHERE doctor_id = %d", 
+                $doctor_id
+            ));
+            
+            // Count recent visits (last 30 days)
+            $recent_visits = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $visitations_table 
+                WHERE doctor_id = %d AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)",
+                $doctor_id
+            ));
+            
+            // Count active patients (had a visit in the last 90 days)
+            $active_patients = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(DISTINCT patient_id) FROM $visitations_table 
+                WHERE doctor_id = %d AND date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)",
+                $doctor_id
+            ));
             
             if (!$results || empty($results['data'])) {
                 return new WP_REST_Response([
                     'data' => [],
                     'meta' => [
-                        'total' => 0,
+                        'total' => $total_patients ? (int)$total_patients : 0,
+                        'active' => $active_patients ? (int)$active_patients : 0,
+                        'recent_visits' => $recent_visits ? (int)$recent_visits : 0,
                         'per_page' => $per_page,
                         'current_page' => $page,
                         'last_page' => 0
@@ -593,15 +620,17 @@ class DoctorController extends BaseController
                     'last_name' => $patient->last_name,
                     'phone' => $patient->phone,
                     'email' => $patient->email,
-                    'status' => $patient->status,
-                    'last_visit_date' => $patient->last_visit_date
+                    'last_visit_date' => $patient->last_visit_date,
+                    'last_visit_time' => $patient->last_visit_time
                 ];
             }, $results['data']);
             
             return new WP_REST_Response([
                 'data' => $patients,
                 'meta' => [
-                    'total' => $results['total'],
+                    'total' => $total_patients ? (int)$total_patients : (int)$results['total'],
+                    'active' => $active_patients ? (int)$active_patients : 0,
+                    'recent_visits' => $recent_visits ? (int)$recent_visits : 0,
                     'per_page' => $per_page,
                     'current_page' => $page,
                     'last_page' => $results['last_page']

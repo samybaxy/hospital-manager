@@ -65,7 +65,7 @@ class CreateHospitalTables
             id bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
-            date datetime NOT NULL,
+            date date NOT NULL,
             time time NOT NULL,
             medical_history text,
             diagnosis text,
