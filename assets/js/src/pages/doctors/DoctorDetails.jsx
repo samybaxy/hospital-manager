@@ -135,16 +135,35 @@ const DoctorDetails = () => {
     
     try {
       setAppointmentsLoading(true);
+      console.log('Fetching appointments for doctor:', id);
 
       // Get all upcoming appointments (both pending and confirmed)
       const response = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
+      console.log('Appointments response:', response.data);
       
-      if (response.data && response.data.data) {
-        // console.log('Found nested data structure with appointments:', response.data.data);
-        // Set the upcoming appointments from the response data
-        setUpcomingAppointments(response.data.data);
+      if (response.data && response.data.success) {
+        // Handle successful response with data structure
+        const appointments = response.data.data || [];
+        console.log('Found appointments:', appointments.length);
+        setUpcomingAppointments(appointments);
         
         // Update stats based on the appointment data
+        const pendingCount = appointments.filter(a => a.status === 'pending').length;
+        const confirmedCount = appointments.filter(a => a.status === 'confirmed').length;
+        
+        setScheduleStats(prev => ({
+          ...prev,
+          upcomingAppointments: appointments.length,
+          pendingAppointments: pendingCount,
+          confirmedAppointments: confirmedCount,
+          // Don't override totalAppointments from the upcoming appointments call
+          // Keep the value from the stats endpoint which shows all appointments
+        }));
+      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Handle nested data structure
+        console.log('Found nested data structure with appointments:', response.data.data.length);
+        setUpcomingAppointments(response.data.data);
+        
         const pendingCount = response.data.data.filter(a => a.status === 'pending').length;
         const confirmedCount = response.data.data.filter(a => a.status === 'confirmed').length;
         
@@ -156,11 +175,10 @@ const DoctorDetails = () => {
           totalAppointments: response.data.meta?.total || prev.totalAppointments
         }));
       } else if (response.data && Array.isArray(response.data)) {
-        console.log('Found flat array response with appointments:', response.data);
         // Handle flat array response
+        console.log('Found flat array response with appointments:', response.data.length);
         setUpcomingAppointments(response.data);
         
-        // Update stats based on the appointment data
         const pendingCount = response.data.filter(a => a.status === 'pending').length;
         const confirmedCount = response.data.filter(a => a.status === 'confirmed').length;
         
@@ -171,11 +189,23 @@ const DoctorDetails = () => {
           confirmedAppointments: confirmedCount
         }));
       } else {
-        console.log('No data found in response or unsupported format');
+        console.log('No data found in response or unsupported format:', response.data);
         setUpcomingAppointments([]);
+        // Set stats to 0 when no appointments found
+        setScheduleStats(prev => ({
+          ...prev,
+          upcomingAppointments: 0,
+          pendingAppointments: 0,
+          confirmedAppointments: 0
+        }));
       }
     } catch (err) {
       console.error('Error fetching appointments:', err);
+      console.log('Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data
+      });
       setUpcomingAppointments([]);
     } finally {
       setAppointmentsLoading(false);
@@ -235,46 +265,41 @@ const DoctorDetails = () => {
 
         // Fetch real appointment statistics
         try {
+          console.log('Fetching appointment stats for doctor:', id);
           const statsResponse = await api.get(`/appointments/stats?doctor_id=${id}`);
+          console.log('Stats response:', statsResponse.data);
+          
           if (statsResponse.data) {
+            console.log('Schedule stats received:', statsResponse.data);
             setScheduleStats({
               ...statsResponse.data,
               // Make sure we include both pending and confirmed appointments in upcomingAppointments count
-              upcomingAppointments: statsResponse.data.pendingAppointments + 
+              upcomingAppointments: (statsResponse.data.pendingAppointments || 0) + 
+                                   (statsResponse.data.confirmedAppointments || 0)
+            });
+            console.log('Schedule stats set to:', {
+              ...statsResponse.data,
+              upcomingAppointments: (statsResponse.data.pendingAppointments || 0) + 
                                    (statsResponse.data.confirmedAppointments || 0)
             });
           }
         } catch (statsErr) {
-          console.warn('Could not fetch appointment statistics:', statsErr);
-          // Try to get upcoming appointments count to at least show accurate data
-          try {
-            // Get upcoming appointments (both pending and confirmed)
-            const upcomingResponse = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
-            if (upcomingResponse.data) {
-              let appointments = [];
-              
-              // Parse appointments based on different possible response formats
-              if (upcomingResponse.data.data && Array.isArray(upcomingResponse.data.data)) {
-                appointments = upcomingResponse.data.data;
-              } else if (Array.isArray(upcomingResponse.data)) {
-                appointments = upcomingResponse.data;
-              }
-              
-              // Filter to only include pending and confirmed appointments
-              const relevantAppointments = appointments.filter(
-                appointment => appointment.status === 'pending' || appointment.status === 'confirmed'
-              );
-              
-              setScheduleStats(prev => ({
-                ...prev,
-                upcomingAppointments: relevantAppointments.length,
-                pendingAppointments: appointments.filter(a => a.status === 'pending').length,
-                confirmedAppointments: appointments.filter(a => a.status === 'confirmed').length
-              }));
-            }
-          } catch (err) {
-            console.warn('Could not fetch upcoming appointments:', err);
-          }
+          console.error('Could not fetch appointment statistics:', statsErr);
+          console.log('Stats error details:', {
+            message: statsErr.message,
+            status: statsErr.response?.status,
+            data: statsErr.response?.data
+          });
+          
+          // Set default stats on error
+          setScheduleStats(prev => ({
+            totalAppointments: 0,
+            upcomingAppointments: 0,
+            completedAppointments: 0,
+            pendingAppointments: 0,
+            confirmedAppointments: 0,
+            cancelledAppointments: 0
+          }));
         }
       } catch (err) {
         console.error('Error fetching doctor details:', err);

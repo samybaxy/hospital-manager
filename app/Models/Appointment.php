@@ -310,37 +310,38 @@ class Appointment extends BaseModel
         return get_user_by('id', $this->patient_id);
     }
 
+    // Enhanced toArray method with proper field mapping and debug logging
     public function toArray()
     {
-        // Get the actual status from attributes if it exists, 
-        // otherwise try to get it from direct property access
-        $status = null;
-        if (isset($this->attributes['status'])) {
-            $status = $this->attributes['status'];
-        } elseif (isset($this->attributes['post_status'])) {
-            $status = $this->attributes['post_status']; 
-        } elseif (property_exists($this, 'status') && $this->status !== 'draft') {
-            // Only use the property if it's not the default 'draft'
-            $status = $this->status;
-        }
+        // Get the base array from the parent
+        $array = parent::toArray();
         
-        // If no status was found or it's 'draft' from PostModel default, use 'pending' as fallback
-        if (empty($status) || $status === 'draft') {
-            $status = 'pending';
-        }
+        // Add debug logging to see what's in the attributes
+        error_log('Appointment toArray - Raw attributes: ' . print_r($this->attributes, true));
         
-        return [
-            'id' => $this->id,
-            'patient_id' => $this->patient_id,
-            'doctor_id' => $this->doctor_id,
-            'appointment_date' => $this->appointment_date,
-            'appointment_time' => $this->appointment_time,
-            'status' => $status,
-            'reason' => $this->reason,
-            'notes' => $this->notes,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
+        // Ensure proper field mapping for appointments
+        $appointment_fields = [
+            'id' => $this->attributes['id'] ?? $this->attributes['ID'] ?? null,
+            'patient_id' => $this->attributes['patient_id'] ?? null,
+            'doctor_id' => $this->attributes['doctor_id'] ?? null,
+            'appointment_date' => $this->attributes['appointment_date'] ?? null,
+            'appointment_time' => $this->attributes['appointment_time'] ?? null,
+            'reason' => $this->attributes['reason'] ?? '',
+            'status' => $this->attributes['status'] ?? 'pending',
+            'notes' => $this->attributes['notes'] ?? '',
+            'created_at' => $this->attributes['created_at'] ?? null,
+            'updated_at' => $this->attributes['updated_at'] ?? null,
         ];
+        
+        // Override the status to ensure it's not defaulting to 'draft'
+        if (isset($this->attributes['status']) && !empty($this->attributes['status'])) {
+            $appointment_fields['status'] = $this->attributes['status'];
+        }
+        
+        // Add debug logging for the final array
+        error_log('Appointment toArray - Final array: ' . print_r($appointment_fields, true));
+        
+        return $appointment_fields;
     }
 
     /**

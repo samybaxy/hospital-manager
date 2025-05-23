@@ -50,6 +50,13 @@ const AppointmentDetails = () => {
           
           // Handle different API response formats
           const appointmentData = response.data;
+          console.log('Received appointment data:', appointmentData);
+          console.log('Date fields available:', {
+            date: appointmentData.date,
+            appointment_date: appointmentData.appointment_date,
+            time: appointmentData.time,
+            appointment_time: appointmentData.appointment_time
+          });
           setAppointment(appointmentData);
           
           // If we have doctor_id in the appointment data, fetch doctor details
@@ -222,23 +229,35 @@ const AppointmentDetails = () => {
 
   // Format date and time for display in view mode
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    console.log('Formatting date:', dateString);
+    if (!dateString || dateString === 'N/A') return 'N/A';
+    try {
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
   };
   
   const formatTime = (timeString) => {
-    if (!timeString) return 'N/A';
+    console.log('Formatting time:', timeString);
+    if (!timeString || timeString === 'N/A') return 'N/A';
     
-    // If timeString is just a time (HH:MM:SS)
-    if (timeString.length <= 8) {
-      const date = new Date(`2000-01-01T${timeString}`);
+    try {
+      // If timeString is just a time (HH:MM:SS)
+      if (timeString.length <= 8) {
+        const date = new Date(`2000-01-01T${timeString}`);
+        return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', hour12: true });
+      }
+      
+      // If timeString is a full datetime
+      const date = new Date(timeString);
       return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', hour12: true });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
     }
-    
-    // If timeString is a full datetime
-    const date = new Date(timeString);
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: 'numeric', hour12: true });
   };
 
   // Get status badge color based on appointment status
@@ -335,12 +354,22 @@ const AppointmentDetails = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Date</h3>
-                  <p className="font-medium">{formatDate(appointment.date)}</p>
+                  <p className="font-medium">
+                    {formatDate(appointment.appointment_date || appointment.date)}
+                    {(!appointment.appointment_date && !appointment.date) && (
+                      <span className="text-red-500 text-sm ml-2">(Date not available)</span>
+                    )}
+                  </p>
                 </div>
                 
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Time</h3>
-                  <p className="font-medium">{formatTime(appointment.time)}</p>
+                  <p className="font-medium">
+                    {formatTime(appointment.appointment_time || appointment.time)}
+                    {(!appointment.appointment_time && !appointment.time) && (
+                      <span className="text-red-500 text-sm ml-2">(Time not available)</span>
+                    )}
+                  </p>
                 </div>
                 
                 {patient && (

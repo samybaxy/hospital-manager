@@ -322,7 +322,7 @@ const Doctors = () => {
       <Card>
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-4">
-            <div className="w-full md:w-1/3">
+            <div className="w-full">
               <label htmlFor="search" className="sr-only">
                 Search Doctors
               </label>

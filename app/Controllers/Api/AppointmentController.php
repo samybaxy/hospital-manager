@@ -70,124 +70,177 @@ class AppointmentController extends BaseController
         ]);
     }
 
+    /**
+     * Get appointments with enhanced filtering and error handling - Updated implementation
+     */
     public function get_appointments($request)
     {
-        $user_id = get_current_user_id();
-        $user = wp_get_current_user();
-        
-        // Get parameters from the request
-        $params = $request->get_params();
-        
-        // Check if parameters are in a nested 'params' array or directly in request
-        if (isset($params['params']) && is_array($params['params'])) {
-            $params = $params['params'];
-        }
-        
-        // Extract parameters with fallbacks
-        $date = isset($params['date']) ? $params['date'] : null;
-        $status = isset($params['status']) ? $params['status'] : null;
-        $doctor_id = isset($params['doctor_id']) ? intval($params['doctor_id']) : null;
-        $upcoming = isset($params['upcoming']) && $params['upcoming'] === 'true';
-        
-        // Debug logging
-        error_log("Appointment request params: " . print_r($params, true));
-        error_log("Doctor ID: $doctor_id, Upcoming: " . ($upcoming ? 'true' : 'false') . ", Status: $status");
-        
-        // Pagination parameters
-        $page = isset($params['page']) ? intval($params['page']) : 1;
-        $per_page = isset($params['per_page']) ? intval($params['per_page']) : 10;
-        
-        // Ensure per_page has a reasonable value
-        $per_page = min(max($per_page, 5), 100); // Min 5, max 100
+        try {
+            // Get parameters with better handling of nested params
+            $params = $request->get_param('params') ?? [];
+            $page = (int) ($request->get_param('page') ?? $params['page'] ?? 1);
+            $per_page = (int) ($request->get_param('per_page') ?? $params['per_page'] ?? 10);
+            $doctor_id = $request->get_param('doctor_id');
+            $patient_id = $request->get_param('patient_id');
+            $status = $request->get_param('status');
+            $upcoming = $request->get_param('upcoming');
+            $date_from = $request->get_param('date_from');
+            $date_to = $request->get_param('date_to');
 
-        $query = Appointment::query();
-
-        // Filter by user role if no specific doctor_id is provided
-        if (!$doctor_id) {
-            if (in_array('doctor', $user->roles)) {
-                $query->where('doctor_id', $user_id);
-            } elseif (in_array('patient', $user->roles)) {
-                $query->where('patient_id', $user_id);
-            }
-        } else {
-            // Filter by specified doctor_id
-            $query->where('doctor_id', $doctor_id);
-        }
-
-        if ($date) {
-            $query->where('appointment_date', $date);
-        }
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-        
-        // Handle upcoming appointments filter
-        if ($upcoming) {
-            $today = date('Y-m-d');
-            error_log("Filtering for upcoming appointments from date: $today");
-            // Use the enhanced where method with >= operator
-            $query->where('appointment_date', '>=', $today)
-                  ->orderBy('appointment_date', 'ASC')
-                  ->orderBy('appointment_time', 'ASC');
-        } else {
-            $query->orderBy('appointment_date', 'DESC')
-                  ->orderBy('appointment_time', 'DESC');
-        }
-
-        $appointments = $query->get();
-        
-        error_log("Found " . count($appointments) . " appointments before processing");
-
-        // Convert appointments to array format to avoid any ID issues with the PostModel
-        $appointments_array = array_map(function($appointment) {
-            $appointment_data = $appointment->toArray();
-            // error_log('Appointment Data: ' . print_r($appointment_data, true));
-            // Add patient and doctor names to the array for display
-            if (isset($appointment_data['patient_id'])) {
-                $patient = Patient::find( $appointment_data['patient_id'] );
-                $appointment_data['patient_name'] = $patient ? $patient->first_name . ' ' . $patient->last_name : 'Unknown Patient';
+            // Validate and sanitize parameters
+            $page = max(1, $page);
+            $per_page = min(100, max(1, $per_page));
+            $offset = ($page - 1) * $per_page;
+            
+            // Use direct database queries for reliability
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'hm_appointments';
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            
+            // Verify tables exist
+            if (!$wpdb->get_var("SHOW TABLES LIKE '{$table_name}'")) {
+                error_log('Appointments table does not exist: ' . $table_name);
+                return new WP_Error('table_not_found', 'Appointments table not found', ['status' => 500]);
             }
             
-            if (isset($appointment_data['doctor_id'])) {
-                $doctor = Doctor::find( $appointment_data['doctor_id'] );
-                $appointment_data['doctor_name'] = $doctor ? $doctor->first_name . ' ' . $doctor->last_name : 'Unknown Doctor';
+            // Build WHERE conditions
+            $where_conditions = [];
+            $prepare_values = [];
+            
+            if ($doctor_id) {
+                $where_conditions[] = "a.doctor_id = %d";
+                $prepare_values[] = (int) $doctor_id;
             }
             
-            return $appointment_data;
-        }, $appointments);
-
-        error_log('Final appointments array count: ' . count($appointments_array));
-        
-        // Calculate pagination
-        $total_items = count($appointments_array);
-        $total_pages = max(1, ceil($total_items / $per_page));
-        
-        // Ensure current page is valid
-        $page = min(max(1, $page), $total_pages);
-        
-        // Apply pagination
-        $offset = ($page - 1) * $per_page;
-        $appointments_page = array_slice($appointments_array, $offset, $per_page);
-        
-        $response = new WP_REST_Response([
-            'data' => $appointments_page,
-            'meta' => [
-                'total' => $total_items,
-                'count' => count($appointments_page),
-                'per_page' => $per_page,
-                'current_page' => $page,
-                'last_page' => $total_pages,
-                'first_page' => 1,
-                'has_more_pages' => ($page < $total_pages)
-            ]
-        ]);
-        
-        // Set X-WP-Total and X-WP-TotalPages headers for compatibility
-        $response->header('X-WP-Total', $total_items);
-        $response->header('X-WP-TotalPages', $total_pages);
-        
-        return $response;
+            if ($patient_id) {
+                $where_conditions[] = "a.patient_id = %d";
+                $prepare_values[] = (int) $patient_id;
+            }
+            
+            if ($status) {
+                $where_conditions[] = "a.status = %s";
+                $prepare_values[] = sanitize_text_field($status);
+            }
+            
+            // Handle upcoming filter
+            if ($upcoming === 'true' || $upcoming === true) {
+                $today = date('Y-m-d');
+                $where_conditions[] = "(a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
+                $prepare_values[] = $today;
+            }
+            
+            if ($date_from) {
+                $where_conditions[] = "a.appointment_date >= %s";
+                $prepare_values[] = sanitize_text_field($date_from);
+            }
+            
+            if ($date_to) {
+                $where_conditions[] = "a.appointment_date <= %s";
+                $prepare_values[] = sanitize_text_field($date_to);
+            }
+            
+            // Build WHERE clause
+            $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+            
+            // Main query with LEFT JOINs
+            $query = "
+                SELECT 
+                    a.id,
+                    a.patient_id,
+                    a.doctor_id,
+                    a.appointment_date,
+                    a.appointment_time,
+                    a.reason,
+                    a.status,
+                    a.notes,
+                    a.created_at,
+                    a.updated_at,
+                    COALESCE(CONCAT(d.first_name, ' ', d.last_name), 'Unknown Doctor') as doctor_name,
+                    COALESCE(d.specialty, 'General Practice') as doctor_specialty,
+                    COALESCE(CONCAT(p.first_name, ' ', p.last_name), 'Unknown Patient') as patient_name,
+                    p.phone as patient_phone
+                FROM {$table_name} a
+                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.id
+                LEFT JOIN {$patients_table} p ON a.patient_id = p.id
+                {$where_clause}
+                ORDER BY a.appointment_date DESC, a.appointment_time DESC
+                LIMIT %d OFFSET %d
+            ";
+            
+            // Add pagination to prepare values
+            $prepare_values[] = $per_page;
+            $prepare_values[] = $offset;
+            
+            // Execute main query
+            if (!empty($prepare_values)) {
+                $appointments = $wpdb->get_results($wpdb->prepare($query, $prepare_values), ARRAY_A);
+            } else {
+                $appointments = $wpdb->get_results($query, ARRAY_A);
+            }
+            
+            // Get total count
+            $count_query = "SELECT COUNT(*) FROM {$table_name} a {$where_clause}";
+            if (!empty($where_conditions)) {
+                $count_prepare_values = array_slice($prepare_values, 0, -2); // Remove pagination values
+                $total_count = $wpdb->get_var($wpdb->prepare($count_query, $count_prepare_values));
+            } else {
+                $total_count = $wpdb->get_var($count_query);
+            }
+            
+            // Handle database errors
+            if ($wpdb->last_error) {
+                error_log('Database error in get_appointments: ' . $wpdb->last_error);
+                error_log('Query: ' . $wpdb->last_query);
+                return new WP_Error('database_error', 'Database query failed', ['status' => 500]);
+            }
+            
+            // Format appointments data
+            $formatted_appointments = array_map(function($appointment) {
+                return [
+                    'id' => (int) $appointment['id'],
+                    'patient_id' => (int) $appointment['patient_id'],
+                    'doctor_id' => (int) $appointment['doctor_id'],
+                    'date' => $appointment['appointment_date'],
+                    'time' => $appointment['appointment_time'],
+                    'appointment_date' => $appointment['appointment_date'],
+                    'appointment_time' => $appointment['appointment_time'],
+                    'reason' => $appointment['reason'] ?? '',
+                    'status' => $appointment['status'] ?? 'pending',
+                    'notes' => $appointment['notes'] ?? '',
+                    'created_at' => $appointment['created_at'],
+                    'updated_at' => $appointment['updated_at'],
+                    'doctor_name' => $appointment['doctor_name'],
+                    'doctor_specialty' => $appointment['doctor_specialty'],
+                    'patient_name' => $appointment['patient_name'],
+                    'patient_phone' => $appointment['patient_phone']
+                ];
+            }, $appointments ?: []);
+            
+            // Calculate pagination metadata
+            $total_pages = ceil($total_count / $per_page);
+            
+            // Debug logging
+            error_log('get_appointments executed: Found ' . count($formatted_appointments) . ' appointments, Total: ' . $total_count);
+            
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $formatted_appointments,
+                'meta' => [
+                    'total' => (int) $total_count,
+                    'page' => $page,
+                    'per_page' => $per_page,
+                    'total_pages' => (int) $total_pages,
+                    'current_page' => $page,
+                    'last_page' => (int) $total_pages
+                ]
+            ], 200);
+            
+        } catch (\Exception $e) {
+            error_log('Exception in get_appointments: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return new WP_Error('appointments_error', 'Failed to retrieve appointments: ' . $e->getMessage(), ['status' => 500]);
+        }
     }
 
     public function create_appointment($request)
@@ -521,184 +574,254 @@ class AppointmentController extends BaseController
      */
     public function get_appointment($request)
     {
-        $appointment_id = $request->get_param('id');
-        $user_id = get_current_user_id();
-        $user = wp_get_current_user();
-
-        // Find the appointment
-        $appointment = Appointment::find($appointment_id);
+        $id = $request->get_param('id');
         
-        if (!$appointment) {
-            return new WP_Error(
-                'appointment_not_found',
-                'Appointment not found',
-                ['status' => 404]
-            );
+        if (!$id) {
+            return new WP_Error('missing_id', 'Appointment ID is required', ['status' => 400]);
         }
         
-        // Security check: Only allow users to view their own appointments
-        // unless they are an admin or desk officer
-        if (!in_array('administrator', $user->roles) && 
-            !in_array('desk_officer', $user->roles)) {
+        try {
+            $appointment = new Appointment();
+            $appointment_data = $appointment->find($id);
             
-            if (in_array('doctor', $user->roles) && $appointment->doctor_id != $user_id) {
-                return new WP_Error(
-                    'permission_denied',
-                    'You do not have permission to view this appointment',
-                    ['status' => 403]
-                );
+            if (!$appointment_data) {
+                return new WP_Error('appointment_not_found', 'Appointment not found', ['status' => 404]);
             }
             
-            if (in_array('patient', $user->roles) && $appointment->patient_id != $user_id) {
-                return new WP_Error(
-                    'permission_denied',
-                    'You do not have permission to view this appointment',
-                    ['status' => 403]
-                );
-            }
-        }
-        
-        // Convert appointment to array format and add additional data
-        $appointment_data = $appointment->toArray();
-        
-        // Add patient and doctor names to the array for display
-        if (isset($appointment_data['patient_id'])) {
-            $patient = get_user_by('id', $appointment_data['patient_id']);
-            $appointment_data['patient_name'] = $patient ? $patient->display_name : 'Unknown Patient';
-            
-            // Get additional patient data if needed
-            $patient_meta = get_user_meta($appointment_data['patient_id']);
-            $appointment_data['patient_details'] = [
-                'email' => $patient ? $patient->user_email : '',
-                'phone' => isset($patient_meta['phone']) ? $patient_meta['phone'][0] : '',
-            ];
-        }
-        
-        if (isset($appointment_data['doctor_id'])) {
-            $doctor = get_user_by('id', $appointment_data['doctor_id']);
-            $appointment_data['doctor_name'] = $doctor ? $doctor->display_name : 'Unknown Doctor';
-            
-            // Get doctor's specialty and other details if available
+            // Also try direct database query as fallback
             global $wpdb;
-            $doctors_table = $wpdb->prefix . 'hm_doctors';
-            $doctor_details = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT specialty, education, years_experience FROM {$doctors_table} WHERE user_id = %d",
-                    $appointment_data['doctor_id']
-                ),
-                ARRAY_A
-            );
+            $table_name = $wpdb->prefix . 'hm_appointments';
+            $db_result = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$table_name} WHERE id = %d", 
+                $id
+            ), ARRAY_A);
             
-            if ($doctor_details) {
-                $appointment_data['doctor_details'] = $doctor_details;
+            error_log('Direct DB query result: ' . print_r($db_result, true));
+            
+            // Convert to array and ensure proper field mapping
+            $appointment_array = $appointment_data->toArray();
+            
+            // Debug log the raw data to see what fields are actually available
+            error_log('Raw appointment data: ' . print_r($appointment_array, true));
+            error_log('Appointment object properties: ' . print_r(get_object_vars($appointment_data), true));
+            
+            // Try direct property access as fallback
+            $date_value = $appointment_array['appointment_date'] ?? $appointment_data->appointment_date ?? $db_result['appointment_date'] ?? null;
+            $time_value = $appointment_array['appointment_time'] ?? $appointment_data->appointment_time ?? $db_result['appointment_time'] ?? null;
+            
+            // If still null, use the database result directly
+            if (!$date_value && $db_result) {
+                $date_value = $db_result['appointment_date'];
             }
+            if (!$time_value && $db_result) {
+                $time_value = $db_result['appointment_time'];
+            }
+            
+            error_log('Final date value: ' . ($date_value ?? 'null'));
+            error_log('Final time value: ' . ($time_value ?? 'null'));
+            
+            // Get related data
+            $doctor = new Doctor();
+            $doctor_data = $doctor->find($appointment_array['doctor_id']);
+            
+            $patient = new Patient();
+            $patient_data = $patient->find($appointment_array['patient_id']);
+            
+            // Ensure both field naming conventions are supported
+            $response_data = [
+                'id' => $appointment_array['id'],
+                'patient_id' => $appointment_array['patient_id'],
+                'doctor_id' => $appointment_array['doctor_id'],
+                // Support both naming conventions with fallbacks
+                'date' => $date_value,
+                'time' => $time_value,
+                'appointment_date' => $date_value,
+                'appointment_time' => $time_value,
+                'reason' => $appointment_array['reason'] ?? '',
+                'status' => $appointment_array['status'] ?? 'pending',
+                'notes' => $appointment_array['notes'] ?? '',
+                'created_at' => $appointment_array['created_at'] ?? '',
+                'updated_at' => $appointment_array['updated_at'] ?? '',
+                'doctor' => $doctor_data ? [
+                    'id' => $doctor_data->id,
+                    'first_name' => $doctor_data->first_name,
+                    'last_name' => $doctor_data->last_name,
+                    'specialty' => $doctor_data->specialty,
+                ] : null,
+                'patient' => $patient_data ? [
+                    'id' => $patient_data->id,
+                    'first_name' => $patient_data->first_name,
+                    'last_name' => $patient_data->last_name,
+                ] : null
+            ];
+            
+            // Debug log the response data
+            error_log('Response appointment data: ' . print_r($response_data, true));
+            
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $response_data
+            ], 200);
+            
+        } catch (\Exception $e) {
+            error_log('Error getting appointment: ' . $e->getMessage());
+            return new WP_Error('appointment_error', 'Failed to retrieve appointment', ['status' => 500]);
         }
-        
-        return new WP_REST_Response($appointment_data);
     }
 
     /**
-     * Get appointment statistics for a doctor
-     * 
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response
+     * Get appointment statistics for a doctor - Updated implementation
      */
     public function get_appointment_stats($request)
     {
-        // Get doctor_id from request parameters
         $doctor_id = $request->get_param('doctor_id');
         
-        error_log("Getting appointment stats for doctor ID: $doctor_id");
-        
         if (!$doctor_id) {
-            return new WP_Error(
-                'missing_doctor_id',
-                'Doctor ID is required',
-                ['status' => 400]
-            );
+            return new WP_Error('missing_doctor_id', 'Doctor ID is required', ['status' => 400]);
         }
-        
-        // Validate doctor exists
-        $doctor = Doctor::find($doctor_id);
-        if (!$doctor) {
-            return new WP_Error(
-                'doctor_not_found',
-                'Doctor not found',
-                ['status' => 404]
-            );
-        }
-        
-        // Initialize stats
-        $stats = [
-            'totalAppointments' => 0,
-            'upcomingAppointments' => 0,
-            'completedAppointments' => 0,
-            'cancelledAppointments' => 0,
-            'pendingAppointments' => 0,
-            'confirmedAppointments' => 0
-        ];
         
         try {
-            // Get doctor's appointments
-            $query = Appointment::query()->where('doctor_id', $doctor_id);
-            $appointments = $query->get();
-            
-            error_log("Found " . count($appointments) . " total appointments for doctor $doctor_id");
-            
-            // Get today's date for comparison
-            $today = date('Y-m-d');
-            error_log("Today's date for comparison: $today");
-            
-            // Count by status and date
-            foreach ($appointments as $appointment) {
-                $appointmentData = $appointment->toArray();
-                $status = isset($appointmentData['status']) ? $appointmentData['status'] : 'pending';
-                $date = isset($appointmentData['appointment_date']) ? $appointmentData['appointment_date'] : '';
-                
-                error_log("Appointment ID: {$appointmentData['id']}, Status: $status, Date: $date");
-                
-                // Count by status
-                if ($status === 'completed') {
-                    $stats['completedAppointments']++;
-                    // Include completed in total count
-                    $stats['totalAppointments']++;
-                } elseif ($status === 'cancelled') {
-                    $stats['cancelledAppointments']++;
-                    // We don't include cancelled in the total count
-                } elseif ($status === 'pending') {
-                    $stats['pendingAppointments']++;
-                    // Include pending in total count
-                    $stats['totalAppointments']++;
-                    
-                    // Count pending appointments in upcoming if date is in the future
-                    if ($date >= $today) {
-                        $stats['upcomingAppointments']++;
-                        error_log("Pending appointment on $date counted as upcoming");
-                    }
-                } elseif ($status === 'confirmed') {
-                    $stats['confirmedAppointments']++;
-                    // Include confirmed in total count
-                    $stats['totalAppointments']++;
-                    
-                    // Count confirmed appointments in upcoming if date is in the future
-                    if ($date >= $today) {
-                        $stats['upcomingAppointments']++;
-                        error_log("Confirmed appointment on $date counted as upcoming");
-                    }
-                }
+            // Verify doctor exists first
+            $doctor = new Doctor();
+            $doctor_exists = $doctor->find($doctor_id);
+            if (!$doctor_exists) {
+                return new WP_Error('doctor_not_found', 'Doctor not found', ['status' => 404]);
             }
             
-            error_log("Final stats: " . print_r($stats, true));
+            // Use direct database queries for reliability
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'hm_appointments';
             
-            return new WP_REST_Response($stats);
+            // Check if table exists
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'");
+            if (!$table_exists) {
+                error_log('Appointments table does not exist: ' . $table_name);
+                return new WP_Error('table_not_found', 'Appointments table not found', ['status' => 500]);
+            }
+            
+            // Get all appointments count for this doctor (excluding cancelled)
+            // Include all statuses except 'cancelled' - this should include pending, confirmed, completed, etc.
+            $total_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND (status != 'cancelled' OR status IS NULL OR status = '')",
+                $doctor_id
+            ));
+            
+            // Debug: Get count of all appointments regardless of status
+            $all_appointments_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d",
+                $doctor_id
+            ));
+            
+            // Debug: Get all appointments for this doctor to see what we have
+            $all_appointments_debug = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, status, appointment_date FROM {$table_name} WHERE doctor_id = %d ORDER BY id",
+                $doctor_id
+            ), ARRAY_A);
+            error_log('Doctor ' . $doctor_id . ' - Total appointments in DB: ' . $all_appointments_count . ', Non-cancelled: ' . $total_appointments);
+            error_log('All appointments for doctor ' . $doctor_id . ': ' . print_r($all_appointments_debug, true));
+            
+            // Get appointments by status
+            $pending_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'pending'",
+                $doctor_id
+            ));
+            
+            $confirmed_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'confirmed'",
+                $doctor_id
+            ));
+            
+            $completed_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'completed'",
+                $doctor_id
+            ));
+            
+            $cancelled_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'cancelled'",
+                $doctor_id
+            ));
+            
+            // Get upcoming appointments (confirmed + pending for future dates)
+            $today = date('Y-m-d');
+            $upcoming_appointments = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table_name} 
+                 WHERE doctor_id = %d 
+                 AND (status = 'pending' OR status = 'confirmed') 
+                 AND appointment_date >= %s",
+                $doctor_id, $today
+            ));
+            
+            // Ensure all values are integers and handle null results
+            $stats = [
+                'totalAppointments' => (int) ($total_appointments ?? 0),
+                'upcomingAppointments' => (int) ($upcoming_appointments ?? 0),
+                'pendingAppointments' => (int) ($pending_appointments ?? 0),
+                'confirmedAppointments' => (int) ($confirmed_appointments ?? 0),
+                'completedAppointments' => (int) ($completed_appointments ?? 0),
+                'cancelledAppointments' => (int) ($cancelled_appointments ?? 0)
+            ];
+            
+            // Debug logging
+            error_log('Appointment stats for doctor ' . $doctor_id . ': ' . print_r($stats, true));
+            
+            return new WP_REST_Response($stats, 200);
             
         } catch (\Exception $e) {
-            error_log("Error in get_appointment_stats: " . $e->getMessage());
-            return new WP_Error(
-                'appointment_stats_error',
-                'Error retrieving appointment statistics: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            error_log('Error getting appointment stats: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return new WP_Error('stats_error', 'Failed to retrieve appointment statistics: ' . $e->getMessage(), ['status' => 500]);
         }
+    }
+
+    // Additional route registration for stats endpoint with proper permissions
+    public function register_stats_route()
+    {
+        register_rest_route('hospital-manager/v1', '/appointments/stats', [
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => [$this, 'get_appointment_stats'],
+            'permission_callback' => '__return_true', // Allow public access
+            'args' => [
+                'doctor_id' => [
+                    'required' => true,
+                    'validate_callback' => function($param, $request, $key) {
+                        return is_numeric($param);
+                    }
+                ]
+            ]
+        ]);
+    }
+
+    // Ensure routes are properly registered with error handling
+    public function ensure_routes_registered()
+    {
+        // Re-register all appointment routes with proper error handling
+        register_rest_route('hospital-manager/v1', '/appointments', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_appointments'],
+                'permission_callback' => '__return_true',
+                'args' => [
+                    'page' => [
+                        'default' => 1,
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'per_page' => [
+                        'default' => 10,
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'doctor_id' => [
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'upcoming' => [
+                        'sanitize_callback' => 'sanitize_text_field'
+                    ]
+                ]
+            ],
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'create_appointment'],
+                'permission_callback' => '__return_true'
+            ]
+        ]);
     }
 }
