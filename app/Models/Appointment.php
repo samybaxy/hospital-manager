@@ -252,9 +252,7 @@ class Appointment extends BaseModel
             'reason' => $this->reason,
             'notes' => $this->notes,
             'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'doctor' => $this->doctor(),
-            'patient' => $this->patient()
+            'updated_at' => $this->updated_at
         ];
     }
 

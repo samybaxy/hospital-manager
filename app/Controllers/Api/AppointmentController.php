@@ -7,6 +7,8 @@ use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
 use HospitalManager\Models\Appointment;
+use HospitalManager\Models\Doctor;
+use HospitalManager\Models\Patient;
 use HospitalManager\Services\NotificationService;
 
 class AppointmentController extends BaseController
@@ -101,19 +103,14 @@ class AppointmentController extends BaseController
             error_log('Appointment Data: ' . print_r($appointment_data, true));
             // Add patient and doctor names to the array for display
             if (isset($appointment_data['patient_id'])) {
-                $patient = get_user_by('id', $appointment_data['patient_id']);
-                $appointment_data['patient_name'] = $patient ? $patient->display_name : 'Unknown Patient';
+                $patient = Patient::find( $appointment_data['patient_id'] );
+                $appointment_data['patient_name'] = $patient ? $patient->first_name . ' ' . $patient->last_name : 'Unknown Patient';
             }
             
             if (isset($appointment_data['doctor_id'])) {
-                $doctor = get_user_by('id', $appointment_data['doctor_id']);
-                $appointment_data['doctor_name'] = $doctor ? $doctor->display_name : 'Unknown Doctor';
+                $doctor = Doctor::find( $appointment_data['doctor_id'] );
+                $appointment_data['doctor_name'] = $doctor ? $doctor->first_name . ' ' . $doctor->last_name : 'Unknown Doctor';
             }
-            
-            // Ensure status is standardized
-            // if (empty($appointment_data['status']) || $appointment_data['status'] === 'draft') {
-            //     $appointment_data['status'] = 'pending';
-            // }
             
             return $appointment_data;
         }, $appointments);
