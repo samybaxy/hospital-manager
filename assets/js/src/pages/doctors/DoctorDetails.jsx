@@ -41,7 +41,9 @@ const DoctorDetails = () => {
   const [scheduleStats, setScheduleStats] = useState({
     totalAppointments: 0,
     upcomingAppointments: 0,
-    completedAppointments: 0
+    completedAppointments: 0,
+    pendingAppointments: 0,
+    confirmedAppointments: 0
   });
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
@@ -125,20 +127,46 @@ const DoctorDetails = () => {
     
     try {
       setAppointmentsLoading(true);
-      const response = await api.get(`/appointments?doctor_id=${id}&status=confirmed&upcoming=true`);
+      console.log(`Fetching appointments for doctor ID: ${id}`);
+      
+      // Get all upcoming appointments (both pending and confirmed)
+      const response = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
+      
+      console.log('Raw appointments response:', response);
       
       if (response.data && response.data.data) {
+        console.log('Found nested data structure with appointments:', response.data.data);
+        // Set the upcoming appointments from the response data
         setUpcomingAppointments(response.data.data);
         
-        // Update schedule stats based on real data
+        // Update stats based on the appointment data
+        const pendingCount = response.data.data.filter(a => a.status === 'pending').length;
+        const confirmedCount = response.data.data.filter(a => a.status === 'confirmed').length;
+        
         setScheduleStats(prev => ({
           ...prev,
           upcomingAppointments: response.data.data.length,
+          pendingAppointments: pendingCount,
+          confirmedAppointments: confirmedCount,
           totalAppointments: response.data.meta?.total || prev.totalAppointments
         }));
-      } else if (response.data) {
+      } else if (response.data && Array.isArray(response.data)) {
+        console.log('Found flat array response with appointments:', response.data);
+        // Handle flat array response
         setUpcomingAppointments(response.data);
+        
+        // Update stats based on the appointment data
+        const pendingCount = response.data.filter(a => a.status === 'pending').length;
+        const confirmedCount = response.data.filter(a => a.status === 'confirmed').length;
+        
+        setScheduleStats(prev => ({
+          ...prev,
+          upcomingAppointments: response.data.length,
+          pendingAppointments: pendingCount,
+          confirmedAppointments: confirmedCount
+        }));
       } else {
+        console.log('No data found in response or unsupported format');
         setUpcomingAppointments([]);
       }
     } catch (err) {
@@ -189,17 +217,39 @@ const DoctorDetails = () => {
         try {
           const statsResponse = await api.get(`/appointments/stats?doctor_id=${id}`);
           if (statsResponse.data) {
-            setScheduleStats(statsResponse.data);
+            setScheduleStats({
+              ...statsResponse.data,
+              // Make sure we include both pending and confirmed appointments in upcomingAppointments count
+              upcomingAppointments: statsResponse.data.pendingAppointments + 
+                                   (statsResponse.data.confirmedAppointments || 0)
+            });
           }
         } catch (statsErr) {
           console.warn('Could not fetch appointment statistics:', statsErr);
           // Try to get upcoming appointments count to at least show accurate data
           try {
-            const upcomingResponse = await api.get(`/appointments?doctor_id=${id}&status=confirmed&upcoming=true`);
-            if (upcomingResponse.data && upcomingResponse.data.meta) {
+            // Get upcoming appointments (both pending and confirmed)
+            const upcomingResponse = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
+            if (upcomingResponse.data) {
+              let appointments = [];
+              
+              // Parse appointments based on different possible response formats
+              if (upcomingResponse.data.data && Array.isArray(upcomingResponse.data.data)) {
+                appointments = upcomingResponse.data.data;
+              } else if (Array.isArray(upcomingResponse.data)) {
+                appointments = upcomingResponse.data;
+              }
+              
+              // Filter to only include pending and confirmed appointments
+              const relevantAppointments = appointments.filter(
+                appointment => appointment.status === 'pending' || appointment.status === 'confirmed'
+              );
+              
               setScheduleStats(prev => ({
                 ...prev,
-                upcomingAppointments: upcomingResponse.data.meta.total || 0
+                upcomingAppointments: relevantAppointments.length,
+                pendingAppointments: appointments.filter(a => a.status === 'pending').length,
+                confirmedAppointments: appointments.filter(a => a.status === 'confirmed').length
               }));
             }
           } catch (err) {
@@ -810,17 +860,15 @@ const DoctorDetails = () => {
                                   Cancel
                                 </button>
                               )}
-                              {status === 'confirmed' && (
-                                <Link to={`/appointments/${appointment.id}`}>
-                                  <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                    </svg>
-                                    View
-                                  </button>
-                                </Link>
-                              )}
+                              <Link to={`/appointments/${appointment.id}`}>
+                                <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View
+                                </button>
+                              </Link>
                             </div>
                           </td>
                         </tr>

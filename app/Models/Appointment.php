@@ -24,6 +24,7 @@ class Appointment extends BaseModel
     ];
 
     protected $conditions = [];
+    protected $rawConditions = [];
     protected $orderBy = [];
     
     public function __construct($attributes = [])
@@ -81,9 +82,27 @@ class Appointment extends BaseModel
         return new self($appointment_data);
     }
     
-    public function where($column, $value)
+    public function where($column, $operator = null, $value = null)
     {
-        $this->conditions[] = [$column, '=', $value];
+        // Handle 2 argument scenario (implying = operator)
+        if ($value === null) {
+            $value = $operator;
+            $operator = '=';
+        }
+        
+        $this->conditions[] = [$column, $operator, $value];
+        return $this;
+    }
+
+    /**
+     * Add a raw where clause to the query
+     */
+    public function whereRaw($sql, $params = [])
+    {
+        $this->rawConditions[] = [
+            'sql' => $sql,
+            'params' => $params
+        ];
         return $this;
     }
 
@@ -99,9 +118,31 @@ class Appointment extends BaseModel
         $query = "SELECT * FROM {$this->table} WHERE 1=1";
         $params = [];
 
+        // Initialize rawConditions array if not already initialized
+        if (!isset($this->rawConditions)) {
+            $this->rawConditions = [];
+        }
+
         // Add where conditions
         foreach ($this->conditions as $condition) {
-            $query .= $wpdb->prepare(" AND {$condition[0]} = %s", $condition[2]);
+            $column = $condition[0];
+            $operator = $condition[1];
+            $value = $condition[2];
+            
+            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
+        }
+        
+        // Add raw where conditions if any
+        foreach ($this->rawConditions as $rawCondition) {
+            $sql = $rawCondition['sql'];
+            $rawParams = $rawCondition['params'];
+            
+            // If there are params, use prepare, otherwise just append the raw SQL
+            if (!empty($rawParams)) {
+                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
+            } else {
+                $query .= ' AND ' . $sql;
+            }
         }
 
         // Add order by
@@ -110,7 +151,8 @@ class Appointment extends BaseModel
                 return "{$order[0]} {$order[1]}";
             }, $this->orderBy));
         }
-
+        
+        error_log("Final SQL query: $query");
         $results = $wpdb->get_results($query);
         
         // Convert results to array of appointment objects
@@ -132,10 +174,32 @@ class Appointment extends BaseModel
     {
         global $wpdb;
         $query = "SELECT COUNT(*) FROM {$this->table} WHERE 1=1";
-        $params = [];
 
+        // Initialize rawConditions array if not already initialized
+        if (!isset($this->rawConditions)) {
+            $this->rawConditions = [];
+        }
+
+        // Add where conditions
         foreach ($this->conditions as $condition) {
-            $query .= $wpdb->prepare(" AND {$condition[0]} = %s", $condition[2]);
+            $column = $condition[0];
+            $operator = $condition[1];
+            $value = $condition[2];
+            
+            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
+        }
+        
+        // Add raw where conditions if any
+        foreach ($this->rawConditions as $rawCondition) {
+            $sql = $rawCondition['sql'];
+            $rawParams = $rawCondition['params'];
+            
+            // If there are params, use prepare, otherwise just append the raw SQL
+            if (!empty($rawParams)) {
+                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
+            } else {
+                $query .= ' AND ' . $sql;
+            }
         }
 
         return (bool)$wpdb->get_var($query);
@@ -151,8 +215,31 @@ class Appointment extends BaseModel
         global $wpdb;
         $query = "SELECT {$column} FROM {$this->table} WHERE 1=1";
         
+        // Initialize rawConditions array if not already initialized
+        if (!isset($this->rawConditions)) {
+            $this->rawConditions = [];
+        }
+        
+        // Add where conditions
         foreach ($this->conditions as $condition) {
-            $query .= $wpdb->prepare(" AND {$condition[0]} = %s", $condition[2]);
+            $column = $condition[0];
+            $operator = $condition[1];
+            $value = $condition[2];
+            
+            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
+        }
+        
+        // Add raw where conditions if any
+        foreach ($this->rawConditions as $rawCondition) {
+            $sql = $rawCondition['sql'];
+            $rawParams = $rawCondition['params'];
+            
+            // If there are params, use prepare, otherwise just append the raw SQL
+            if (!empty($rawParams)) {
+                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
+            } else {
+                $query .= ' AND ' . $sql;
+            }
         }
 
         if (!empty($this->orderBy)) {
