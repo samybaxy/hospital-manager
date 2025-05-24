@@ -310,38 +310,37 @@ class Appointment extends BaseModel
         return get_user_by('id', $this->patient_id);
     }
 
-    // Enhanced toArray method with proper field mapping and debug logging
+    /**
+     * Convert the model instance to an array
+     * 
+     * @return array
+     */
     public function toArray()
     {
-        // Get the base array from the parent
-        $array = parent::toArray();
+        // Start with the attributes
+        $data = $this->attributes;
         
-        // Add debug logging to see what's in the attributes
-        error_log('Appointment toArray - Raw attributes: ' . print_r($this->attributes, true));
-        
-        // Ensure proper field mapping for appointments
-        $appointment_fields = [
-            'id' => $this->attributes['id'] ?? $this->attributes['ID'] ?? null,
-            'patient_id' => $this->attributes['patient_id'] ?? null,
-            'doctor_id' => $this->attributes['doctor_id'] ?? null,
-            'appointment_date' => $this->attributes['appointment_date'] ?? null,
-            'appointment_time' => $this->attributes['appointment_time'] ?? null,
-            'reason' => $this->attributes['reason'] ?? '',
-            'status' => $this->attributes['status'] ?? 'pending',
-            'notes' => $this->attributes['notes'] ?? '',
-            'created_at' => $this->attributes['created_at'] ?? null,
-            'updated_at' => $this->attributes['updated_at'] ?? null,
-        ];
-        
-        // Override the status to ensure it's not defaulting to 'draft'
-        if (isset($this->attributes['status']) && !empty($this->attributes['status'])) {
-            $appointment_fields['status'] = $this->attributes['status'];
+        // Process notes if it's a JSON string
+        if (!empty($data['notes']) && is_string($data['notes'])) {
+            $decoded = json_decode($data['notes'], true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $data['notes'] = $decoded;
+            }
         }
         
-        // Add debug logging for the final array
-        error_log('Appointment toArray - Final array: ' . print_r($appointment_fields, true));
+        // Ensure ID properties are consistent
+        if (isset($data['id']) && !isset($data['ID'])) {
+            $data['ID'] = $data['id'];
+        } elseif (isset($data['ID']) && !isset($data['id'])) {
+            $data['id'] = $data['ID'];
+        }
         
-        return $appointment_fields;
+        // Ensure status defaults to 'pending' if not set
+        if (empty($data['status'])) {
+            $data['status'] = 'pending';
+        }
+        
+        return $data;
     }
 
     /**
