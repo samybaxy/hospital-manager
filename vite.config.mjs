@@ -50,23 +50,24 @@ export default defineConfig(({ mode }) => {
     ],
     base: '',
     build: {
-      outDir: 'assets/js/dist',
-      emptyOutDir: false, // Don't empty out dir as we only want to update JS files here
-      sourcemap: true,
-      minify: isDev ? false : true, // Don't minify in development mode
-      rollupOptions: {
-        input: {
-          bundle: resolve(__dirname, 'assets/js/src/index.jsx'),
-        },
-        output: {
-          entryFileNames: 'bundle.js',
-          chunkFileNames: '[name]-[hash].js',
-          assetFileNames: (assetInfo) => {
-              // Place files directly in js/dist without creating an additional assets directory
-              return '[name]-[hash][extname]';
-          }
-        },
-      }
+        outDir: 'assets/js/dist',
+        emptyOutDir: false, // Don't empty out dir as we only want to update JS files here
+        sourcemap: isDev ? true : false, // Enable sourcemaps in development mode,
+        sourcemapExcludeSources: true, // Don't include source code in maps
+        minify: isDev ? false : true, // Don't minify in development mode
+        rollupOptions: {
+            input: {
+                bundle: resolve(__dirname, 'assets/js/src/index.jsx'),
+            },
+            output: {
+                entryFileNames: 'bundle.js',
+                chunkFileNames: '[name]-[hash].js',
+                assetFileNames: (assetInfo) => {
+                    // Place files directly in js/dist without creating an additional assets directory
+                    return '[name]-[hash][extname]';
+                }
+            },
+        }
     },
     define: {
       // This ensures React runs in development mode when we use --mode development

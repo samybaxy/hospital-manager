@@ -584,35 +584,37 @@ const renderAppointmentList = () => {
   return (
     <>
       <div className="flex flex-wrap gap-4 mb-4">
-        <div>
-          <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
-          <select
-            id="statusFilter"
-            value={filterStatus}
-            onChange={(e) => handleFilterChange(e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            <option value="all">All Appointments</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        
-        <div>
-          <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
-          <select
-            id="perPage"
-            value={perPage}
-            onChange={(e) => handlePerPageChange(e.target.value)}
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
+        <div className="flex flex-wrap gap-4">
+          <div>
+            <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select
+              id="statusFilter"
+              value={filterStatus}
+              onChange={(e) => handleFilterChange(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value="all">All Appointments</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          
+          <div>
+            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={(e) => handlePerPageChange(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -623,16 +625,14 @@ const renderAppointmentList = () => {
               ? `You don't have any ${filterStatus} appointments.` 
               : "You don't have any appointments yet."}
           </p>
-          {userRole === 'patient' && (
-            <Link to="/doctors">
-              <Button
-                variant="primary" 
-                className="px-4 py-2"
-              >
-                Book an Appointment
-              </Button>
-            </Link>
-          )}
+          <Link to="/doctors">
+            <Button
+              variant="primary" 
+              className="px-4 py-2"
+            >
+              Book an Appointment
+            </Button>
+          </Link>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -751,37 +751,49 @@ const renderAppointmentList = () => {
                         Details
                       </Link>
                     
-                      {appointment.status === 'pending' && userRole === 'patient' && (
-                        <button
-                          onClick={() => handleCancelClick(appointment.id)}
-                          className="text-red-600 hover:text-red-900 text-sm font-medium"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      {userRole === 'doctor' && appointment.status === 'pending' && (
+                      {appointment.status === 'pending' && (
                         <>
                           <button
                             onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'confirmed' }).then(fetchAppointments)}
-                            className="text-green-600 hover:text-green-900 text-sm font-medium"
+                            className="inline-flex items-center px-2 py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                           >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
                             Confirm
                           </button>
                           <button
                             onClick={() => handleCancelClick(appointment.id)}
-                            className="text-red-600 hover:text-red-900 text-sm font-medium"
+                            className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
-                            Decline
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancel
                           </button>
                         </>
                       )}
-                      {userRole === 'doctor' && appointment.status === 'confirmed' && (
-                        <button
-                          onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'completed' }).then(fetchAppointments)}
-                          className="text-blue-600 hover:text-blue-900 text-sm font-medium ml-2"
-                        >
-                          Mark Completed
-                        </button>
+                      {appointment.status === 'confirmed' && (
+                        <>
+                          <button
+                            onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'completed' }).then(fetchAppointments)}
+                            className="inline-flex items-center px-2 py-1 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Mark Completed
+                          </button>
+                          <button
+                            onClick={() => handleCancelClick(appointment.id)}
+                            className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancel
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -804,7 +816,7 @@ const renderAppointmentList = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Appointments</h1>
-        <Link to="/appointments/book">
+        <Link to="/doctors">
           <Button 
             variant="primary"
           >
