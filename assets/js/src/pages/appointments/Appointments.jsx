@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import appointmentService from '../services/appointmentService';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import { api } from '../../services/apiService';
+
+// Removed unused imports
+import { useAuth } from '../../context/AuthContext';
 
 const Appointments = () => {
   const { user, loading: authLoading } = useAuth();
@@ -86,7 +88,8 @@ const Appointments = () => {
       }
       updateUrlParams(urlParams);
       
-      const response = await appointmentService.getAppointments(apiParams);
+      // Use api directly instead of appointmentService
+      const response = await api.get('/appointments', { params: apiParams });
       
       // Handle the response format with pagination metadata
       if (response.data) {
@@ -141,8 +144,8 @@ const Appointments = () => {
     }));
 
     try {
-      // Include cancellation reason in the update
-      await appointmentService.updateAppointment(cancellationState.appointmentId, { 
+      // Include cancellation reason in the update - use api directly
+      await api.put(`/appointments/${cancellationState.appointmentId}`, { 
         status: 'cancelled',
         notes: cancellationState.reason || 'No reason provided'
       });
@@ -213,6 +216,9 @@ const Appointments = () => {
     }
   };
 
+  // These methods are no longer needed since filtering and sorting are done on the backend
+  // Keeping them commented for reference in case we need to implement client-side filtering again
+  /*
   // Filter appointments based on selected status
   const getFilteredAppointments = () => {
     if (filterStatus === 'all') {
@@ -221,12 +227,13 @@ const Appointments = () => {
     return appointments.filter(app => app.status === filterStatus);
   };
 
-// Make getSortedAppointments simpler to avoid potential filtering issues
-const getSortedAppointments = () => {
-  // We don't need filtering or sorting logic here anymore
-  // as we get paginated data from the backend
-  return appointments;
-};
+  // Sort appointments
+  const getSortedAppointments = () => {
+    // We don't need filtering or sorting logic here anymore
+    // as we get paginated data from the backend
+    return appointments;
+  };
+  */
 
 // Handle page navigation
 const handlePageChange = (page) => {
@@ -347,7 +354,7 @@ const getUrlParams = () => {
   return params;
 };
 
-  // Toggle sort direction and set the sort field
+  // Toggle sort direction and set the sort field - note this is only used in UI but sorting is done server-side
   const handleSort = (field) => {
     if (sortBy === field) {
       // Toggle direction if same field
@@ -357,6 +364,15 @@ const getUrlParams = () => {
       setSortBy(field);
       setSortDirection('asc');
     }
+    
+    // Note: Currently we're not sending sort parameters to the API - this would be implemented here
+    // fetchAppointments({
+    //   page: currentPage,
+    //   per_page: perPage,
+    //   status: filterStatus !== 'all' ? filterStatus : null,
+    //   sort_by: field,
+    //   sort_dir: sortBy === field && sortDirection === 'asc' ? 'desc' : 'asc'
+    // });
   };
 
   // Fix the renderPagination method for better visibility and clarity
@@ -541,6 +557,7 @@ const renderPagination = () => {
     );
   };
 
+// Make the appointment list component simpler and ensure the pagination is visible
 // Make the appointment list component simpler and ensure the pagination is visible
 const renderAppointmentList = () => {
   if (loading) {
@@ -745,7 +762,7 @@ const renderAppointmentList = () => {
                       {userRole === 'doctor' && appointment.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => appointmentService.updateAppointment(appointment.id, { status: 'confirmed' }).then(fetchAppointments)}
+                            onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'confirmed' }).then(fetchAppointments)}
                             className="text-green-600 hover:text-green-900 text-sm font-medium"
                           >
                             Confirm
@@ -760,7 +777,7 @@ const renderAppointmentList = () => {
                       )}
                       {userRole === 'doctor' && appointment.status === 'confirmed' && (
                         <button
-                          onClick={() => appointmentService.updateAppointment(appointment.id, { status: 'completed' }).then(fetchAppointments)}
+                          onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'completed' }).then(fetchAppointments)}
                           className="text-blue-600 hover:text-blue-900 text-sm font-medium ml-2"
                         >
                           Mark Completed
@@ -781,43 +798,22 @@ const renderAppointmentList = () => {
   );
 };
 
-// Add a dedicated useEffect for pagination monitoring
-useEffect(() => {
-  // This effect will run whenever pagination state changes
-  // to help with debugging and ensuring everything is in sync
-  
-  // Skip during initial load or when auth is still loading
-  if (authLoading || loading) {
-    return;
-  }
-  
-  // Optional: Add analytics tracking for pagination events
-  // if (window.analytics) {
-  //   window.analytics.track('Pagination Changed', {
-  //     currentPage,
-  //     perPage,
-  //     totalPages,
-  //     statusFilter: filterStatus
-  //   });
-  // }
-}, [currentPage, totalPages, perPage, totalAppointments, appointments.length, filterStatus]);
+// Remove unused effect that doesn't perform any actions
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Appointments</h1>
-        {userRole === 'patient' && (
-          <Link to="/doctors">
-            <Button 
-              variant="primary"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Book New Appointment
-            </Button>
-          </Link>
-        )}
+        <Link to="/appointments/book">
+          <Button 
+            variant="primary"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Book Appointment
+          </Button>
+        </Link>
       </div>
       <Card>
         {renderAppointmentList()}

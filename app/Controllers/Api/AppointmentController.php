@@ -32,23 +32,6 @@ class AppointmentController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/appointments/(?P<id>\d+)', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_appointment'],
-                'permission_callback' => function() {
-                    return is_user_logged_in();
-                }
-            ],
-            [
-                'methods' => WP_REST_Server::EDITABLE,
-                'callback' => [$this, 'update_appointment'],
-                'permission_callback' => function() {
-                    return current_user_can('doctor') || current_user_can('desk_officer');
-                }
-            ]
-        ]);
-
         register_rest_route($this->namespace, '/appointments/availability', [
             [
                 'methods' => WP_REST_Server::READABLE,
@@ -66,6 +49,40 @@ class AppointmentController extends BaseController
                 'permission_callback' => function() {
                     return is_user_logged_in();
                 }
+            ]
+        ]);
+
+        // Single appointment route - consolidated
+        register_rest_route($this->namespace, '/appointments/(?P<id>\d+)', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_appointment'],
+                'permission_callback' => function() {
+                    return is_user_logged_in();
+                },
+                'args' => [
+                    'id' => [
+                        'validate_callback' => function($param, $request, $key) {
+                            return is_numeric($param);
+                        },
+                        'sanitize_callback' => 'absint'
+                    ]
+                ]
+            ],
+            [
+                'methods' => WP_REST_Server::EDITABLE,
+                'callback' => [$this, 'update_appointment'],
+                'permission_callback' => function() {
+                    return is_user_logged_in();
+                },
+                'args' => [
+                    'id' => [
+                        'validate_callback' => function($param, $request, $key) {
+                            return is_numeric($param);
+                        },
+                        'sanitize_callback' => 'absint'
+                    ]
+                ]
             ]
         ]);
     }
@@ -567,107 +584,80 @@ class AppointmentController extends BaseController
     }
 
     /**
-     * Get a single appointment by ID
-     * 
-     * @param WP_REST_Request $request
-     * @return WP_REST_Response|WP_Error
+     * Get a single appointment with robust error handling
      */
     public function get_appointment($request)
     {
-        $id = $request->get_param('id');
-        
-        if (!$id) {
-            return new WP_Error('missing_id', 'Appointment ID is required', ['status' => 400]);
-        }
-        
         try {
-            $appointment = new Appointment();
-            $appointment_data = $appointment->find($id);
+            $id = (int)$request->get_param('id');
             
-            if (!$appointment_data) {
-                return new WP_Error('appointment_not_found', 'Appointment not found', ['status' => 404]);
+            if (!$id) {
+                return new WP_Error('missing_id', 'Appointment ID is required', ['status' => 400]);
             }
             
-            // Also try direct database query as fallback
+            // Use direct DB query for reliability
             global $wpdb;
             $table_name = $wpdb->prefix . 'hm_appointments';
-            $db_result = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$table_name} WHERE id = %d", 
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            
+            // Check if table exists
+            if (!$wpdb->get_var("SHOW TABLES LIKE '{$table_name}'")) {
+                error_log('Appointments table not found: ' . $table_name);
+                return new WP_Error('table_not_found', 'Appointments table not found', ['status' => 500]);
+            }
+            
+            // Query with JOINs for related data
+            $query = $wpdb->prepare(
+                "SELECT 
+                    a.*,
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    d.specialty as doctor_specialty,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                    p.phone as patient_phone
+                FROM {$table_name} a
+                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.id
+                LEFT JOIN {$patients_table} p ON a.patient_id = p.id
+                WHERE a.id = %d",
                 $id
-            ), ARRAY_A);
+            );
             
-            error_log('Direct DB query result: ' . print_r($db_result, true));
+            $appointment = $wpdb->get_row($query, ARRAY_A);
             
-            // Convert to array and ensure proper field mapping
-            $appointment_array = $appointment_data->toArray();
-            
-            // Debug log the raw data to see what fields are actually available
-            error_log('Raw appointment data: ' . print_r($appointment_array, true));
-            error_log('Appointment object properties: ' . print_r(get_object_vars($appointment_data), true));
-            
-            // Try direct property access as fallback
-            $date_value = $appointment_array['appointment_date'] ?? $appointment_data->appointment_date ?? $db_result['appointment_date'] ?? null;
-            $time_value = $appointment_array['appointment_time'] ?? $appointment_data->appointment_time ?? $db_result['appointment_time'] ?? null;
-            
-            // If still null, use the database result directly
-            if (!$date_value && $db_result) {
-                $date_value = $db_result['appointment_date'];
-            }
-            if (!$time_value && $db_result) {
-                $time_value = $db_result['appointment_time'];
+            if (!$appointment) {
+                return new WP_Error('not_found', 'Appointment not found', ['status' => 404]);
             }
             
-            error_log('Final date value: ' . ($date_value ?? 'null'));
-            error_log('Final time value: ' . ($time_value ?? 'null'));
-            
-            // Get related data
-            $doctor = new Doctor();
-            $doctor_data = $doctor->find($appointment_array['doctor_id']);
-            
-            $patient = new Patient();
-            $patient_data = $patient->find($appointment_array['patient_id']);
-            
-            // Ensure both field naming conventions are supported
-            $response_data = [
-                'id' => $appointment_array['id'],
-                'patient_id' => $appointment_array['patient_id'],
-                'doctor_id' => $appointment_array['doctor_id'],
-                // Support both naming conventions with fallbacks
-                'date' => $date_value,
-                'time' => $time_value,
-                'appointment_date' => $date_value,
-                'appointment_time' => $time_value,
-                'reason' => $appointment_array['reason'] ?? '',
-                'status' => $appointment_array['status'] ?? 'pending',
-                'notes' => $appointment_array['notes'] ?? '',
-                'created_at' => $appointment_array['created_at'] ?? '',
-                'updated_at' => $appointment_array['updated_at'] ?? '',
-                'doctor' => $doctor_data ? [
-                    'id' => $doctor_data->id,
-                    'first_name' => $doctor_data->first_name,
-                    'last_name' => $doctor_data->last_name,
-                    'specialty' => $doctor_data->specialty,
-                ] : null,
-                'patient' => $patient_data ? [
-                    'id' => $patient_data->id,
-                    'first_name' => $patient_data->first_name,
-                    'last_name' => $patient_data->last_name,
-                ] : null
+            // Format response data
+            $formatted_appointment = [
+                'id' => (int) $appointment['id'],
+                'patient_id' => (int) $appointment['patient_id'],
+                'doctor_id' => (int) $appointment['doctor_id'],
+                'date' => $appointment['appointment_date'],
+                'time' => $appointment['appointment_time'],
+                'appointment_date' => $appointment['appointment_date'],
+                'appointment_time' => $appointment['appointment_time'],
+                'reason' => $appointment['reason'] ?? '',
+                'status' => $appointment['status'] ?? 'pending',
+                'notes' => $appointment['notes'] ?? '',
+                'created_at' => $appointment['created_at'],
+                'updated_at' => $appointment['updated_at'],
+                'doctor_name' => $appointment['doctor_name'],
+                'doctor_specialty' => $appointment['doctor_specialty'],
+                'patient_name' => $appointment['patient_name'],
+                'patient_phone' => $appointment['patient_phone']
             ];
             
-            // Debug log the response data
-            error_log('Response appointment data: ' . print_r($response_data, true));
-            
-            return new WP_REST_Response([
-                'success' => true,
-                'data' => $response_data
-            ], 200);
+            return new WP_REST_Response($formatted_appointment, 200);
             
         } catch (\Exception $e) {
             error_log('Error getting appointment: ' . $e->getMessage());
-            return new WP_Error('appointment_error', 'Failed to retrieve appointment', ['status' => 500]);
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            return new WP_Error('error', 'Failed to retrieve appointment: ' . $e->getMessage(), ['status' => 500]);
         }
     }
+
+    // Removed redundant get_appointment_fixed method - consolidated into get_appointment
 
     /**
      * Get appointment statistics for a doctor - Updated implementation
@@ -773,55 +763,5 @@ class AppointmentController extends BaseController
         }
     }
 
-    // Additional route registration for stats endpoint with proper permissions
-    public function register_stats_route()
-    {
-        register_rest_route('hospital-manager/v1', '/appointments/stats', [
-            'methods' => WP_REST_Server::READABLE,
-            'callback' => [$this, 'get_appointment_stats'],
-            'permission_callback' => '__return_true', // Allow public access
-            'args' => [
-                'doctor_id' => [
-                    'required' => true,
-                    'validate_callback' => function($param, $request, $key) {
-                        return is_numeric($param);
-                    }
-                ]
-            ]
-        ]);
-    }
-
-    // Ensure routes are properly registered with error handling
-    public function ensure_routes_registered()
-    {
-        // Re-register all appointment routes with proper error handling
-        register_rest_route('hospital-manager/v1', '/appointments', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_appointments'],
-                'permission_callback' => '__return_true',
-                'args' => [
-                    'page' => [
-                        'default' => 1,
-                        'sanitize_callback' => 'absint'
-                    ],
-                    'per_page' => [
-                        'default' => 10,
-                        'sanitize_callback' => 'absint'
-                    ],
-                    'doctor_id' => [
-                        'sanitize_callback' => 'absint'
-                    ],
-                    'upcoming' => [
-                        'sanitize_callback' => 'sanitize_text_field'
-                    ]
-                ]
-            ],
-            [
-                'methods' => WP_REST_Server::CREATABLE,
-                'callback' => [$this, 'create_appointment'],
-                'permission_callback' => '__return_true'
-            ]
-        ]);
-    }
+    // Removed redundant methods - all functionality consolidated into main methods above
 }

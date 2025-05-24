@@ -16,7 +16,9 @@ import Doctors from './pages/doctors/Doctors';
 import AddDoctor from './pages/doctors/AddDoctor';
 import EditDoctor from './pages/doctors/EditDoctor';
 import DoctorDetails from './pages/doctors/DoctorDetails';
-import Appointments from './pages/Appointments';
+import Appointments from './pages/appointments/Appointments';
+import AppointmentView from './pages/appointments/AppointmentView';
+import BookAppointment from './pages/appointments/BookAppointment';
 import Departments from './pages/Departments';
 import Billing from './pages/Billing';
 import Inventory from './pages/Inventory';
@@ -31,7 +33,6 @@ import Chat from './pages/Chat';
 import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
-import AppointmentDetails from './pages/AppointmentDetails';
 
 // Main content component with routes
 const AppRoutes = () => {
@@ -117,14 +118,19 @@ const AppRoutes = () => {
             <Appointments />
           </ProtectedRoute>
         } />
-        <Route path="/appointments/doctor/:doctorId" element={
+        <Route path="/appointments/book" element={
           <ProtectedRoute routeName="appointments">
-            <AppointmentDetails />
+            <BookAppointment />
+          </ProtectedRoute>
+        } />
+        <Route path="/appointments/book/:doctorId" element={
+          <ProtectedRoute routeName="appointments">
+            <BookAppointment />
           </ProtectedRoute>
         } />
         <Route path="/appointments/:id" element={
           <ProtectedRoute routeName="appointments">
-            <AppointmentDetails />
+            <AppointmentView />
           </ProtectedRoute>
         } />
         <Route path="/departments" element={
