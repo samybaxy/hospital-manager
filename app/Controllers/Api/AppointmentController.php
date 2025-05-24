@@ -22,12 +22,33 @@ class AppointmentController extends BaseController
                 'permission_callback' => function() {
                     return is_user_logged_in();
                 }
-            ],
+            ]
+        ]);
+
+        register_rest_route($this->namespace, '/appointments/book/(?P<id>\d+)', [
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [$this, 'get_booking_data'],
+                'permission_callback' => function() {
+                    return is_user_logged_in();
+                },
+                'args' => [
+                    'id' => [
+                        'validate_callback' => function($param, $request, $key) {
+                            return is_numeric($param);
+                        },
+                        'sanitize_callback' => 'absint'
+                    ]
+                ]
+            ]
+        ]);
+
+        register_rest_route($this->namespace, '/appointments', [
             [
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'create_appointment'],
                 'permission_callback' => function() {
-                    return current_user_can('patient');
+                    return is_user_logged_in();
                 }
             ]
         ]);
@@ -260,19 +281,75 @@ class AppointmentController extends BaseController
         }
     }
 
+    /**
+     * Get booking data for appointment booking form
+     */
+    public function get_booking_data($request)
+    {
+        $doctor_id = $request->get_param('id');
+        
+        if (!$doctor_id) {
+            return new WP_Error(
+                'missing_doctor_id',
+                'Doctor ID is required',
+                ['status' => 400]
+            );
+        }
+        
+        try {
+            // Get doctor information
+            global $wpdb;
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $doctor = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT * FROM {$doctors_table} WHERE id = %d",
+                    $doctor_id
+                ),
+                ARRAY_A
+            );
+            
+            if (!$doctor) {
+                return new WP_Error(
+                    'doctor_not_found',
+                    'Doctor not found',
+                    ['status' => 404]
+                );
+            }
+            
+            // Get available dates
+            $available_dates = $this->get_available_dates($doctor_id);
+            
+            return new WP_REST_Response([
+                'doctor' => $doctor,
+                'available_dates' => $available_dates->data['dates'] ?? [],
+                'doctor_id' => $doctor_id
+            ], 200);
+            
+        } catch (\Exception $e) {
+            error_log('Error getting booking data: ' . $e->getMessage());
+            return new WP_Error(
+                'booking_data_error',
+                'Failed to retrieve booking data: ' . $e->getMessage(),
+                ['status' => 500]
+            );
+        }
+    }
+
     public function create_appointment($request)
     {
-        $patient_id = get_current_user_id();
+        // Get parameters from request body (form submission)
+        $patient_id = $request->get_param('patient_id') ?: get_current_user_id();
         $doctor_id = $request->get_param('doctor_id');
-        $date = $request->get_param('date');
-        $time = $request->get_param('time');
+        $date = $request->get_param('appointment_date') ?: $request->get_param('date');
+        $time = $request->get_param('appointment_time') ?: $request->get_param('time');
         $reason = $request->get_param('reason');
+        $notes = $request->get_param('notes');
 
         // Validate required fields
-        if (!$doctor_id || !$date || !$time) {
+        if (!$patient_id || !$doctor_id || !$date || !$time) {
             return new WP_Error(
                 'missing_required_fields',
-                'Missing required fields',
+                'Missing required fields: patient_id, doctor_id, date, and time are required',
                 ['status' => 400]
             );
         }
@@ -306,6 +383,7 @@ class AppointmentController extends BaseController
                 'appointment_date' => $date,
                 'appointment_time' => $time,
                 'reason' => sanitize_text_field($reason),
+                'notes' => sanitize_textarea_field($notes),
                 'status' => 'pending'
             ];
             
@@ -354,13 +432,16 @@ class AppointmentController extends BaseController
             
             return new WP_REST_Response([
                 'message' => 'Appointment booked successfully',
-                'appointment' => [
+                'data' => [
                     'id' => $appointment->id,
                     'doctor_id' => $appointment->doctor_id,
                     'patient_id' => $appointment->patient_id,
-                    'date' => $appointment->appointment_date,
-                    'time' => $appointment->appointment_time,
-                    'status' => $appointment->status
+                    'appointment_date' => $appointment->appointment_date,
+                    'appointment_time' => $appointment->appointment_time,
+                    'reason' => $appointment->reason,
+                    'notes' => $appointment->notes,
+                    'status' => $appointment->status,
+                    'created_at' => $appointment->created_at
                 ]
             ], 201);
         } catch (\Exception $e) {
@@ -370,17 +451,6 @@ class AppointmentController extends BaseController
                 ['status' => 500]
             );
         }
-
-        // Notify doctor about new appointment
-        NotificationService::create(
-            $doctor_id,
-            'new_appointment',
-            'New Appointment Request',
-            "A new appointment has been requested for {$date} at {$time}",
-            ['appointment_id' => $appointment->id]
-        );
-
-        return new WP_REST_Response($appointment, 201);
     }
 
     public function update_appointment($request)
@@ -421,12 +491,17 @@ class AppointmentController extends BaseController
         $doctor_id = $request->get_param('doctor_id');
         $date = $request->get_param('date');
 
-        if (!$doctor_id || !$date) {
+        if (!$doctor_id) {
             return new WP_Error(
                 'missing_required_fields',
-                'Doctor ID and date are required',
+                'Doctor ID is required',
                 ['status' => 400]
             );
+        }
+
+        // If no date provided, return available dates for the next 30 days
+        if (!$date) {
+            return $this->get_available_dates($doctor_id);
         }
 
         // Get the day of the week from the date
@@ -761,6 +836,69 @@ class AppointmentController extends BaseController
             error_log('Stack trace: ' . $e->getTraceAsString());
             return new WP_Error('stats_error', 'Failed to retrieve appointment statistics: ' . $e->getMessage(), ['status' => 500]);
         }
+    }
+
+    /**
+     * Get available dates for a doctor (next 30 days)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return WP_REST_Response
+     */
+    private function get_available_dates($doctor_id)
+    {
+        global $wpdb;
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        
+        // Get doctor's availability settings
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                $doctor_id
+            )
+        );
+        
+        $availability = [];
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+        }
+        
+        // Default working days if no custom availability
+        $default_working_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        
+        $available_dates = [];
+        $start_date = strtotime('today');
+        $end_date = strtotime('+30 days');
+        
+        for ($date = $start_date; $date <= $end_date; $date += 86400) { // 86400 seconds = 1 day
+            $day_of_week = strtolower(date('l', $date));
+            $date_string = date('Y-m-d', $date);
+            
+            // Skip past dates
+            if ($date < strtotime('today')) {
+                continue;
+            }
+            
+            $is_available = false;
+            
+            // Check if doctor works on this day
+            if (!empty($availability)) {
+                $is_available = isset($availability[$day_of_week]) && !empty($availability[$day_of_week]);
+            } else {
+                // Use default working days
+                $is_available = in_array($day_of_week, $default_working_days);
+            }
+            
+            $available_dates[] = [
+                'date' => $date_string,
+                'day' => ucfirst($day_of_week),
+                'available' => $is_available
+            ];
+        }
+        
+        return new WP_REST_Response([
+            'dates' => $available_dates,
+            'doctor_id' => $doctor_id
+        ]);
     }
 
     // Removed redundant methods - all functionality consolidated into main methods above

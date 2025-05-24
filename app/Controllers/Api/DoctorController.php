@@ -218,7 +218,7 @@ class DoctorController extends BaseController
                 'education' => $doctor->education,
                 'years_experience' => $doctor->years_experience,
                 'office' => $doctor->office,
-                // Don't include personal contact info in public endpoint
+                'appointment_availability' => $doctor->appointment_availability,
             ];
             
             return new WP_REST_Response($response);
@@ -238,60 +238,97 @@ class DoctorController extends BaseController
     public function create_doctor($request)
     {
         try {
-            $params = $request->get_params();
+            // Get request data
+            $data = $request->get_json_params() ?: $request->get_params();
             
             // Validate required fields
-            $required_fields = ['first_name', 'last_name', 'phone', 'specialty'];
+            $required_fields = ['first_name', 'last_name', 'phone', 'specialty', 'license_number'];
             foreach ($required_fields as $field) {
-                if (empty($params[$field])) {
+                if (empty($data[$field])) {
                     return new WP_Error(
                         'missing_required_field',
-                        "Field '{$field}' is required",
+                        "Missing required field: {$field}",
                         ['status' => 400]
                     );
                 }
             }
             
-            // Sanitize and prepare data for database
-            $doctor_data = [
-                'first_name' => sanitize_text_field($params['first_name']),
-                'last_name' => sanitize_text_field($params['last_name']),
-                'phone' => sanitize_text_field($params['phone']),
-                'specialty' => sanitize_text_field($params['specialty']),
-                'status' => !empty($params['status']) ? sanitize_text_field($params['status']) : 'active',
-            ];
+            // Create new doctor instance
+            $doctor = new Doctor();
             
-            // Create new doctor record
-            $doctor = Doctor::create($doctor_data);
+            // Set required fields
+            $doctor->first_name = sanitize_text_field($data['first_name']);
+            $doctor->last_name = sanitize_text_field($data['last_name']);
+            $doctor->phone = sanitize_text_field($data['phone']);
+            $doctor->specialty = sanitize_text_field($data['specialty']);
+            $doctor->license_number = sanitize_text_field($data['license_number']);
+            $doctor->status = isset($data['status']) ? sanitize_text_field($data['status']) : 'active';
             
-            // Log the creation
-            AuditLogger::log(
-                'create_doctor',
-                'doctor',
-                $doctor->id,
-                [
-                    'user_id' => get_current_user_id(),
-                    'doctor_data' => $doctor_data
-                ]
-            );
+            // Set optional fields
+            if (isset($data['years_experience'])) {
+                $doctor->years_experience = sanitize_text_field($data['years_experience']);
+            }
             
-            // Return the created doctor
+            if (isset($data['education'])) {
+                $doctor->education = sanitize_text_field($data['education']);
+            }
+            
+            if (isset($data['certification'])) {
+                $doctor->certification = sanitize_text_field($data['certification']);
+            }
+            
+            if (isset($data['office'])) {
+                $doctor->office = sanitize_text_field($data['office']);
+            }
+            
+            if (isset($data['department'])) {
+                $doctor->department = sanitize_text_field($data['department']);
+            }
+            
+            // Handle appointment_availability - it comes as JSON string from frontend
+            if (isset($data['appointment_availability'])) {
+                if (is_string($data['appointment_availability'])) {
+                    // Validate JSON
+                    $availability = json_decode($data['appointment_availability'], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $doctor->appointment_availability = $data['appointment_availability'];
+                    } else {
+                        error_log('Invalid JSON in appointment_availability: ' . $data['appointment_availability']);
+                        return new WP_Error(
+                            'invalid_availability_format',
+                            'Invalid appointment availability format',
+                            ['status' => 400]
+                        );
+                    }
+                } else {
+                    // Convert array to JSON string
+                    $doctor->appointment_availability = json_encode($data['appointment_availability']);
+                    error_log('Converted appointment_availability to JSON: ' . $doctor->appointment_availability);
+                }
+            }
+            
+            // Set timestamps
+            $doctor->created_at = current_time('mysql');
+            $doctor->updated_at = current_time('mysql');
+            
+            // Save the doctor
+            $saved = $doctor->save();
+            
+            if (!$saved) {
+                throw new \Exception('Failed to save doctor to database');
+            }
+            
+            error_log("Doctor created successfully with ID: {$doctor->id}");
+            
             return new WP_REST_Response([
                 'message' => 'Doctor created successfully',
-                'doctor' => [
-                    'id' => $doctor->id,
-                    'first_name' => $doctor->first_name,
-                    'last_name' => $doctor->last_name,
-                    'phone' => $doctor->phone,
-                    'specialty' => $doctor->specialty,
-                    'status' => $doctor->status,
-                ]
-            ], 201); // Created
+                'data' => $doctor->toArray()
+            ], 201);
             
         } catch (\Exception $e) {
             error_log('Error creating doctor: ' . $e->getMessage());
             return new WP_Error(
-                'create_failed',
+                'doctor_creation_failed',
                 'Failed to create doctor: ' . $e->getMessage(),
                 ['status' => 500]
             );
@@ -303,12 +340,18 @@ class DoctorController extends BaseController
      */
     public function update_doctor($request)
     {
+        $id = $request->get_param('id');
+        
+        if (!$id) {
+            return new WP_Error(
+                'missing_doctor_id',
+                'Doctor ID is required',
+                ['status' => 400]
+            );
+        }
+        
         try {
-            $doctor_id = $request->get_param('id');
-            $params = $request->get_params();
-            
-            // Find the doctor to update
-            $doctor = Doctor::find($doctor_id);
+            $doctor = Doctor::find($id);
             
             if (!$doctor) {
                 return new WP_Error(
@@ -318,60 +361,92 @@ class DoctorController extends BaseController
                 );
             }
             
-            // Update doctor fields
-            if (isset($params['first_name'])) {
-                $doctor->first_name = sanitize_text_field($params['first_name']);
+            // Get the request data
+            $data = $request->get_json_params() ?: $request->get_params();
+            
+            // Validate required fields
+            $required_fields = ['first_name', 'last_name', 'phone', 'specialty', 'license_number'];
+            foreach ($required_fields as $field) {
+                if (empty($data[$field])) {
+                    return new WP_Error(
+                        'missing_required_field',
+                        "Missing required field: {$field}",
+                        ['status' => 400]
+                    );
+                }
             }
             
-            if (isset($params['last_name'])) {
-                $doctor->last_name = sanitize_text_field($params['last_name']);
+            // Update the doctor fields with new data
+            $doctor->first_name = sanitize_text_field($data['first_name']);
+            $doctor->last_name = sanitize_text_field($data['last_name']);
+            $doctor->phone = sanitize_text_field($data['phone']);
+            $doctor->specialty = sanitize_text_field($data['specialty']);
+            $doctor->license_number = sanitize_text_field($data['license_number']);
+            $doctor->status = isset($data['status']) ? sanitize_text_field($data['status']) : 'active';
+            
+            // Optional fields
+            if (isset($data['years_experience'])) {
+                $doctor->years_experience = sanitize_text_field($data['years_experience']);
             }
             
-            if (isset($params['phone'])) {
-                $doctor->phone = sanitize_text_field($params['phone']);
+            if (isset($data['education'])) {
+                $doctor->education = sanitize_text_field($data['education']);
             }
             
-            if (isset($params['specialty'])) {
-                $doctor->specialty = sanitize_text_field($params['specialty']);
+            if (isset($data['certification'])) {
+                $doctor->certification = sanitize_text_field($data['certification']);
             }
             
-            if (isset($params['status'])) {
-                $doctor->status = sanitize_text_field($params['status']);
+            if (isset($data['office'])) {
+                $doctor->office = sanitize_text_field($data['office']);
             }
             
-            // Save updated doctor
-            $doctor->save();
+            if (isset($data['department'])) {
+                $doctor->department = sanitize_text_field($data['department']);
+            }
             
-            // Log the update
-            AuditLogger::log(
-                'update_doctor',
-                'doctor',
-                $doctor->id,
-                [
-                    'user_id' => get_current_user_id(),
-                    'updated_fields' => array_keys($request->get_params())
-                ]
-            );
+            // Handle appointment_availability - it comes as JSON string from frontend
+            if (isset($data['appointment_availability'])) {
+                if (is_string($data['appointment_availability'])) {
+                    // Validate JSON
+                    $availability = json_decode($data['appointment_availability'], true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $doctor->appointment_availability = $data['appointment_availability'];
+                        error_log('Setting appointment_availability to: ' . $data['appointment_availability']);
+                    } else {
+                        error_log('Invalid JSON in appointment_availability: ' . $data['appointment_availability']);
+                        return new WP_Error(
+                            'invalid_availability_format',
+                            'Invalid appointment availability format',
+                            ['status' => 400]
+                        );
+                    }
+                } else {
+                    // Convert array to JSON string
+                    $doctor->appointment_availability = json_encode($data['appointment_availability']);
+                    error_log('Converted appointment_availability to JSON: ' . $doctor->appointment_availability);
+                }
+            }
             
-            // Return the updated doctor
-            $updated_doctor = Doctor::find($doctor->id);
+            // Save the doctor with updated data
+            $saved = $doctor->save();
+            
+            if (!$saved) {
+                throw new \Exception('Failed to save doctor to database');
+            }
+            
+            // Log successful update
+            error_log("Doctor {$id} updated successfully");
             
             return new WP_REST_Response([
                 'message' => 'Doctor updated successfully',
-                'doctor' => [
-                    'id' => $updated_doctor->id,
-                    'first_name' => $updated_doctor->first_name,
-                    'last_name' => $updated_doctor->last_name,
-                    'phone' => $updated_doctor->phone,
-                    'specialty' => $updated_doctor->specialty,
-                    'status' => $updated_doctor->status,
-                ]
-            ]);
+                'data' => $doctor->toArray()
+            ], 200);
             
         } catch (\Exception $e) {
             error_log('Error updating doctor: ' . $e->getMessage());
             return new WP_Error(
-                'update_failed',
+                'doctor_update_failed',
                 'Failed to update doctor: ' . $e->getMessage(),
                 ['status' => 500]
             );

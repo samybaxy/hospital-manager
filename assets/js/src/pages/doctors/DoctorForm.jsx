@@ -38,11 +38,11 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
     office: doctor.office || '',
     department: doctor.department || '',
     appointment_availability: doctor.appointment_availability || {
-      monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-      friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
+      monday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+      tuesday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+      wednesday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+      thursday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+      friday: { enabled: false, start_time: '09:00', end_time: '17:00' },
       saturday: { enabled: false, start_time: '09:00', end_time: '13:00' },
       sunday: { enabled: false, start_time: '09:00', end_time: '13:00' }
     },
@@ -53,8 +53,60 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
 
   // Update form data if doctor prop changes
   useEffect(() => {
-    if (isEditing && doctor) {
-      setFormData({
+    if (isEditing && doctor) {      
+      // Parse appointment_availability if it's a JSON string
+      let parsedAvailability = {
+        monday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+        tuesday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+        wednesday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+        thursday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+        friday: { enabled: false, start_time: '09:00', end_time: '17:00' },
+        saturday: { enabled: false, start_time: '09:00', end_time: '13:00' },
+        sunday: { enabled: false, start_time: '09:00', end_time: '13:00' }
+      };
+      
+      if (doctor.appointment_availability) {
+        try {
+          let availabilityData;
+          
+          // Handle if it's already an object or if it's a JSON string
+          if (typeof doctor.appointment_availability === 'string' && doctor.appointment_availability.trim() !== '') {
+                availabilityData = JSON.parse(doctor.appointment_availability);
+          } else {
+            console.log('DoctorForm: Using object directly');
+            availabilityData = doctor.appointment_availability;
+          }
+
+          // Convert backend format to frontend format
+          // Backend: { day: [{ start: "09:00", end: "17:00" }] }
+          // Frontend: { day: { enabled: true, start_time: "09:00", end_time: "17:00" } }
+          
+          if (availabilityData && typeof availabilityData === 'object') {
+            Object.entries(availabilityData).forEach(([day, schedules]) => {
+              if (Array.isArray(schedules) && schedules.length > 0) {
+                const schedule = schedules[0]; // Take first schedule if multiple
+                if (schedule && schedule.start && schedule.end) {
+                  parsedAvailability[day] = {
+                    enabled: true,
+                    start_time: schedule.start || '09:00',
+                    end_time: schedule.end || '17:00'
+                  };
+                }
+              } else {
+                console.log(`DoctorForm: ${day} has no schedule or empty array`);
+              }
+              // If no schedules or empty array, the day remains disabled (already set above)
+            });
+          }
+        } catch (e) {
+          console.error('DoctorForm: Error parsing appointment_availability:', e);
+          // Keep default availability on parse error
+        }
+      } else {
+        console.log('DoctorForm: No appointment_availability data found');
+      }
+      
+      const newFormData = {
         first_name: doctor.first_name || '',
         last_name: doctor.last_name || '',
         phone: doctor.phone || '',
@@ -67,16 +119,10 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         certification: doctor.certification || '',
         office: doctor.office || '',
         department: doctor.department || '',
-        appointment_availability: doctor.appointment_availability || {
-          monday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          tuesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          wednesday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          thursday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          friday: { enabled: true, start_time: '09:00', end_time: '17:00' },
-          saturday: { enabled: false, start_time: '09:00', end_time: '13:00' },
-          sunday: { enabled: false, start_time: '09:00', end_time: '13:00' }
-        },
-      });
+        appointment_availability: parsedAvailability,
+      };
+      
+      setFormData(newFormData);
     }
   }, [doctor, isEditing]);
 
@@ -140,15 +186,24 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
     
     // Validate working hours
     let hasWorkingHoursError = false;
+    let hasAtLeastOneEnabledDay = false;
     
     Object.entries(formData.appointment_availability).forEach(([day, hours]) => {
-      if (hours.enabled && hours.start_time >= hours.end_time) {
-        hasWorkingHoursError = true;
+      if (hours.enabled) {
+        hasAtLeastOneEnabledDay = true;
+        if (hours.start_time >= hours.end_time) {
+          hasWorkingHoursError = true;
+        }
       }
     });
     
     if (hasWorkingHoursError) {
       errors.appointment_availability = 'One or more working days have end time earlier than or equal to start time';
+    }
+    
+    // Optional: Warn if no working days are enabled
+    if (!hasAtLeastOneEnabledDay) {
+      console.warn('No working days enabled - doctor will not be available for appointments');
     }
     
     setFormErrors(errors);
@@ -195,7 +250,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
         ...prev.appointment_availability,
         [day]: {
           ...prev.appointment_availability[day],
-          [field]: value
+          [field]: field === 'enabled' ? value : field === 'start_time' ? value : field === 'end_time' ? value : value
         }
       }
     }));
@@ -241,6 +296,25 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
       // since it's managed by WordPress users table, not the doctors table
       const dataToSubmit = { ...formData };
       delete dataToSubmit.email;
+      
+      // Convert appointment_availability to the format expected by backend
+      // Backend expects: { day: [{ start: "09:00", end: "17:00" }] } for enabled days
+      // Frontend has: { day: { enabled: true, start_time: "09:00", end_time: "17:00" } }
+      const convertedAvailability = {};
+      Object.entries(formData.appointment_availability).forEach(([day, schedule]) => {
+        if (schedule.enabled && schedule.start_time && schedule.end_time) {
+          convertedAvailability[day] = [{
+            start: schedule.start_time,
+            end: schedule.end_time
+          }];
+        }
+        // If not enabled or incomplete, don't include this day (empty/off day)
+      });
+      
+      console.log('Original appointment_availability:', formData.appointment_availability);
+      console.log('Converted appointment_availability:', convertedAvailability);
+      
+      dataToSubmit.appointment_availability = JSON.stringify(convertedAvailability);
       
       if (isEditing) {
         await api.put(`/doctors/${doctor.id}`, dataToSubmit);

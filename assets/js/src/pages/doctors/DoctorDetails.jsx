@@ -265,10 +265,8 @@ const DoctorDetails = () => {
 
         // Fetch real appointment statistics
         try {
-          console.log('Fetching appointment stats for doctor:', id);
           const statsResponse = await api.get(`/appointments/stats?doctor_id=${id}`);
-          console.log('Stats response:', statsResponse.data);
-          
+
           if (statsResponse.data) {
             console.log('Schedule stats received:', statsResponse.data);
             setScheduleStats({
@@ -567,18 +565,106 @@ const DoctorDetails = () => {
             </table>
           </Card>
 
-          <Card title="Working Hours">
+          <Card title="Working Hours">            
             <div className="space-y-3">
-              {doctor.appointment_availability && typeof doctor.appointment_availability === 'object' ? (
-                Object.entries(doctor.appointment_availability).map(([day, hours]) => (
-                  <div key={day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                    <span className="text-sm font-medium text-gray-900 capitalize">
-                      {day.charAt(0).toUpperCase() + day.slice(1)}
+              {(() => {
+                // Parse working hours from appointment_availability
+                const parseWorkingHours = () => {
+                  
+                    if (!doctor.appointment_availability || 
+                        doctor.appointment_availability === '' ||  
+                        doctor.appointment_availability === null || 
+                        doctor.appointment_availability === undefined) 
+                    {
+                        console.log('No valid appointment_availability found');
+                        return null;
+                    }
+
+                  try {
+                    let availabilityData;
+                    
+                    // Handle if it's already an object or if it's a JSON string
+                    if (typeof doctor.appointment_availability === 'string') {
+                        availabilityData = JSON.parse(doctor.appointment_availability);
+                    } else if (typeof doctor.appointment_availability === 'object') {
+                      console.log('Using object directly:', doctor.appointment_availability);
+                      availabilityData = doctor.appointment_availability;
+                    } else {
+                      console.log('Unknown type for appointment_availability');
+                      return null;
+                    }
+
+                    // Check if availabilityData is valid
+                    if (!availabilityData || typeof availabilityData !== 'object') {
+                        console.log('Invalid availability data after parsing');
+                        return null;
+                    }
+
+                    // Convert backend format to display format
+                    // Backend format: {day: [{start: "09:00", end: "17:00"}]} for enabled days
+                    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                    const workingDays = [];
+                    let hasAnyWorkingDay = false;
+                    
+                    dayOrder.forEach(day => {                      
+                      if (availabilityData[day] && Array.isArray(availabilityData[day]) && availabilityData[day].length > 0) {
+                        const schedule = availabilityData[day][0]; // Take first schedule
+                        if (schedule && schedule.start && schedule.end) {
+                          workingDays.push({
+                            day: day.charAt(0).toUpperCase() + day.slice(1),
+                            start: schedule.start,
+                            end: schedule.end,
+                            enabled: true
+                          });
+                          hasAnyWorkingDay = true;
+                        } else {
+                            console.log(`${day} schedule is invalid`);
+                            workingDays.push({
+                                day: day.charAt(0).toUpperCase() + day.slice(1),
+                                enabled: false
+                            });
+                        }
+                      } else {
+                        workingDays.push({
+                            day: day.charAt(0).toUpperCase() + day.slice(1),
+                            enabled: false
+                        });
+                      }
+                    });
+                    
+                    return hasAnyWorkingDay ? workingDays : null;
+                  } catch (e) {
+                    console.error('Error parsing working hours:', e);
+                    return null;
+                  }
+                };
+
+                const workingHours = parseWorkingHours();
+                const hasWorkingHours = workingHours && workingHours.some(day => day.enabled);
+
+                if (!hasWorkingHours) {
+                  return (
+                    <div className="text-center py-6 text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-sm">Working hours not set</p>
+                      <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                        Set working hours
+                      </Link>
+                    </div>
+                  );
+                }
+
+                return workingHours.map((daySchedule) => (
+                  <div key={daySchedule.day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                    <span className="text-sm font-medium text-gray-900">
+                      {daySchedule.day}
                     </span>
                     <div className="flex items-center">
-                      {hours && typeof hours === 'object' && hours.enabled ? (
-                        <span className="text-sm text-gray-700">
-                          {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
+                      {daySchedule.enabled ? (
+                        <span className="text-sm text-gray-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                          {formatTime(daySchedule.start)} - {formatTime(daySchedule.end)}
                         </span>
                       ) : (
                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
@@ -587,56 +673,8 @@ const DoctorDetails = () => {
                       )}
                     </div>
                   </div>
-                ))
-              ) : doctor.appointment_availability && typeof doctor.appointment_availability === 'string' ? (
-                // Handle case where appointment_availability is stored as a JSON string
-                (() => {
-                  try {
-                    const parsedAvailability = JSON.parse(doctor.appointment_availability);
-                    return Object.entries(parsedAvailability).map(([day, hours]) => (
-                      <div key={day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
-                        <span className="text-sm font-medium text-gray-900 capitalize">
-                          {day.charAt(0).toUpperCase() + day.slice(1)}
-                        </span>
-                        <div className="flex items-center">
-                          {hours && typeof hours === 'object' && hours.enabled ? (
-                            <span className="text-sm text-gray-700">
-                              {formatTime(hours.start_time)} - {formatTime(hours.end_time)}
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                              Off duty
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ));
-                  } catch (e) {
-                    console.error('Error parsing appointment availability', e);
-                    return (
-                      <div className="text-center py-6 text-gray-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-sm">Working hours format error</p>
-                        <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
-                          Update working hours
-                        </Link>
-                      </div>
-                    );
-                  }
-                })()
-              ) : (
-                <div className="text-center py-6 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto mb-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm">Working hours not set</p>
-                  <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
-                    Set working hours
-                  </Link>
-                </div>
-              )}
+                ));
+              })()}
             </div>
           </Card>
         </div>

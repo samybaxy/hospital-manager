@@ -67,13 +67,22 @@ const BookAppointment = () => {
     async function fetchPatients() {
       try {
         const response = await api.get('/patients');
+        console.log('Patients API response:', response); // Debug log
+        
         if (response.data && response.data.data) {
+          console.log('Setting patients from response.data.data:', response.data.data);
           setPatients(response.data.data);
         } else if (Array.isArray(response.data)) {
+          console.log('Setting patients from response.data (array):', response.data);
           setPatients(response.data);
+        } else {
+          console.log('Unexpected response format, setting empty array');
+          // Fallback: set empty array if response format is unexpected
+          setPatients([]);
         }
       } catch (err) {
         console.error('Error fetching patients:', err);
+        setPatients([]); // Set empty array on error to prevent map error
       }
     }
     
@@ -87,8 +96,8 @@ const BookAppointment = () => {
       
       try {
         const response = await api.get(`/appointments/availability?doctor_id=${doctorId}`);
-        if (response.data && Array.isArray(response.data)) {
-          setAvailableDates(response.data);
+        if (response.data && response.data.dates) {
+          setAvailableDates(response.data.dates);
         }
       } catch (err) {
         console.error('Error fetching available dates:', err);
@@ -108,8 +117,8 @@ const BookAppointment = () => {
       
       try {
         const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${selectedDate}`);
-        if (response.data && Array.isArray(response.data)) {
-          setAvailableTimes(response.data);
+        if (response.data && response.data.available_slots) {
+          setAvailableTimes(response.data.available_slots);
         }
       } catch (err) {
         console.error('Error fetching available times:', err);
@@ -146,11 +155,11 @@ const BookAppointment = () => {
       
       const response = await api.post('/appointments', appointmentData);
       
-      if (response.data) {
+      if (response.data && response.data.data) {
         setSuccess(true);
         setTimeout(() => {
           // Redirect to appointment details
-          navigate(`/appointments/${response.data.id}`);
+          navigate(`/appointments/${response.data.data.id}`);
         }, 2000);
       }
     } catch (err) {
@@ -225,20 +234,17 @@ const BookAppointment = () => {
     
     return (
       <div className="grid grid-cols-4 gap-2 mt-4">
-        {availableTimes.map(slot => (
+        {availableTimes.map(timeSlot => (
           <button
-            key={slot.time}
-            onClick={() => setSelectedTime(slot.time)}
-            disabled={!slot.available}
+            key={timeSlot}
+            onClick={() => setSelectedTime(timeSlot)}
             className={`py-2 px-4 rounded-md ${
-              selectedTime === slot.time
+              selectedTime === timeSlot
                 ? 'bg-blue-500 text-white'
-                : slot.available
-                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
             }`}
           >
-            {formatTime(slot.time)}
+            {formatTime(timeSlot)}
           </button>
         ))}
       </div>
@@ -315,11 +321,15 @@ const BookAppointment = () => {
                 required
               >
                 <option value="">-- Select Patient --</option>
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.first_name} {patient.last_name}
-                  </option>
-                ))}
+                {Array.isArray(patients) && patients.length > 0 ? (
+                  patients.map((patient) => (
+                    <option key={patient.id} value={patient.id}>
+                      {patient.first_name} {patient.last_name}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>Loading patients...</option>
+                )}
               </select>
             </div>
             

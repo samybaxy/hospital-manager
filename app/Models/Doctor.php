@@ -561,4 +561,30 @@ class Doctor extends BaseModel
             'last_page' => ceil($total / $perPage)
         ];
     }
+
+    /**
+     * Convert the doctor instance to an array
+     */
+    public function toArray()
+    {
+        return [
+            'id' => $this->id,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'fullName' => $this->first_name . ' ' . $this->last_name,
+            'phone' => $this->phone,
+            'email' => $this->email,
+            'specialty' => $this->specialty,
+            'license_number' => $this->license_number,
+            'years_experience' => $this->years_experience,
+            'education' => $this->education,
+            'certification' => $this->certification,
+            'office' => $this->office,
+            'department' => $this->department,
+            'status' => $this->status,
+            'appointment_availability' => $this->appointment_availability,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at
+        ];
+    }
 }
