@@ -1,8 +1,67 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import Calendar from 'react-calendar';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
+import { useAuth } from '../../context/AuthContext';
+import 'react-calendar/dist/Calendar.css';
+
+// Custom styles for react-calendar
+const calendarStyles = `
+  .react-calendar {
+    width: 100%;
+    border: none;
+    font-family: inherit;
+  }
+  .react-calendar__tile {
+    max-width: 100%;
+    padding: 10px 6px;
+    background: none;
+    text-align: center;
+    line-height: 16px;
+    border-radius: 6px;
+  }
+  .react-calendar__tile:enabled:hover,
+  .react-calendar__tile:enabled:focus {
+    background-color: #e6f3ff;
+  }
+  .react-calendar__tile--active {
+    background: #3b82f6 !important;
+    color: white;
+  }
+  .react-calendar__tile--now {
+    background: #f3f4f6;
+  }
+  .react-calendar__tile:disabled {
+    background-color: #f9fafb;
+    color: #d1d5db;
+  }
+  .react-calendar__navigation {
+    display: flex;
+    height: 44px;
+    margin-bottom: 1em;
+  }
+  .react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 16px;
+    margin: 0 2px;
+  }
+  .react-calendar__navigation button:enabled:hover,
+  .react-calendar__navigation button:enabled:focus {
+    background-color: #e6f3ff;
+  }
+`;
+
+// Add styles to document head
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = calendarStyles;
+  document.head.appendChild(styleElement);
+}
 // Helper functions for formatting dates and times
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -22,15 +81,11 @@ const formatTime = (timeString) => {
 const BookAppointment = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const { user } = useAuth();
   
   const [doctor, setDoctor] = useState(null);
-  const [patient, setPatient] = useState(null);
-  const [patients, setPatients] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState('');
-  const [availableDates, setAvailableDates] = useState([]);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
@@ -38,77 +93,46 @@ const BookAppointment = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [calendarView, setCalendarView] = useState('month');
+  const [patientId, setPatientId] = useState(null);
   
-  // Fetch doctor details when component mounts
+  // Fetch doctor details and current patient ID when component mounts
   useEffect(() => {
-    async function fetchDoctor() {
+    async function fetchInitialData() {
       if (!doctorId) return;
       
       try {
         setLoading(true);
-        const response = await api.get(`/doctors/${doctorId}`);
-        if (response.data) {
-          setDoctor(response.data);
+        
+        // Fetch doctor details
+        const doctorResponse = await api.get(`/doctors/${doctorId}`);
+        if (doctorResponse.data) {
+          setDoctor(doctorResponse.data);
+        }
+        
+        // Fetch current patient ID from patients table using logged-in user
+        if (user?.id) {
+          const patientResponse = await api.get(`/patients/me`);
+          if (patientResponse.data && patientResponse.data.success) {
+            setPatientId(patientResponse.data.data.id);
+          } else {
+            setError('You must be a registered patient to book appointments.');
+            return;
+          }
         }
       } catch (err) {
-        console.error('Error fetching doctor:', err);
-        setError('Failed to load doctor details.');
+        console.error('Error fetching data:', err);
+        if (err.response?.status === 403) {
+          setError('You must be a registered patient to book appointments.');
+        } else {
+          setError('Failed to load booking data.');
+        }
       } finally {
         setLoading(false);
       }
     }
     
-    fetchDoctor();
-  }, [doctorId]);
-  
-  // Fetch patients for dropdown
-  useEffect(() => {
-    async function fetchPatients() {
-      try {
-        const response = await api.get('/patients');
-        console.log('Patients API response:', response); // Debug log
-        
-        if (response.data && response.data.data) {
-          console.log('Setting patients from response.data.data:', response.data.data);
-          setPatients(response.data.data);
-        } else if (Array.isArray(response.data)) {
-          console.log('Setting patients from response.data (array):', response.data);
-          setPatients(response.data);
-        } else {
-          console.log('Unexpected response format, setting empty array');
-          // Fallback: set empty array if response format is unexpected
-          setPatients([]);
-        }
-      } catch (err) {
-        console.error('Error fetching patients:', err);
-        setPatients([]); // Set empty array on error to prevent map error
-      }
-    }
-    
-    fetchPatients();
-  }, []);
-  
-  // Fetch available dates for the selected doctor
-  useEffect(() => {
-    async function fetchAvailableDates() {
-      if (!doctorId) return;
-      
-      try {
-        const response = await api.get(`/appointments/availability?doctor_id=${doctorId}`);
-        if (response.data && response.data.dates) {
-          setAvailableDates(response.data.dates);
-        }
-      } catch (err) {
-        console.error('Error fetching available dates:', err);
-        setError('Failed to load available appointment dates.');
-      }
-    }
-    
-    if (doctorId) {
-      fetchAvailableDates();
-    }
-  }, [doctorId]);
+    fetchInitialData();
+  }, [doctorId, user]);
   
   // Fetch available time slots when date is selected
   useEffect(() => {
@@ -116,13 +140,17 @@ const BookAppointment = () => {
       if (!doctorId || !selectedDate) return;
       
       try {
-        const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${selectedDate}`);
+        const dateString = selectedDate.toISOString().split('T')[0]; // Convert Date to YYYY-MM-DD
+        const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${dateString}`);
         if (response.data && response.data.available_slots) {
           setAvailableTimes(response.data.available_slots);
+        } else {
+          setAvailableTimes([]);
         }
       } catch (err) {
         console.error('Error fetching available times:', err);
         setError('Failed to load available time slots.');
+        setAvailableTimes([]);
       }
     }
     
@@ -134,7 +162,7 @@ const BookAppointment = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!doctorId || !selectedPatient || !selectedDate || !selectedTime) {
+    if (!doctorId || !patientId || !selectedDate || !selectedTime || !reason) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -145,8 +173,8 @@ const BookAppointment = () => {
       
       const appointmentData = {
         doctor_id: doctorId,
-        patient_id: selectedPatient,
-        appointment_date: selectedDate,
+        patient_id: patientId,
+        appointment_date: selectedDate.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD
         appointment_time: selectedTime,
         reason,
         notes,
@@ -170,48 +198,21 @@ const BookAppointment = () => {
     }
   };
   
-  // Helper function to generate a calendar view
-  const renderCalendar = () => {
-    if (!availableDates.length) {
-      return (
-        <div className="text-center py-8">
-          <p>No available dates found for this doctor.</p>
-        </div>
-      );
+  // Handle calendar date selection
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    setSelectedTime(''); // Reset time selection when date changes
+    setAvailableTimes([]); // Clear available times
+  };
+
+  // Check if a date should be disabled (past dates)
+  const tileDisabled = ({ date, view }) => {
+    if (view === 'month') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return date < today;
     }
-    
-    // Simple calendar display
-    return (
-      <div className="grid grid-cols-7 gap-2">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center font-medium text-gray-700 py-2">
-            {day}
-          </div>
-        ))}
-        
-        {availableDates.map(date => {
-          const isAvailable = date.available;
-          const isSelected = date.date === selectedDate;
-          
-          return (
-            <button
-              key={date.date}
-              onClick={() => isAvailable && setSelectedDate(date.date)}
-              disabled={!isAvailable}
-              className={`py-2 rounded-md ${
-                isSelected
-                  ? 'bg-blue-500 text-white'
-                  : isAvailable
-                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              {new Date(date.date).getDate()}
-            </button>
-          );
-        })}
-      </div>
-    );
+    return false;
   };
   
   // Render time slots
@@ -308,41 +309,24 @@ const BookAppointment = () => {
         )}
         
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 p-4">
+          <div className="space-y-6 p-4">
             <div>
-              <label htmlFor="patient" className="block text-sm font-medium text-gray-700 mb-1">
-                Select Patient <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="patient"
-                value={selectedPatient}
-                onChange={(e) => setSelectedPatient(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="">-- Select Patient --</option>
-                {Array.isArray(patients) && patients.length > 0 ? (
-                  patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name}
-                    </option>
-                  ))
-                ) : (
-                  <option disabled>Loading patients...</option>
-                )}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
                 Select Date <span className="text-red-500">*</span>
               </label>
               <div className="border border-gray-300 rounded-md p-4">
-                {renderCalendar()}
+                <Calendar
+                  onChange={handleDateChange}
+                  value={selectedDate}
+                  tileDisabled={tileDisabled}
+                  minDate={new Date()}
+                  selectRange={false}
+                  className="react-calendar"
+                />
               </div>
               {selectedDate && (
                 <p className="mt-2 text-sm text-gray-600">
-                  Selected date: {formatDate(selectedDate)}
+                  Selected date: {formatDate(selectedDate.toISOString().split('T')[0])}
                 </p>
               )}
             </div>
@@ -392,7 +376,7 @@ const BookAppointment = () => {
               <Button
                 variant="primary"
                 type="submit"
-                disabled={submitting || !selectedPatient || !selectedDate || !selectedTime || !reason}
+                disabled={submitting || !patientId || !selectedDate || !selectedTime || !reason}
               >
                 {submitting ? 'Booking...' : 'Book Appointment'}
               </Button>
