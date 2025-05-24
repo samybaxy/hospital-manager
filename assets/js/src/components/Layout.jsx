@@ -29,6 +29,15 @@ const Layout = ({ children }) => {
   const role = accessState?.role;
   const permissions = accessState?.permissions || {};
   
+  // Auto-collapse sidebar for appointments page
+  useEffect(() => {
+    if (location.pathname === '/appointments') {
+      setSidebarCollapsed(true);
+    } else {
+      setSidebarCollapsed(false);
+    }
+  }, [location.pathname]);
+  
   // Prefetch user access data
   useEffect(() => {
     if (isAuthenticated && !accessState?.role && !accessLoading) {
@@ -36,9 +45,6 @@ const Layout = ({ children }) => {
     }
   }, [dispatch, isAuthenticated, accessState?.role, accessLoading]);
   
-  // We no longer need to create a comprehensive user data object for Sidebar
-  // as it will use Redux directly
-
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
     try {
