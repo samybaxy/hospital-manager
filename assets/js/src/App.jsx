@@ -197,7 +197,7 @@ const AppRoutes = () => {
 // Main App component with router
 const App = () => {
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         {/* Wrap the entire application with AccessProvider for permissions check */}
         <AccessProvider>
