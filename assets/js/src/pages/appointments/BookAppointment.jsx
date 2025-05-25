@@ -285,6 +285,7 @@ if (typeof document !== 'undefined') {
   styleElement.textContent = calendarStyles;
   document.head.appendChild(styleElement);
 }
+
 // Helper functions for formatting dates and times
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
@@ -337,10 +338,11 @@ const BookAppointment = () => {
       try {
         setLoading(true);
         
-        // Fetch doctor details
+        // Fetch doctor details - making sure to get availability data
         const doctorResponse = await api.get(`/doctors/${doctorId}`);
         if (doctorResponse.data) {
           setDoctor(doctorResponse.data);
+          console.log('Doctor availability:', doctorResponse.data.appointment_availability);
         }
         
         // Fetch current patient ID from patients table using logged-in user
@@ -371,7 +373,7 @@ const BookAppointment = () => {
   // Fetch available time slots when date is selected
   useEffect(() => {
     async function fetchAvailableTimes() {
-      if (!doctorId || !selectedDate) return;
+      if (!doctorId || !selectedDate || !doctor) return;
       
       try {
         // Format date to YYYY-MM-DD consistently
@@ -380,11 +382,53 @@ const BookAppointment = () => {
         const day = String(selectedDate.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${dateString}`);
-        if (response.data && response.data.available_slots) {
-          setAvailableTimes(response.data.available_slots);
+        // Get the day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+        const dayOfWeek = selectedDate.getDay();
+        const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayName = daysOfWeek[dayOfWeek];
+        
+        // Check if doctor has availability for this day in their schedule
+        let availableTimesFromSchedule = [];
+        
+        if (doctor.appointment_availability) {
+          // Parse the doctor's availability schedule
+          let availabilityData;
+          try {
+            if (typeof doctor.appointment_availability === 'string') {
+              availabilityData = JSON.parse(doctor.appointment_availability);
+            } else {
+              availabilityData = doctor.appointment_availability;
+            }
+            
+            // Find the availability for the current day
+            const dayAvailability = availabilityData[dayName];
+            
+            if (dayAvailability && dayAvailability.isAvailable) {
+              // Get start and end times
+              const startTime = dayAvailability.startTime;
+              const endTime = dayAvailability.endTime;
+              
+              if (startTime && endTime) {
+                // Generate 30 minute slots between start and end times
+                availableTimesFromSchedule = generateTimeSlots(startTime, endTime);
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing doctor availability:', e);
+          }
+        }
+        
+        // If we have doctor-specific availability, use that
+        if (availableTimesFromSchedule.length > 0) {
+          setAvailableTimes(availableTimesFromSchedule);
         } else {
-          setAvailableTimes([]);
+          // Fallback to API if no schedule or unable to parse
+          const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${dateString}`);
+          if (response.data && response.data.available_slots) {
+            setAvailableTimes(response.data.available_slots);
+          } else {
+            setAvailableTimes([]);
+          }
         }
       } catch (err) {
         console.error('Error fetching available times:', err);
@@ -393,10 +437,36 @@ const BookAppointment = () => {
       }
     }
     
-    if (selectedDate) {
+    // Helper function to generate time slots
+    const generateTimeSlots = (startTime, endTime) => {
+      const slots = [];
+      
+      // Parse start and end times
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+      
+      // Convert to minutes since midnight for easier calculation
+      const startTimeMinutes = startHour * 60 + startMinute;
+      const endTimeMinutes = endHour * 60 + endMinute;
+      
+      // Generate slots at 30-minute intervals
+      for (let timeMinutes = startTimeMinutes; timeMinutes < endTimeMinutes; timeMinutes += 30) {
+        const hour = Math.floor(timeMinutes / 60);
+        const minute = timeMinutes % 60;
+        
+        const formattedHour = String(hour).padStart(2, '0');
+        const formattedMinute = String(minute).padStart(2, '0');
+        
+        slots.push(`${formattedHour}:${formattedMinute}`);
+      }
+      
+      return slots;
+    };
+    
+    if (selectedDate && doctor) {
       fetchAvailableTimes();
     }
-  }, [doctorId, selectedDate]);
+  }, [doctorId, selectedDate, doctor]);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -475,9 +545,6 @@ const BookAppointment = () => {
     return false;
   };
 
-  // Note: We've moved the tileClassName logic directly into the Calendar component
-  // This ensures that the tile classes are applied based on both the date and the active month view
-  
   // Render time slots
   const renderTimeSlots = () => {
     if (!selectedDate) {
