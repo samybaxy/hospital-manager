@@ -7,52 +7,204 @@ import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import 'react-calendar/dist/Calendar.css';
 
-// Custom styles for react-calendar
+// Custom styles for react-calendar - Modern and Fun Design
 const calendarStyles = `
   .react-calendar {
     width: 100%;
     border: none;
     font-family: inherit;
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
   }
-  .react-calendar__tile {
-    max-width: 100%;
-    padding: 10px 6px;
-    background: none;
-    text-align: center;
-    line-height: 16px;
-    border-radius: 6px;
-  }
-  .react-calendar__tile:enabled:hover,
-  .react-calendar__tile:enabled:focus {
-    background-color: #e6f3ff;
-  }
-  .react-calendar__tile--active {
-    background: #3b82f6 !important;
-    color: white;
-  }
-  .react-calendar__tile--now {
-    background: #f3f4f6;
-  }
-  .react-calendar__tile:disabled {
-    background-color: #f9fafb;
-    color: #d1d5db;
-  }
+  
   .react-calendar__navigation {
     display: flex;
-    height: 44px;
-    margin-bottom: 1em;
+    height: 60px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    padding: 10px;
+    backdrop-filter: blur(10px);
   }
+  
   .react-calendar__navigation button {
-    min-width: 44px;
-    background: none;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 16px;
-    margin: 0 2px;
+    min-width: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    margin: 0 5px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
   }
+  
   .react-calendar__navigation button:enabled:hover,
   .react-calendar__navigation button:enabled:focus {
-    background-color: #e6f3ff;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .react-calendar__navigation__label {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .react-calendar__month-view__weekdays {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    padding: 10px 0;
+  }
+  
+  .react-calendar__month-view__weekdays__weekday {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px;
+  }
+  
+  .react-calendar__month-view__days {
+    gap: 8px;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr);
+  }
+  
+  .react-calendar__tile {
+    max-width: 100%;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.9);
+    text-align: center;
+    border-radius: 12px;
+    font-weight: 600;
+    color: #4a5568;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .react-calendar__tile::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+  
+  .react-calendar__tile:enabled:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  
+  .react-calendar__tile:enabled:hover::before {
+    opacity: 1;
+  }
+  
+  .react-calendar__tile--active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
+    color: white !important;
+    transform: scale(1.1);
+    box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .react-calendar__tile--now {
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    color: white;
+    border: 2px solid #1d4ed8;
+    font-weight: 700;
+    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+  }
+  
+  .react-calendar__tile--now:enabled:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: white;
+  }
+  
+  .react-calendar__tile:disabled {
+    background: rgba(255, 255, 255, 0.3) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  
+  .react-calendar__tile--weekend {
+    background: rgba(147, 197, 253, 0.9);
+    color: #1e40af;
+  }
+  
+  .react-calendar__tile--weekend:enabled:hover {
+    background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
+    color: white;
+  }
+  
+  /* Add a subtle animation to the entire calendar */
+  .react-calendar {
+    animation: fadeInUp 0.6s ease-out;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Add pulse animation for active dates */
+  .react-calendar__tile--active {
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+    }
+    50% {
+      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.6);
+    }
+    100% {
+      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+    }
+  }
+  
+  /* Time slot animations */
+  .time-slot {
+    animation: slideInUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  @keyframes slideInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `;
 
@@ -219,35 +371,59 @@ const BookAppointment = () => {
   const renderTimeSlots = () => {
     if (!selectedDate) {
       return (
-        <div className="text-center py-4">
-          <p>Please select a date first.</p>
+        <div className="text-center py-8 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300">
+          <svg className="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-gray-500 font-medium">Please select a date first to see available times</p>
         </div>
       );
     }
     
     if (!availableTimes.length) {
       return (
-        <div className="text-center py-4">
-          <p>No available time slots for the selected date.</p>
+        <div className="text-center py-8 bg-gradient-to-br from-red-50 to-pink-50 rounded-xl border border-red-200">
+          <svg className="w-12 h-12 mx-auto text-red-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <p className="text-red-600 font-medium">No available time slots for the selected date</p>
+          <p className="text-red-500 text-sm mt-1">Please try selecting a different date</p>
         </div>
       );
     }
     
     return (
-      <div className="grid grid-cols-4 gap-2 mt-4">
-        {availableTimes.map(timeSlot => (
-          <button
-            key={timeSlot}
-            onClick={() => setSelectedTime(timeSlot)}
-            className={`py-2 px-4 rounded-md ${
-              selectedTime === timeSlot
-                ? 'bg-blue-500 text-white'
-                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-            }`}
-          >
-            {formatTime(timeSlot)}
-          </button>
-        ))}
+      <div className="mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {availableTimes.map((timeSlot, index) => (
+            <button
+              key={timeSlot}
+              onClick={() => setSelectedTime(timeSlot)}
+              className={`time-slot relative py-3 px-4 rounded-xl font-semibold transition-all duration-300 transform ${
+                selectedTime === timeSlot
+                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white scale-105 shadow-lg'
+                  : 'bg-gradient-to-r from-blue-50 to-purple-50 text-gray-700 hover:from-blue-100 hover:to-purple-100 hover:scale-105 hover:shadow-md border border-blue-200'
+              }`}
+              style={{
+                animationDelay: `${index * 0.1}s`
+              }}
+            >
+              <div className="flex items-center justify-center">
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {formatTime(timeSlot)}
+              </div>
+              {selectedTime === timeSlot && (
+                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-400 rounded-full flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     );
   };
@@ -311,29 +487,52 @@ const BookAppointment = () => {
         <form onSubmit={handleSubmit}>
           <div className="space-y-6 p-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Select Date <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                <span className="flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Select Date <span className="text-red-500">*</span>
+                </span>
               </label>
-              <div className="border border-gray-300 rounded-md p-4">
-                <Calendar
-                  onChange={handleDateChange}
-                  value={selectedDate}
-                  tileDisabled={tileDisabled}
-                  minDate={new Date()}
-                  selectRange={false}
-                  className="react-calendar"
-                />
+              <div className="relative">
+                <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-2 rounded-xl shadow-lg border border-purple-100">
+                  <Calendar
+                    onChange={handleDateChange}
+                    value={selectedDate}
+                    tileDisabled={tileDisabled}
+                    minDate={new Date()}
+                    selectRange={false}
+                    className="react-calendar"
+                  />
+                </div>
+                {/* Decorative elements */}
+                <div className="absolute -top-2 -left-2 w-4 h-4 bg-yellow-400 rounded-full opacity-60 animate-bounce"></div>
+                <div className="absolute -top-1 -right-3 w-3 h-3 bg-pink-400 rounded-full opacity-70 animate-pulse"></div>
+                <div className="absolute -bottom-2 left-4 w-5 h-5 bg-blue-400 rounded-full opacity-50 animate-bounce" style={{animationDelay: '0.5s'}}></div>
               </div>
               {selectedDate && (
-                <p className="mt-2 text-sm text-gray-600">
-                  Selected date: {formatDate(selectedDate.toISOString().split('T')[0])}
-                </p>
+                <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p className="text-sm font-medium text-green-800">
+                      Selected date: {formatDate(selectedDate.toISOString().split('T')[0])}
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Time <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <span className="flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Select Time <span className="text-red-500">*</span>
+                </span>
               </label>
               {renderTimeSlots()}
             </div>
