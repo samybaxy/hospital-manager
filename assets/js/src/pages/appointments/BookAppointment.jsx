@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -80,6 +80,7 @@ const calendarStyles = `
     height: 32px;
     width: 100%;
     text-align: center;
+    padding: 0 !important;
   }
   
   /* Override abbr tag styling for weekdays */
@@ -115,9 +116,10 @@ const calendarStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
+    padding: 0 !important;
     margin: 0;
     text-align: center;
+    line-height: 1;
   }
   
   .react-calendar__tile::before {
@@ -183,18 +185,28 @@ const calendarStyles = `
     color: #1e40af;
   }
   
-  /* Neighbor month tiles (prev/next month dates) - Hide them completely */
+  /* Neighboring month tiles styling */
   .react-calendar__tile--neighboringMonth {
-    visibility: hidden !important;
-    pointer-events: none !important;
-    background: transparent !important;
+    opacity: 0.4 !important;
+    background: rgba(200, 200, 200, 0.3) !important;
+    color: #999 !important;
   }
   
-  /* Alternative approach - if the above doesn't work, make them invisible */
+  /* Make sure disabled neighboring month dates are visually distinct */
   .react-calendar__month-view__days button:disabled.react-calendar__tile--neighboringMonth {
-    opacity: 0 !important;
-    cursor: default !important;
-    background: transparent !important;
+    opacity: 0.25 !important;
+    background: rgba(200, 200, 200, 0.2) !important;
+    color: #aaa !important;
+    cursor: not-allowed !important;
+    text-decoration: line-through !important;
+    box-shadow: none !important;
+  }
+  
+  /* Ensure hovered neighboring month dates don't look selectable */
+  .react-calendar__tile--neighboringMonth:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
   }
   
   /* Calendar container animations */
@@ -277,7 +289,18 @@ if (typeof document !== 'undefined') {
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString('en-US', options);
+  
+  // Make sure we're working with a string in YYYY-MM-DD format
+  let dateObj;
+  if (dateString instanceof Date) {
+    dateObj = dateString;
+  } else {
+    // If it's a string, parse it
+    dateObj = new Date(dateString);
+  }
+  
+  // Ensure we get a consistent date regardless of timezone
+  return dateObj.toLocaleDateString('en-US', options);
 };
 
 const formatTime = (timeString) => {
@@ -351,7 +374,7 @@ const BookAppointment = () => {
       if (!doctorId || !selectedDate) return;
       
       try {
-        // Format date to YYYY-MM-DD in local timezone to avoid offset issues
+        // Format date to YYYY-MM-DD consistently
         const year = selectedDate.getFullYear();
         const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
         const day = String(selectedDate.getDate()).padStart(2, '0');
@@ -387,10 +410,16 @@ const BookAppointment = () => {
       setSubmitting(true);
       setError(null);
       
+      // Format date in YYYY-MM-DD format ensuring consistency regardless of timezone
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const formattedDate = `${year}-${month}-${day}`;
+      
       const appointmentData = {
         doctor_id: doctorId,
         patient_id: patientId,
-        appointment_date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`, // Format date properly
+        appointment_date: formattedDate,
         appointment_time: selectedTime,
         reason,
         notes,
@@ -423,48 +452,31 @@ const BookAppointment = () => {
     setAvailableTimes([]); // Clear available times
   };
 
-  // Check if a date should be disabled (past dates and neighboring month dates)
-  const tileDisabled = ({ date, view }) => {
+  // Check if a date should be disabled (past dates and dates from neighboring months)
+  const tileDisabled = ({ date, view, activeStartDate }) => {
     if (view === 'month') {
+      // Current date for comparing with past dates
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
+      // Get the current month being displayed in the calendar
+      const currentViewMonth = activeStartDate.getMonth();
+      
       // Disable past dates
       if (date < today) {
+        return true;
+      }
+      
+      // Disable dates from neighboring months
+      if (date.getMonth() !== currentViewMonth) {
         return true;
       }
     }
     return false;
   };
 
-  // Custom tile content to handle neighboring month dates properly
-  const tileContent = ({ date, view }) => {
-    if (view === 'month') {
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      
-      // Check if this date is from a neighboring month
-      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
-        return null; // Don't show content for neighboring month dates
-      }
-    }
-    return null;
-  };
-
-  // Custom tile className to style neighboring month dates
-  const tileClassName = ({ date, view }) => {
-    if (view === 'month') {
-      const today = new Date();
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
-      
-      // Add class for neighboring month dates
-      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
-        return 'react-calendar__tile--neighboringMonth';
-      }
-    }
-    return null;
-  };
+  // Note: We've moved the tileClassName logic directly into the Calendar component
+  // This ensures that the tile classes are applied based on both the date and the active month view
   
   // Render time slots
   const renderTimeSlots = () => {
@@ -600,11 +612,31 @@ const BookAppointment = () => {
                     onChange={handleDateChange}
                     value={selectedDate}
                     tileDisabled={tileDisabled}
-                    tileClassName={tileClassName}
-                    tileContent={tileContent}
+                    tileClassName={({ date, view, activeStartDate }) => {
+                      // Base classes
+                      let classes = [];
+                      
+                      if (view === 'month') {
+                        // Add weekend class
+                        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                        if (isWeekend) {
+                          classes.push('react-calendar__tile--weekend');
+                        }
+                        
+                        // Add neighboring month class
+                        if (date.getMonth() !== activeStartDate.getMonth()) {
+                          classes.push('react-calendar__tile--neighboringMonth');
+                        }
+                      }
+                      
+                      return classes.join(' ');
+                    }}
                     minDate={new Date()}
+                    calendarType="gregory" // Use Gregorian calendar (Sunday start)
+                    formatDay={(locale, date) => date.getDate()} // Format day to show only the number
                     selectRange={false}
-                    showNeighboringMonth={false}
+                    showNeighboringMonth={true} // Show neighboring month dates
+                    showFixedNumberOfWeeks={false} // Don't force 6 weeks display
                     className="react-calendar"
                   />
                 </div>
@@ -620,7 +652,7 @@ const BookAppointment = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <p className="text-sm font-medium text-green-800">
-                      Selected date: {formatDate(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`)}
+                      Selected date: {formatDate(selectedDate)}
                     </p>
                   </div>
                 </div>
