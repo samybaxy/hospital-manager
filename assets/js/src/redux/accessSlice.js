@@ -82,9 +82,9 @@ export const selectHasAccess = (state, routeName) => {
       return false;
     }
   } else if (role === 'patient') {
-    // Patients can't access: Patients, Doctors, Departments, Audit Log, Billing, 
+    // Patients can't access: Patients, Departments, Audit Log, Billing, 
     // Inventory, Reports, Statistics, and Settings
-    if (['patients', 'doctors', 'departments', 'audit_log', 'billing', 
+    if (['patients', 'departments', 'audit_log', 'billing', 
          'inventory', 'reports', 'statistics', 'settings'].includes(routeName)) {
       return false;
     }

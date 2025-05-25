@@ -94,7 +94,7 @@ const checkAccess = (role, permissions, routeName) => {
       return false;
     }
   } else if (role === 'patient') {
-    if (['patients', 'doctors', 'departments', 'audit_log', 'billing', 
+    if (['patients', 'departments', 'audit_log', 'billing', 
          'inventory', 'reports', 'statistics', 'settings'].includes(routeName)) {
       return false;
     }

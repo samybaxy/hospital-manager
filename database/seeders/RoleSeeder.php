@@ -97,7 +97,7 @@ class RoleSeeder extends Seeder
                 'view_own_records' => true,
                 // Route access capabilities
                 'access_patients' => false,  // Restricted
-                'access_doctors' => false,   // Restricted
+                'access_doctors' => true,   // Can view doctors
                 'access_departments' => false, // Restricted
                 'access_appointments' => true,
                 'access_visitations' => true,
