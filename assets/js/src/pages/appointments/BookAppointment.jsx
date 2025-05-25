@@ -7,22 +7,23 @@ import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 import 'react-calendar/dist/Calendar.css';
 
-// Custom styles for react-calendar - Modern and Fun Design
+// Custom styles for react-calendar - Modern and Clean Design
 const calendarStyles = `
   .react-calendar {
     width: 100%;
+    max-width: 100%;
     border: none;
     font-family: inherit;
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    background: linear-gradient(135deg, #075985 0%, #0c4a6e 100%);
     border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 20px 40px rgba(96, 165, 250, 0.15);
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(7, 89, 133, 0.15);
   }
   
   .react-calendar__navigation {
     display: flex;
     height: 60px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     background: rgba(255, 255, 255, 0.15);
     border-radius: 15px;
     padding: 10px;
@@ -55,36 +56,56 @@ const calendarStyles = `
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
   
+  /* Weekdays Header - Clean Grid Layout */
   .react-calendar__month-view__weekdays {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    margin-bottom: 15px;
-    padding: 10px 0;
+    margin-bottom: 16px;
+    padding: 12px 0;
+    display: grid !important;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
   }
   
   .react-calendar__month-view__weekdays__weekday {
     color: white;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 8px;
     text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    width: 100%;
+    text-align: center;
   }
   
+  /* Override abbr tag styling for weekdays */
+  .react-calendar__month-view__weekdays__weekday span,
+  .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none !important;
+    border-bottom: none !important;
+  }
+  
+  /* Days Grid - Perfect Alignment */
   .react-calendar__month-view__days {
-    gap: 8px;
     display: grid !important;
     grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    width: 100%;
   }
   
   .react-calendar__tile {
-    max-width: 100%;
-    height: 50px;
+    width: 100%;
+    aspect-ratio: 1;
+    min-height: 48px;
+    max-height: 48px;
     background: rgba(255, 255, 255, 0.9);
-    text-align: center;
     border-radius: 12px;
     font-weight: 600;
+    font-size: 14px;
     color: #4a5568;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 2px solid transparent;
@@ -96,6 +117,7 @@ const calendarStyles = `
     justify-content: center;
     padding: 0;
     margin: 0;
+    text-align: center;
   }
   
   .react-calendar__tile::before {
@@ -112,8 +134,8 @@ const calendarStyles = `
   }
   
   .react-calendar__tile:enabled:hover {
-    transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     color: white;
     border-color: rgba(255, 255, 255, 0.3);
   }
@@ -125,8 +147,8 @@ const calendarStyles = `
   .react-calendar__tile--active {
     background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
     color: white !important;
-    transform: scale(1.1);
-    box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
+    transform: scale(1.05);
+    box-shadow: 0 12px 25px rgba(96, 165, 250, 0.4);
     border-color: rgba(255, 255, 255, 0.5);
   }
   
@@ -135,7 +157,7 @@ const calendarStyles = `
     color: white;
     border: 2px solid #3b82f6;
     font-weight: 700;
-    box-shadow: 0 5px 15px rgba(96, 165, 250, 0.3);
+    box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
   }
   
   .react-calendar__tile--now:enabled:hover {
@@ -161,7 +183,21 @@ const calendarStyles = `
     color: #1e40af;
   }
   
-  /* Add a subtle animation to the entire calendar */
+  /* Neighbor month tiles (prev/next month dates) - Hide them completely */
+  .react-calendar__tile--neighboringMonth {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    background: transparent !important;
+  }
+  
+  /* Alternative approach - if the above doesn't work, make them invisible */
+  .react-calendar__month-view__days button:disabled.react-calendar__tile--neighboringMonth {
+    opacity: 0 !important;
+    cursor: default !important;
+    background: transparent !important;
+  }
+  
+  /* Calendar container animations */
   .react-calendar {
     animation: fadeInUp 0.6s ease-out;
   }
@@ -177,20 +213,42 @@ const calendarStyles = `
     }
   }
   
-  /* Add pulse animation for active dates */
+  /* Active date pulse animation */
   .react-calendar__tile--active {
     animation: pulse 2s infinite;
   }
   
   @keyframes pulse {
     0% {
-      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
+      box-shadow: 0 12px 25px rgba(96, 165, 250, 0.4);
     }
     50% {
-      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.6);
+      box-shadow: 0 12px 25px rgba(96, 165, 250, 0.6);
     }
     100% {
-      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
+      box-shadow: 0 12px 25px rgba(96, 165, 250, 0.4);
+    }
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 640px) {
+    .react-calendar {
+      padding: 16px;
+    }
+    
+    .react-calendar__tile {
+      min-height: 40px;
+      max-height: 40px;
+      font-size: 13px;
+    }
+    
+    .react-calendar__month-view__weekdays__weekday {
+      font-size: 10px;
+      height: 28px;
+    }
+    
+    .react-calendar__month-view__days {
+      gap: 4px;
     }
   }
   
@@ -293,7 +351,12 @@ const BookAppointment = () => {
       if (!doctorId || !selectedDate) return;
       
       try {
-        const dateString = selectedDate.toISOString().split('T')[0]; // Convert Date to YYYY-MM-DD
+        // Format date to YYYY-MM-DD in local timezone to avoid offset issues
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day}`;
+        
         const response = await api.get(`/appointments/availability?doctor_id=${doctorId}&date=${dateString}`);
         if (response.data && response.data.available_slots) {
           setAvailableTimes(response.data.available_slots);
@@ -327,7 +390,7 @@ const BookAppointment = () => {
       const appointmentData = {
         doctor_id: doctorId,
         patient_id: patientId,
-        appointment_date: selectedDate.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD
+        appointment_date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`, // Format date properly
         appointment_time: selectedTime,
         reason,
         notes,
@@ -351,21 +414,56 @@ const BookAppointment = () => {
     }
   };
   
-  // Handle calendar date selection
+  // Handle calendar date selection with proper timezone handling
   const handleDateChange = (date) => {
-    setSelectedDate(date);
+    // Create a new date object to avoid timezone issues
+    const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    setSelectedDate(localDate);
     setSelectedTime(''); // Reset time selection when date changes
     setAvailableTimes([]); // Clear available times
   };
 
-  // Check if a date should be disabled (past dates)
+  // Check if a date should be disabled (past dates and neighboring month dates)
   const tileDisabled = ({ date, view }) => {
     if (view === 'month') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      return date < today;
+      
+      // Disable past dates
+      if (date < today) {
+        return true;
+      }
     }
     return false;
+  };
+
+  // Custom tile content to handle neighboring month dates properly
+  const tileContent = ({ date, view }) => {
+    if (view === 'month') {
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      
+      // Check if this date is from a neighboring month
+      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
+        return null; // Don't show content for neighboring month dates
+      }
+    }
+    return null;
+  };
+
+  // Custom tile className to style neighboring month dates
+  const tileClassName = ({ date, view }) => {
+    if (view === 'month') {
+      const today = new Date();
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      
+      // Add class for neighboring month dates
+      if (date.getMonth() !== currentMonth || date.getFullYear() !== currentYear) {
+        return 'react-calendar__tile--neighboringMonth';
+      }
+    }
+    return null;
   };
   
   // Render time slots
@@ -497,13 +595,16 @@ const BookAppointment = () => {
                 </span>
               </label>
               <div className="relative">
-                <div className="bg-gradient-to-br from-purple-50 to-blue-50 p-2 rounded-xl shadow-lg border border-purple-100">
+                <div className="bg-gradient-to-br from-slate-50 to-blue-50 p-3 rounded-xl shadow-lg border border-slate-200">
                   <Calendar
                     onChange={handleDateChange}
                     value={selectedDate}
                     tileDisabled={tileDisabled}
+                    tileClassName={tileClassName}
+                    tileContent={tileContent}
                     minDate={new Date()}
                     selectRange={false}
+                    showNeighboringMonth={false}
                     className="react-calendar"
                   />
                 </div>
@@ -519,7 +620,7 @@ const BookAppointment = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     <p className="text-sm font-medium text-green-800">
-                      Selected date: {formatDate(selectedDate.toISOString().split('T')[0])}
+                      Selected date: {formatDate(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`)}
                     </p>
                   </div>
                 </div>
