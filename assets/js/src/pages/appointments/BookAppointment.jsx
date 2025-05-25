@@ -13,10 +13,10 @@ const calendarStyles = `
     width: 100%;
     border: none;
     font-family: inherit;
-    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
     border-radius: 20px;
     padding: 20px;
-    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 20px 40px rgba(96, 165, 250, 0.15);
   }
   
   .react-calendar__navigation {
@@ -65,10 +65,11 @@ const calendarStyles = `
   .react-calendar__month-view__weekdays__weekday {
     color: white;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     padding: 8px;
+    text-decoration: none;
   }
   
   .react-calendar__month-view__days {
@@ -122,23 +123,23 @@ const calendarStyles = `
   }
   
   .react-calendar__tile--active {
-    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%) !important;
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%) !important;
     color: white !important;
     transform: scale(1.1);
-    box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
     border-color: rgba(255, 255, 255, 0.5);
   }
   
   .react-calendar__tile--now {
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
     color: white;
-    border: 2px solid #1d4ed8;
+    border: 2px solid #3b82f6;
     font-weight: 700;
-    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 5px 15px rgba(96, 165, 250, 0.3);
   }
   
   .react-calendar__tile--now:enabled:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
     color: white;
   }
   
@@ -156,8 +157,8 @@ const calendarStyles = `
   }
   
   .react-calendar__tile--weekend:enabled:hover {
-    background: linear-gradient(135deg, #93c5fd 0%, #60a5fa 100%);
-    color: white;
+    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+    color: #1e40af;
   }
   
   /* Add a subtle animation to the entire calendar */
@@ -183,13 +184,13 @@ const calendarStyles = `
   
   @keyframes pulse {
     0% {
-      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
     }
     50% {
-      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.6);
+      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.6);
     }
     100% {
-      box-shadow: 0 15px 30px rgba(59, 130, 246, 0.4);
+      box-shadow: 0 15px 30px rgba(96, 165, 250, 0.4);
     }
   }
   
