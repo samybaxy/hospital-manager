@@ -345,6 +345,15 @@ class AppointmentController extends BaseController
         $reason = $request->get_param('reason');
         $notes = $request->get_param('notes');
 
+        // Debug incoming parameters
+        error_log('Appointment creation parameters: ' . json_encode([
+            'patient_id' => $patient_id,
+            'doctor_id' => $doctor_id,
+            'date' => $date,
+            'time' => $time,
+            'reason' => $reason
+        ]));
+
         // Validate required fields
         if (!$patient_id || !$doctor_id || !$date || !$time) {
             return new WP_Error(
@@ -355,10 +364,10 @@ class AppointmentController extends BaseController
         }
         
         // Validate that the appointment date is in the future
-        $appointment_datetime = strtotime("$date $time");
-        $current_datetime = current_time('timestamp');
+        $appointment_date = strtotime("$date");
+        $current_datetime = current_time('timestamp'); // Use current_time instead of current_datetime for better compatibility
         
-        if ($appointment_datetime <= $current_datetime) {
+        if ($appointment_date < strtotime('today')) {
             return new WP_Error(
                 'invalid_appointment_time',
                 'Appointment time must be in the future',
@@ -389,45 +398,110 @@ class AppointmentController extends BaseController
             
             $appointment = Appointment::create($appointment_data);
             
-            // Get patient name for notification
-            $patient = get_userdata($patient_id);
-            $patient_name = $patient ? trim($patient->first_name . ' ' . $patient->last_name) : 'A patient';
-            if (empty(trim($patient_name))) {
-                $patient_name = $patient->display_name;
-            }
-            
-            // Get doctor's user ID for notification
-            global $wpdb;
-            $doctors_table = $wpdb->prefix . 'hm_doctors';
-            $doctor_user_id = $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT user_id FROM {$doctors_table} WHERE id = %d",
-                    $doctor_id
-                )
-            );
-            
-            if ($doctor_user_id) {
-                // Create notification for doctor
-                $notification_title = 'New Appointment';
-                $notification_message = sprintf(
-                    '%s has booked an appointment with you on %s at %s.',
-                    $patient_name,
-                    date('F j, Y', strtotime($date)),
-                    date('g:i A', strtotime($time))
+            // MANUAL NOTIFICATION APPROACH: Skip the NotificationService and insert notification directly
+            try {
+                global $wpdb;
+                
+                // Get patient name
+                $patients_table = $wpdb->prefix . 'hm_patients';
+                $patient_data = $wpdb->get_row(
+                    $wpdb->prepare(
+                        "SELECT first_name, last_name FROM {$patients_table} WHERE id = %d",
+                        $patient_id
+                    )
                 );
                 
-                NotificationService::create(
-                    $doctor_user_id,
-                    'appointment',
-                    $notification_title,
-                    $notification_message,
-                    [
-                        'appointment_id' => $appointment->id,
-                        'patient_id' => $patient_id,
-                        'appointment_date' => $date,
-                        'appointment_time' => $time
-                    ]
+                $patient_name = $patient_data ? 
+                    trim($patient_data->first_name . ' ' . $patient_data->last_name) : 
+                    'A patient';
+                    
+                if (empty(trim($patient_name))) {
+                    $patient_name = 'A patient';
+                }
+                
+                // Get doctor user_id
+                $doctors_table = $wpdb->prefix . 'hm_doctors';
+                $doctor_user_id = $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT user_id FROM {$doctors_table} WHERE id = %d",
+                        $doctor_id
+                    )
                 );
+                
+                // Insert notification record directly into the database if user_id is valid
+                if ($doctor_user_id && is_numeric($doctor_user_id) && get_user_by('ID', $doctor_user_id)) {
+                    // Create notification title and message
+                    $notification_title = 'New Appointment';
+                    $notification_message = sprintf(
+                        '%s has booked an appointment with you on %s at %s.',
+                        $patient_name,
+                        date('F j, Y', strtotime($date)),
+                        date('g:i A', strtotime($time))
+                    );
+                    
+                    // Get the notifications table name directly
+                    $notifications_table = $wpdb->prefix . 'hm_notifications';
+                    
+                    // Check if the table exists, if not, we'll skip inserting notifications
+                    if ($wpdb->get_var("SHOW TABLES LIKE '{$notifications_table}'") === $notifications_table) {
+                        // Insert notification directly using wpdb
+                        $wpdb->insert(
+                            $notifications_table,
+                            [
+                                'user_id' => $doctor_user_id,
+                                'type' => 'appointment',
+                                'title' => $notification_title,
+                                'message' => $notification_message,
+                                'is_read' => 0,
+                                'created_at' => current_time('mysql'),
+                                'updated_at' => current_time('mysql')
+                            ],
+                            [
+                                '%d', '%s', '%s', '%s', '%d', '%s', '%s'
+                            ]
+                        );
+                        
+                        $notification_id = $wpdb->insert_id;
+                        
+                        if ($notification_id) {
+                            error_log("Direct notification insertion successful: ID $notification_id");
+                            
+                            // Insert notification meta data
+                            $notifications_meta_table = $wpdb->prefix . 'hm_notification_meta';
+                            
+                            if ($wpdb->get_var("SHOW TABLES LIKE '{$notifications_meta_table}'") === $notifications_meta_table) {
+                                // Insert meta for appointment_id
+                                $wpdb->insert(
+                                    $notifications_meta_table,
+                                    [
+                                        'notification_id' => $notification_id,
+                                        'meta_key' => 'appointment_id',
+                                        'meta_value' => $appointment->id
+                                    ],
+                                    ['%d', '%s', '%s']
+                                );
+                                
+                                // Insert other meta as needed
+                                $wpdb->insert(
+                                    $notifications_meta_table,
+                                    [
+                                        'notification_id' => $notification_id,
+                                        'meta_key' => 'appointment_date',
+                                        'meta_value' => $date
+                                    ],
+                                    ['%d', '%s', '%s']
+                                );
+                            }
+                        }
+                    } else {
+                        error_log("Notifications table not found: $notifications_table");
+                    }
+                } else {
+                    error_log("Skipping notification - invalid doctor user ID: $doctor_user_id");
+                }
+            } catch (\Exception $notifyEx) {
+                error_log("Error in direct notification insert: " . $notifyEx->getMessage());
+                // Don't stop the appointment flow for notification errors
             }
             
             return new WP_REST_Response([
@@ -445,6 +519,8 @@ class AppointmentController extends BaseController
                 ]
             ], 201);
         } catch (\Exception $e) {
+            error_log('Appointment creation error: ' . $e->getMessage());
+            error_log('Trace: ' . $e->getTraceAsString());
             return new WP_Error(
                 'appointment_creation_failed',
                 'Failed to create appointment: ' . $e->getMessage(),

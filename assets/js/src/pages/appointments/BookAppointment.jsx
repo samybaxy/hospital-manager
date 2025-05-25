@@ -341,19 +341,42 @@ const BookAppointment = () => {
         // Fetch doctor details - making sure to get availability data
         const doctorResponse = await api.get(`/doctors/${doctorId}`);
         if (doctorResponse.data) {
-          setDoctor(doctorResponse.data);
-          console.log('Doctor availability:', doctorResponse.data.appointment_availability);
+            setDoctor(doctorResponse.data);
         }
         
         // Fetch current patient ID from patients table using logged-in user
         if (user?.id) {
-          const patientResponse = await api.get(`/patients/me`);
-          if (patientResponse.data && patientResponse.data.success) {
-            setPatientId(patientResponse.data.data.id);
-          } else {
-            setError('You must be a registered patient to book appointments.');
-            return;
+          try {
+            const patientResponse = await api.get(`/patients/me`);
+            console.log('Patient response:', patientResponse.data);
+            
+            // Handle different API response formats
+            if (patientResponse.data) {
+              if (patientResponse.data.success && patientResponse.data.data && patientResponse.data.data.id) {
+                // Format: { success: true, data: { id: 123, ... } }
+                const id = patientResponse.data.data.id;
+                setPatientId(id);
+              } else if (patientResponse.data.id) {
+                // Format: { id: 123, ... }
+                setPatientId(patientResponse.data.id);
+              } else if (Array.isArray(patientResponse.data) && patientResponse.data[0]?.id) {
+                // Format: [{ id: 123, ... }]
+                setPatientId(patientResponse.data[0].id);
+              } else {
+                console.error('No valid patient ID found in response:', patientResponse.data);
+                setError('Could not find your patient record.');
+              }
+            } else {
+              console.error('Empty patient response data');
+              setError('No patient data received from server.');
+            }
+          } catch (patientErr) {
+            console.error('Error fetching patient data:', patientErr);
+            setError('Could not load your patient information.');
           }
+        } else {
+          console.error('No user ID found');
+          setError('You must be logged in to book appointments.');
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -369,7 +392,7 @@ const BookAppointment = () => {
     
     fetchInitialData();
   }, [doctorId, user]);
-  
+
   // Fetch available time slots when date is selected
   useEffect(() => {
     async function fetchAvailableTimes() {
@@ -386,7 +409,7 @@ const BookAppointment = () => {
         const dayOfWeek = selectedDate.getDay();
         const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = daysOfWeek[dayOfWeek];
-        
+
         // Check if doctor has availability for this day in their schedule
         let availableTimesFromSchedule = [];
         
@@ -476,6 +499,15 @@ const BookAppointment = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Debug form field values
+    console.log('Form submission check - values:', {
+      doctorId,
+      patientId,
+      selectedDate,
+      selectedTime,
+      reason
+    });
+    
     if (!doctorId || !patientId || !selectedDate || !selectedTime || !reason) {
       setError('Please fill in all required fields.');
       return;
@@ -492,8 +524,8 @@ const BookAppointment = () => {
       const formattedDate = `${year}-${month}-${day}`;
       
       const appointmentData = {
-        doctor_id: doctorId,
-        patient_id: patientId,
+        doctor_id: parseInt(doctorId, 10),
+        patient_id: parseInt(patientId, 10),
         appointment_date: formattedDate,
         appointment_time: selectedTime,
         reason,
@@ -501,7 +533,10 @@ const BookAppointment = () => {
         status: 'pending'
       };
       
+      console.log('Submitting appointment data:', appointmentData);
+      
       const response = await api.post('/appointments', appointmentData);
+      console.log('Appointment creation response:', response);
       
       if (response.data && response.data.data) {
         setSuccess(true);
@@ -512,7 +547,9 @@ const BookAppointment = () => {
       }
     } catch (err) {
       console.error('Error creating appointment:', err);
-      setError('Failed to create appointment. Please try again.');
+      // Show more detailed error message
+      const errorMessage = err.response?.data?.message || 'Failed to create appointment. Please try again.';
+      setError(`Error: ${errorMessage}`);
     } finally {
       setSubmitting(false);
     }
@@ -525,6 +562,9 @@ const BookAppointment = () => {
     setSelectedDate(localDate);
     setSelectedTime(''); // Reset time selection when date changes
     setAvailableTimes([]); // Clear available times
+    
+    // Debug selected date
+    console.log('Selected date:', localDate, formatDate(localDate));
   };
 
   // Check if a date should be disabled (past dates and dates from neighboring months)
@@ -581,7 +621,11 @@ const BookAppointment = () => {
           {availableTimes.map((timeSlot, index) => (
             <button
               key={timeSlot}
-              onClick={() => setSelectedTime(timeSlot)}
+              type="button" // Explicitly set type to button to avoid form submission
+              onClick={() => {
+                console.log(`Time selected: ${timeSlot}`);
+                setSelectedTime(timeSlot);
+              }}
               className={`time-slot relative py-3 px-4 rounded-xl font-semibold transition-all duration-300 transform ${
                 selectedTime === timeSlot
                   ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white scale-105 shadow-lg'

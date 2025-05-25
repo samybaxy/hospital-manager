@@ -381,7 +381,7 @@ class PatientController extends BaseController
             $patient = new Patient($patient_data);
             
             return $this->success_response(
-                $patient,
+                $patient->toArray(),
                 'Patient record retrieved successfully'
             );
         } catch (\Exception $e) {

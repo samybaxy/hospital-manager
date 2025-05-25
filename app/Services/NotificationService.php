@@ -3,36 +3,77 @@
 namespace HospitalManager\Services;
 
 use HospitalManager\Models\Notification;
+use WP_Error;
 
 class NotificationService
 {
     /**
      * Create a new notification
      *
-     * @param int    $userId      User ID to notify
-     * @param string $type        Type of notification (e.g., 'lab_results', 'appointment')
-     * @param string $title       Notification title
-     * @param string $message     Notification message
-     * @param array  $data        Additional data for the notification
-     * @return Notification|false Created notification or false on failure
+     * @param int $user_id User ID to notify
+     * @param string $type Notification type
+     * @param string $title Notification title
+     * @param string $message Notification message
+     * @param array $meta Additional metadata
+     * 
+     * @return Notification|WP_Error
      */
-    public static function create($userId, $type, $title, $message, $data = [])
+    public static function create($user_id, $type, $title, $message, $meta = [])
     {
-        $notification = new Notification([
-            'user_id' => $userId,
-            'type' => $type,
-            'title' => $title,
-            'message' => $message,
-            'data' => maybe_serialize($data),
-            'read' => false,
-            'created_at' => current_time('mysql')
-        ]);
-        
-        if ($notification->save()) {
-            return $notification;
+        if (empty($user_id) || !is_numeric($user_id)) {
+            error_log("NotificationService::create - Invalid user ID: " . print_r($user_id, true));
+            return new WP_Error('invalid_user_id', 'Invalid user ID');
         }
-        
-        return false;
+
+        try {
+            // Verify user exists
+            $user = get_user_by('ID', $user_id);
+            if (!$user) {
+                error_log("NotificationService::create - User not found: $user_id");
+                return new WP_Error('user_not_found', 'User not found');
+            }
+
+            // Create notification post
+            $notification_data = [
+                'post_type' => 'hm_notification',
+                'post_title' => $title,
+                'post_content' => $message,
+                'post_status' => 'publish',
+                'post_author' => $user_id,
+                'meta_input' => array_merge([
+                    'type' => $type,
+                    'is_read' => false,
+                    'user_id' => $user_id,
+                ], $meta)
+            ];
+
+            // Insert the post directly using WordPress function
+            $post_id = wp_insert_post($notification_data, true);
+            
+            // Check if post was created successfully
+            if (is_wp_error($post_id)) {
+                error_log("NotificationService::create - Error creating notification: " . $post_id->get_error_message());
+                return $post_id; // Return the WP_Error
+            }
+
+            // Return created notification using our model
+            $notification = new Notification([
+                'ID' => $post_id,
+                'post_title' => $title,
+                'post_content' => $message,
+                'post_type' => 'hm_notification',
+                'post_status' => 'publish',
+                'post_author' => $user_id,
+            ]);
+
+            error_log("NotificationService::create - Successfully created notification ID: $post_id for user: $user_id");
+            return $notification;
+            
+        } catch (\Exception $e) {
+            error_log("NotificationService::create - Exception: " . $e->getMessage());
+            error_log("NotificationService::create - Trace: " . $e->getTraceAsString());
+            return new WP_Error('notification_error', 'Failed to create notification: ' . $e->getMessage());
+        }
     }
 
     /**
