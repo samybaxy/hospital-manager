@@ -400,13 +400,18 @@ const BookAppointment = () => {
               availabilityData = doctor.appointment_availability;
             }
             
-            // Find the availability for the current day
-            const dayAvailability = availabilityData[dayName];
+            // Get day name in lowercase to match the data format
+            const dayKey = dayName.toLowerCase();
             
-            if (dayAvailability && dayAvailability.isAvailable) {
-              // Get start and end times
-              const startTime = dayAvailability.startTime;
-              const endTime = dayAvailability.endTime;
+            // Find the availability for the current day
+            const dayAvailability = availabilityData[dayKey];
+            
+            // Check if there are any time slots for this day
+            if (dayAvailability && dayAvailability.length > 0) {
+              // We're only using the first time slot for each day as per the format
+              const timeSlot = dayAvailability[0];
+              const startTime = timeSlot.start;
+              const endTime = timeSlot.end;
               
               if (startTime && endTime) {
                 // Generate 30 minute slots between start and end times

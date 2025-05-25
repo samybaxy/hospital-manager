@@ -104,7 +104,8 @@ class DoctorSeeder extends Seeder
     /**
      * Generate a random working hours availability schedule for a doctor
      * 
-     * @return array Working hours for each day of the week
+     * @return array Working hours for each day of the week in the format:
+     * {"friday": [{"end": "14:00", "start": "08:00"}], "thursday": [{"end": "14:00", "start": "07:00"}], ...}
      */
     protected function generateAvailability()
     {
@@ -116,29 +117,23 @@ class DoctorSeeder extends Seeder
         $workingDays = (array) array_rand(array_flip($days), $workingDaysCount);
         
         foreach ($days as $day) {
-            // If it's a working day, generate time slots
+            // If it's a working day, generate time slot
             if (in_array($day, $workingDays)) {
-                // Morning slot (8 AM - 12 PM)
-                $morningStart = rand(8, 10);
-                $morningEnd = rand($morningStart + 2, 12);
+                // Randomly choose a start time between 6 AM and 12 PM
+                $startHour = rand(6, 12);
                 
-                // Afternoon slot (1 PM - 6 PM)
-                $afternoonStart = rand(13, 15);
-                $afternoonEnd = rand($afternoonStart + 2, 18);
+                // End time is 2-6 hours after start time, but no later than 6 PM
+                $endHour = min(rand($startHour + 2, $startHour + 6), 18);
                 
-                // Format as 24-hour time for storage in JSON
+                // Format as 24-hour time for storage in JSON - each day has a single slot in an array
                 $availability[$day] = [
                     [
-                        'start' => sprintf('%02d:00', $morningStart),
-                        'end' => sprintf('%02d:00', $morningEnd)
-                    ],
-                    [
-                        'start' => sprintf('%02d:00', $afternoonStart),
-                        'end' => sprintf('%02d:00', $afternoonEnd)
+                        'start' => sprintf('%02d:00', $startHour),
+                        'end' => sprintf('%02d:00', $endHour)
                     ]
                 ];
             } else {
-                // Not a working day
+                // Not a working day - empty array
                 $availability[$day] = [];
             }
         }
