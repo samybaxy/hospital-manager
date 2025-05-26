@@ -85,12 +85,15 @@ export const selectHasAccess = (state, routeName) => {
     // Patients can't access: Patients, Departments, Audit Log, Billing, 
     // Inventory, Reports, Statistics, and Settings
     if (['patients', 'departments', 'audit_log', 'billing', 
-         'inventory', 'reports', 'statistics', 'settings'].includes(routeName)) {
+         'inventory', 'statistics', 'settings'].includes(routeName)) {
       return false;
     }
   } else if (role === 'lab_tech') {
     // Lab techs can only access: Dashboard and Lab Dashboard
-    return ['lab_dashboard', 'dashboard'].includes(routeName);
+    if (['departments', 'audit_log', 'billing', 'reports', 'doctors', 'chats', 'appointments',
+         'inventory', 'statistics', 'settings'].includes(routeName)) {
+      return false;
+    }
   } else if (role === 'desk_officer') {
     // Desk officers can't access: Chat, Audit Log, Billing, Inventory, Statistics, and Settings
     if (['chat', 'audit_log', 'billing', 'inventory', 'statistics', 'settings'].includes(routeName)) {

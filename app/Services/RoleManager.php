@@ -72,13 +72,18 @@ class RoleManager
         add_role('doctor', 'Doctor', [
             'read' => true,
             'access_hospital_manager' => true,
-            'view_patients' => true,
-            'edit_patient' => true,
-            'schedule_appointments' => true,
+            'create_patients' => true, // Can create patients
+            'edit_patient' => false, // Cannot edit patients
+            'delete_patients' => false, // Cannot delete patients
+            'edit_doctors' => false, // Cannot edit doctors
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
+            'schedule_appointments' => false, // Cannot schedule appointments
             'add_visitation' => true,
             'edit_visitation' => true,
-            'manage_medical_reports' => true,
             // Route access capabilities for doctors
+            'access_own_records' => true,
             'access_patients' => true,
             'access_doctors' => true,
             'access_departments' => true,
@@ -98,11 +103,17 @@ class RoleManager
         add_role('patient', 'Patient', [
             'read' => true,
             'access_hospital_manager' => true,
-            'view_own_records' => true,
+            'create_patients' => false,
+            'edit_patients' => false,
+            'edit_doctors' => false,
+            'delete_patients' => false,
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
             // Route access capabilities for patients
+            'access_own_records' => true,
             'access_patients' => false,  // Restricted
             'access_doctors' => true, // Can view doctors
-            'edit_doctor' => false, // Cannot edit doctors
             'access_departments' => false, // Restricted
             'access_appointments' => true,
             'access_visitations' => true,
@@ -111,25 +122,31 @@ class RoleManager
             'access_audit_log' => false, // Restricted
             'access_billing' => false,   // Restricted
             'access_inventory' => false, // Restricted
-            'access_reports' => false,   // Restricted
+            'access_reports' => true,   // Restricted
             'access_statistics' => false, // Restricted
             'access_settings' => false,  // Restricted
-            'access_lab_dashboard' => false,
+            'access_lab_dashboard' => true,
         ]);
 
         add_role('lab_tech', 'Lab Technician', [
             'read' => true,
             'access_hospital_manager' => true,
-            'manage_medical_reports' => true,
-            'view_lab_dashboard' => true,
+            'manage_medical_reports' => false, // Cannot manage medical reports
+            'create_patients' => false,
+            'edit_patients' => false,
+            'edit_doctors' => false,
+            'delete_patients' => false,
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
             // Route access capabilities for lab technicians
-            'access_patients' => false,  // Restricted
+            'access_patients' => true,  // Restricted
             'access_doctors' => false,   // Restricted
             'access_departments' => false, // Restricted
             'access_appointments' => false, // Restricted
             'access_visitations' => false,  // Restricted
             'access_chat' => false,      // Restricted
-            'access_notifications' => false, // Restricted
+            'access_notifications' => true, // Un-Restricted
             'access_audit_log' => false, // Restricted
             'access_billing' => false,   // Restricted
             'access_inventory' => false, // Restricted
@@ -142,12 +159,14 @@ class RoleManager
         add_role('desk_officer', 'Desk Officer', [
             'read' => true,
             'access_hospital_manager' => true,
-            'view_patients' => true,
             'create_patients' => true,
-            'edit_patients' => false,
+            'edit_patients' => true,
+            'edit_doctors' => false,
             'delete_patients' => false,
             'schedule_appointments' => false,
-            'view_audit_log' => false,
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
             // Route access capabilities for desk officers
             'access_patients' => true,
             'access_doctors' => true,
@@ -162,7 +181,7 @@ class RoleManager
             'access_reports' => true,
             'access_statistics' => false, // Restricted
             'access_settings' => false,  // Restricted
-            'access_lab_dashboard' => false,
+            'access_lab_dashboard' => true,
         ]);
     }
     

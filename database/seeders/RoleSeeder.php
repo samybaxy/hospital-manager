@@ -47,7 +47,6 @@ class RoleSeeder extends Seeder
                 'schedule_appointments' => true,
                 'add_visitation' => true,
                 'edit_visitation' => true,
-                'manage_medical_reports' => true,
                 // Route access capabilities
                 'access_patients' => true,
                 'access_doctors' => true,
@@ -68,12 +67,15 @@ class RoleSeeder extends Seeder
             $doctor_caps = [
                 'read' => true,
                 'access_hospital_manager' => true,
-                'view_patients' => true,
-                'edit_patient' => true,
-                'schedule_appointments' => true,
+                'create_patients' => true,
+                'edit_patient' => false, // Doctors cannot edit patients
+                'delete_patients' => false, // Doctors cannot delete patients
+                'add_lab_results' => false,
+                'edit_lab_results' => false,
+                'delete_lab_results' => false,
+                'schedule_appointments' => false,
                 'add_visitation' => true,
                 'edit_visitation' => true,
-                'manage_medical_reports' => true,
                 // Route access capabilities
                 'access_patients' => true,
                 'access_doctors' => true,
@@ -94,7 +96,13 @@ class RoleSeeder extends Seeder
             $patient_caps = [
                 'read' => true,
                 'access_hospital_manager' => true,
-                'view_own_records' => true,
+                'create_patients' => false,
+                'edit_patients' => false,
+                'edit_doctors' => false,
+                'delete_patients' => false,
+                'add_lab_results' => false,
+                'edit_lab_results' => false,
+                'delete_lab_results' => false,
                 // Route access capabilities
                 'access_patients' => false,  // Restricted
                 'access_doctors' => true,   // Can view doctors
@@ -106,7 +114,7 @@ class RoleSeeder extends Seeder
                 'access_audit_log' => false, // Restricted
                 'access_billing' => false,   // Restricted
                 'access_inventory' => false, // Restricted
-                'access_reports' => false,   // Restricted
+                'access_reports' => true,   // Restricted
                 'access_statistics' => false, // Restricted
                 'access_settings' => false,  // Restricted
                 'access_lab_dashboard' => false,
@@ -115,12 +123,18 @@ class RoleSeeder extends Seeder
             $lab_tech_caps = [
                 'read' => true,
                 'access_hospital_manager' => true,
-                'manage_medical_reports' => true,
-                'view_lab_dashboard' => true,
+                'manage_medical_reports' => false, // Cannot manage medical reports
+                'create_patients' => false,
+                'edit_patients' => false,
+                'edit_doctors' => false,
+                'delete_patients' => false,
+                'add_lab_results' => false,
+                'edit_lab_results' => false,
+                'delete_lab_results' => false,
                 // Route access capabilities
-                'access_patients' => false,  // Restricted
+                'access_patients' => true,  // Restricted
                 'access_doctors' => false,   // Restricted
-                'access_departments' => true,
+                'access_departments' => false, // Restricted
                 'access_appointments' => false, // Restricted
                 'access_visitations' => false,  // Restricted
                 'access_chat' => false,      // Restricted
@@ -137,12 +151,14 @@ class RoleSeeder extends Seeder
             $desk_officer_caps = [
                 'read' => true,
                 'access_hospital_manager' => true,
-                'view_patients' => true,
                 'create_patients' => true,
-                'edit_patients' => false,
+                'edit_patients' => true,
+                'edit_doctors' => false,
                 'delete_patients' => false,
                 'schedule_appointments' => false,
-                'view_audit_log' => false,
+                'add_lab_results' => false,
+                'edit_lab_results' => false,
+                'delete_lab_results' => false,
                 // Route access capabilities
                 'access_patients' => true,
                 'access_doctors' => true,
