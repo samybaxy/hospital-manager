@@ -8,7 +8,7 @@ class Appointment extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_appointments';
     
     protected $fillable = [
@@ -39,25 +39,20 @@ class Appointment extends BaseModel
             $attributes = [];
         }
         
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -66,16 +61,11 @@ class Appointment extends BaseModel
         $table = $instance->getTable();
         
         // Fetch the appointment record directly from the database.
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $appointment_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$appointment_data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
-        if (isset($appointment_data['id']) && !isset($appointment_data['ID'])) {
-            $appointment_data['ID'] = $appointment_data['id'];
         }
         
         // Create a new appointment instance with the fetched data.
@@ -156,14 +146,9 @@ class Appointment extends BaseModel
         $results = $wpdb->get_results($query);
         
         // Convert results to array of appointment objects
-        // Make sure each result has both 'id' and 'ID' for compatibility
         $formatted_results = [];
         foreach ($results as $data) {
             $data = (array)$data;
-            // Ensure both lowercase and uppercase ID exist
-            if (isset($data['id'])) {
-                $data['ID'] = $data['id']; // Add uppercase ID for PostModel compatibility
-            }
             $formatted_results[] = new static($data);
         }
         
@@ -293,8 +278,7 @@ class Appointment extends BaseModel
         }
         
         // Get the newly created ID and add it to the data
-        $data['id'] = $wpdb->insert_id;
-        $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+        $data['ID'] = $wpdb->insert_id;
         
         // Return a new instance with the created data
         return new static($data);
@@ -302,12 +286,12 @@ class Appointment extends BaseModel
 
     public function doctor()
     {
-        return get_user_by('id', $this->doctor_id);
+        return get_user_by('ID', $this->doctor_id);
     }
 
     public function patient()
     {
-        return get_user_by('id', $this->patient_id);
+        return get_user_by('ID', $this->patient_id);
     }
 
     /**
@@ -326,13 +310,6 @@ class Appointment extends BaseModel
             if (json_last_error() === JSON_ERROR_NONE) {
                 $data['notes'] = $decoded;
             }
-        }
-        
-        // Ensure ID properties are consistent
-        if (isset($data['id']) && !isset($data['ID'])) {
-            $data['ID'] = $data['id'];
-        } elseif (isset($data['ID']) && !isset($data['id'])) {
-            $data['id'] = $data['ID'];
         }
         
         // Ensure status defaults to 'pending' if not set
@@ -363,12 +340,6 @@ class Appointment extends BaseModel
 
         $results = $wpdb->get_results($query, ARRAY_A);
         $appointments = array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results ?: []);
         
@@ -395,14 +366,7 @@ class Appointment extends BaseModel
         );
 
         $results = $wpdb->get_results($query, ARRAY_A);
-        return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
-            
+        return array_map(function($item) {            
             $model = new static($item);
             if (isset($item['patient_name'])) {
                 $model->patient_name = $item['patient_name'];

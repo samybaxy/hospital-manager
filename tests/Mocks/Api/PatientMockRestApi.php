@@ -38,7 +38,7 @@ class PatientMockRestApi
         ]);
 
         // Individual patient routes
-        register_rest_route(self::$namespace, '/patients/(?P<id>\d+)', [
+        register_rest_route(self::$namespace, '/patients/(?P<ID>\d+)', [
             [
                 'methods' => 'GET',
                 'callback' => [self::class, 'getPatient'],
@@ -140,14 +140,14 @@ class PatientMockRestApi
         // Patient permissions
         if (in_array('patient', $roles)) {
             // If this is a GET request to a specific patient
-            if ($method === 'GET' && isset($request['id'])) {
+            if ($method === 'GET' && isset($request['ID'])) {
                 global $wpdb;
                 $table = $wpdb->prefix . 'hm_patients';
                 
                 // Get the patient record being requested
                 $patient = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $table WHERE id = %d",
-                    $request['id']
+                    "SELECT * FROM $table WHERE ID = %d",
+                    $request['ID']
                 ));
                 
                 // Patients can only access their own records
@@ -214,8 +214,8 @@ class PatientMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_patients';
         
-        $id = $request['id'];
-        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $ID = $request['ID'];
+        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$patient) {
             return new \WP_REST_Response([
@@ -261,7 +261,7 @@ class PatientMockRestApi
         }
         
         $patient_id = $wpdb->insert_id;
-        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $patient_id));
+        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $patient_id));
         
         return new \WP_REST_Response([
             'success' => true,
@@ -280,11 +280,11 @@ class PatientMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_patients';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         $data = $request->get_params();
         
         // Check if patient exists
-        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$patient) {
             return new \WP_REST_Response([
@@ -294,9 +294,9 @@ class PatientMockRestApi
         }
         
         // Remove ID from data to prevent overwrite
-        unset($data['id']);
+        unset($data['ID']);
         
-        $result = $wpdb->update($table, $data, ['id' => $id]);
+        $result = $wpdb->update($table, $data, ['ID' => $ID]);
         
         if ($result === false) {
             return new \WP_REST_Response([
@@ -305,7 +305,7 @@ class PatientMockRestApi
             ], 500);
         }
         
-        $updated_patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $updated_patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         return new \WP_REST_Response([
             'success' => true,
@@ -324,10 +324,10 @@ class PatientMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_patients';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         
         // Check if patient exists
-        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$patient) {
             return new \WP_REST_Response([
@@ -336,7 +336,7 @@ class PatientMockRestApi
             ], 404);
         }
         
-        $result = $wpdb->delete($table, ['id' => $id]);
+        $result = $wpdb->delete($table, ['ID' => $ID]);
         
         if (!$result) {
             return new \WP_REST_Response([

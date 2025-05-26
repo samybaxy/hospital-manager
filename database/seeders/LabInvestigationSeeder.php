@@ -96,7 +96,7 @@ class LabInvestigationSeeder extends Seeder
             if ($count >= $maxRecords) break;
             
             // Get patient and doctor IDs from visitation
-            $visitation = $this->wpdb->get_row("SELECT patient_id, doctor_id FROM {$this->wpdb->prefix}hm_visitations WHERE id = {$visitation_id}");
+            $visitation = $this->wpdb->get_row("SELECT patient_id, doctor_id FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
             
             if (!$visitation) continue;
             
@@ -111,7 +111,7 @@ class LabInvestigationSeeder extends Seeder
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
                 
                 // Generate created_at date based on visitation date
-                $created_at = $this->wpdb->get_var("SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE id = {$visitation_id}");
+                $created_at = $this->wpdb->get_var("SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
                 
                 $notes = $this->faker->paragraph(2);
@@ -159,6 +159,6 @@ class LabInvestigationSeeder extends Seeder
      */
     protected function getExistingIds($table)
     {
-        return $this->wpdb->get_col("SELECT id FROM {$this->wpdb->prefix}{$table}");
+        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table}");
     }
 }

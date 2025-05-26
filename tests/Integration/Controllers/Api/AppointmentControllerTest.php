@@ -74,8 +74,8 @@ class AppointmentControllerTest extends TestCase
         
         // Create a test appointment
         $this->test_appointment = $this->createTestAppointment(
-            $this->test_patient->id,
-            $this->test_doctor->id,
+            $this->test_patient->ID,
+            $this->test_doctor->ID,
             [
                 'appointment_date' => date('Y-m-d', strtotime('+1 day')),
                 'appointment_time' => '10:00:00',
@@ -87,7 +87,7 @@ class AppointmentControllerTest extends TestCase
         // Debug appointment creation
         Debugger::log("Creation result for test appointment:", ($this->test_appointment ? "Success" : "Failed"));
         if ($this->test_appointment) {
-            Debugger::log("Test appointment ID:", (isset($this->test_appointment->id) ? $this->test_appointment->id : "No ID found"));
+            Debugger::log("Test appointment ID:", (isset($this->test_appointment->ID) ? $this->test_appointment->ID : "No ID found"));
         } else {
             Debugger::log("Failed to create test appointment in setUp()");
         }
@@ -104,8 +104,8 @@ class AppointmentControllerTest extends TestCase
         }
         
         // Get appointment ID from attributes if direct property access fails
-        $appointment_id = isset($this->test_appointment->id) ? $this->test_appointment->id : 
-                        (isset($this->test_appointment->attributes['id']) ? $this->test_appointment->attributes['id'] : null);
+        $appointment_id = isset($this->test_appointment->ID) ? $this->test_appointment->ID : 
+                        (isset($this->test_appointment->attributes['ID']) ? $this->test_appointment->attributes['ID'] : null);
                         
         if (empty($appointment_id)) {
             // Try to access protected attributes through reflection if needed
@@ -113,7 +113,7 @@ class AppointmentControllerTest extends TestCase
             $attributes = $reflection->getProperty('attributes');
             $attributes->setAccessible(true);
             $attr_values = $attributes->getValue($this->test_appointment);
-            $appointment_id = isset($attr_values['id']) ? $attr_values['id'] : null;
+            $appointment_id = isset($attr_values['ID']) ? $attr_values['ID'] : null;
             
             if (empty($appointment_id)) {
                 $this->fail("Test appointment was created but has no ID. Attributes: " . print_r($attr_values, true));
@@ -143,7 +143,7 @@ class AppointmentControllerTest extends TestCase
         $data = $response->get_data();
         
         // Add debug information to help diagnose issues
-        error_log("Test appointment ID: " . $this->test_appointment->id);
+        error_log("Test appointment ID: " . $this->test_appointment->ID);
         error_log("Response data structure: " . print_r($data, true));
         
         $this->assertTrue($data['success'], 'API response indicates failure');
@@ -172,20 +172,20 @@ class AppointmentControllerTest extends TestCase
             
             // First check if $appointment is an object or array
             if (is_object($appointment)) {
-                $appointment_id = property_exists($appointment, 'id') ? $appointment->id : null;
-                if ($appointment_id == $this->test_appointment->id) {
+                $appointment_id = property_exists($appointment, 'ID') ? $appointment->ID : null;
+                if ($appointment_id == $this->test_appointment->ID) {
                     $found = true;
-                    $this->assertEquals($this->test_patient->id, $appointment->patient_id);
-                    $this->assertEquals($this->test_doctor->id, $appointment->doctor_id);
+                    $this->assertEquals($this->test_patient->ID, $appointment->patient_id);
+                    $this->assertEquals($this->test_doctor->ID, $appointment->doctor_id);
                     $this->assertEquals('scheduled', $appointment->status);
                     break;
                 }
             } else if (is_array($appointment)) {
-                $appointment_id = isset($appointment['id']) ? $appointment['id'] : null;
-                if ($appointment_id == $this->test_appointment->id) {
+                $appointment_id = isset($appointment['ID']) ? $appointment['ID'] : null;
+                if ($appointment_id == $this->test_appointment->ID) {
                     $found = true;
-                    $this->assertEquals($this->test_patient->id, $appointment['patient_id']);
-                    $this->assertEquals($this->test_doctor->id, $appointment['doctor_id']);
+                    $this->assertEquals($this->test_patient->ID, $appointment['patient_id']);
+                    $this->assertEquals($this->test_doctor->ID, $appointment['doctor_id']);
                     $this->assertEquals('scheduled', $appointment['status']);
                     break;
                 }
@@ -194,9 +194,9 @@ class AppointmentControllerTest extends TestCase
         
         // If not found, output helpful debug information
         if (!$found) {
-            error_log("TEST APPOINTMENT NOT FOUND. Test appointment ID: " . $this->test_appointment->id);
-            error_log("Test patient ID: " . $this->test_patient->id);
-            error_log("Test doctor ID: " . $this->test_doctor->id);
+            error_log("TEST APPOINTMENT NOT FOUND. Test appointment ID: " . $this->test_appointment->ID);
+            error_log("Test patient ID: " . $this->test_patient->ID);
+            error_log("Test doctor ID: " . $this->test_doctor->ID);
         }
         
         $this->assertTrue($found, 'Test appointment not found in response');
@@ -212,8 +212,8 @@ class AppointmentControllerTest extends TestCase
         
         // Prepare appointment data
         $appointment_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'appointment_date' => date('Y-m-d', strtotime('+2 days')),
             'appointment_time' => '14:30:00',
             'reason' => 'Flu symptoms',
@@ -234,17 +234,17 @@ class AppointmentControllerTest extends TestCase
         $this->assertArrayHasKey('data', $data);
         
         // Verify the appointment was created with correct data
-        $this->assertEquals($this->test_doctor->id, $data['data']->doctor_id);
+        $this->assertEquals($this->test_doctor->ID, $data['data']->doctor_id);
         $this->assertEquals($appointment_data['appointment_date'], $data['data']->appointment_date);
         $this->assertEquals($appointment_data['appointment_time'], $data['data']->appointment_time);
         $this->assertEquals($appointment_data['reason'], $data['data']->reason);
         $this->assertEquals('scheduled', $data['data']->status); // Default status
         
         // Verify the appointment exists in database
-        $appointment_id = $data['data']->id;
+        $appointment_id = $data['data']->ID;
         $created_appointment = Appointment::find($appointment_id);
         $this->assertNotNull($created_appointment);
-        $this->assertEquals($this->test_patient->id, $created_appointment->patient_id);
+        $this->assertEquals($this->test_patient->ID, $created_appointment->patient_id);
     }
 
     /**
@@ -262,7 +262,7 @@ class AppointmentControllerTest extends TestCase
         ];
         
         // Create request to update the appointment
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/appointments/{$this->test_appointment->id}");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/appointments/{$this->test_appointment->ID}");
         $request->set_body_params($update_data);
         $response = $this->server->dispatch($request);
         
@@ -292,7 +292,7 @@ class AppointmentControllerTest extends TestCase
         }
         
         // Verify the update was saved to database
-        $updated_appointment = Appointment::find($this->test_appointment->id);
+        $updated_appointment = Appointment::find($this->test_appointment->ID);
         $this->assertNotNull($updated_appointment, 'Updated appointment not found in database');
         $this->assertEquals('completed', $updated_appointment->status);
     }
@@ -308,8 +308,8 @@ class AppointmentControllerTest extends TestCase
         // Prepare appointment data with past date
         $past_date = date('Y-m-d', strtotime('-1 day'));
         $appointment_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'appointment_date' => $past_date,
             'appointment_time' => '10:00:00',
             'reason' => 'Test appointment',
@@ -342,8 +342,8 @@ class AppointmentControllerTest extends TestCase
         
         // Create the first appointment
         $first_appointment = $this->createTestAppointment(
-            $this->test_patient->id, 
-            $this->test_doctor->id,
+            $this->test_patient->ID, 
+            $this->test_doctor->ID,
             [
                 'appointment_date' => $future_date,
                 'appointment_time' => '10:00:00',
@@ -352,8 +352,8 @@ class AppointmentControllerTest extends TestCase
         
         // Try to create a second appointment at the same time
         $conflicting_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'appointment_date' => $future_date,
             'appointment_time' => '10:00:00', // Same time as first appointment
             'reason' => 'Conflicting appointment',
@@ -410,7 +410,7 @@ class AppointmentControllerTest extends TestCase
         // Create request to check availability
         $request = new WP_REST_Request('GET', "/{$this->namespace}/appointments/availability");
         $request->set_query_params([
-            'doctor_id' => $this->test_doctor->id,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d', strtotime('+1 day'))
         ]);
         $response = $this->server->dispatch($request);
@@ -444,8 +444,8 @@ class AppointmentControllerTest extends TestCase
         
         // Prepare appointment data
         $appointment_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'appointment_date' => date('Y-m-d', strtotime('+3 days')),
             'appointment_time' => '11:30:00',
             'reason' => 'Follow-up'

@@ -201,13 +201,13 @@ class TestCase extends \WP_UnitTestCase
                 $wpdb->update(
                     $table,
                     ['gender' => $data['gender']],
-                    ['id' => $patient->id],
+                    ['ID' => $patient->ID],
                     ['%s'],
                     ['%d']
                 );
                 
                 // Re-fetch to get the updated gender
-                $patient = \HospitalManager\Models\Patient::find($patient->id);
+                $patient = \HospitalManager\Models\Patient::find($patient->ID);
             } else {
                 // Create normally
                 $patient = \HospitalManager\Models\Patient::create($data);
@@ -292,7 +292,7 @@ class TestCase extends \WP_UnitTestCase
             $appointment = \HospitalManager\Models\Appointment::create($data);
             
             if ($appointment) {
-                error_log('Appointment created successfully with ID: ' . (isset($appointment->id) ? $appointment->id : 'No ID found'));
+                error_log('Appointment created successfully with ID: ' . (isset($appointment->ID) ? $appointment->ID : 'No ID found'));
             } else {
                 error_log('Failed to create appointment - returned null');
             }
@@ -437,8 +437,7 @@ class TestCase extends \WP_UnitTestCase
                 throw new \Exception($wpdb->last_error);
             }
             
-            $data['id'] = $wpdb->insert_id;
-            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            $data['ID'] = $wpdb->insert_id;
             
             return new \HospitalManager\Models\Visitation($data);
         } catch (\Exception $e) {
@@ -489,8 +488,7 @@ class TestCase extends \WP_UnitTestCase
                 throw new \Exception($wpdb->last_error);
             }
             
-            $data['id'] = $wpdb->insert_id;
-            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            $data['ID'] = $wpdb->insert_id;
             
             return new \HospitalManager\Models\LabInvestigation($data);
         } catch (\Exception $e) {
@@ -567,8 +565,7 @@ class TestCase extends \WP_UnitTestCase
                 throw new \Exception($wpdb->last_error);
             }
             
-            $data['id'] = $wpdb->insert_id;
-            $data['ID'] = $data['id']; // Add uppercase ID for compatibility
+            $data['ID'] = $wpdb->insert_id;
             
             return new \HospitalManager\Models\RadiologicalExam($data);
         } catch (\Exception $e) {

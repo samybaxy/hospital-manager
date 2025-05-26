@@ -102,13 +102,13 @@ class RoleBasedAccessTest extends TestCase
         
         // Test deletion permissions - only admin should be able to delete patients
         wp_set_current_user($admin_id);
-        $this->assertTrue(current_user_can('delete_patient', $patient->id));
+        $this->assertTrue(current_user_can('delete_patient', $patient->ID));
         
         wp_set_current_user($doctor_id);
-        $this->assertFalse(current_user_can('delete_patient', $patient->id));
+        $this->assertFalse(current_user_can('delete_patient', $patient->ID));
         
         wp_set_current_user($receptionist_id);
-        $this->assertFalse(current_user_can('delete_patient', $patient->id));
+        $this->assertFalse(current_user_can('delete_patient', $patient->ID));
         
         // Test medical record edit permissions
         wp_set_current_user($admin_id);
@@ -147,15 +147,15 @@ class RoleBasedAccessTest extends TestCase
         wp_set_current_user($patient_user_id);
         
         // Test that the patient can view their own record
-        $this->assertTrue(current_user_can('view_patient_record', $patient->id));
+        $this->assertTrue(current_user_can('view_patient_record', $patient->ID));
         
         // Test that the patient cannot view other patient records
-        $this->assertFalse(current_user_can('view_patient_record', $other_patient->id));
+        $this->assertFalse(current_user_can('view_patient_record', $other_patient->ID));
         
         // Doctor should be able to view all patients
         $doctor_id = $this->createUserWithRole('doctor');
         wp_set_current_user($doctor_id);
-        $this->assertTrue(current_user_can('view_patient_record', $patient->id));
-        $this->assertTrue(current_user_can('view_patient_record', $other_patient->id));
+        $this->assertTrue(current_user_can('view_patient_record', $patient->ID));
+        $this->assertTrue(current_user_can('view_patient_record', $other_patient->ID));
     }
 }

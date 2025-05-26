@@ -28,7 +28,7 @@ class NotificationController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/notifications/(?P<id>\d+)/read', [
+        register_rest_route($this->namespace, '/notifications/(?P<ID>\d+)/read', [
             [
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'mark_as_read'],
@@ -58,7 +58,7 @@ class NotificationController extends BaseController
 
     public function mark_as_read($request)
     {
-        $notification_id = $request->get_param('id');
+        $notification_id = $request->get_param('ID');
         $user_id = get_current_user_id();
 
         // Verify notification belongs to user

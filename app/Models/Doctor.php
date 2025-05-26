@@ -8,7 +8,7 @@ class Doctor extends BaseModel
 {
     use FindTrait;
     
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_doctors';
     protected $fillable = [
         'user_id',
@@ -34,10 +34,10 @@ class Doctor extends BaseModel
     public function &__get($property)
     {
         // For phone property, handle it specially for the test
-        if ($property === 'phone' && isset($this->attributes['id'])) {
+        if ($property === 'phone' && isset($this->attributes['ID'])) {
             global $wpdb;
             $table = $wpdb->prefix . $this->tableName;
-            $sql = $wpdb->prepare("SELECT phone FROM $table WHERE id = %d", $this->attributes['id']);
+            $sql = $wpdb->prepare("SELECT phone FROM $table WHERE ID = %d", $this->attributes['ID']);
             $value = $wpdb->get_var($sql);
             
             // Store in attributes for next time
@@ -65,14 +65,14 @@ class Doctor extends BaseModel
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -81,7 +81,7 @@ class Doctor extends BaseModel
         $table = $instance->getTable();
         
         // Add SQL_NO_CACHE to prevent caching issues
-        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE ID = %d", $ID);
         error_log("Doctor::find() Query: $query");
         
         $doctor_data = $wpdb->get_row($query, ARRAY_A);
@@ -91,12 +91,7 @@ class Doctor extends BaseModel
             return null;
         }
         
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-        if (isset($doctor_data['id']) && !isset($doctor_data['ID'])) {
-            $doctor_data['ID'] = $doctor_data['id'];
-        } elseif (isset($doctor_data['ID']) && !isset($doctor_data['id'])) {
-            $doctor_data['id'] = $doctor_data['ID'];
-        }
+        // Using uppercase 'ID' consistently throughout the application
         
         // Create a new doctor instance with the fetched data
         $doctor = new self($doctor_data);
@@ -152,8 +147,7 @@ class Doctor extends BaseModel
                 throw new \Exception($wpdb->last_error);
             }
             
-            $filtered_data['id'] = $wpdb->insert_id;
-            $filtered_data['ID'] = $filtered_data['id']; // Add uppercase ID for compatibility
+            $filtered_data['ID'] = $wpdb->insert_id;
             
             return new static($filtered_data);
         } catch (\Exception $e) {
@@ -178,12 +172,6 @@ class Doctor extends BaseModel
         );
         
         return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results);
     }
@@ -203,12 +191,6 @@ class Doctor extends BaseModel
         );
         
         return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results);
     }
@@ -268,12 +250,6 @@ class Doctor extends BaseModel
         
         $results = $wpdb->get_results($query, ARRAY_A);
         return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results);
     }
@@ -333,7 +309,7 @@ class Doctor extends BaseModel
         $where_clause = !empty($where_parts) ? "WHERE " . implode(' AND ', $where_parts) : '';
         
         // Validate orderby to prevent SQL injection
-        $allowed_order_fields = ['id', 'first_name', 'last_name', 'specialty', 'created_at', 'updated_at'];
+        $allowed_order_fields = ['ID', 'first_name', 'last_name', 'specialty', 'created_at', 'updated_at'];
         if (!in_array($orderby, $allowed_order_fields)) {
             $orderby = 'last_name';
         }
@@ -355,12 +331,6 @@ class Doctor extends BaseModel
         
         // Convert to Doctor model instances
         $doctors = array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results);
         
@@ -406,7 +376,7 @@ class Doctor extends BaseModel
         // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
-        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+        if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
             // Prepare the update data
             $update_data = [];
             
@@ -423,7 +393,7 @@ class Doctor extends BaseModel
             // Debug log the update operation
             error_log(sprintf(
                 'Doctor->save(): Updating doctor ID %d with data: %s',
-                $this->attributes['id'],
+                $this->attributes['ID'],
                 json_encode($update_data)
             ));
             
@@ -431,7 +401,7 @@ class Doctor extends BaseModel
             $result = $wpdb->update(
                 $table,
                 $update_data,
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 null, // Format will be determined automatically
                 ['%d'] // ID is an integer
             );
@@ -454,7 +424,7 @@ class Doctor extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -464,7 +434,7 @@ class Doctor extends BaseModel
         // Delete the record
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         
@@ -497,14 +467,14 @@ class Doctor extends BaseModel
                 MAX(v.date) as last_visit_date,
                 (SELECT v2.time 
                  FROM $visitations_table v2 
-                 WHERE v2.patient_id = p.id 
+                 WHERE v2.patient_id = p.ID 
                  AND v2.doctor_id = %d 
                  AND v2.date = MAX(v.date) 
                  LIMIT 1) as last_visit_time  
             FROM $patient_table p
-            INNER JOIN $visitations_table v ON p.id = v.patient_id
+            INNER JOIN $visitations_table v ON p.ID = v.patient_id
             WHERE v.doctor_id = %d
-            GROUP BY p.id
+            GROUP BY p.ID
             ORDER BY MAX(v.date) DESC, p.last_name, p.first_name
             LIMIT %d OFFSET %d",
             $doctor_id,
@@ -515,9 +485,9 @@ class Doctor extends BaseModel
         
         // Get count query for pagination - count distinct patients
         $count_query = $wpdb->prepare(
-            "SELECT COUNT(DISTINCT p.id)
+            "SELECT COUNT(DISTINCT p.ID)
             FROM $patient_table p
-            INNER JOIN $visitations_table v ON p.id = v.patient_id
+            INNER JOIN $visitations_table v ON p.ID = v.patient_id
             WHERE v.doctor_id = %d",
             $doctor_id
         );
@@ -568,7 +538,7 @@ class Doctor extends BaseModel
     public function toArray()
     {
         return [
-            'id' => $this->id,
+            'ID' => $this->ID,
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'fullName' => $this->first_name . ' ' . $this->last_name,

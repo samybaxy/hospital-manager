@@ -4,7 +4,7 @@ namespace HospitalManager\Models;
 
 class HMO extends BaseModel
 {
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_hmos';
     protected $fillable = [
         'name'
@@ -15,27 +15,20 @@ class HMO extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Find an HMO record by ID
      * 
-     * @param int $id The HMO ID
+     * @param int $ID The HMO ID
      * @return static|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -44,7 +37,7 @@ class HMO extends BaseModel
         $table = $instance->getTable();
         
         // Add SQL_NO_CACHE to prevent caching issues
-        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE ID = %d", $ID);
         
         $hmo_data = $wpdb->get_row($query, ARRAY_A);
         
@@ -94,7 +87,7 @@ class HMO extends BaseModel
                 throw new \Exception($wpdb->last_error);
             }
             
-            $filtered_data['id'] = $wpdb->insert_id;
+            $filtered_data['ID'] = $wpdb->insert_id;
             
             return new static($filtered_data);
         } catch (\Exception $e) {
@@ -112,7 +105,7 @@ class HMO extends BaseModel
         // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
-        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+        if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
             // Prepare the update data
             $update_data = [];
             
@@ -130,7 +123,7 @@ class HMO extends BaseModel
             $result = $wpdb->update(
                 $table,
                 $update_data,
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 null, // Format will be determined automatically
                 ['%d'] // ID is an integer
             );
@@ -148,7 +141,7 @@ class HMO extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -158,7 +151,7 @@ class HMO extends BaseModel
         // Delete the record
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         
@@ -174,7 +167,7 @@ class HMO extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id'])) {
+        if (!isset($this->attributes['ID'])) {
             return [];
         }
         
@@ -185,7 +178,7 @@ class HMO extends BaseModel
         // Query patients with this HMO ID
         $query = $wpdb->prepare(
             "SELECT * FROM {$patient_table} WHERE hmo_id = %d",
-            $this->attributes['id']
+            $this->attributes['ID']
         );
         
         $results = $wpdb->get_results($query, ARRAY_A);

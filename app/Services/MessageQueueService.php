@@ -14,7 +14,7 @@ class MessageQueueService
     {
         $queue = get_transient(self::$transient_prefix . $userId) ?: [];
         $queue[] = [
-            'id' => uniqid(),
+            'ID' => uniqid(),
             'message' => $message,
             'timestamp' => time()
         ];
@@ -49,7 +49,7 @@ class MessageQueueService
         
         // Remove delivered message
         $queue = array_filter($queue, function($item) use ($messageId) {
-            return $item['id'] !== $messageId;
+            return $item['ID'] !== $messageId;
         });
 
         if (!empty($queue)) {

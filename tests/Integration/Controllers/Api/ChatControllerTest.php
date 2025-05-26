@@ -62,7 +62,7 @@ class ChatControllerTest extends TestCase
         
         // Create a test chat between patient and doctor
         $this->test_chat = $this->createTestChat([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'status' => 'active',
             'created_at' => date('Y-m-d H:i:s')
@@ -70,7 +70,7 @@ class ChatControllerTest extends TestCase
         
         // Add some test messages to the chat
         $this->createTestChatMessage([
-            'chat_id' => $this->test_chat->id,
+            'chat_id' => $this->test_chat->ID,
             'sender_id' => $this->test_users['patient'],
             'message' => 'Hello doctor, I have a question.',
             'read' => 1,
@@ -78,7 +78,7 @@ class ChatControllerTest extends TestCase
         ]);
         
         $this->createTestChatMessage([
-            'chat_id' => $this->test_chat->id,
+            'chat_id' => $this->test_chat->ID,
             'sender_id' => $this->test_users['doctor'],
             'message' => 'Hello, how can I help you?',
             'read' => 0,
@@ -130,9 +130,9 @@ class ChatControllerTest extends TestCase
         // Verify the chat data is correct
         $found = false;
         foreach ($data as $chat) {
-            if ( (int)$chat->id === $this->test_chat->id ) {
+            if ( (int)$chat->ID === $this->test_chat->ID ) {
                 $found = true;
-                $this->assertEquals($this->test_patient->id, $chat->patient_id);
+                $this->assertEquals($this->test_patient->ID, $chat->patient_id);
                 $this->assertEquals($this->test_users['doctor'], $chat->doctor_id);
                 $this->assertEquals('active', $chat->status);
                 break;
@@ -163,9 +163,9 @@ class ChatControllerTest extends TestCase
         // Verify the chat data is correct
         $found = false;
         foreach ($data as $chat) {
-            if ( (int) $chat->id === $this->test_chat->id ) {
+            if ( (int) $chat->ID === $this->test_chat->ID ) {
                 $found = true;
-                $this->assertEquals($this->test_patient->id, $chat->patient_id);
+                $this->assertEquals($this->test_patient->ID, $chat->patient_id);
                 $this->assertEquals($this->test_users['doctor'], $chat->doctor_id);
                 break;
             }
@@ -182,7 +182,7 @@ class ChatControllerTest extends TestCase
         wp_set_current_user($this->test_users['patient']);
         
         // Create request to get chat messages
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->id}/messages");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->ID}/messages");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -209,7 +209,7 @@ class ChatControllerTest extends TestCase
         // Add 20 more messages to the chat
         for ($i = 0; $i < 20; $i++) {
             $this->createTestChatMessage([
-                'chat_id' => $this->test_chat->id,
+                'chat_id' => $this->test_chat->ID,
                 'sender_id' => ($i % 2 == 0) ? $this->test_users['patient'] : $this->test_users['doctor'],
                 'message' => "Test message {$i}",
                 'read' => 0,
@@ -218,7 +218,7 @@ class ChatControllerTest extends TestCase
         }
         
         // Create request with pagination
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->id}/messages");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->ID}/messages");
         $request->set_param('page', 1);
         $request->set_param('per_page', 10);
         $response = $this->server->dispatch($request);
@@ -240,7 +240,7 @@ class ChatControllerTest extends TestCase
         wp_set_current_user($this->test_users['patient']);
         
         // Create request to send a new message
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/chats/{$this->test_chat->id}/messages");
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/chats/{$this->test_chat->ID}/messages");
         $request->set_param('message', 'This is a new test message');
         $response = $this->server->dispatch($request);
         
@@ -248,7 +248,7 @@ class ChatControllerTest extends TestCase
         $this->assertEquals(200, $response->get_status());
         
         // Verify the new message was saved
-        $messagesObj = ChatMessage::getChatMessages($this->test_chat->id, 1, 1);
+        $messagesObj = ChatMessage::getChatMessages($this->test_chat->ID, 1, 1);
         $message = isset($messagesObj->data) && !empty($messagesObj->data) ? $messagesObj->data[0] : null;
         $this->assertNotNull($message, 'Message not found');
         $this->assertEquals('This is a new test message', $message->message);
@@ -275,11 +275,11 @@ class ChatControllerTest extends TestCase
         // Check that a new chat was created
         $data = $response->get_data();
         $this->assertNotEmpty($data);
-        $this->assertEquals($this->test_patient->id, $data->patient_id);
+        $this->assertEquals($this->test_patient->ID, $data->patient_id);
         $this->assertEquals($this->test_users['doctor'], $data->doctor_id);
         
         // Check that the initial message was added
-        $msgObject = ChatMessage::getChatMessages($data->id, 1, 10);
+        $msgObject = ChatMessage::getChatMessages($data->ID, 1, 10);
         $messages = isset($msgObject->data) && !empty($msgObject->data) ? $msgObject->data : [];
         $this->assertNotEmpty($messages);
         $this->assertEquals('I would like to ask about my medication', $messages[0]->message);
@@ -294,14 +294,14 @@ class ChatControllerTest extends TestCase
         wp_set_current_user($this->test_users['patient']);
         
         // Create request to mark chat as read
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/chats/{$this->test_chat->id}/read");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/chats/{$this->test_chat->ID}/read");
         $response = $this->server->dispatch($request);
         
         // Check response status
         $this->assertEquals(200, $response->get_status());
         
         // Verify all messages are marked as read
-        $messages = ChatMessage::getChatMessages($this->test_chat->id, 1, 10);
+        $messages = ChatMessage::getChatMessages($this->test_chat->ID, 1, 10);
         foreach ($messages->data as $message) {
             if ($message->sender_id != $this->test_users['patient']) {
                 $this->assertEquals(1, $message->read);
@@ -319,7 +319,7 @@ class ChatControllerTest extends TestCase
         wp_set_current_user($unauthorized_user);
         
         // Try to access chat messages
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->id}/messages");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/chats/{$this->test_chat->ID}/messages");
         $response = $this->server->dispatch($request);
         
         // Check response status (should be 403 Forbidden)

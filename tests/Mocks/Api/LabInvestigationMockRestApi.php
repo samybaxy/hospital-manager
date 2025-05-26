@@ -39,7 +39,7 @@ class LabInvestigationMockRestApi
         ]);
 
         // Individual lab investigation routes
-        register_rest_route(self::$namespace, '/lab-investigations/(?P<id>\d+)', [
+        register_rest_route(self::$namespace, '/lab-investigations/(?P<ID>\d+)', [
             [
                 'methods' => 'GET',
                 'callback' => [self::class, 'getLabInvestigation'],
@@ -147,7 +147,7 @@ class LabInvestigationMockRestApi
         
         // Create a mock test investigation using the expected data from the test
         $test_investigation = new \stdClass();
-        $test_investigation->id = 1; // This value is used in the test
+        $test_investigation->ID = 1; // This value is used in the test
         $test_investigation->patient_id = 1; // Mock patient ID
         $test_investigation->doctor_id = 1; // Doctor user ID used in test
         $test_investigation->test_type = 'Complete Blood Count';
@@ -178,8 +178,8 @@ class LabInvestigationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_lab_investigations';
         
-        $id = $request['id'];
-        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $ID = $request['ID'];
+        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$investigation) {
             return new \WP_REST_Response([
@@ -236,7 +236,7 @@ class LabInvestigationMockRestApi
         
         // Create a mock investigation object for tests
         $investigation = new \stdClass();
-        $investigation->id = $investigation_id;
+        $investigation->ID = $investigation_id;
         $investigation->patient_id = $data['patient_id'];
         $investigation->doctor_id = $data['doctor_id'] ?? null;
         $investigation->test_type = $data['test_type'];
@@ -258,14 +258,14 @@ class LabInvestigationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_lab_investigations';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         $data = $request->get_params();
         
         // For testing, if ID is the test investigation ID, return a mock response
-        if ($id == 1) {
+        if ($ID == 1) {
             // Create a mock updated investigation object
             $investigation = new \stdClass();
-            $investigation->id = $id;
+            $investigation->ID = $ID;
             $investigation->patient_id = 1;  // Mock patient ID
             $investigation->doctor_id = 1;   // Mock doctor ID
             $investigation->test_type = 'Complete Blood Count';
@@ -278,7 +278,7 @@ class LabInvestigationMockRestApi
         }
         
         // Check if investigation exists
-        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$investigation) {
             return new \WP_REST_Response([
@@ -288,10 +288,10 @@ class LabInvestigationMockRestApi
         }
         
         // Remove ID from data to prevent overwrite
-        unset($data['id']);
+        unset($data['ID']);
         
         // Update in database
-        $result = $wpdb->update($table, $data, ['id' => $id]);
+        $result = $wpdb->update($table, $data, ['ID' => $ID]);
         
         if ($result === false) {
             return new \WP_REST_Response([
@@ -301,7 +301,7 @@ class LabInvestigationMockRestApi
         }
         
         $updated_investigation = new \stdClass();
-        $updated_investigation->id = $id;
+        $updated_investigation->ID = $ID;
         $updated_investigation->patient_id = $investigation->patient_id;
         $updated_investigation->doctor_id = $investigation->doctor_id;
         $updated_investigation->test_type = $investigation->test_type;
@@ -324,10 +324,10 @@ class LabInvestigationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_lab_investigations';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         
         // Check if investigation exists
-        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $investigation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$investigation) {
             return new \WP_REST_Response([
@@ -336,7 +336,7 @@ class LabInvestigationMockRestApi
             ], 404);
         }
         
-        $result = $wpdb->delete($table, ['id' => $id]);
+        $result = $wpdb->delete($table, ['ID' => $ID]);
         
         if (!$result) {
             return new \WP_REST_Response([

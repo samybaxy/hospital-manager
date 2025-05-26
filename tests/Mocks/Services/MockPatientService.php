@@ -23,7 +23,7 @@ class MockPatientService
             MockAuditLogger::log(
                 'create_patient',
                 'patient',
-                $patient->id,
+                $patient->ID,
                 ['patient_data' => $data]
             );
             
@@ -37,9 +37,9 @@ class MockPatientService
     /**
      * Update an existing patient
      */
-    public static function updatePatient($id, $data) 
+    public static function updatePatient($ID, $data) 
     {
-        $patient = MockPatient::find($id);
+        $patient = MockPatient::find($ID);
         if (!$patient) {
             return false;
         }
@@ -65,7 +65,7 @@ class MockPatientService
         MockAuditLogger::log(
             'update_patient',
             'patient',
-            $patient->id,
+            $patient->ID,
             [
                 'before' => $before,
                 'after' => $after
@@ -78,31 +78,31 @@ class MockPatientService
     /**
      * Get a patient by ID
      */
-    public static function getPatient($id) 
+    public static function getPatient($ID) 
     {
-        return MockPatient::find($id);
+        return MockPatient::find($ID);
     }
     
     /**
      * Delete a patient
      */
-    public static function deletePatient($id) 
+    public static function deletePatient($ID) 
     {
-        $patient = MockPatient::find($id);
+        $patient = MockPatient::find($ID);
         if (!$patient) {
             return false;
         }
         
         // Delete the patient
-        $result = MockPatient::delete($id);
+        $result = MockPatient::delete($ID);
         
         // Log the deletion if successful
         if ($result) {
             MockAuditLogger::log(
                 'delete_patient',
                 'patient',
-                $id,
-                ['patient_id' => $id]
+                $ID,
+                ['patient_id' => $ID]
             );
         }
         

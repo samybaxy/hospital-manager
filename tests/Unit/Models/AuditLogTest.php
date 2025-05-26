@@ -48,11 +48,11 @@ class AuditLogTest extends TestCase
         );
         
         $this->assertNotFalse($result, "Failed to insert audit log: " . $wpdb->last_error);
-        $id = $wpdb->insert_id;
-        $this->assertGreaterThan(0, $id, "Failed to get insert ID");
+        $ID = $wpdb->insert_id;
+        $this->assertGreaterThan(0, $ID, "Failed to get insert ID");
         
         // Now check if we can retrieve it
-        $log = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id));
+        $log = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID));
         $this->assertNotNull($log, "Failed to retrieve inserted audit log");
         $this->assertEquals($this->user_id, $log->user_id);
         $this->assertEquals('view_patient', $log->action);
@@ -86,12 +86,12 @@ class AuditLogTest extends TestCase
         
         // Fetch directly from the database
         $found_log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE id = %d",
+            "SELECT * FROM {$table} WHERE ID = %d",
             $log_id
         ));
         
         $this->assertNotNull($found_log, "Could not find audit log with ID {$log_id}");
-        $this->assertEquals($log_id, $found_log->id);
+        $this->assertEquals($log_id, $found_log->ID);
         $this->assertEquals($this->user_id, $found_log->user_id);
         $this->assertEquals('create_visitation', $found_log->action);
         $this->assertEquals('visitation', $found_log->entity_type);
@@ -136,7 +136,7 @@ class AuditLogTest extends TestCase
         
         // Fetch directly from the database
         $found_log = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$table} WHERE id = %d",
+            "SELECT * FROM {$table} WHERE ID = %d",
             $log_id
         ));
         

@@ -8,7 +8,7 @@ class AuditLog extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_audit_logs';
     
     protected $fillable = [
@@ -46,13 +46,6 @@ class AuditLog extends BaseModel
         
         $table = (new static)->table;
         
-        // Ensure both uppercase 'ID' and lowercase 'id' are handled
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         $result = $wpdb->insert(
             $table,
             $attributes,
@@ -66,8 +59,7 @@ class AuditLog extends BaseModel
         }
         
         // Add the generated ID to the attributes
-        $attributes['id'] = $wpdb->insert_id;
-        $attributes['ID'] = $attributes['id']; // Ensure both ID formats are available
+        $attributes['ID'] = $wpdb->insert_id;
 
         return new static($attributes);
     }
@@ -117,13 +109,6 @@ class AuditLog extends BaseModel
         $items = array_map(function($item) {
             $data = (array)$item;
             
-            // Ensure both id and ID exist
-            if (isset($data['id']) && !isset($data['ID'])) {
-                $data['ID'] = $data['id'];
-            } elseif (isset($data['ID']) && !isset($data['id'])) {
-                $data['id'] = $data['ID'];
-            }
-            
             return new static($data);
         }, $results);
 
@@ -165,13 +150,6 @@ class AuditLog extends BaseModel
         // Process results to ensure ID consistency
         $items = array_map(function($item) {
             $data = (array)$item;
-            
-            // Ensure both id and ID exist
-            if (isset($data['id']) && !isset($data['ID'])) {
-                $data['ID'] = $data['id'];
-            } elseif (isset($data['ID']) && !isset($data['id'])) {
-                $data['id'] = $data['ID'];
-            }
             
             return new static($data);
         }, $results);

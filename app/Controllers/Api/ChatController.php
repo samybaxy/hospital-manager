@@ -23,7 +23,7 @@ class ChatController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/chats/(?P<id>\d+)/messages', [
+        register_rest_route($this->namespace, '/chats/(?P<ID>\d+)/messages', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_messages'],
@@ -50,7 +50,7 @@ class ChatController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/chats/(?P<id>\d+)/read', [
+        register_rest_route($this->namespace, '/chats/(?P<ID>\d+)/read', [
             [
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'mark_as_read'],
@@ -70,7 +70,7 @@ class ChatController extends BaseController
 
     public function get_messages($request)
     {
-        $chat_id = $request->get_param('id');
+        $chat_id = $request->get_param('ID');
         $page = $request->get_param('page') ?? 1;
         $per_page = $request->get_param('per_page') ?? 50;
         $user_id = get_current_user_id();
@@ -90,7 +90,7 @@ class ChatController extends BaseController
 
     public function send_message($request)
     {
-        $chat_id = $request->get_param('id');
+        $chat_id = $request->get_param('ID');
         $message_text = $request->get_param('message');
         $user_id = get_current_user_id();
 
@@ -146,7 +146,7 @@ class ChatController extends BaseController
         ]);
 
         return new WP_REST_Response([
-            'id' => $chat->id,
+            'ID' => $chat->ID,
             'doctor_id' => $doctor_id,
             'patient_id' => $patient_id
         ], 201);
@@ -154,7 +154,7 @@ class ChatController extends BaseController
 
     public function mark_as_read($request)
     {
-        $chat_id = $request->get_param('id');
+        $chat_id = $request->get_param('ID');
         $user_id = get_current_user_id();
 
         // Verify chat access

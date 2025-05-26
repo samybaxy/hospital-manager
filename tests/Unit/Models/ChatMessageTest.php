@@ -77,7 +77,7 @@ class ChatMessageTest extends TestCase
     protected function createTestChatMessage(array $overrides = [])
     {
         $default_data = [
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id,
             'message' => 'Test message',
@@ -101,7 +101,7 @@ class ChatMessageTest extends TestCase
     public function testCreateChatMessage()
     {
         $data = [
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id,
             'message' => 'Hello, this is a test message.',
@@ -112,7 +112,7 @@ class ChatMessageTest extends TestCase
         $message = ChatMessage::create($data);
 
         $this->assertInstanceOf(ChatMessage::class, $message);
-        $this->assertEquals($this->chat->id, $message->chat_id);
+        $this->assertEquals($this->chat->ID, $message->chat_id);
         $this->assertEquals($this->sender_id, $message->sender_id);
         $this->assertEquals($this->recipient_id, $message->receiver_id);
         $this->assertEquals('Hello, this is a test message.', $message->message);
@@ -126,16 +126,16 @@ class ChatMessageTest extends TestCase
     {
         // Create a test message
         $message = $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id
         ]);
         
         // Find the message by ID
-        $found_message = ChatMessage::find($message->id);
+        $found_message = ChatMessage::find($message->ID);
         
         $this->assertInstanceOf(ChatMessage::class, $found_message);
-        $this->assertEquals($message->id, $found_message->id);
+        $this->assertEquals($message->ID, $found_message->ID);
         $this->assertEquals($message->chat_id, $found_message->chat_id);
         $this->assertEquals($message->message, $found_message->message);
     }
@@ -148,7 +148,7 @@ class ChatMessageTest extends TestCase
         // Create multiple test messages
         for ($i = 0; $i < 3; $i++) {
             $this->createTestChatMessage([
-                'chat_id' => $this->chat->id,
+                'chat_id' => $this->chat->ID,
                 'sender_id' => $this->sender_id,
                 'receiver_id' => $this->recipient_id,
                 'message' => "Test message $i"
@@ -156,12 +156,12 @@ class ChatMessageTest extends TestCase
         }
         
         // Get messages for this chat
-        $messages = ChatMessage::where('chat_id', $this->chat->id)->get();
+        $messages = ChatMessage::where('chat_id', $this->chat->ID)->get();
         
         $this->assertNotEmpty($messages);
         $this->assertCount(3, $messages);
         foreach ($messages as $message) {
-            $this->assertEquals($this->chat->id, $message->chat_id);
+            $this->assertEquals($this->chat->ID, $message->chat_id);
         }
     }
 
@@ -172,7 +172,7 @@ class ChatMessageTest extends TestCase
     {
         // Create a test message
         $message = $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id
         ]);
@@ -191,7 +191,7 @@ class ChatMessageTest extends TestCase
     {
         // Create a test message
         $message = $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id
         ]);
@@ -210,7 +210,7 @@ class ChatMessageTest extends TestCase
     {
         // Create an unread message
         $message = $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id,
             'read' => 0
@@ -221,7 +221,7 @@ class ChatMessageTest extends TestCase
         $message->save();
         
         // Verify it was updated
-        $updated_message = ChatMessage::find($message->id);
+        $updated_message = ChatMessage::find($message->ID);
         $this->assertEquals(1, $updated_message->read);
     }
     
@@ -232,14 +232,14 @@ class ChatMessageTest extends TestCase
     {
         // Create some read and unread messages
         $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id,
             'read' => 1 // Read
         ]);
         
         $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id,
             'read' => 0 // Unread
@@ -272,7 +272,7 @@ class ChatMessageTest extends TestCase
         
         foreach ($timestamps as $index => $timestamp) {
             $this->createTestChatMessage([
-                'chat_id' => $this->chat->id,
+                'chat_id' => $this->chat->ID,
                 'sender_id' => $this->sender_id,
                 'receiver_id' => $this->recipient_id,
                 'message' => "Message $index",
@@ -281,7 +281,7 @@ class ChatMessageTest extends TestCase
         }
         
         // Get messages in ascending order
-        $messages = ChatMessage::where('chat_id', $this->chat->id)
+        $messages = ChatMessage::where('chat_id', $this->chat->ID)
             ->orderBy('created_at', 'ASC')
             ->get();
         
@@ -298,12 +298,12 @@ class ChatMessageTest extends TestCase
     {
         // Create a test message
         $message = $this->createTestChatMessage([
-            'chat_id' => $this->chat->id,
+            'chat_id' => $this->chat->ID,
             'sender_id' => $this->sender_id,
             'receiver_id' => $this->recipient_id
         ]);
         
-        $message_id = $message->id;
+        $message_id = $message->ID;
         
         // Delete the message
         $message->delete();

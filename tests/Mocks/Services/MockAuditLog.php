@@ -31,9 +31,9 @@ class MockAuditLog
     public static function create($data) 
     {
         // Use the provided ID if it exists, otherwise auto-increment
-        $id = isset($data['id']) ? $data['id'] : self::$nextId++;
-        $log = (object)array_merge(['id' => $id], $data);
-        self::$mockLogs[$id] = $log;
+        $ID = isset($data['ID']) ? $data['ID'] : self::$nextId++;
+        $log = (object)array_merge(['ID' => $ID], $data);
+        self::$mockLogs[$ID] = $log;
         return $log;
     }
     
@@ -79,12 +79,12 @@ class MockAuditLog
     /**
      * Find a log by ID
      *
-     * @param int $id The ID of the log to find
+     * @param int $ID The ID of the log to find
      * @return object|null The log entry if found, or null
      */
-    public static function find($id) 
+    public static function find($ID) 
     {
-        return isset(self::$mockLogs[$id]) ? self::$mockLogs[$id] : null;
+        return isset(self::$mockLogs[$ID]) ? self::$mockLogs[$ID] : null;
     }
     
     /**

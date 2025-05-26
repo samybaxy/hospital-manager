@@ -59,10 +59,10 @@ class NotificationTest extends TestCase
         ]);
         
         // Find the notification by ID
-        $found_notification = Notification::find($notification->id);
+        $found_notification = Notification::find($notification->ID);
         
         $this->assertInstanceOf(Notification::class, $found_notification);
-        $this->assertEquals($notification->id, $found_notification->id);
+        $this->assertEquals($notification->ID, $found_notification->ID);
         $this->assertEquals($notification->user_id, $found_notification->user_id);
         $this->assertEquals($notification->title, $found_notification->title);
         $this->assertEquals($notification->message, $found_notification->message);
@@ -101,7 +101,7 @@ class NotificationTest extends TestCase
         $notification->save();
         
         // Retrieve the notification again
-        $updated = Notification::find($notification->id);
+        $updated = Notification::find($notification->ID);
         
         $this->assertEquals(1, $updated->read);
     }
@@ -135,7 +135,7 @@ class NotificationTest extends TestCase
             'user_id' => $this->user_id
         ]);
         
-        $notification_id = $notification->id;
+        $notification_id = $notification->ID;
         
         // Delete the notification
         $notification->delete();

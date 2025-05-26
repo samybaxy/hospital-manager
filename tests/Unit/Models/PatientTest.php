@@ -45,10 +45,10 @@ class PatientTest extends TestCase
         $test_patient = $this->createTestPatient();
         
         // Find the patient by ID
-        $found_patient = Patient::find($test_patient->id);
+        $found_patient = Patient::find($test_patient->ID);
         
         $this->assertInstanceOf(Patient::class, $found_patient);
-        $this->assertEquals($test_patient->id, $found_patient->id);
+        $this->assertEquals($test_patient->ID, $found_patient->ID);
         $this->assertEquals($test_patient->first_name, $found_patient->first_name);
         $this->assertEquals($test_patient->last_name, $found_patient->last_name);
     }
@@ -73,7 +73,7 @@ class PatientTest extends TestCase
         $this->assertTrue($updated);
         
         // Fetch the patient again to check if updates were saved
-        $updated_patient = Patient::find($patient->id);
+        $updated_patient = Patient::find($patient->ID);
         
         $this->assertEquals('Updated', $updated_patient->first_name);
         $this->assertEquals('Name', $updated_patient->last_name);
@@ -291,7 +291,7 @@ class PatientTest extends TestCase
         ]);
         
         // Store ID for later verification
-        $patient_id = $patient->id;
+        $patient_id = $patient->ID;
         
         // Delete the patient
         $result = $patient->delete();

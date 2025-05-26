@@ -51,7 +51,7 @@ class HMOController extends BaseController
             foreach ($hmos as $hmo) {
                 // Force the ID to be an integer to ensure proper type comparison in filtering
                 $formatted_hmos[] = [
-                    'id' => (int)$hmo->id, // Cast to integer to ensure numeric comparison works
+                    'ID' => (int)$hmo->ID, // Cast to integer to ensure numeric comparison works
                     'name' => $hmo->name,
                 ];
             }

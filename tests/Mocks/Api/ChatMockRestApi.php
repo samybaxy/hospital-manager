@@ -49,13 +49,13 @@ class ChatMockRestApi
             ],
         ]);
         
-        // GET /chats/{id}/messages - Get messages for a specific chat
-        register_rest_route(self::$namespace, '/chats/(?P<id>\d+)/messages', [
+        // GET /chats/{ID}/messages - Get messages for a specific chat
+        register_rest_route(self::$namespace, '/chats/(?P<ID>\d+)/messages', [
             'methods' => 'GET',
             'callback' => [self::class, 'getChatMessages'],
             'permission_callback' => [self::class, 'checkChatAccessPermission'],
             'args' => [
-                'id' => [
+                'ID' => [
                     'required' => true,
                     'validate_callback' => function($param) {
                         return is_numeric($param);
@@ -70,13 +70,13 @@ class ChatMockRestApi
             ],
         ]);
         
-        // POST /chats/{id}/messages - Send a new message
-        register_rest_route(self::$namespace, '/chats/(?P<id>\d+)/messages', [
+        // POST /chats/{ID}/messages - Send a new message
+        register_rest_route(self::$namespace, '/chats/(?P<ID>\d+)/messages', [
             'methods' => 'POST',
             'callback' => [self::class, 'sendMessage'],
             'permission_callback' => [self::class, 'checkChatAccessPermission'],
             'args' => [
-                'id' => [
+                'ID' => [
                     'required' => true,
                     'validate_callback' => function($param) {
                         return is_numeric($param);
@@ -88,13 +88,13 @@ class ChatMockRestApi
             ],
         ]);
         
-        // PUT /chats/{id}/read - Mark chat messages as read
-        register_rest_route(self::$namespace, '/chats/(?P<id>\d+)/read', [
+        // PUT /chats/{ID}/read - Mark chat messages as read
+        register_rest_route(self::$namespace, '/chats/(?P<ID>\d+)/read', [
             'methods' => 'PUT',
             'callback' => [self::class, 'markAsRead'],
             'permission_callback' => [self::class, 'checkChatAccessPermission'],
             'args' => [
-                'id' => [
+                'ID' => [
                     'required' => true,
                     'validate_callback' => function($param) {
                         return is_numeric($param);
@@ -125,7 +125,7 @@ class ChatMockRestApi
      */
     public static function checkChatAccessPermission($request)
     {
-        $chat_id = $request['id'];
+        $chat_id = $request['ID'];
         $user_id = get_current_user_id();
         
         if (!$user_id) {
@@ -150,7 +150,7 @@ class ChatMockRestApi
             
             if ($result) {
                 $patient = new Patient($result);
-                $patient_id = $patient->id;
+                $patient_id = $patient->ID;
             }
         }
         
@@ -192,7 +192,7 @@ class ChatMockRestApi
                 
                 // Get patient's chats
                 $results = $wpdb->get_results(
-                    $wpdb->prepare("SELECT * FROM $chat_table WHERE patient_id = %d ORDER BY updated_at DESC", $patient->id),
+                    $wpdb->prepare("SELECT * FROM $chat_table WHERE patient_id = %d ORDER BY updated_at DESC", $patient->ID),
                     ARRAY_A
                 );
                 
@@ -240,7 +240,7 @@ class ChatMockRestApi
         $existing_chat_result = $wpdb->get_row(
             $wpdb->prepare(
                 "SELECT * FROM $chat_table WHERE patient_id = %d AND doctor_id = %d AND status = 'active'",
-                $patient->id, $doctor_id
+                $patient->ID, $doctor_id
             ),
             ARRAY_A
         );
@@ -250,7 +250,7 @@ class ChatMockRestApi
         } else {
             // Create a new chat
             $chat = Chat::create([
-                'patient_id' => $patient->id,
+                'patient_id' => $patient->ID,
                 'doctor_id' => $doctor_id,
                 'status' => 'active',
                 'created_at' => current_time('mysql'),
@@ -260,7 +260,7 @@ class ChatMockRestApi
         
         // Add the initial message
         ChatMessage::create([
-            'chat_id' => $chat->id,
+            'chat_id' => $chat->ID,
             'sender_id' => $user_id,
             'message' => $initial_message,
             'read' => 0,
@@ -273,7 +273,7 @@ class ChatMockRestApi
         $wpdb->update(
             $chat_table,
             ['updated_at' => current_time('mysql')],
-            ['id' => $chat->id]
+            ['ID' => $chat->ID]
         );
         
         return rest_ensure_response(self::processChatForResponse($chat));
@@ -284,7 +284,7 @@ class ChatMockRestApi
      */
     public static function getChatMessages($request)
     {
-        $chat_id = $request['id'];
+        $chat_id = $request['ID'];
         $page = isset($request['page']) ? max(1, intval($request['page'])) : 1;
         $per_page = isset($request['per_page']) ? max(1, intval($request['per_page'])) : 20;
         
@@ -307,7 +307,7 @@ class ChatMockRestApi
      */
     public static function sendMessage($request)
     {
-        $chat_id = $request['id'];
+        $chat_id = $request['ID'];
         $message_text = $request['message'];
         $user_id = get_current_user_id();
         
@@ -328,7 +328,7 @@ class ChatMockRestApi
             $wpdb->update(
                 $chat_table,
                 ['updated_at' => current_time('mysql')],
-                ['id' => $chat_id]
+                ['ID' => $chat_id]
             );
         }
         
@@ -340,7 +340,7 @@ class ChatMockRestApi
      */
     public static function markAsRead($request)
     {
-        $chat_id = $request['id'];
+        $chat_id = $request['ID'];
         $user_id = get_current_user_id();
         
         // Mark all messages from the other user as read
@@ -366,25 +366,8 @@ class ChatMockRestApi
         if ($reflection->hasProperty('attributes')) {
             $attributes = $reflection->getProperty('attributes');
             $attributes->setAccessible(true);
-            $attr_values = $attributes->getValue($chat);
-            
-            // Ensure both id and ID exist
-            if (isset($attr_values['id']) && !isset($attr_values['ID'])) {
-                $attr_values['ID'] = $attr_values['id'];
-            } elseif (isset($attr_values['ID']) && !isset($attr_values['id'])) {
-                $attr_values['id'] = $attr_values['ID'];
-            }
-            
+            $attr_values = $attributes->getValue($chat);            
             return (object)$attr_values;
-        }
-        
-        // If not using protected attributes, ensure both id and ID exist
-        if (is_object($chat)) {
-            if (isset($chat->id) && !isset($chat->ID)) {
-                $chat->ID = $chat->id;
-            } elseif (isset($chat->ID) && !isset($chat->id)) {
-                $chat->id = $chat->ID;
-            }
         }
         
         // Fallback if reflection doesn't work
@@ -397,14 +380,7 @@ class ChatMockRestApi
     private static function processMessageForResponse($message)
     {
         // If message is already an array, handle it directly
-        if (is_array($message)) {
-            // Ensure both id and ID exist
-            if (isset($message['id']) && !isset($message['ID'])) {
-                $message['ID'] = $message['id'];
-            } elseif (isset($message['ID']) && !isset($message['id'])) {
-                $message['id'] = $message['ID'];
-            }
-            
+        if (is_array($message)) {            
             return (object)$message;
         }
         
@@ -415,13 +391,6 @@ class ChatMockRestApi
                 $attributes = $reflection->getProperty('attributes');
                 $attributes->setAccessible(true);
                 $attr_values = $attributes->getValue($message);
-                
-                // Ensure both id and ID exist
-                if (isset($attr_values['id']) && !isset($attr_values['ID'])) {
-                    $attr_values['ID'] = $attr_values['id'];
-                } elseif (isset($attr_values['ID']) && !isset($attr_values['id'])) {
-                    $attr_values['id'] = $attr_values['ID'];
-                }
                 
                 // Make sure 'message' property is included
                 if (isset($message->message)) {
@@ -439,16 +408,8 @@ class ChatMockRestApi
                 return (object)$attr_values;
             }
             
-            // If not using protected attributes, ensure both id and ID exist
-            if (isset($message->id) && !isset($message->ID)) {
-                $message->ID = $message->id;
-            } elseif (isset($message->ID) && !isset($message->id)) {
-                $message->id = $message->ID;
-            }
-            
             // Create a simple stdClass with all the needed properties
             $result = new \stdClass();
-            $result->id = $message->id ?? null;
             $result->ID = $message->ID ?? null;
             $result->message = $message->message ?? null;
             $result->sender_id = $message->sender_id ?? null;

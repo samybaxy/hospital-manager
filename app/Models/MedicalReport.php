@@ -8,7 +8,7 @@ class MedicalReport extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_medical_reports';
     
     protected $fillable = [
@@ -28,13 +28,6 @@ class MedicalReport extends BaseModel
     {
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
-        
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
         
         parent::__construct($attributes);
     }
@@ -209,24 +202,24 @@ class MedicalReport extends BaseModel
         );
         
         // Get the newly created ID
-        $id = $wpdb->insert_id;
+        $ID = $wpdb->insert_id;
         
         // Return a new instance with the created data
-        $created_data = array_merge(['id' => $id], $fillable_data);
+        $created_data = array_merge(['ID' => $ID], $fillable_data);
         return new static($created_data);
     }
 
     /**
      * Find a medical report by ID
      * 
-     * @param int $id The medical report ID
+     * @param int $ID The medical report ID
      * @return static|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -235,10 +228,10 @@ class MedicalReport extends BaseModel
         $table = $instance->table;
         
         // Clear any potential WordPress cache for this query
-        wp_cache_delete($id, 'hm_medical_reports');
+        wp_cache_delete($ID, 'hm_medical_reports');
         
         // Add SQL_NO_CACHE to prevent MySQL query caching issues
-        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d LIMIT 1", $id);
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE ID = %d LIMIT 1", $ID);
         
         // Use no_found_rows to improve performance and suppress filters
         $report_data = $wpdb->get_row($query, ARRAY_A);
@@ -270,15 +263,15 @@ class MedicalReport extends BaseModel
         
         // Get the primary key and value
         $primary_key = $this->primaryKey;
-        $id = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
+        $ID = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
         
         // If we have an ID, update the record, otherwise insert a new one
-        if (!empty($id)) {
+        if (!empty($ID)) {
             // Update existing record
             $result = $wpdb->update(
                 $table,
                 $this->attributes,
-                array($primary_key => $id)
+                array($primary_key => $ID)
             );
             
             return $result !== false;
@@ -305,7 +298,7 @@ class MedicalReport extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -317,7 +310,7 @@ class MedicalReport extends BaseModel
         // Delete the record
         $result = $wpdb->delete(
             $this->table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         

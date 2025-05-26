@@ -108,10 +108,10 @@ class ChatTest extends TestCase
         ]);
         
         // Find the chat by ID
-        $found_chat = Chat::find($chat->id);
+        $found_chat = Chat::find($chat->ID);
         
         $this->assertInstanceOf(Chat::class, $found_chat);
-        $this->assertEquals($chat->id, $found_chat->id);
+        $this->assertEquals($chat->ID, $found_chat->ID);
         $this->assertEquals($chat->doctor_id, $found_chat->doctor_id);
         $this->assertEquals($chat->patient_id, $found_chat->patient_id);
     }
@@ -203,7 +203,7 @@ class ChatTest extends TestCase
         $chat->save();
         
         // Retrieve the chat again
-        $updated_chat = Chat::find($chat->id);
+        $updated_chat = Chat::find($chat->ID);
         
         $this->assertEquals($new_time, $updated_chat->last_message_at);
         $this->assertNotEquals($initial_time, $updated_chat->last_message_at);
@@ -220,7 +220,7 @@ class ChatTest extends TestCase
             'patient_id' => $this->patient_id
         ]);
         
-        $chat_id = $chat->id;
+        $chat_id = $chat->ID;
         
         // Delete the chat
         $chat->delete();

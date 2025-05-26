@@ -14,7 +14,7 @@ class PatientSeeder extends Seeder
         
         // Get HMO IDs
         $hmo_table = $this->wpdb->prefix . 'hm_hmos';
-        $hmo_ids = $this->wpdb->get_col("SELECT id FROM {$hmo_table}");
+        $hmo_ids = $this->wpdb->get_col("SELECT ID FROM {$hmo_table}");
         
         if (empty($hmo_ids)) {
             $this->log("Warning: No HMOs found. Make sure HMOSeeder was run before this seeder.");

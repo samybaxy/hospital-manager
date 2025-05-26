@@ -87,7 +87,7 @@ class AuditControllerTest extends TestCase
                 'user_id' => $this->test_users['doctor'],
                 'action' => $actions[$i],
                 'entity_type' => 'patient',
-                'entity_id' => $this->test_patient->id,
+                'entity_id' => $this->test_patient->ID,
                 'details' => json_encode(['field' => "Field {$i}", 'value' => "Value {$i}"]),
                 'created_at' => date('Y-m-d H:i:s', strtotime("-{$i} hours"))
             ]);
@@ -101,21 +101,8 @@ class AuditControllerTest extends TestCase
      * @return AuditLog
      */
     protected function createAuditLog($data)
-    {
-        // Add uppercase ID if only lowercase exists
-        if (!isset($data['ID']) && isset($data['id'])) {
-            $data['ID'] = $data['id'];
-        }
-        
+    {        
         $log = AuditLog::create($data);
-        
-        // Ensure both uppercase and lowercase IDs are set after creation
-        if (isset($log->id) && !isset($log->ID)) {
-            $log->ID = $log->id;
-        } elseif (isset($log->ID) && !isset($log->id)) {
-            $log->id = $log->ID;
-        }
-        
         return $log;
     }
 
@@ -244,7 +231,7 @@ class AuditControllerTest extends TestCase
         wp_set_current_user($this->test_users['doctor']);
         
         // Create request to get patient logs
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -274,10 +261,10 @@ class AuditControllerTest extends TestCase
                 
                 if ($hasEntityType && $hasEntityId) {
                     $this->assertEquals('patient', $log->entity_type);
-                    $this->assertEquals($this->test_patient->id, $log->entity_id);
+                    $this->assertEquals($this->test_patient->ID, $log->entity_id);
                 } else {
                     // If not direct properties, the test patient ID is in the API response
-                    $this->assertEquals($this->test_patient->id, $data['data']['patient_id']);
+                    $this->assertEquals($this->test_patient->ID, $data['data']['patient_id']);
                 }
             } elseif (is_array($log)) {
                 $hasEntityType = isset($log['entity_type']);
@@ -285,10 +272,10 @@ class AuditControllerTest extends TestCase
                 
                 if ($hasEntityType && $hasEntityId) {
                     $this->assertEquals('patient', $log['entity_type']);
-                    $this->assertEquals($this->test_patient->id, $log['entity_id']);
+                    $this->assertEquals($this->test_patient->ID, $log['entity_id']);
                 } else {
                     // If not direct properties, the test patient ID is in the API response
-                    $this->assertEquals($this->test_patient->id, $data['data']['patient_id']);
+                    $this->assertEquals($this->test_patient->ID, $data['data']['patient_id']);
                 }
             } else {
                 $this->fail('Log is neither an object nor an array: ' . gettype($log));
@@ -305,7 +292,7 @@ class AuditControllerTest extends TestCase
         wp_set_current_user($this->test_users['admin']);
         
         // Create request to get patient logs
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -332,7 +319,7 @@ class AuditControllerTest extends TestCase
         $this->assertEquals(403, $response->get_status());
         
         // Try to get patient audit logs
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/audit-logs/patient/{$this->test_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status (should be 403 Forbidden)

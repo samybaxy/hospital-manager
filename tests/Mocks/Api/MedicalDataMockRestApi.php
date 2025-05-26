@@ -24,14 +24,14 @@ class MedicalDataMockRestApi
     public static function register_routes() 
     {
         // Lab results routes
-        register_rest_route(self::$namespace, '/patients/(?P<id>\d+)/lab-results', [
+        register_rest_route(self::$namespace, '/patients/(?P<ID>\d+)/lab-results', [
             'methods' => 'GET',
             'callback' => [self::class, 'getLabResults'],
             'permission_callback' => [self::class, 'checkLabResultsPermission'],
         ]);
 
         // Prescriptions routes
-        register_rest_route(self::$namespace, '/patients/(?P<id>\d+)/prescriptions', [
+        register_rest_route(self::$namespace, '/patients/(?P<ID>\d+)/prescriptions', [
             'methods' => 'GET',
             'callback' => [self::class, 'getPrescriptions'],
             'permission_callback' => [self::class, 'checkPrescriptionsPermission'],
@@ -88,12 +88,12 @@ class MedicalDataMockRestApi
      */
     public static function getLabResults($request) 
     {
-        $patient_id = $request['id'];
+        $patient_id = $request['ID'];
         
         // Mock lab results data
         $lab_results = [
             [
-                'id' => 1,
+                'ID' => 1,
                 'patient_id' => $patient_id,
                 'test_name' => 'Blood Test',
                 'test_date' => date('Y-m-d'),
@@ -101,7 +101,7 @@ class MedicalDataMockRestApi
                 'notes' => 'All values within acceptable range'
             ],
             [
-                'id' => 2,
+                'ID' => 2,
                 'patient_id' => $patient_id,
                 'test_name' => 'Urine Analysis',
                 'test_date' => date('Y-m-d', strtotime('-1 week')),
@@ -124,12 +124,12 @@ class MedicalDataMockRestApi
      */
     public static function getPrescriptions($request) 
     {
-        $patient_id = $request['id'];
+        $patient_id = $request['ID'];
         
         // Mock prescriptions data
         $prescriptions = [
             [
-                'id' => 1,
+                'ID' => 1,
                 'patient_id' => $patient_id,
                 'medication' => 'Amoxicillin',
                 'dosage' => '500mg',
@@ -139,7 +139,7 @@ class MedicalDataMockRestApi
                 'prescribed_by' => 'Dr. Smith'
             ],
             [
-                'id' => 2,
+                'ID' => 2,
                 'patient_id' => $patient_id,
                 'medication' => 'Ibuprofen',
                 'dosage' => '400mg',

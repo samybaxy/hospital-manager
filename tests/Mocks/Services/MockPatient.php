@@ -23,24 +23,24 @@ class MockPatient
             }
         }
         
-        $id = self::$nextId++;
+        $ID = self::$nextId++;
         $patient = new \stdClass();
-        $patient->id = $id;
+        $patient->ID = $ID;
         
         foreach ($data as $key => $value) {
             $patient->$key = $value;
         }
         
-        self::$patients[$id] = $patient;
+        self::$patients[$ID] = $patient;
         return $patient;
     }
     
     /**
      * Find a patient by ID
      */
-    public static function find($id) 
+    public static function find($ID) 
     {
-        return isset(self::$patients[$id]) ? self::$patients[$id] : null;
+        return isset(self::$patients[$ID]) ? self::$patients[$ID] : null;
     }
     
     /**
@@ -63,10 +63,10 @@ class MockPatient
     /**
      * Delete a patient
      */
-    public static function delete($id) 
+    public static function delete($ID) 
     {
-        if (isset(self::$patients[$id])) {
-            unset(self::$patients[$id]);
+        if (isset(self::$patients[$ID])) {
+            unset(self::$patients[$ID]);
             return true;
         }
         return false;

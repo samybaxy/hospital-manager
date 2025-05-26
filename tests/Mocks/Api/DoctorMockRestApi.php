@@ -48,7 +48,7 @@ class DoctorMockRestApi
         ]);
 
         // Update patient biodata
-        register_rest_route(self::$namespace, '/doctor/patients/(?P<id>\d+)/biodata', [
+        register_rest_route(self::$namespace, '/doctor/patients/(?P<ID>\d+)/biodata', [
             'methods' => 'PUT',
             'callback' => [self::class, 'updatePatientBiodata'],
             'permission_callback' => [self::class, 'checkDoctorPermission'],
@@ -104,17 +104,11 @@ class DoctorMockRestApi
             'to' => count($patients)
         ];
 
-        // Convert to objects with both ID and id properties
+        // Convert to objects with both ID and ID properties
         $patient_objects = array_map(function($patient) {
             $patient_obj = new \stdClass();
             foreach ($patient as $key => $value) {
                 $patient_obj->$key = $value;
-            }
-            // Ensure both lowercase 'id' and uppercase 'ID' exist
-            if (isset($patient_obj->id) && !isset($patient_obj->ID)) {
-                $patient_obj->ID = $patient_obj->id;
-            } elseif (isset($patient_obj->ID) && !isset($patient_obj->id)) {
-                $patient_obj->id = $patient_obj->ID;
             }
             return $patient_obj;
         }, $patients);
@@ -169,17 +163,11 @@ class DoctorMockRestApi
             'to' => count($visitations)
         ];
 
-        // Convert to objects with both ID and id properties
+        // Convert to objects with both ID and ID properties
         $visitation_objects = array_map(function($visitation) {
             $visitation_obj = new \stdClass();
             foreach ($visitation as $key => $value) {
                 $visitation_obj->$key = $value;
-            }
-            // Ensure both lowercase 'id' and uppercase 'ID' exist
-            if (isset($visitation_obj->id) && !isset($visitation_obj->ID)) {
-                $visitation_obj->ID = $visitation_obj->id;
-            } elseif (isset($visitation_obj->ID) && !isset($visitation_obj->id)) {
-                $visitation_obj->id = $visitation_obj->ID;
             }
             return $visitation_obj;
         }, $visitations);
@@ -243,12 +231,6 @@ class DoctorMockRestApi
         foreach ($visitation->toArray() as $key => $value) {
             $visitation_obj->$key = $value;
         }
-        // Ensure both lowercase 'id' and uppercase 'ID' exist
-        if (isset($visitation_obj->id) && !isset($visitation_obj->ID)) {
-            $visitation_obj->ID = $visitation_obj->id;
-        } elseif (isset($visitation_obj->ID) && !isset($visitation_obj->id)) {
-            $visitation_obj->id = $visitation_obj->ID;
-        }
         
         return new \WP_REST_Response([
             'success' => true,
@@ -267,11 +249,11 @@ class DoctorMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_patients';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         $data = $request->get_params();
         
         // Check if patient exists
-        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$patient) {
             return new \WP_REST_Response([
@@ -296,7 +278,7 @@ class DoctorMockRestApi
         }
         
         // Update the patient biodata
-        $result = $wpdb->update($table, $biodata, ['id' => $id]);
+        $result = $wpdb->update($table, $biodata, ['ID' => $ID]);
         
         if ($result === false) {
             return new \WP_REST_Response([
@@ -306,17 +288,10 @@ class DoctorMockRestApi
         }
         
         // Get the updated patient
-        $updated_patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
-        
-        // Ensure both lowercase 'id' and uppercase 'ID' exist
+        $updated_patient = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         $patient_obj = new \stdClass();
         foreach ($updated_patient as $key => $value) {
             $patient_obj->$key = $value;
-        }
-        if (isset($patient_obj->id) && !isset($patient_obj->ID)) {
-            $patient_obj->ID = $patient_obj->id;
-        } elseif (isset($patient_obj->ID) && !isset($patient_obj->id)) {
-            $patient_obj->id = $patient_obj->ID;
         }
         
         return new \WP_REST_Response([

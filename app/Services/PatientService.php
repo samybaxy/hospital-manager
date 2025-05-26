@@ -87,14 +87,14 @@ class PatientService
     /**
      * Update an existing patient with validation
      *
-     * @param int $id Patient ID
+     * @param int $ID Patient ID
      * @param array $data Patient data to update
      * @return Patient The updated patient
      * @throws Exception If validation fails or patient update fails
      */
-    public static function updatePatient(int $id, array $data)
+    public static function updatePatient(int $ID, array $data)
     {
-        $patient = Patient::find($id);
+        $patient = Patient::find($ID);
         
         if (!$patient) {
             throw new Exception("Patient not found");
@@ -104,7 +104,7 @@ class PatientService
         if (isset($data['phone']) && $data['phone'] !== $patient->phone) {
             $query = new Patient();
             $existing = $query->where('phone', $data['phone'])
-                ->where('id', '!=', $id)
+                ->where('ID', '!=', $ID)
                 ->get();
                 
             if (!empty($existing)) {
@@ -123,7 +123,7 @@ class PatientService
         // Update the patient
         $patient->update($data);
         
-        return Patient::find($id); // Reload fresh data
+        return Patient::find($ID); // Reload fresh data
     }
     
     /**
@@ -220,13 +220,6 @@ class PatientService
             foreach ($items as $item) {
                 // Convert the database row directly to an array
                 $patientArray = (array)$item;
-                
-                // Make sure we have consistent ID fields
-                if (isset($patientArray['id']) && !isset($patientArray['ID'])) {
-                    $patientArray['ID'] = $patientArray['id'];
-                } elseif (isset($patientArray['ID']) && !isset($patientArray['id'])) {
-                    $patientArray['id'] = $patientArray['ID'];
-                }
                 
                 // Parse JSON fields if needed
                 if (!empty($patientArray['bio_data']) && is_string($patientArray['bio_data'])) {
@@ -379,16 +372,16 @@ class PatientService
                 (
                     SELECT created_at 
                     FROM {$visitation_table} v
-                    WHERE v.patient_id = p.id
+                    WHERE v.patient_id = p.ID
                     ORDER BY v.created_at DESC
                     LIMIT 1
                 ) as last_visit_date
             FROM {$patient_table} p
-            LEFT JOIN {$hmo_table} h ON p.hmo_id = h.id
+            LEFT JOIN {$hmo_table} h ON p.hmo_id = h.ID
             WHERE 1=1
         ";
         
-        $countQuery = "SELECT COUNT(p.id) FROM {$patient_table} p WHERE 1=1";
+        $countQuery = "SELECT COUNT(p.ID) FROM {$patient_table} p WHERE 1=1";
         $values = [];
         
         // Apply filters if provided
@@ -439,7 +432,7 @@ class PatientService
         $sortOrder = !empty($params['sort_order']) && strtolower($params['sort_order']) === 'desc' ? 'DESC' : 'ASC';
         
         // Validate sort field to prevent SQL injection
-        $allowed_sort_fields = ['id', 'first_name', 'last_name', 'gender', 'age', 'hmo_name', 'last_visit_date'];
+        $allowed_sort_fields = ['ID', 'first_name', 'last_name', 'gender', 'age', 'hmo_name', 'last_visit_date'];
         if (!in_array($sortField, $allowed_sort_fields)) {
             $sortField = 'last_name'; // Default to last_name if invalid sort field
         }
@@ -474,13 +467,6 @@ class PatientService
         if ($items) {
             foreach ($items as $item) {
                 $patientArray = (array)$item;
-                
-                // Make sure we have consistent ID fields
-                if (isset($patientArray['id']) && !isset($patientArray['ID'])) {
-                    $patientArray['ID'] = $patientArray['id'];
-                } elseif (isset($patientArray['ID']) && !isset($patientArray['id'])) {
-                    $patientArray['id'] = $patientArray['ID'];
-                }
                 
                 // Format the last visit date in a user-friendly format if it exists
                 if (!empty($patientArray['last_visit_date'])) {

@@ -99,7 +99,7 @@ class WebSocketService
                             flush();
                             
                             // Delete processed message
-                            self::deleteMessage($user_id, $message['id']);
+                            self::deleteMessage($user_id, $message['ID']);
                         }
                     } else {
                         // Send a ping to keep connection alive
@@ -144,7 +144,7 @@ class WebSocketService
     public static function sendMessage($channel, $data, $user_id)
     {
         $message = [
-            'id' => uniqid(),
+            'ID' => uniqid(),
             'channel' => $channel,
             'data' => $data,
             'timestamp' => time()
@@ -192,7 +192,7 @@ class WebSocketService
         $messages = get_transient(self::$transient_prefix . $user_id) ?: [];
         
         $messages = array_filter($messages, function($message) use ($message_id) {
-            return $message['id'] !== $message_id;
+            return $message['ID'] !== $message_id;
         });
 
         set_transient(self::$transient_prefix . $user_id, $messages, self::$message_ttl);
@@ -257,7 +257,7 @@ class WebSocketService
         
         // Delete processed messages
         foreach ($messages as $message) {
-            self::deleteMessage($user_id, $message['id']);
+            self::deleteMessage($user_id, $message['ID']);
         }
         
         return new \WP_REST_Response($response);

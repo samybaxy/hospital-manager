@@ -34,10 +34,10 @@ class HMOTest extends TestCase
         ]);
         
         // Find the HMO by ID
-        $found_hmo = HMO::find($hmo->id);
+        $found_hmo = HMO::find($hmo->ID);
         
         $this->assertInstanceOf(HMO::class, $found_hmo);
-        $this->assertEquals($hmo->id, $found_hmo->id);
+        $this->assertEquals($hmo->ID, $found_hmo->ID);
         $this->assertEquals('Premium Health Partners', $found_hmo->name);
     }
 
@@ -53,13 +53,13 @@ class HMOTest extends TestCase
         
         // Create patients linked to this HMO
         $patient1 = $this->createTestPatient([
-            'hmo_id' => $hmo->id,
+            'hmo_id' => $hmo->ID,
             'first_name' => 'John',
             'last_name' => 'Doe'
         ]);
         
         $patient2 = $this->createTestPatient([
-            'hmo_id' => $hmo->id,
+            'hmo_id' => $hmo->ID,
             'first_name' => 'Jane',
             'last_name' => 'Smith'
         ]);
@@ -72,8 +72,8 @@ class HMOTest extends TestCase
         $this->assertInstanceOf(Patient::class, $patients[0]);
         
         // Verify patient data
-        $patient_ids = [$patient1->id, $patient2->id];
-        $found_ids = [$patients[0]->id, $patients[1]->id];
+        $patient_ids = [$patient1->ID, $patient2->ID];
+        $found_ids = [$patients[0]->ID, $patients[1]->ID];
         sort($patient_ids);
         sort($found_ids);
         $this->assertEquals($patient_ids, $found_ids);
@@ -94,7 +94,7 @@ class HMOTest extends TestCase
         $hmo->save();
         
         // Retrieve the HMO again
-        $updated_hmo = HMO::find($hmo->id);
+        $updated_hmo = HMO::find($hmo->ID);
         
         $this->assertEquals('Updated HMO Name', $updated_hmo->name);
     }
@@ -109,7 +109,7 @@ class HMOTest extends TestCase
             'name' => 'Temporary HMO'
         ]);
         
-        $hmo_id = $hmo->id;
+        $hmo_id = $hmo->ID;
         
         // Delete the HMO
         $hmo->delete();

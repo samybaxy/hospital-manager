@@ -54,7 +54,7 @@ class MockAuditLogger
         
         // Create the log data
         $logData = [
-            'id' => 999, // Force ID to be 999 to match test expectation
+            'ID' => 999, // Force ID to be 999 to match test expectation
             'user_id' => $userId,
             'action' => $action,
             'entity_type' => $entityType,

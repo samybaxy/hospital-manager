@@ -63,7 +63,7 @@ class AuditLoggerTest extends TestCase
         
         // We can't use instanceof with dynamic creation, so check for expected properties
         $this->assertNotNull($result);
-        $this->assertEquals(999, $result->id);
+        $this->assertEquals(999, $result->ID);
         
         // Verify the logged data
         $this->assertNotNull($this->logData);

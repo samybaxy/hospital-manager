@@ -38,7 +38,7 @@ class VisitationMockRestApi
         ]);
 
         // Individual visitation routes
-        register_rest_route(self::$namespace, '/visitations/(?P<id>\d+)', [
+        register_rest_route(self::$namespace, '/visitations/(?P<ID>\d+)', [
             [
                 'methods' => 'GET',
                 'callback' => [self::class, 'getVisitation'],
@@ -126,7 +126,7 @@ class VisitationMockRestApi
         // If user is a patient, they can only access their own visitations
         if (in_array('patient', $roles)) {
             // For individual visitation request, check if it belongs to this patient
-            if (isset($request['id'])) {
+            if (isset($request['ID'])) {
                 global $wpdb;
                 $table = $wpdb->prefix . 'hm_visitations';
                 $patient_id = self::getPatientIdForUser(get_current_user_id());
@@ -136,8 +136,8 @@ class VisitationMockRestApi
                 }
                 
                 $visitation = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM $table WHERE id = %d AND patient_id = %d",
-                    $request['id'], $patient_id
+                    "SELECT * FROM $table WHERE ID = %d AND patient_id = %d",
+                    $request['ID'], $patient_id
                 ));
                 
                 return $visitation !== null;
@@ -163,7 +163,7 @@ class VisitationMockRestApi
         $table = $wpdb->prefix . 'hm_patients';
         
         return $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM $table WHERE user_id = %d",
+            "SELECT ID FROM $table WHERE user_id = %d",
             $user_id
         ));
     }
@@ -224,7 +224,7 @@ class VisitationMockRestApi
         }
         
         // Add order by
-        $query .= " ORDER BY date DESC, id DESC";
+        $query .= " ORDER BY date DESC, ID DESC";
         
         // Prepare and execute the query
         $prepared_query = $args ? $wpdb->prepare($query, $args) : $query;
@@ -232,7 +232,7 @@ class VisitationMockRestApi
         
         // Convert data types for better testing
         foreach ($visitations as &$visitation) {
-            $visitation->id = (int) $visitation->id;
+            $visitation->ID = (int) $visitation->ID;
             $visitation->patient_id = (int) $visitation->patient_id;
             $visitation->doctor_id = (int) $visitation->doctor_id;
         }
@@ -251,8 +251,8 @@ class VisitationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_visitations';
         
-        $id = $request['id'];
-        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $ID = $request['ID'];
+        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$visitation) {
             return new \WP_REST_Response([
@@ -262,7 +262,7 @@ class VisitationMockRestApi
         }
         
         // Convert data types for better testing
-        $visitation->id = (int) $visitation->id;
+        $visitation->ID = (int) $visitation->ID;
         $visitation->patient_id = (int) $visitation->patient_id;
         $visitation->doctor_id = (int) $visitation->doctor_id;
         
@@ -306,10 +306,10 @@ class VisitationMockRestApi
         }
         
         $visitation_id = $wpdb->insert_id;
-        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $visitation_id));
+        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $visitation_id));
         
         // Convert data types for better testing
-        $visitation->id = (int) $visitation->id;
+        $visitation->ID = (int) $visitation->ID;
         $visitation->patient_id = (int) $visitation->patient_id;
         $visitation->doctor_id = (int) $visitation->doctor_id;
         
@@ -327,11 +327,11 @@ class VisitationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_visitations';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         $data = $request->get_params();
         
         // Check if visitation exists
-        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$visitation) {
             return new \WP_REST_Response([
@@ -341,14 +341,14 @@ class VisitationMockRestApi
         }
         
         // Remove ID from data to prevent overwrite
-        unset($data['id']);
+        unset($data['ID']);
         
         // Set updated_at timestamp
         if (!isset($data['updated_at'])) {
             $data['updated_at'] = current_time('mysql');
         }
         
-        $result = $wpdb->update($table, $data, ['id' => $id]);
+        $result = $wpdb->update($table, $data, ['ID' => $ID]);
         
         if ($result === false) {
             return new \WP_REST_Response([
@@ -357,10 +357,10 @@ class VisitationMockRestApi
             ], 500);
         }
         
-        $updated_visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $updated_visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         // Convert data types for better testing
-        $updated_visitation->id = (int) $updated_visitation->id;
+        $updated_visitation->ID = (int) $updated_visitation->ID;
         $updated_visitation->patient_id = (int) $updated_visitation->patient_id;
         $updated_visitation->doctor_id = (int) $updated_visitation->doctor_id;
         
@@ -378,10 +378,10 @@ class VisitationMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_visitations';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         
         // Check if visitation exists
-        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $visitation = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$visitation) {
             return new \WP_REST_Response([
@@ -390,7 +390,7 @@ class VisitationMockRestApi
             ], 404);
         }
         
-        $result = $wpdb->delete($table, ['id' => $id]);
+        $result = $wpdb->delete($table, ['ID' => $ID]);
         
         if (!$result) {
             return new \WP_REST_Response([

@@ -91,7 +91,7 @@ class RadiologicalExamSeeder extends Seeder
             if (rand(1, 10) > 4) {
                 // Get visitation date
                 $created_at = $this->wpdb->get_var(
-                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE id = {$visitation_id}"
+                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}"
                 );
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
                 
@@ -147,6 +147,6 @@ class RadiologicalExamSeeder extends Seeder
      */
     protected function getExistingIds($table)
     {
-        return $this->wpdb->get_col("SELECT id FROM {$this->wpdb->prefix}{$table}");
+        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table}");
     }
 }

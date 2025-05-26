@@ -87,7 +87,7 @@ class PatientControllerTest extends TestCase
         // Verify the patient data is correct
         $found = false;
         foreach ($data['data']['patients'] as $patient) {
-            if ( (int)$patient->id === $this->test_patient->id ) {
+            if ( (int)$patient->ID === $this->test_patient->ID ) {
                 $found = true;
                 $this->assertEquals($this->test_users['patient'], $patient->user_id);
                 $this->assertEquals('Test', $patient->first_name);
@@ -107,7 +107,7 @@ class PatientControllerTest extends TestCase
         wp_set_current_user($this->test_users['doctor']);
         
         // Create request to get a specific patient
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -119,7 +119,7 @@ class PatientControllerTest extends TestCase
         $this->assertArrayHasKey('data', $data);
         
         // Verify patient data is correct
-        $this->assertEquals($this->test_patient->id, $data['data']->id);
+        $this->assertEquals($this->test_patient->ID, $data['data']->ID);
         $this->assertEquals('Test', $data['data']->first_name);
         $this->assertEquals('Patient', $data['data']->last_name);
         $this->assertEquals('37', $data['data']->age);
@@ -181,7 +181,7 @@ class PatientControllerTest extends TestCase
         $this->assertEquals('AB-', $bio_data['blood_group']);
         
         // Verify the patient exists in database
-        $patient_id = $data['data']->id;
+        $patient_id = $data['data']->ID;
         $created_patient = Patient::find($patient_id);
         $this->assertNotNull($created_patient, 'Patient not found in database');
         
@@ -213,7 +213,7 @@ class PatientControllerTest extends TestCase
         ];
         
         // Create request to update the patient
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/patients/{$this->test_patient->id}");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/patients/{$this->test_patient->ID}");
         $request->set_body_params($update_data);
         $response = $this->server->dispatch($request);
         
@@ -233,7 +233,7 @@ class PatientControllerTest extends TestCase
         $this->assertEquals('Updated allergies', $bio_data['allergies']);
         
         // Verify the update was saved to database
-        $updated_patient = Patient::find($this->test_patient->id);
+        $updated_patient = Patient::find($this->test_patient->ID);
         $this->assertEquals('05555555555', $updated_patient->phone);
         
         // Verify bio_data in database
@@ -257,7 +257,7 @@ class PatientControllerTest extends TestCase
         ]);
         
         // Create request to delete the patient
-        $request = new WP_REST_Request('DELETE', "/{$this->namespace}/patients/{$temp_patient->id}");
+        $request = new WP_REST_Request('DELETE', "/{$this->namespace}/patients/{$temp_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -268,7 +268,7 @@ class PatientControllerTest extends TestCase
         $this->assertTrue($data['success']);
         
         // Verify the patient was deleted from database
-        $deleted_patient = Patient::find($temp_patient->id);
+        $deleted_patient = Patient::find($temp_patient->ID);
         $this->assertNull($deleted_patient);
     }
 
@@ -291,7 +291,7 @@ class PatientControllerTest extends TestCase
         wp_set_current_user(0);
         
         // Try to get a specific patient
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be unauthorized
@@ -318,7 +318,7 @@ class PatientControllerTest extends TestCase
         $this->assertTrue($data['success']);
         
         // Verify the correct patient data is returned
-        $this->assertEquals($this->test_patient->id, $data['data']->id);
+        $this->assertEquals($this->test_patient->ID, $data['data']->ID);
         $this->assertEquals($this->test_users['patient'], $data['data']->user_id);
     }
 
@@ -471,7 +471,7 @@ class PatientControllerTest extends TestCase
         wp_set_current_user($different_patient_id);
         
         // Attempt to access the patient record that doesn't belong to them
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be 403 Forbidden

@@ -46,10 +46,10 @@ class VisitationSeeder extends Seeder
         
         // Get patient and doctor IDs
         $patients_table = $this->wpdb->prefix . 'hm_patients';
-        $patient_ids = $this->wpdb->get_col("SELECT id FROM {$patients_table}");
+        $patient_ids = $this->wpdb->get_col("SELECT ID FROM {$patients_table}");
         
         $doctors_table = $this->wpdb->prefix . 'hm_doctors';
-        $doctor_ids = $this->wpdb->get_col("SELECT id FROM {$doctors_table}");
+        $doctor_ids = $this->wpdb->get_col("SELECT ID FROM {$doctors_table}");
         
         if (empty($patient_ids) || empty($doctor_ids)) {
             $this->log("No patients or doctors found. Cannot create visitations.");
@@ -110,7 +110,7 @@ class VisitationSeeder extends Seeder
                     [
                         'patient_id' => $appointment['patient_id'],
                         'doctor_id' => $appointment['doctor_id'],
-                        'appointment_id' => $appointment['id'], // Link to appointment
+                        'appointment_id' => $appointment['ID'], // Link to appointment
                         'date' => $appointment['appointment_date'],
                         'time' => $visit_time,
                         'medical_history' => $medical_history,

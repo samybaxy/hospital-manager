@@ -13,14 +13,14 @@ class ChatSeeder extends Seeder
         
         // Get patient and doctor IDs
         $patients = $this->wpdb->get_results("
-            SELECT id, user_id FROM {$this->wpdb->prefix}hm_patients
-            ORDER BY id ASC
+            SELECT ID, user_id FROM {$this->wpdb->prefix}hm_patients
+            ORDER BY ID ASC
             LIMIT 15
         ");
         
         $doctors = $this->wpdb->get_results("
-            SELECT id, user_id FROM {$this->wpdb->prefix}hm_doctors
-            ORDER BY id ASC
+            SELECT ID, user_id FROM {$this->wpdb->prefix}hm_doctors
+            ORDER BY ID ASC
             LIMIT 10
         ");
         
@@ -50,8 +50,8 @@ class ChatSeeder extends Seeder
                 $created_at_dt = $this->faker->dateTimeBetween('-3 months', '-1 day');
                 $created_at = $created_at_dt->format('Y-m-d H:i:s');
                 $chat_data = [
-                    'doctor_id' => $doctor->id,
-                    'patient_id' => $patient->id,
+                    'doctor_id' => $doctor->ID,
+                    'patient_id' => $patient->ID,
                     'status' => 'active',
                     'created_at' => $created_at,
                     'updated_at' => $created_at,
@@ -76,7 +76,7 @@ class ChatSeeder extends Seeder
                     $this->wpdb->update(
                         $this->wpdb->prefix . 'hm_chats',
                         ['last_message_at' => date('Y-m-d H:i:s')],
-                        ['id' => $chat_id]
+                        ['ID' => $chat_id]
                     );
                 }
             }

@@ -87,9 +87,9 @@ class DoctorControllerTest extends TestCase
         
         // Create test visitation - let's use a static mock object instead
         $this->test_visitation = new \stdClass();
-        $this->test_visitation->id = 1;
-        $this->test_visitation->patient_id = $this->test_patients[0]->id;
-        $this->test_visitation->doctor_id = $this->test_doctor->id;
+        $this->test_visitation->ID = 1;
+        $this->test_visitation->patient_id = $this->test_patients[0]->ID;
+        $this->test_visitation->doctor_id = $this->test_doctor->ID;
         $this->test_visitation->complaint = 'Chest pain';
         $this->test_visitation->diagnosis = 'Suspected angina';
         $this->test_visitation->date = date('Y-m-d');
@@ -116,9 +116,9 @@ class DoctorControllerTest extends TestCase
             $visitation = Visitation::create($data);
             
             // If Visitation::create failed to set an ID, create a mock object
-            if (!isset($visitation->id) || empty($visitation->id)) {
+            if (!isset($visitation->ID) || empty($visitation->ID)) {
                 $mock = new \stdClass();
-                $mock->id = 1;
+                $mock->ID = 1;
                 $mock->patient_id = $patient_id;
                 $mock->doctor_id = $doctor_id;
                 $mock->complaint = $data['complaint'];
@@ -132,7 +132,7 @@ class DoctorControllerTest extends TestCase
         } catch (\Exception $e) {
             // If an exception occurs, create a mock object
             $mock = new \stdClass();
-            $mock->id = 1;
+            $mock->ID = 1;
             $mock->patient_id = $patient_id;
             $mock->doctor_id = $doctor_id;
             $mock->complaint = $data['complaint'];
@@ -239,7 +239,7 @@ class DoctorControllerTest extends TestCase
         
         // Prepare visitation data
         $visitation_data = [
-            'patient_id' => $this->test_patients[1]->id,
+            'patient_id' => $this->test_patients[1]->ID,
             'date' => date('Y-m-d', strtotime('+1 day')),
             'time' => '11:30:00',
             'complaint' => 'Headache and dizziness',
@@ -264,12 +264,12 @@ class DoctorControllerTest extends TestCase
         // Get response data and determine format
         $response_data = $data['data'];
         
-        // The response has a complex structure in tests where the id is inside attributes
+        // The response has a complex structure in tests where the ID is inside attributes
         $visitation_id = null;
         
         if (is_object($response_data) && property_exists($response_data, 'attributes') && is_array($response_data->attributes)) {
             // Get ID from attributes array
-            $visitation_id = $response_data->attributes['id'] ?? null;
+            $visitation_id = $response_data->attributes['ID'] ?? null;
             
             // If we found the ID, also verify doctor_id 
             if (isset($response_data->attributes['doctor_id'])) {
@@ -301,8 +301,8 @@ class DoctorControllerTest extends TestCase
         } else {
             // If we can't find doctor_id, create a mock to continue testing
             $mock_visitation = new \stdClass();
-            $mock_visitation->id = $visitation_id;
-            $mock_visitation->doctor_id = $this->test_doctor->id;
+            $mock_visitation->ID = $visitation_id;
+            $mock_visitation->doctor_id = $this->test_doctor->ID;
             // Use this mock for the rest of the test
             $created_visitation = $mock_visitation;
         }
@@ -330,7 +330,7 @@ class DoctorControllerTest extends TestCase
         ];
         
         // Create request to update patient biodata
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/doctor/patients/{$this->test_patients[0]->id}/biodata");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/doctor/patients/{$this->test_patients[0]->ID}/biodata");
         $request->set_body_params($update_data);
         $response = $this->server->dispatch($request);
         
@@ -352,7 +352,7 @@ class DoctorControllerTest extends TestCase
         $this->assertEquals($biodata['family_history'], $returned_biodata['family_history']);
         
         // Verify the update was saved to database
-        $updated_patient = Patient::find($this->test_patients[0]->id);
+        $updated_patient = Patient::find($this->test_patients[0]->ID);
         $stored_biodata = json_decode($updated_patient->bio_data, true);
         $this->assertIsArray($stored_biodata);
         $this->assertEquals($biodata['blood_group'], $stored_biodata['blood_group']);
@@ -369,7 +369,7 @@ class DoctorControllerTest extends TestCase
         
         // Prepare visitation data
         $visitation_data = [
-            'patient_id' => $this->test_patients[1]->id,
+            'patient_id' => $this->test_patients[1]->ID,
             'date' => date('Y-m-d'),
             'time' => '14:00:00',
             'complaint' => 'Test complaint'

@@ -91,7 +91,7 @@ class AuditLoggingTest extends TestCase
         $logs = MockAuditLog::where([
             'action' => 'create_patient',
             'entity_type' => 'patient',
-            'entity_id' => $patient->id
+            'entity_id' => $patient->ID
         ])->get();
         
         // Verify log contents
@@ -101,7 +101,7 @@ class AuditLoggingTest extends TestCase
         $this->assertEquals($this->admin_user_id, $log->user_id, "User ID in audit log doesn't match current user");
         $this->assertEquals('create_patient', $log->action, "Incorrect action recorded in audit log");
         $this->assertEquals('patient', $log->entity_type, "Incorrect entity type in audit log");
-        $this->assertEquals($patient->id, $log->entity_id, "Incorrect entity ID in audit log");
+        $this->assertEquals($patient->ID, $log->entity_id, "Incorrect entity ID in audit log");
         $this->assertEquals($this->test_ip, $log->ip_address, "IP address not correctly recorded in audit log");
         $this->assertNotNull($log->created_at, "Timestamp missing from audit log");
         
@@ -142,7 +142,7 @@ class AuditLoggingTest extends TestCase
             'age' => 35,
             'bio_data' => 'Updated bio data'
         ];
-        MockPatientService::updatePatient($patient->id, $update_data);
+        MockPatientService::updatePatient($patient->ID, $update_data);
         
         // There should be one log entry for the update
         $this->assertEquals(1, $this->getAuditLogCount(), "Patient update should generate exactly one audit log entry");
@@ -151,7 +151,7 @@ class AuditLoggingTest extends TestCase
         $logs = MockAuditLog::where([
             'action' => 'update_patient',
             'entity_type' => 'patient',
-            'entity_id' => $patient->id
+            'entity_id' => $patient->ID
         ])->get();
         
         // Verify log contents
@@ -186,7 +186,7 @@ class AuditLoggingTest extends TestCase
         
         // Create and get the ID
         $patient = MockPatientService::createPatient($patient_data);
-        $patient_id = $patient->id;
+        $patient_id = $patient->ID;
         
         // Reset log count after creation
         MockAuditLog::$mockLogs = [];

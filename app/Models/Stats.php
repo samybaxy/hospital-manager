@@ -8,7 +8,7 @@ class Stats extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_stats';
     protected static $conditions = [];
     protected static $orderBy = [];

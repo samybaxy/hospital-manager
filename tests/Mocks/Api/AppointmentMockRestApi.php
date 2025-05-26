@@ -38,7 +38,7 @@ class AppointmentMockRestApi
         ]);
 
         // Individual appointment routes
-        register_rest_route(self::$namespace, '/appointments/(?P<id>\d+)', [
+        register_rest_route(self::$namespace, '/appointments/(?P<ID>\d+)', [
             [
                 'methods' => 'GET',
                 'callback' => [self::class, 'getAppointment'],
@@ -126,16 +126,16 @@ class AppointmentMockRestApi
         
         // Patient can view and update their own appointments
         if (in_array('patient', $roles)) {
-            if ($method === 'GET' && isset($request['id'])) {
+            if ($method === 'GET' && isset($request['ID'])) {
                 global $wpdb;
                 $table = $wpdb->prefix . 'hm_appointments';
                 
                 // Get the appointment record being requested
                 $appointment = $wpdb->get_row($wpdb->prepare(
                     "SELECT a.* FROM $table a 
-                    INNER JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.id
-                    WHERE a.id = %d",
-                    $request['id']
+                    INNER JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.ID
+                    WHERE a.ID = %d",
+                    $request['ID']
                 ));
                 
                 // Get the patient associated with current user
@@ -146,7 +146,7 @@ class AppointmentMockRestApi
                 ));
                 
                 // Patients can only access their own appointments
-                if ($appointment && $patient && $appointment->patient_id == $patient->id) {
+                if ($appointment && $patient && $appointment->patient_id == $patient->ID) {
                     return true;
                 }
                 
@@ -193,7 +193,7 @@ class AppointmentMockRestApi
             
             if ($doctor) {
                 $sql .= " WHERE a.doctor_id = %d";
-                $params[] = $doctor->id;
+                $params[] = $doctor->ID;
             }
         }
         
@@ -208,7 +208,7 @@ class AppointmentMockRestApi
             
             if ($patient) {
                 $sql .= " WHERE a.patient_id = %d";
-                $params[] = $patient->id;
+                $params[] = $patient->ID;
             }
         }
         
@@ -264,8 +264,8 @@ class AppointmentMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_appointments';
         
-        $id = $request['id'];
-        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $ID = $request['ID'];
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$appointment) {
             return new \WP_REST_Response([
@@ -310,7 +310,7 @@ class AppointmentMockRestApi
             ));
             
             if ($patient) {
-                $data['patient_id'] = $patient->id;
+                $data['patient_id'] = $patient->ID;
             } else {
                 return new \WP_REST_Response([
                     'success' => false,
@@ -367,7 +367,7 @@ class AppointmentMockRestApi
         }
         
         $appointment_id = $wpdb->insert_id;
-        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $appointment_id));
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $appointment_id));
         
         return new \WP_REST_Response([
             'success' => true,
@@ -386,11 +386,11 @@ class AppointmentMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_appointments';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         $data = $request->get_params();
         
         // Check if appointment exists
-        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$appointment) {
             return new \WP_REST_Response([
@@ -400,7 +400,7 @@ class AppointmentMockRestApi
         }
         
         // Remove ID from data to prevent overwrite
-        unset($data['id']);
+        unset($data['ID']);
         
         // If updating date/time, check for conflicts
         if ((isset($data['appointment_date']) || isset($data['appointment_time'])) && 
@@ -415,9 +415,9 @@ class AppointmentMockRestApi
                  WHERE doctor_id = %d 
                  AND appointment_date = %s 
                  AND appointment_time = %s 
-                 AND id != %d
+                 AND ID != %d
                  AND status NOT IN ('cancelled', 'completed')",
-                $appointment->doctor_id, $date, $time, $id
+                $appointment->doctor_id, $date, $time, $ID
             ));
             
             if ($existing > 0) {
@@ -432,7 +432,7 @@ class AppointmentMockRestApi
         $data['updated_at'] = current_time('mysql');
         
         // Update the appointment
-        $result = $wpdb->update($table, $data, ['id' => $id]);
+        $result = $wpdb->update($table, $data, ['ID' => $ID]);
         
         if ($result === false) {
             return new \WP_REST_Response([
@@ -441,7 +441,7 @@ class AppointmentMockRestApi
             ], 500);
         }
         
-        $updated_appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $updated_appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         return new \WP_REST_Response([
             'success' => true,
@@ -460,10 +460,10 @@ class AppointmentMockRestApi
         global $wpdb;
         $table = $wpdb->prefix . 'hm_appointments';
         
-        $id = $request['id'];
+        $ID = $request['ID'];
         
         // Check if appointment exists
-        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
+        $appointment = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE ID = %d", $ID));
         
         if (!$appointment) {
             return new \WP_REST_Response([
@@ -473,7 +473,7 @@ class AppointmentMockRestApi
         }
         
         // Delete the appointment
-        $result = $wpdb->delete($table, ['id' => $id]);
+        $result = $wpdb->delete($table, ['ID' => $ID]);
         
         if (!$result) {
             return new \WP_REST_Response([

@@ -40,7 +40,7 @@ class DoctorController extends BaseController
         ]);
 
         // Get single doctor (public endpoint)
-        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/doctors/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctor'],
@@ -49,7 +49,7 @@ class DoctorController extends BaseController
         ]);
 
         // Get doctor's patients
-        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)/patients', [
+        register_rest_route($this->namespace, '/doctors/(?P<ID>\d+)/patients', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctor_patients'],
@@ -58,7 +58,7 @@ class DoctorController extends BaseController
         ]);
 
         // Update doctor (admin only)
-        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/doctors/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'update_doctor'],
@@ -67,7 +67,7 @@ class DoctorController extends BaseController
         ]);
 
         // Delete doctor (admin only)
-        register_rest_route($this->namespace, '/doctors/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/doctors/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::DELETABLE,
                 'callback' => [$this, 'delete_doctor'],
@@ -129,7 +129,7 @@ class DoctorController extends BaseController
             // Format doctors to include all required fields and fullName
             $doctors = array_map(function($doctor) {
                 $formatted_doctor = [
-                    'id' => $doctor->id,
+                    'ID' => $doctor->ID,
                     'user_id' => $doctor->user_id,
                     'first_name' => $doctor->first_name,
                     'last_name' => $doctor->last_name,
@@ -190,7 +190,7 @@ class DoctorController extends BaseController
     public function get_doctor($request)
     {
         try {
-            $doctor_id = $request->get_param('id');
+            $doctor_id = $request->get_param('ID');
             $doctor = Doctor::find($doctor_id);
             
             if (!$doctor || $doctor->status !== 'active') {
@@ -205,7 +205,7 @@ class DoctorController extends BaseController
             
             // Format the response
             $response = [
-                'id' => $doctor->id,
+                'ID' => $doctor->ID,
                 'first_name' => $doctor->first_name,
                 'last_name' => $doctor->last_name,
                 'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
@@ -318,7 +318,7 @@ class DoctorController extends BaseController
                 throw new \Exception('Failed to save doctor to database');
             }
             
-            error_log("Doctor created successfully with ID: {$doctor->id}");
+            error_log("Doctor created successfully with ID: {$doctor->ID}");
             
             return new WP_REST_Response([
                 'message' => 'Doctor created successfully',
@@ -340,9 +340,9 @@ class DoctorController extends BaseController
      */
     public function update_doctor($request)
     {
-        $id = $request->get_param('id');
+        $ID = $request->get_param('ID');
         
-        if (!$id) {
+        if (!$ID) {
             return new WP_Error(
                 'missing_doctor_id',
                 'Doctor ID is required',
@@ -351,7 +351,7 @@ class DoctorController extends BaseController
         }
         
         try {
-            $doctor = Doctor::find($id);
+            $doctor = Doctor::find($ID);
             
             if (!$doctor) {
                 return new WP_Error(
@@ -436,7 +436,7 @@ class DoctorController extends BaseController
             }
             
             // Log successful update
-            error_log("Doctor {$id} updated successfully");
+            error_log("Doctor {$ID} updated successfully");
             
             return new WP_REST_Response([
                 'message' => 'Doctor updated successfully',
@@ -462,7 +462,7 @@ class DoctorController extends BaseController
     public function delete_doctor($request) 
     {
         try {
-            $doctor_id = (int) $request['id'];
+            $doctor_id = (int) $request['ID'];
             $doctor = Doctor::find($doctor_id);
             
             if (!$doctor) {
@@ -505,7 +505,7 @@ class DoctorController extends BaseController
                 [
                     'user_id' => get_current_user_id(),
                     'doctor_data' => [
-                        'id' => $doctor_id,
+                        'ID' => $doctor_id,
                         'first_name' => $doctor->first_name,
                         'last_name' => $doctor->last_name
                     ]
@@ -595,7 +595,7 @@ class DoctorController extends BaseController
             AuditLogger::log(
                 'update_doctor_profile',
                 'doctor',
-                $doctor->id,
+                $doctor->ID,
                 [
                     'user_id' => $user_id,
                     'updated_fields' => array_keys($request->get_params())
@@ -603,7 +603,7 @@ class DoctorController extends BaseController
             );
             
             // Return the updated profile
-            $updated_doctor = Doctor::find($doctor->id);
+            $updated_doctor = Doctor::find($doctor->ID);
             $user = get_userdata($user_id);
             $response = $updated_doctor->attributes;
             $response['email'] = $user->user_email;
@@ -628,7 +628,7 @@ class DoctorController extends BaseController
     public function get_doctor_patients($request)
     {
         try {
-            $doctor_id = $request->get_param('id');
+            $doctor_id = $request->get_param('ID');
             
             // Validate doctor exists
             $doctor = Doctor::find($doctor_id);
@@ -690,7 +690,7 @@ class DoctorController extends BaseController
             // Format the response data
             $patients = array_map(function($patient) {
                 return [
-                    'id' => $patient->id,
+                    'ID' => $patient->ID,
                     'first_name' => $patient->first_name,
                     'last_name' => $patient->last_name,
                     'phone' => $patient->phone,

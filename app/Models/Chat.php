@@ -8,7 +8,7 @@ class Chat extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_chats';
     
     protected $fillable = [
@@ -26,27 +26,20 @@ class Chat extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -55,16 +48,11 @@ class Chat extends BaseModel
         $table = $instance->getTable();
         
         // Fetch the chat record directly from the database.
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $chat_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$chat_data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
-        if (isset($chat_data['id']) && !isset($chat_data['ID'])) {
-            $chat_data['ID'] = $chat_data['id'];
         }
         
         // Create a new chat instance with the fetched data.
@@ -87,9 +75,9 @@ class Chat extends BaseModel
                     COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
                 FROM {$table} c
                 JOIN {$wpdb->users} p ON p.ID = c.patient_id
-                LEFT JOIN {$messages_table} m ON m.chat_id = c.id
+                LEFT JOIN {$messages_table} m ON m.chat_id = c.ID
                 WHERE c.doctor_id = %d
-                GROUP BY c.id
+                GROUP BY c.ID
                 ORDER BY c.last_message_at DESC
             ", $userId, $userId), ARRAY_A);
         } else {
@@ -99,23 +87,16 @@ class Chat extends BaseModel
                     COUNT(CASE WHEN m.read = 0 AND m.receiver_id = %d THEN 1 END) as unread_count
                 FROM {$table} c
                 JOIN {$wpdb->users} d ON d.ID = c.doctor_id
-                LEFT JOIN {$messages_table} m ON m.chat_id = c.id
+                LEFT JOIN {$messages_table} m ON m.chat_id = c.ID
                 WHERE c.patient_id = %d
-                GROUP BY c.id
+                GROUP BY c.ID
                 ORDER BY c.last_message_at DESC
             ", $userId, $userId), ARRAY_A);
         }
         
         // Process results to ensure ID case consistency
         $chats = [];
-        foreach ($results as $result) {
-            // Make sure both lowercase 'id' and uppercase 'ID' exist
-            if (isset($result['id']) && !isset($result['ID'])) {
-                $result['ID'] = $result['id'];
-            } elseif (isset($result['ID']) && !isset($result['id'])) {
-                $result['id'] = $result['ID'];
-            }
-            
+        foreach ($results as $result) {            
             $chats[] = new static($result);
         }
         
@@ -145,7 +126,7 @@ class Chat extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $wpdb->insert_id;
         return new static($attributes);
     }
 
@@ -180,7 +161,7 @@ class Chat extends BaseModel
         return $wpdb->update(
             $table,
             ['last_message_at' => current_time('mysql')],
-            ['id' => $chatId]
+            ['ID' => $chatId]
         );
     }
 
@@ -196,7 +177,7 @@ class Chat extends BaseModel
         
         return $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM {$table}
-            WHERE id = %d AND (doctor_id = %d OR patient_id = %d)
+            WHERE ID = %d AND (doctor_id = %d OR patient_id = %d)
         ", $chatId, $userId, $userId)) > 0;
     }
 
@@ -205,7 +186,7 @@ class Chat extends BaseModel
      */
     public function messages()
     {
-        return ChatMessage::where('chat_id', $this->id)
+        return ChatMessage::where('chat_id', $this->ID)
             ->orderBy('created_at', 'DESC')
             ->get();
     }
@@ -381,7 +362,7 @@ class Chat extends BaseModel
         // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
-        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+        if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
             // Update existing record
             $result = $wpdb->update(
                 $table,
@@ -391,14 +372,14 @@ class Chat extends BaseModel
                     'last_message_at' => $this->attributes['last_message_at'],
                     'updated_at' => current_time('mysql')
                 ],
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 [
                     '%d', // doctor_id
                     '%d', // patient_id
                     '%s', // last_message_at
                     '%s', // updated_at
                 ],
-                ['%d'] // id
+                ['%d'] // ID
             );
             
             return $result !== false;
@@ -417,7 +398,7 @@ class Chat extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -427,7 +408,7 @@ class Chat extends BaseModel
         // Delete the record
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         

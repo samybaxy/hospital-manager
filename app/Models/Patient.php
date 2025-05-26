@@ -8,7 +8,7 @@ class Patient extends BaseModel
 {
     use FindTrait;
     
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_patients';
     protected static $conditions = [];
     protected static $orderBy = [];
@@ -35,13 +35,6 @@ class Patient extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
     
@@ -63,27 +56,20 @@ class Patient extends BaseModel
             }
         }
         
-        // Ensure ID properties are consistent
-        if (isset($data['id']) && !isset($data['ID'])) {
-            $data['ID'] = $data['id'];
-        } elseif (isset($data['ID']) && !isset($data['id'])) {
-            $data['id'] = $data['ID'];
-        }
-        
         return $data;
     }
 
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -92,16 +78,11 @@ class Patient extends BaseModel
         $table = $instance->getTable();
         
         // Fetch the patient record directly from the database
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $patient_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$patient_data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-        if (isset($patient_data['id']) && !isset($patient_data['ID'])) {
-            $patient_data['ID'] = $patient_data['id'];
         }
         
         // Ensure phone number has leading zero if needed (but not in tests)
@@ -127,7 +108,7 @@ class Patient extends BaseModel
         $table = $instance->getTable();
         
         // Get all patients
-        $patients = $wpdb->get_results("SELECT * FROM $table ORDER BY id ASC", ARRAY_A);
+        $patients = $wpdb->get_results("SELECT * FROM $table ORDER BY ID ASC", ARRAY_A);
         
         // Convert to Patient models
         return array_map(function($patient) {
@@ -168,8 +149,7 @@ class Patient extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
-        $attributes['ID'] = $attributes['id']; // Add uppercase ID for compatibility
+        $attributes['ID'] = $wpdb->insert_id;
         return new static($attributes);
     }
 
@@ -441,7 +421,7 @@ class Patient extends BaseModel
      */
     public function hmo()
     {
-        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'id');
+        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'ID');
     }
 
     /**
@@ -449,7 +429,7 @@ class Patient extends BaseModel
      */
     public function visitations()
     {
-        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'id');
+        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'ID');
     }
     
     /**
@@ -482,12 +462,12 @@ class Patient extends BaseModel
         }
         
         // Determine if this is an update or insert
-        if (isset($this->attributes['id']) && !empty($this->attributes['id'])) {
+        if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
             $result = $wpdb->update(
                 $table,
                 $data,
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 array_map(function($field) {
                     return is_numeric($field) ? '%d' : '%s';
                 }, $data),
@@ -506,8 +486,7 @@ class Patient extends BaseModel
             );
             
             if ($result !== false) {
-                $this->attributes['id'] = $wpdb->insert_id;
-                $this->attributes['ID'] = $this->attributes['id']; // For compatibility
+                $this->attributes['ID'] = $wpdb->insert_id;
                 return true;
             }
             
@@ -552,14 +531,14 @@ class Patient extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || empty($this->attributes['id'])) {
+        if (!isset($this->attributes['ID']) || empty($this->attributes['ID'])) {
             return false;
         }
         
         $table = $this->getTable();
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         
@@ -600,12 +579,12 @@ class Patient extends BaseModel
         $visitation_table = $wpdb->prefix . 'hm_visitations';
         $doctor_table = $wpdb->prefix . 'hm_doctors';
         
-        $patient_id = $this->id;
+        $patient_id = $this->ID;
         
         $visitations = $wpdb->get_results($wpdb->prepare(
             "SELECT v.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name 
              FROM {$visitation_table} v
-             LEFT JOIN {$doctor_table} d ON v.doctor_id = d.id
+             LEFT JOIN {$doctor_table} d ON v.doctor_id = d.ID
              WHERE v.patient_id = %d
              ORDER BY v.date DESC, v.time DESC",
             $patient_id

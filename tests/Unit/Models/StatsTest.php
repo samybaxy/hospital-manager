@@ -47,7 +47,7 @@ class StatsTest extends TestCase
             $hmo_index = $i % 3; // Distribute across the 3 HMOs
             $this->patients[] = $this->createTestPatient([
                 'user_id' => $user_id,
-                'hmo_id' => $this->hmos[$hmo_index]->id
+                'hmo_id' => $this->hmos[$hmo_index]->ID
             ]);
         }
         
@@ -68,8 +68,8 @@ class StatsTest extends TestCase
             for ($i = 0; $i < $count; $i++) {
                 $patient_index = ($index + $i) % count($this->patients);
                 $this->createTestVisitation([
-                    'patient_id' => $this->patients[$patient_index]->id,
-                    'doctor_id' => $this->doctor->id,
+                    'patient_id' => $this->patients[$patient_index]->ID,
+                    'doctor_id' => $this->doctor->ID,
                     'date' => $date
                 ]);
             }
@@ -117,7 +117,7 @@ class StatsTest extends TestCase
         // Verify we have data for all 3 HMOs
         $this->assertCount(3, $distribution);
         
-        // Create a map of HMO id to patient count
+        // Create a map of HMO ID to patient count
         $hmo_counts = [];
         foreach ($distribution as $data) {
             // The name field is actually the hmo_id
@@ -125,9 +125,9 @@ class StatsTest extends TestCase
         }
         
         // Verify counts - note that name field is actually the HMO ID
-        $this->assertEquals(2, $hmo_counts[$this->hmos[0]->id]); // HMO 0 should have 2 patients (index 0 and 3)
-        $this->assertEquals(2, $hmo_counts[$this->hmos[1]->id]); // HMO 1 should have 2 patients (index 1 and 4)
-        $this->assertEquals(1, $hmo_counts[$this->hmos[2]->id]); // HMO 2 should have 1 patient (index 2)
+        $this->assertEquals(2, $hmo_counts[$this->hmos[0]->ID]); // HMO 0 should have 2 patients (index 0 and 3)
+        $this->assertEquals(2, $hmo_counts[$this->hmos[1]->ID]); // HMO 1 should have 2 patients (index 1 and 4)
+        $this->assertEquals(1, $hmo_counts[$this->hmos[2]->ID]); // HMO 2 should have 1 patient (index 2)
     }
 
     /**

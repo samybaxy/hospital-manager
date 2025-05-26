@@ -75,7 +75,7 @@ class LabResultServiceTest extends TestCase
         
         // Create a test patient
         $this->test_patient = (object)[
-            'id' => 1,
+            'ID' => 1,
             'user_id' => $patient_user_id,
             'first_name' => 'Test',
             'last_name' => 'Patient'
@@ -87,7 +87,7 @@ class LabResultServiceTest extends TestCase
         
         // Create a test doctor
         $this->test_doctor = (object)[
-            'id' => 2,
+            'ID' => 2,
             'user_id' => $doctor_user_id,
             'first_name' => 'Test',
             'last_name' => 'Doctor'
@@ -95,17 +95,17 @@ class LabResultServiceTest extends TestCase
         
         // Create a test visitation
         $visitation = (object)[
-            'id' => 3,
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id
+            'ID' => 3,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID
         ];
         
         // Create a test lab investigation
         $this->test_lab = new MockLabInvestigation([
-            'id' => 4,
-            'visitation_id' => $visitation->id,
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'ID' => 4,
+            'visitation_id' => $visitation->ID,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'lab_tech_id' => $lab_tech_id,
             'test_type' => 'Blood Test',
             'status' => 'pending',
@@ -115,7 +115,7 @@ class LabResultServiceTest extends TestCase
         
         // Store our test lab in the global registry so it can be found
         global $mockLabInvestigations;
-        $mockLabInvestigations = [$this->test_lab->id => $this->test_lab];
+        $mockLabInvestigations = [$this->test_lab->ID => $this->test_lab];
     }
     
     /**
@@ -143,7 +143,7 @@ class LabResultServiceTest extends TestCase
         ];
         
         // Test the update method
-        $result = MockLabResultService::updateLabResults($this->test_lab->id, $data);
+        $result = MockLabResultService::updateLabResults($this->test_lab->ID, $data);
         
         // Verify success
         $this->assertTrue($result, "Lab result update should return true on success");
@@ -154,7 +154,7 @@ class LabResultServiceTest extends TestCase
         
         // Verify notification was sent
         $this->assertCount(2, MockNotificationService::$notifications, "Two notifications should be sent: one to patient and one to requesting doctor");
-        // The patient id needs to correspond to user id in our test setup (patient_id = 1, user_id = 101)
+        // The patient ID needs to correspond to user ID in our test setup (patient_id = 1, user_id = 101)
         $this->assertEquals($this->test_patient->user_id, MockNotificationService::$notifications[0]['user_id'], "Patient notification not sent correctly");
         $this->assertEquals('lab_results', MockNotificationService::$notifications[0]['type'], "Incorrect notification type");
         
@@ -212,7 +212,7 @@ class LabResultServiceTest extends TestCase
         ];
         
         // Test the update method
-        $result = MockLabResultService::updateLabResults($this->test_lab->id, $data);
+        $result = MockLabResultService::updateLabResults($this->test_lab->ID, $data);
         
         // Verify success (should still work without report URL)
         $this->assertTrue($result, "Lab result update should succeed even without a report URL. Some lab results don't have associated reports, and the system should handle this case gracefully.");
@@ -239,7 +239,7 @@ class LabResultServiceTest extends TestCase
         ];
         
         // Test the update method
-        $result = MockLabResultService::updateLabResults($this->test_lab->id, $data);
+        $result = MockLabResultService::updateLabResults($this->test_lab->ID, $data);
         
         // Verify failure
         $this->assertFalse($result, "Update should fail when required fields are missing. Results are essential medical data that cannot be omitted.");
@@ -250,7 +250,7 @@ class LabResultServiceTest extends TestCase
             // No status provided
         ];
         
-        $result2 = MockLabResultService::updateLabResults($this->test_lab->id, $data2);
+        $result2 = MockLabResultService::updateLabResults($this->test_lab->ID, $data2);
         $this->assertFalse($result2, "Update should fail when status field is missing.");
         
         // Verify lab status was not changed

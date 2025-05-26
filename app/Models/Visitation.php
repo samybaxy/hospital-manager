@@ -7,7 +7,7 @@ class Visitation extends BaseModel
 {
     use FindTrait;
     
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_visitations';
     protected static $conditions = [];
     protected static $orderBy = [];
@@ -29,21 +29,7 @@ class Visitation extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
-        
-        // Also ensure object properties have both id and ID
-        if (isset($this->id) && !isset($this->ID)) {
-            $this->ID = $this->id;
-        } elseif (isset($this->ID) && !isset($this->id)) {
-            $this->id = $this->ID;
-        }
     }
 
     /**
@@ -87,7 +73,7 @@ class Visitation extends BaseModel
         
         // Prepare the query
         $query = $wpdb->prepare(
-            "SELECT * FROM {$this->table} WHERE {$field} = %s ORDER BY id ASC",
+            "SELECT * FROM {$this->table} WHERE {$field} = %s ORDER BY ID ASC",
             $value
         );
         
@@ -103,14 +89,14 @@ class Visitation extends BaseModel
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -119,18 +105,11 @@ class Visitation extends BaseModel
         $table = $instance->getTable();
         
         // Fetch the patient record directly from the database
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $patient_visitation_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$patient_visitation_data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-        if (isset($patient_visitation_data['id']) && !isset($patient_visitation_data['ID'])) {
-            $patient_visitation_data['ID'] = $patient_visitation_data['id'];
-        } elseif (isset($patient_visitation_data['ID']) && !isset($patient_visitation_data['id'])) {
-            $patient_visitation_data['id'] = $patient_visitation_data['ID'];
         }
 
         // Format the date if it exists
@@ -177,7 +156,7 @@ class Visitation extends BaseModel
      */
     public function radiologicalExams()
     {
-        return $this->has_many('HospitalManager\Models\RadiologicalExam', 'visitation_id', 'id');
+        return $this->has_many('HospitalManager\Models\RadiologicalExam', 'visitation_id', 'ID');
     }
 
     /**
@@ -200,8 +179,7 @@ class Visitation extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
-        $attributes['ID'] = $attributes['id']; // Ensure both ID versions exist
+        $attributes['ID'] = $wpdb->insert_id;
         
         return new static($attributes);
     }
@@ -367,7 +345,7 @@ class Visitation extends BaseModel
         $patient = new \HospitalManager\Models\Patient();
         $result = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT * FROM {$patient->table} WHERE id = %d",
+                "SELECT * FROM {$patient->table} WHERE ID = %d",
                 $this->patient_id
             ),
             ARRAY_A
@@ -385,7 +363,7 @@ class Visitation extends BaseModel
         $doctor = new \HospitalManager\Models\Doctor();
         $result = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT * FROM {$doctor->table} WHERE id = %d",
+                "SELECT * FROM {$doctor->table} WHERE ID = %d",
                 $this->doctor_id
             ),
             ARRAY_A
@@ -404,7 +382,7 @@ class Visitation extends BaseModel
         $results = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT * FROM {$labInvestigation->table} WHERE visitation_id = %d",
-                $this->id
+                $this->ID
             ),
             ARRAY_A
         );
@@ -457,12 +435,12 @@ class Visitation extends BaseModel
         $data['updated_at'] = current_time('mysql');
         
         // Determine if this is an update or insert
-        if (isset($this->attributes['id']) && !empty($this->attributes['id'])) {
+        if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
             $result = $wpdb->update(
                 $table,
                 $data,
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 array_map(function($field) {
                     return is_numeric($field) ? '%d' : '%s';
                 }, $data),
@@ -481,8 +459,7 @@ class Visitation extends BaseModel
             );
             
             if ($result !== false) {
-                $this->attributes['id'] = $wpdb->insert_id;
-                $this->attributes['ID'] = $this->attributes['id']; // For compatibility
+                $this->attributes['ID'] = $wpdb->insert_id; 
                 return true;
             }
             
@@ -499,14 +476,14 @@ class Visitation extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id'])) {
+        if (!isset($this->attributes['ID'])) {
             return false;
         }
         
         $table = $this->getTable();
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         

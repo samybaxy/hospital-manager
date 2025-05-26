@@ -37,8 +37,8 @@ class AppointmentTest extends TestCase
     public function testCreateAppointment()
     {
         $data = [
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
             'appointment_date' => '2025-05-15',
             'appointment_time' => '10:30:00',
             'status' => 'scheduled',
@@ -51,8 +51,8 @@ class AppointmentTest extends TestCase
         $appointment = Appointment::create($data);
 
         $this->assertInstanceOf(Appointment::class, $appointment);
-        $this->assertEquals($this->patient->id, $appointment->patient_id);
-        $this->assertEquals($this->doctor->id, $appointment->doctor_id);
+        $this->assertEquals($this->patient->ID, $appointment->patient_id);
+        $this->assertEquals($this->doctor->ID, $appointment->doctor_id);
         $this->assertEquals('2025-05-15', $appointment->appointment_date);
         $this->assertEquals('10:30:00', $appointment->appointment_time);
         $this->assertEquals('scheduled', $appointment->status);
@@ -66,15 +66,15 @@ class AppointmentTest extends TestCase
     {
         // Create a test appointment
         $appointment = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id
+            $this->patient->ID,
+            $this->doctor->ID
         );
         
         // Find the appointment by ID
-        $found_appointment = Appointment::find($appointment->id);
+        $found_appointment = Appointment::find($appointment->ID);
         
         $this->assertInstanceOf(Appointment::class, $found_appointment);
-        $this->assertEquals($appointment->id, $found_appointment->id);
+        $this->assertEquals($appointment->ID, $found_appointment->ID);
         $this->assertEquals($appointment->patient_id, $found_appointment->patient_id);
         $this->assertEquals($appointment->doctor_id, $found_appointment->doctor_id);
         $this->assertEquals($appointment->appointment_date, $found_appointment->appointment_date);
@@ -87,14 +87,14 @@ class AppointmentTest extends TestCase
     {
         // Create multiple test appointments with different statuses
         $appointment1 = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id,
+            $this->patient->ID,
+            $this->doctor->ID,
             ['status' => 'scheduled']
         );
         
         $appointment2 = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id,
+            $this->patient->ID,
+            $this->doctor->ID,
             ['status' => 'completed']
         );
         
@@ -120,14 +120,14 @@ class AppointmentTest extends TestCase
     {
         // Create appointments with different dates
         $appointment1 = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id,
+            $this->patient->ID,
+            $this->doctor->ID,
             ['appointment_date' => '2025-06-15']
         );
         
         $appointment2 = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id,
+            $this->patient->ID,
+            $this->doctor->ID,
             ['appointment_date' => '2025-05-10']
         );
         
@@ -146,8 +146,8 @@ class AppointmentTest extends TestCase
     {
         // Create a test appointment
         $appointment = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id,
+            $this->patient->ID,
+            $this->doctor->ID,
             ['status' => 'scheduled']
         );
         
@@ -161,11 +161,11 @@ class AppointmentTest extends TestCase
         $wpdb->update(
             $table,
             ['status' => 'rescheduled', 'notes' => 'Patient requested to reschedule'],
-            ['id' => $appointment->id]
+            ['ID' => $appointment->ID]
         );
         
         // Retrieve the appointment again
-        $updated = Appointment::find($appointment->id);
+        $updated = Appointment::find($appointment->ID);
         
         // Check if the update was successful
         $this->assertEquals('rescheduled', $updated->status);
@@ -179,18 +179,18 @@ class AppointmentTest extends TestCase
     {
         // Create a test appointment
         $appointment = $this->createTestAppointment(
-            $this->patient->id,
-            $this->doctor->id
+            $this->patient->ID,
+            $this->doctor->ID
         );
         
         // Ensure appointment was created
         $this->assertNotNull($appointment);
-        $appointment_id = $appointment->id;
+        $appointment_id = $appointment->ID;
         
         // Delete the appointment using direct SQL
         global $wpdb;
         $table = $wpdb->prefix . 'hm_appointments';
-        $wpdb->delete($table, ['id' => $appointment_id]);
+        $wpdb->delete($table, ['ID' => $appointment_id]);
         
         // Try to retrieve the deleted appointment
         $deleted_appointment = Appointment::find($appointment_id);

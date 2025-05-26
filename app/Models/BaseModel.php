@@ -9,7 +9,7 @@ abstract class BaseModel extends PostModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName; // Name portion after prefix
     
     /**

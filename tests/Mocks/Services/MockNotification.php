@@ -7,7 +7,7 @@ namespace HospitalManager\Tests\Mocks\Services;
  */
 class MockNotification 
 {
-    public $id;
+    public $ID;
     public $user_id;
     public $type;
     public $title;
@@ -34,20 +34,20 @@ class MockNotification
      */
     public function save() 
     {
-        if (!isset($this->id)) {
-            $this->id = self::$nextId++;
+        if (!isset($this->ID)) {
+            $this->ID = self::$nextId++;
         }
         
-        self::$mockNotifications[$this->id] = $this;
+        self::$mockNotifications[$this->ID] = $this;
         return true;
     }
     
     /**
      * Find a notification by ID
      */
-    public static function find($id) 
+    public static function find($ID) 
     {
-        return isset(self::$mockNotifications[$id]) ? self::$mockNotifications[$id] : null;
+        return isset(self::$mockNotifications[$ID]) ? self::$mockNotifications[$ID] : null;
     }
     
     /**

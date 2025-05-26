@@ -39,8 +39,8 @@ class LabInvestigationTest extends TestCase
         
         // Create a test visitation
         $this->visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
     }
     
@@ -50,10 +50,10 @@ class LabInvestigationTest extends TestCase
     public function testCreateLabInvestigation()
     {
         $data = [
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
             'test_type' => 'Complete Blood Count',
-            'doctor_id' => $this->doctor->id,
+            'doctor_id' => $this->doctor->ID,
             'notes' => 'Check for infection markers',
             'status' => 'pending',
             'created_at' => current_time('mysql')
@@ -62,10 +62,10 @@ class LabInvestigationTest extends TestCase
         $lab = LabInvestigation::create($data);
 
         $this->assertInstanceOf(LabInvestigation::class, $lab);
-        $this->assertEquals($this->visitation->id, $lab->visitation_id);
-        $this->assertEquals($this->patient->id, $lab->patient_id);
+        $this->assertEquals($this->visitation->ID, $lab->visitation_id);
+        $this->assertEquals($this->patient->ID, $lab->patient_id);
         $this->assertEquals('Complete Blood Count', $lab->test_type);
-        $this->assertEquals($this->doctor->id, $lab->doctor_id);
+        $this->assertEquals($this->doctor->ID, $lab->doctor_id);
         $this->assertEquals('pending', $lab->status);
     }
 
@@ -76,16 +76,16 @@ class LabInvestigationTest extends TestCase
     {
         // Create a test lab investigation
         $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Find the lab investigation by ID
-        $found_lab = LabInvestigation::find($lab->id);
+        $found_lab = LabInvestigation::find($lab->ID);
         
         $this->assertInstanceOf(LabInvestigation::class, $found_lab);
-        $this->assertEquals($lab->id, $found_lab->id);
+        $this->assertEquals($lab->ID, $found_lab->ID);
         $this->assertEquals($lab->visitation_id, $found_lab->visitation_id);
         $this->assertEquals($lab->patient_id, $found_lab->patient_id);
         $this->assertEquals($lab->test_type, $found_lab->test_type);
@@ -98,16 +98,16 @@ class LabInvestigationTest extends TestCase
     {
         // Create a test lab investigation
         $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Get the related visitation
         $visitation = $lab->visitation();
         
         $this->assertInstanceOf(Visitation::class, $visitation);
-        $this->assertEquals($this->visitation->id, $visitation->id);
+        $this->assertEquals($this->visitation->ID, $visitation->ID);
         $this->assertEquals($this->visitation->patient_id, $visitation->patient_id);
         $this->assertEquals($this->visitation->doctor_id, $visitation->doctor_id);
     }
@@ -119,16 +119,16 @@ class LabInvestigationTest extends TestCase
     {
         // Create a test lab investigation
         $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Get the related doctor
         $doctor = $lab->requestedBy();
         
         $this->assertInstanceOf(Doctor::class, $doctor);
-        $this->assertEquals($this->doctor->id, $doctor->id);
+        $this->assertEquals($this->doctor->ID, $doctor->ID);
     }
 
     /**
@@ -138,9 +138,9 @@ class LabInvestigationTest extends TestCase
     {
         // Create a test lab investigation
         $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
             'status' => 'pending'
         ]);
 
@@ -150,7 +150,7 @@ class LabInvestigationTest extends TestCase
         $lab->save();
 
         // Retrieve the lab investigation again
-        $updated = LabInvestigation::find($lab->id);
+        $updated = LabInvestigation::find($lab->ID);
         
         $this->assertEquals('completed', $updated->status);
         $this->assertEquals('Normal blood count, hemoglobin 14.2 g/dL', $updated->results);
@@ -163,12 +163,12 @@ class LabInvestigationTest extends TestCase
     {
         // Create a test lab investigation
         $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'visitation_id' => $this->visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
-        $lab_id = $lab->id;
+        $lab_id = $lab->ID;
         
         // Delete the lab investigation
         $lab->delete();

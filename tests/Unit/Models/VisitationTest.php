@@ -38,8 +38,8 @@ class VisitationTest extends TestCase
     public function testCreateVisitation()
     {
         $data = [
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
             'date' => '2025-04-22',
             'time' => '09:15:00',
             'medical_history' => 'Patient reports recurring headaches for the past two weeks',
@@ -50,8 +50,8 @@ class VisitationTest extends TestCase
         $visitation = Visitation::create($data);
 
         $this->assertInstanceOf(Visitation::class, $visitation);
-        $this->assertEquals($this->patient->id, $visitation->patient_id);
-        $this->assertEquals($this->doctor->id, $visitation->doctor_id);
+        $this->assertEquals($this->patient->ID, $visitation->patient_id);
+        $this->assertEquals($this->doctor->ID, $visitation->doctor_id);
         $this->assertEquals('2025-04-22', $visitation->date);
         $this->assertEquals('09:15:00', $visitation->time);
         $this->assertEquals('Tension headache, possible migraine', $visitation->diagnosis);
@@ -64,15 +64,15 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Find the visitation by ID
-        $found_visitation = Visitation::find($visitation->id);
+        $found_visitation = Visitation::find($visitation->ID);
         
         $this->assertInstanceOf(Visitation::class, $found_visitation);
-        $this->assertEquals($visitation->id, $found_visitation->id);
+        $this->assertEquals($visitation->ID, $found_visitation->ID);
         $this->assertEquals($visitation->patient_id, $found_visitation->patient_id);
         $this->assertEquals($visitation->doctor_id, $found_visitation->doctor_id);
         $this->assertEquals($visitation->date, $found_visitation->date);
@@ -85,15 +85,15 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Get the related patient
         $patient = $visitation->patient();
         
         $this->assertInstanceOf(Patient::class, $patient);
-        $this->assertEquals($this->patient->id, $patient->id);
+        $this->assertEquals($this->patient->ID, $patient->ID);
         $this->assertEquals($this->patient->first_name, $patient->first_name);
         $this->assertEquals($this->patient->last_name, $patient->last_name);
     }
@@ -105,15 +105,15 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Get the related doctor
         $doctor = $visitation->doctor();
         
         $this->assertInstanceOf(Doctor::class, $doctor);
-        $this->assertEquals($this->doctor->id, $doctor->id);
+        $this->assertEquals($this->doctor->ID, $doctor->ID);
         $this->assertEquals($this->doctor->first_name, $doctor->first_name);
         $this->assertEquals($this->doctor->last_name, $doctor->last_name);
     }
@@ -125,15 +125,15 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
         // Create a lab investigation for this visitation
         $lab = LabInvestigation::create([
-            'visitation_id' => $visitation->id,
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
+            'visitation_id' => $visitation->ID,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
             'test_type' => 'Blood Test',
             'status' => 'pending',
             'created_at' => current_time('mysql'),
@@ -146,7 +146,7 @@ class VisitationTest extends TestCase
         $this->assertIsArray($investigations);
         $this->assertNotEmpty($investigations);
         $this->assertInstanceOf(LabInvestigation::class, $investigations[0]);
-        $this->assertEquals($lab->id, $investigations[0]->id);
+        $this->assertEquals($lab->ID, $investigations[0]->ID);
         $this->assertEquals('Blood Test', $investigations[0]->test_type);
     }
 
@@ -157,8 +157,8 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
             'diagnosis' => 'Initial diagnosis'
         ]);
         
@@ -168,7 +168,7 @@ class VisitationTest extends TestCase
         $visitation->save();
         
         // Retrieve the visitation again
-        $updated = Visitation::find($visitation->id);
+        $updated = Visitation::find($visitation->ID);
         
         $this->assertEquals('Updated diagnosis after further tests', $updated->diagnosis);
         $this->assertEquals('Updated treatment plan', $updated->treatment);
@@ -181,11 +181,11 @@ class VisitationTest extends TestCase
     {
         // Create a test visitation
         $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
         
-        $visitation_id = $visitation->id;
+        $visitation_id = $visitation->ID;
         
         // Delete the visitation
         $visitation->delete();

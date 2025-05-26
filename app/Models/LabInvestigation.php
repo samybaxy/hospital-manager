@@ -8,7 +8,7 @@ class LabInvestigation extends BaseModel
     use FindTrait;
 
     protected $type = 'lab_investigation';
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_lab_investigations';
     protected static $conditions = [];
     protected static $orderBy = [];
@@ -32,27 +32,20 @@ class LabInvestigation extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Find a lab investigation by ID
      * 
-     * @param int $id The lab investigation ID
+     * @param int $ID The lab investigation ID
      * @return static|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -61,17 +54,17 @@ class LabInvestigation extends BaseModel
         $table = $instance->getTable();
         
         // Clear any potential WordPress cache for this query
-        wp_cache_delete($id, 'hm_lab_investigations');
+        wp_cache_delete($ID, 'hm_lab_investigations');
         
         // Add SQL_NO_CACHE to prevent MySQL query caching issues
-        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE id = %d LIMIT 1", $id);
+        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE ID = %d LIMIT 1", $ID);
         error_log("Finding lab investigation with query: {$query}");
         
         // Use no_found_rows to improve performance and suppress filters
         $lab_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$lab_data) {
-            error_log("No lab investigation found with ID: {$id}");
+            error_log("No lab investigation found with ID: {$ID}");
             return null;
         }
         
@@ -144,7 +137,7 @@ class LabInvestigation extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
+        $attributes['ID'] = $wpdb->insert_id;
         return new static($attributes);
     }
 
@@ -263,7 +256,7 @@ class LabInvestigation extends BaseModel
         $result = $wpdb->update(
             $this->table,
             $attributes,
-            ['id' => $this->id],
+            ['ID' => $this->ID],
             array_map(function($field) {
                 return is_numeric($field) ? '%d' : '%s';
             }, $attributes),
@@ -299,12 +292,6 @@ class LabInvestigation extends BaseModel
 
         $results = $wpdb->get_results($query, ARRAY_A);
         return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
             return new static($item);
         }, $results ?: []);
     }
@@ -350,12 +337,7 @@ class LabInvestigation extends BaseModel
 
         $results = $wpdb->get_results($query, ARRAY_A);
         return array_map(function($item) {
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($item['id']) && !isset($item['ID'])) {
-                $item['ID'] = $item['id'];
-            } elseif (isset($item['ID']) && !isset($item['id'])) {
-                $item['id'] = $item['ID'];
-            }
+            // Use consistent ID format
             
             $model = new static($item);
             if (isset($item['patient_name'])) {
@@ -384,15 +366,15 @@ class LabInvestigation extends BaseModel
         
         // Get the primary key and value
         $primary_key = $this->primaryKey;
-        $id = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
+        $ID = isset($this->attributes[$primary_key]) ? $this->attributes[$primary_key] : null;
         
         // If we have an ID, update the record, otherwise insert a new one
-        if (!empty($id)) {
+        if (!empty($ID)) {
             // Update existing record
             $result = $wpdb->update(
                 $table,
                 $this->attributes,
-                array($primary_key => $id)
+                array($primary_key => $ID)
             );
             
             return $result !== false;
@@ -419,7 +401,7 @@ class LabInvestigation extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -427,12 +409,12 @@ class LabInvestigation extends BaseModel
         $table = $wpdb->prefix . $this->tableName;
         
         // Debug log
-        error_log('Deleting lab investigation with ID: ' . $this->attributes['id'] . ' from table: ' . $table);
+        error_log('Deleting lab investigation with ID: ' . $this->attributes['ID'] . ' from table: ' . $table);
         
         // Delete the record
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         
@@ -454,7 +436,7 @@ class LabInvestigation extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -465,7 +447,7 @@ class LabInvestigation extends BaseModel
         $result = $wpdb->update(
             $this->table,
             ['status' => $status],
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%s'],
             ['%d']
         );

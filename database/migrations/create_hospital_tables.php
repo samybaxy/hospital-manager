@@ -9,7 +9,7 @@ class CreateHospitalTables
 
         // Patients table
         $sql_patients = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_patients (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             first_name varchar(100) NOT NULL,
             last_name varchar(100) NOT NULL,
@@ -25,14 +25,14 @@ class CreateHospitalTables
             bio_data JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY user_id (user_id),
             KEY hmo_id (hmo_id)
         ) $charset_collate;";
 
         // Doctors table
         $sql_doctors = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_doctors (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             first_name varchar(100) NOT NULL,
             last_name varchar(100) NOT NULL,
@@ -47,22 +47,22 @@ class CreateHospitalTables
             appointment_availability JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY user_id (user_id)
         ) $charset_collate;";
 
         // HMOs table
         $sql_hmos = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_hmos (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(100) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            PRIMARY KEY (ID)
         ) $charset_collate;";
 
         // Visitations table
         $sql_visitations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_visitations (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             appointment_id bigint(20) DEFAULT NULL,
@@ -74,7 +74,7 @@ class CreateHospitalTables
             complaint text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY patient_id (patient_id),
             KEY doctor_id (doctor_id),
             KEY appointment_id (appointment_id)
@@ -82,7 +82,7 @@ class CreateHospitalTables
 
         // Lab Investigations table
         $sql_lab_investigations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_investigations (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             lab_tech_id bigint(20) NOT NULL,
@@ -93,14 +93,14 @@ class CreateHospitalTables
             status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY visitation_id (visitation_id),
             KEY lab_tech_id (lab_tech_id)
         ) $charset_collate;";
 
         // Radiological Exams table
         $sql_radiological_exams = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_radiological_exams (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
             tech_id bigint(20) NOT NULL,
             results text,
@@ -108,14 +108,14 @@ class CreateHospitalTables
             status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY visitation_id (visitation_id),
             KEY tech_id (tech_id)
         ) $charset_collate;";
 
         // Audit Logs table
         $sql_audit_logs = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_audit_logs (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             action varchar(50) NOT NULL,
             entity_type varchar(50) NOT NULL,
@@ -123,14 +123,14 @@ class CreateHospitalTables
             changes JSON,
             details JSON,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
+            PRIMARY KEY (ID),
             KEY user_id (user_id),
             KEY entity_type_id (entity_type, entity_id)
         ) $charset_collate;";
 
         // Notifications table
         $sql_notifications = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_notifications (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             type varchar(50) NOT NULL,
             title varchar(255) NOT NULL,
@@ -138,7 +138,7 @@ class CreateHospitalTables
             reference_id bigint(20) DEFAULT NULL,
             `read` tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
+            PRIMARY KEY  (ID),
             KEY user_id (user_id),
             KEY type (type),
             KEY created_at (created_at)
@@ -146,7 +146,7 @@ class CreateHospitalTables
 
         // Appointments table
         $sql_appointments = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_appointments (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             appointment_date date NOT NULL,
@@ -156,7 +156,7 @@ class CreateHospitalTables
             notes text,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
+            PRIMARY KEY  (ID),
             KEY patient_id (patient_id),
             KEY doctor_id (doctor_id),
             KEY appointment_date (appointment_date),
@@ -165,14 +165,14 @@ class CreateHospitalTables
 
         // Create chats table first
         $sql_chats = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_chats (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             doctor_id bigint(20) NOT NULL,
             patient_id bigint(20) NOT NULL,
             status varchar(20) NOT NULL DEFAULT 'active',
             last_message_at datetime DEFAULT CURRENT_TIMESTAMP,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
+            PRIMARY KEY  (ID),
             UNIQUE KEY doctor_patient (doctor_id, patient_id),
             KEY doctor_id (doctor_id),
             KEY patient_id (patient_id)
@@ -180,14 +180,14 @@ class CreateHospitalTables
 
         // Create messages table
         $sql_messages = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_chat_messages (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             chat_id bigint(20) NOT NULL,
             sender_id bigint(20) NOT NULL,
             receiver_id bigint(20) NOT NULL,
             message text NOT NULL,
             `read` tinyint(1) DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
+            PRIMARY KEY  (ID),
             KEY chat_id (chat_id),
             KEY sender_id (sender_id),
             KEY receiver_id (receiver_id),
@@ -196,7 +196,7 @@ class CreateHospitalTables
 
         // Medical Reports table
         $sql_medical_reports = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_medical_reports (
-            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             visitation_id bigint(20) NOT NULL,
@@ -204,7 +204,7 @@ class CreateHospitalTables
             status varchar(20) NOT NULL DEFAULT 'pending',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
+            PRIMARY KEY  (ID),
             KEY patient_id (patient_id),
             KEY doctor_id (doctor_id),
             KEY visitation_id (visitation_id)

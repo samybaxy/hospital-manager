@@ -35,7 +35,7 @@ class PatientController extends BaseController
         ]);
 
         // Routes for individual patient operations
-        register_rest_route($this->namespace, '/patients/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/patients/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient'],
@@ -95,7 +95,7 @@ class PatientController extends BaseController
         ]);
 
         // Route for patient visitation history
-        register_rest_route($this->namespace, '/patients/(?P<id>\d+)/visitations', [
+        register_rest_route($this->namespace, '/patients/(?P<ID>\d+)/visitations', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient_visitations'],
@@ -148,7 +148,7 @@ class PatientController extends BaseController
     public function get_patient($request) 
     {
         try {
-            $patient_id = $request['id'];
+            $patient_id = $request['ID'];
             $patient = Patient::find($patient_id)->toArray();
 
             if (!$patient) {
@@ -172,7 +172,7 @@ class PatientController extends BaseController
                 // For the test case, we'll use a simple check:
                 // If the test specifies the doctor should be unauthorized, deny access
                 if (defined('PHPUNIT_TESTING') && isset($GLOBALS['doctor_unauthorized_patients']) && 
-                    in_array($patient->id, $GLOBALS['doctor_unauthorized_patients'])) {
+                    in_array($patient->ID, $GLOBALS['doctor_unauthorized_patients'])) {
                     return $this->error_response('Doctor not authorized to view this patient', 403);
                 }
                 
@@ -188,7 +188,7 @@ class PatientController extends BaseController
                 }
                 
                 // For the test case specifically
-                if (!$doctor_allowed && $patient->id != null) {
+                if (!$doctor_allowed && $patient->ID != null) {
                     return $this->error_response('Doctor not authorized to view this patient', 403);
                 }
             }
@@ -261,9 +261,9 @@ class PatientController extends BaseController
     public function update_patient($request) 
     {
         try {
-            $patient_id = (int) $request['id'];
+            $patient_id = (int) $request['ID'];
             $params = $request->get_params();
-            unset($params['id']); // Remove id from parameters to update
+            unset($params['ID']); // Remove ID from parameters to update
             
             $updated_patient = PatientService::updatePatient($patient_id, $params);
             
@@ -289,7 +289,7 @@ class PatientController extends BaseController
     public function delete_patient($request) 
     {
         try {
-            $patient_id = (int) $request['id'];
+            $patient_id = (int) $request['ID'];
             $patient = Patient::find($patient_id);
             
             if (!$patient) {
@@ -373,11 +373,6 @@ class PatientController extends BaseController
                 return $this->error_response('No patient record found for this user', 404);
             }
             
-            // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-            if (isset($patient_data['id']) && !isset($patient_data['ID'])) {
-                $patient_data['ID'] = $patient_data['id'];
-            }
-            
             $patient = new Patient($patient_data);
             
             return $this->success_response(
@@ -401,7 +396,7 @@ class PatientController extends BaseController
     public function get_patient_visitations($request) 
     {
         try {
-            $patient_id = $request['id'];
+            $patient_id = $request['ID'];
             
             // Verify patient exists
             $patient = Patient::find($patient_id);

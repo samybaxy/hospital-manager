@@ -21,7 +21,7 @@ class AuditController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/audit-logs/patient/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/audit-logs/patient/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient_logs'],
@@ -61,7 +61,7 @@ class AuditController extends BaseController
 
     public function get_patient_logs($request)
     {
-        $patient_id = $request->get_param('id');
+        $patient_id = $request->get_param('ID');
         
         $logs = AuditLog::where('entity_type', 'patient')
             ->where('entity_id', $patient_id)

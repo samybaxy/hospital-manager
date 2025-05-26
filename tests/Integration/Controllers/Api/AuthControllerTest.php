@@ -97,7 +97,7 @@ class AuthControllerTest extends TestCase
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('data', $data);
         $this->assertArrayHasKey('user', $data['data']);
-        $this->assertEquals($this->login_test_user_id, $data['data']['user']['id']);
+        $this->assertEquals($this->login_test_user_id, $data['data']['user']['ID']);
         $this->assertArrayHasKey('role', $data['data']['user']);
         
         // Verify user is now logged in
@@ -178,7 +178,7 @@ class AuthControllerTest extends TestCase
         $data = $response->get_data();
         $this->assertTrue($data['success']);
         $this->assertArrayHasKey('user', $data);
-        $this->assertEquals($this->test_users['doctor'], $data['user']['id']);
+        $this->assertEquals($this->test_users['doctor'], $data['user']['ID']);
         $this->assertArrayHasKey('role', $data['user']);
     }
 

@@ -8,7 +8,7 @@ class ChatMessage extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_chat_messages';
     
     protected $fillable = [
@@ -28,27 +28,20 @@ class ChatMessage extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for consistency
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Override the find method from FindTrait to handle our constructor's array requirement
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return object|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -57,16 +50,11 @@ class ChatMessage extends BaseModel
         $table = $instance->table;
         
         // Fetch the chat message record directly from the database.
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $message_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$message_data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility.
-        if (isset($message_data['id']) && !isset($message_data['ID'])) {
-            $message_data['ID'] = $message_data['id'];
         }
         
         // Create a new chat message instance with the fetched data.
@@ -112,8 +100,7 @@ class ChatMessage extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
-        $attributes['ID'] = $wpdb->insert_id; // Ensure both lowercase and uppercase ID are set
+        $attributes['ID'] = $wpdb->insert_id;
         return new static($attributes);
     }
 
@@ -253,7 +240,7 @@ class ChatMessage extends BaseModel
         // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
-        if (isset($this->attributes['id']) && intval($this->attributes['id']) > 0) {
+        if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
             // Update existing record
             $result = $wpdb->update(
                 $table,
@@ -265,7 +252,7 @@ class ChatMessage extends BaseModel
                     'read' => $this->attributes['read'],
                     'created_at' => $this->attributes['created_at'],
                 ],
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 [
                     '%d', // chat_id
                     '%d', // sender_id
@@ -274,7 +261,7 @@ class ChatMessage extends BaseModel
                     '%d', // read
                     '%s', // created_at
                 ],
-                ['%d'] // id
+                ['%d'] // ID
             );
             
             return $result !== false;
@@ -293,7 +280,7 @@ class ChatMessage extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id']) || intval($this->attributes['id']) <= 0) {
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
             return false;
         }
         
@@ -303,7 +290,7 @@ class ChatMessage extends BaseModel
         // Delete the record
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         

@@ -45,17 +45,17 @@ class MockLabResultService
             'Lab Results Available',
             "Your {$lab->test_type} results are now available",
             [
-                'lab_result_id' => $lab->id,
+                'lab_result_id' => $lab->ID,
                 'test_type' => $lab->test_type
             ]
         );
 
         // Create WebSocket message directly instead of using sendMessage to avoid duplicates
         MockWebSocketService::$messages[] = [
-            'id' => uniqid(),
+            'ID' => uniqid(),
             'channel' => 'lab_results',
             'data' => [
-                'lab_result_id' => $lab->id,
+                'lab_result_id' => $lab->ID,
                 'test_type' => $lab->test_type,
                 'patient_id' => $lab->patient_id
             ],
@@ -75,7 +75,7 @@ class MockLabResultService
                 'Lab Results Ready',
                 "Lab results for patient #{$lab->patient_id} are now available",
                 [
-                    'lab_result_id' => $lab->id,
+                    'lab_result_id' => $lab->ID,
                     'patient_id' => $lab->patient_id,
                     'test_type' => $lab->test_type
                 ]
@@ -83,10 +83,10 @@ class MockLabResultService
 
             // Create WebSocket message directly instead of using sendMessage to avoid duplicates
             MockWebSocketService::$messages[] = [
-                'id' => uniqid(),
+                'ID' => uniqid(),
                 'channel' => 'lab_results',
                 'data' => [
-                    'lab_result_id' => $lab->id,
+                    'lab_result_id' => $lab->ID,
                     'test_type' => $lab->test_type,
                     'patient_id' => $lab->patient_id
                 ],
@@ -99,7 +99,7 @@ class MockLabResultService
         MockAuditLogger::log(
             'update_lab_results',
             'lab_investigation',
-            $lab->id,
+            $lab->ID,
             [
                 'patient_id' => $lab->patient_id,
                 'test_type' => $lab->test_type,

@@ -79,7 +79,7 @@ class ApiServiceTest extends TestCase
     public function testGetControllers()
     {
         // Test formatResponse method
-        $data = ['id' => 1, 'name' => 'Test'];
+        $data = ['ID' => 1, 'name' => 'Test'];
         $message = 'Success message';
         $status = 200;
         

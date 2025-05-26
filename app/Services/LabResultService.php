@@ -32,14 +32,14 @@ class LabResultService
             'Lab Results Available',
             "Your {$lab->test_type} results are now available",
             [
-                'lab_result_id' => $lab->id,
+                'lab_result_id' => $lab->ID,
                 'test_type' => $lab->test_type
             ]
         );
 
         // Send real-time notification
         WebSocketService::sendMessage('lab_results', [
-            'lab_result_id' => $lab->id,
+            'lab_result_id' => $lab->ID,
             'test_type' => $lab->test_type,
             'patient_id' => $lab->patient_id
         ], $lab->patient_id);
@@ -52,14 +52,14 @@ class LabResultService
                 'Lab Results Ready',
                 "Lab results for patient #{$lab->patient_id} are now available",
                 [
-                    'lab_result_id' => $lab->id,
+                    'lab_result_id' => $lab->ID,
                     'patient_id' => $lab->patient_id,
                     'test_type' => $lab->test_type
                 ]
             );
 
             WebSocketService::sendMessage('lab_results', [
-                'lab_result_id' => $lab->id,
+                'lab_result_id' => $lab->ID,
                 'test_type' => $lab->test_type,
                 'patient_id' => $lab->patient_id
             ], $lab->doctor_id);
@@ -69,7 +69,7 @@ class LabResultService
         AuditLogger::log(
             'update_lab_results',
             'lab_investigation',
-            $lab->id,
+            $lab->ID,
             [
                 'patient_id' => $lab->patient_id,
                 'test_type' => $lab->test_type,
@@ -104,14 +104,14 @@ class LabResultService
                 'New Lab Test Request',
                 "New {$testType} test requested for patient #{$patientId}",
                 [
-                    'lab_id' => $lab->id,
+                    'lab_id' => $lab->ID,
                     'patient_id' => $patientId,
                     'test_type' => $testType
                 ]
             );
 
             WebSocketService::sendMessage('lab_request', [
-                'lab_id' => $lab->id,
+                'lab_id' => $lab->ID,
                 'test_type' => $testType,
                 'patient_id' => $patientId
             ], $tech->ID);
@@ -121,7 +121,7 @@ class LabResultService
         AuditLogger::log(
             'request_lab_investigation',
             'lab_investigation',
-            $lab->id,
+            $lab->ID,
             [
                 'patient_id' => $patientId,
                 'test_type' => $testType,

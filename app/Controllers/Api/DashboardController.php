@@ -66,13 +66,13 @@ class DashboardController extends WP_REST_Controller
         }
 
         // Get recent visitations
-        $visitations = \HospitalManager\Models\Visitation::forPatient($patient->id);
+        $visitations = \HospitalManager\Models\Visitation::forPatient($patient->ID);
 
         // Get pending lab tests
-        $lab_tests = \HospitalManager\Models\LabInvestigation::getPendingForPatient($patient->id);
+        $lab_tests = \HospitalManager\Models\LabInvestigation::getPendingForPatient($patient->ID);
 
         // Get upcoming appointments
-        $appointments = \HospitalManager\Models\Appointment::getUpcomingForPatient($patient->id);
+        $appointments = \HospitalManager\Models\Appointment::getUpcomingForPatient($patient->ID);
 
         return new WP_REST_Response([
             'patient' => $patient,
@@ -156,7 +156,7 @@ class DashboardController extends WP_REST_Controller
             $upcoming_appointments = $wpdb->get_results(
                 "SELECT a.*, p.first_name, p.last_name 
                 FROM {$wpdb->prefix}hm_appointments a
-                LEFT JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.id
+                LEFT JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.ID
                 WHERE a.appointment_date >= CURDATE()
                 ORDER BY a.appointment_date ASC, a.appointment_time ASC
                 LIMIT 5"

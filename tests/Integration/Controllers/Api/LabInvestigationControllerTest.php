@@ -64,7 +64,7 @@ class LabInvestigationControllerTest extends TestCase
         
         // Create a test lab investigation
         $this->test_investigation = $this->createTestLabInvestigation([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'test_type' => 'Complete Blood Count',
             'status' => 'pending',
@@ -83,7 +83,7 @@ class LabInvestigationControllerTest extends TestCase
     {
         // Create a mock investigation object for testing
         $investigation = new \stdClass();
-        $investigation->id = 1; // Use a fixed ID for tests
+        $investigation->ID = 1; // Use a fixed ID for tests
         $investigation->patient_id = $data['patient_id'] ?? null;
         $investigation->doctor_id = $data['doctor_id'] ?? null;
         $investigation->test_type = $data['test_type'] ?? 'Complete Blood Count';
@@ -115,7 +115,7 @@ class LabInvestigationControllerTest extends TestCase
         
         // Create a mock investigation that matches what would be in the response
         $mock_data = [
-            'id' => 1,
+            'ID' => 1,
             'patient_id' => 1,
             'doctor_id' => 1,
             'test_type' => 'Complete Blood Count',
@@ -141,7 +141,7 @@ class LabInvestigationControllerTest extends TestCase
         $doctor->add_cap('view_patient_records');
         
         // Create mock investigation for the patient
-        $test_patient_id = $this->test_patient->id;
+        $test_patient_id = $this->test_patient->ID;
         $mock_investigation = $this->createTestLabInvestigation([
             'patient_id' => $test_patient_id,
             'doctor_id' => $this->test_users['doctor'],
@@ -174,7 +174,7 @@ class LabInvestigationControllerTest extends TestCase
         
         // Create request to create a new lab investigation
         $request = new WP_REST_Request('POST', "/{$this->namespace}/lab-investigations");
-        $request->set_param('patient_id', $this->test_patient->id);
+        $request->set_param('patient_id', $this->test_patient->ID);
         $request->set_param('doctor_id', $this->test_users['doctor']);
         $request->set_param('test_type', 'Urine Analysis');
         $request->set_param('status', 'pending');
@@ -187,7 +187,7 @@ class LabInvestigationControllerTest extends TestCase
         // Check response data
         $data = $response->get_data();
         $this->assertNotEmpty($data);
-        $this->assertEquals($this->test_patient->id, $data->patient_id);
+        $this->assertEquals($this->test_patient->ID, $data->patient_id);
         $this->assertEquals($this->test_users['doctor'], $data->doctor_id);
         $this->assertEquals('Urine Analysis', $data->test_type);
         $this->assertEquals('pending', $data->status);
@@ -195,7 +195,7 @@ class LabInvestigationControllerTest extends TestCase
         
         // Verify the investigation was saved to the database
         $saved_investigation = new \stdClass();
-        $saved_investigation->id = $data->id;
+        $saved_investigation->ID = $data->ID;
         $saved_investigation->test_type = 'Urine Analysis';
         $this->assertNotNull($saved_investigation);
         $this->assertEquals('Urine Analysis', $saved_investigation->test_type);
@@ -214,7 +214,7 @@ class LabInvestigationControllerTest extends TestCase
         $lab_tech->add_cap('update_lab_results');
         
         // Create request to update the lab investigation
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/lab-investigations/{$this->test_investigation->id}");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/lab-investigations/{$this->test_investigation->ID}");
         $request->set_param('status', 'completed');
         $request->set_param('results', 'Normal blood count. All values within range.');
         $response = $this->server->dispatch($request);
@@ -225,13 +225,13 @@ class LabInvestigationControllerTest extends TestCase
         // Check response data
         $data = $response->get_data();
         $this->assertNotEmpty($data);
-        $this->assertEquals($this->test_investigation->id, $data->id);
+        $this->assertEquals($this->test_investigation->ID, $data->ID);
         $this->assertEquals('completed', $data->status);
         $this->assertEquals('Normal blood count. All values within range.', $data->results);
         
         // Verify the changes were saved to the database
         $updated_investigation = new \stdClass();
-        $updated_investigation->id = $this->test_investigation->id;
+        $updated_investigation->ID = $this->test_investigation->ID;
         $updated_investigation->status = 'completed';
         $updated_investigation->results = 'Normal blood count. All values within range.';
         $this->assertEquals('completed', $updated_investigation->status);
@@ -277,7 +277,7 @@ class LabInvestigationControllerTest extends TestCase
         
         // Patients should not have permission to create lab investigations
         $request = new WP_REST_Request('POST', "/{$this->namespace}/lab-investigations");
-        $request->set_param('patient_id', $this->test_patient->id);
+        $request->set_param('patient_id', $this->test_patient->ID);
         $request->set_param('test_type', 'Blood Test');
         $response = $this->server->dispatch($request);
         
@@ -285,7 +285,7 @@ class LabInvestigationControllerTest extends TestCase
         $this->assertEquals(403, $response->get_status());
         
         // Patients should not have permission to update lab investigations
-        $request = new WP_REST_Request('PUT', "/{$this->namespace}/lab-investigations/{$this->test_investigation->id}");
+        $request = new WP_REST_Request('PUT', "/{$this->namespace}/lab-investigations/{$this->test_investigation->ID}");
         $request->set_param('status', 'completed');
         $response = $this->server->dispatch($request);
         

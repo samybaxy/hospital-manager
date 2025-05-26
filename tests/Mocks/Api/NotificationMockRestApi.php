@@ -30,7 +30,7 @@ class NotificationMockRestApi
         ]);
 
         // Mark notification as read
-        register_rest_route(self::$namespace, '/notifications/(?P<id>\d+)/read', [
+        register_rest_route(self::$namespace, '/notifications/(?P<ID>\d+)/read', [
             'methods' => 'POST',
             'callback' => [self::class, 'markNotificationAsRead'],
             'permission_callback' => [self::class, 'checkUserPermission'],
@@ -66,7 +66,7 @@ class NotificationMockRestApi
         // If this is the patient user, return the test notification
         if ($user_id == self::findTestUserId('patient')) {
             $notifications[] = (object)[
-                'id' => 1,
+                'ID' => 1,
                 'user_id' => $user_id,
                 'title' => 'Test Notification',
                 'message' => 'This is a test notification',
@@ -79,7 +79,7 @@ class NotificationMockRestApi
             if ($per_page < 20) {
                 for ($i = 2; $i <= 30; $i++) {
                     $notifications[] = (object)[
-                        'id' => $i,
+                        'ID' => $i,
                         'user_id' => $user_id,
                         'title' => "Notification " . ($i - 2),
                         'message' => "This is notification " . ($i - 2),
@@ -91,7 +91,7 @@ class NotificationMockRestApi
             }
         } else if ($user_id == self::findTestUserId('doctor')) {
             $notifications[] = (object)[
-                'id' => 2,
+                'ID' => 2,
                 'user_id' => $user_id,
                 'title' => 'Doctor Notification',
                 'message' => 'This is a notification for the doctor',
@@ -128,7 +128,7 @@ class NotificationMockRestApi
     public static function markNotificationAsRead($request)
     {
         $user_id = get_current_user_id();
-        $notification_id = $request['id'];
+        $notification_id = $request['ID'];
         
         // For test notification ID 1 (patient's notification)
         if ($notification_id == 1 && $user_id == self::findTestUserId('patient')) {

@@ -66,7 +66,7 @@ class NotificationControllerTest extends TestCase
     {
         // Create a mock notification object
         $notification = new \stdClass();
-        $notification->id = $data['id'] ?? 1; // Use ID from data or default to 1
+        $notification->ID = $data['ID'] ?? 1; // Use ID from data or default to 1
         $notification->user_id = $data['user_id'] ?? null;
         $notification->title = $data['title'] ?? 'Test Notification';
         $notification->message = $data['message'] ?? 'Test message';
@@ -100,7 +100,7 @@ class NotificationControllerTest extends TestCase
         // Verify the notification data is correct
         $found = false;
         foreach ($data['data'] as $notification) {
-            if ($notification->id === $this->test_notification->id) {
+            if ($notification->ID === $this->test_notification->ID) {
                 $found = true;
                 $this->assertEquals($this->test_users['patient'], $notification->user_id);
                 $this->assertEquals('Test Notification', $notification->title);
@@ -160,7 +160,7 @@ class NotificationControllerTest extends TestCase
         wp_set_current_user($this->test_users['patient']);
         
         // Create request to mark notification as read
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/notifications/{$this->test_notification->id}/read");
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/notifications/{$this->test_notification->ID}/read");
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -199,7 +199,7 @@ class NotificationControllerTest extends TestCase
     {
         // Create a notification for the doctor
         $doctor_notification = $this->createTestNotification([
-            'id' => 2, // Make sure to use ID 2 for doctor's notification
+            'ID' => 2, // Make sure to use ID 2 for doctor's notification
             'user_id' => $this->test_users['doctor'],
             'title' => 'Doctor Notification',
             'message' => 'This is a notification for the doctor',
@@ -212,7 +212,7 @@ class NotificationControllerTest extends TestCase
         wp_set_current_user($this->test_users['patient']);
         
         // Try to mark doctor's notification as read
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/notifications/{$doctor_notification->id}/read");
+        $request = new WP_REST_Request('POST', "/{$this->namespace}/notifications/{$doctor_notification->ID}/read");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be 404 as it doesn't belong to user

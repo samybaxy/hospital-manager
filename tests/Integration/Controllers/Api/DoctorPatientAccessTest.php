@@ -70,7 +70,7 @@ class DoctorPatientAccessTest extends TestCase
         wp_set_current_user($this->test_users['doctor']);
         
         // Doctor should be able to access their assigned patient
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patients[0]->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patients[0]->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be allowed
@@ -79,7 +79,7 @@ class DoctorPatientAccessTest extends TestCase
         // Check that the doctor has full access to patient data
         $data = $response->get_data();
         $this->assertTrue($data['success']);
-        $this->assertEquals($this->test_patients[0]->id, $data['data']->id);
+        $this->assertEquals($this->test_patients[0]->ID, $data['data']->ID);
         $this->assertEquals('Assigned', $data['data']->first_name);
         $this->assertEquals('Patient', $data['data']->last_name);
     }
@@ -102,10 +102,10 @@ class DoctorPatientAccessTest extends TestCase
         // Data should match the patient's own record
         $data = $response->get_data();
         $this->assertTrue($data['success']);
-        $this->assertEquals($this->test_patients[0]->id, $data['data']->id);
+        $this->assertEquals($this->test_patients[0]->ID, $data['data']->ID);
         
         // Patient should NOT be able to access other patient records
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patients[1]->id}");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$this->test_patients[1]->ID}");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be forbidden
@@ -127,14 +127,14 @@ class DoctorPatientAccessTest extends TestCase
         wp_set_current_user($this->test_users['lab_tech']);
         
         // Lab tech should be able to access lab results
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}/lab-results");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->ID}/lab-results");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be allowed
         $this->assertEquals(200, $response->get_status());
         
         // Lab tech should NOT be able to access prescriptions
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}/prescriptions");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->ID}/prescriptions");
         $response = $this->server->dispatch($request);
         
         // Check response status - should be forbidden
@@ -144,11 +144,11 @@ class DoctorPatientAccessTest extends TestCase
         wp_set_current_user($this->test_users['doctor']);
         
         // Doctor should be able to access both lab results and prescriptions
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}/lab-results");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->ID}/lab-results");
         $response = $this->server->dispatch($request);
         $this->assertEquals(200, $response->get_status());
         
-        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->id}/prescriptions");
+        $request = new WP_REST_Request('GET', "/{$this->namespace}/patients/{$patient->ID}/prescriptions");
         $response = $this->server->dispatch($request);
         $this->assertEquals(200, $response->get_status());
     }

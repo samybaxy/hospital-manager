@@ -38,10 +38,10 @@ class DoctorTest extends TestCase
         $test_doctor = $this->createTestDoctor();
         
         // Find the doctor by ID
-        $found_doctor = Doctor::find($test_doctor->id);
+        $found_doctor = Doctor::find($test_doctor->ID);
         
         $this->assertInstanceOf(Doctor::class, $found_doctor);
-        $this->assertEquals($test_doctor->id, $found_doctor->id);
+        $this->assertEquals($test_doctor->ID, $found_doctor->ID);
         $this->assertEquals($test_doctor->first_name, $found_doctor->first_name);
         $this->assertEquals($test_doctor->last_name, $found_doctor->last_name);
     }
@@ -91,7 +91,7 @@ class DoctorTest extends TestCase
         $test_doctor = $this->createTestDoctor();
         
         // Store the original ID and get original data
-        $doctor_id = $test_doctor->id;
+        $doctor_id = $test_doctor->ID;
         
         // Set a new phone number
         $new_phone = '07011223344';
@@ -109,7 +109,7 @@ class DoctorTest extends TestCase
         $table = $wpdb->prefix . 'hm_doctors';
         
         // Use direct SQL query to check the database
-        $sql = $wpdb->prepare("SELECT phone FROM $table WHERE id = %d", $doctor_id);
+        $sql = $wpdb->prepare("SELECT phone FROM $table WHERE ID = %d", $doctor_id);
         $db_phone = $wpdb->get_var($sql);
         
         // Verify the phone was updated in the database
@@ -123,7 +123,7 @@ class DoctorTest extends TestCase
     {
         // Create a test doctor
         $test_doctor = $this->createTestDoctor();
-        $doctor_id = $test_doctor->id;
+        $doctor_id = $test_doctor->ID;
         
         // Delete the doctor
         $test_doctor->delete();

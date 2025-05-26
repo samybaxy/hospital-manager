@@ -54,8 +54,8 @@ class RadiologicalExamTest extends TestCase
         
         // Create a test visitation
         $this->visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
     }
     
@@ -65,7 +65,7 @@ class RadiologicalExamTest extends TestCase
     public function testCreateRadiologicalExam()
     {
         $data = [
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id,
             'results' => 'X-ray shows no bone fractures. Soft tissues appear normal.'
         ];
@@ -73,7 +73,7 @@ class RadiologicalExamTest extends TestCase
         $exam = RadiologicalExam::create($data);
 
         $this->assertInstanceOf(RadiologicalExam::class, $exam);
-        $this->assertEquals($this->visitation->id, $exam->visitation_id);
+        $this->assertEquals($this->visitation->ID, $exam->visitation_id);
         $this->assertEquals($this->tech_id, $exam->tech_id);
         $this->assertEquals('X-ray shows no bone fractures. Soft tissues appear normal.', $exam->results);
     }
@@ -85,15 +85,15 @@ class RadiologicalExamTest extends TestCase
     {
         // Create a test exam
         $exam = $this->createTestRadiologicalExam([
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id
         ]);
         
         // Find the exam by ID
-        $found_exam = RadiologicalExam::find($exam->id);
+        $found_exam = RadiologicalExam::find($exam->ID);
         
         $this->assertInstanceOf(RadiologicalExam::class, $found_exam);
-        $this->assertEquals($exam->id, $found_exam->id);
+        $this->assertEquals($exam->ID, $found_exam->ID);
         $this->assertEquals($exam->visitation_id, $found_exam->visitation_id);
         $this->assertEquals($exam->tech_id, $found_exam->tech_id);
     }
@@ -105,7 +105,7 @@ class RadiologicalExamTest extends TestCase
     {
         // Create a test exam
         $exam = $this->createTestRadiologicalExam([
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id
         ]);
         
@@ -113,7 +113,7 @@ class RadiologicalExamTest extends TestCase
         $visitation = $exam->visitation();
         
         $this->assertInstanceOf(Visitation::class, $visitation);
-        $this->assertEquals($this->visitation->id, $visitation->id);
+        $this->assertEquals($this->visitation->ID, $visitation->ID);
         $this->assertEquals($this->visitation->patient_id, $visitation->patient_id);
         $this->assertEquals($this->visitation->doctor_id, $visitation->doctor_id);
     }
@@ -125,7 +125,7 @@ class RadiologicalExamTest extends TestCase
     {
         // Create a test exam
         $exam = $this->createTestRadiologicalExam([
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id
         ]);
         
@@ -143,7 +143,7 @@ class RadiologicalExamTest extends TestCase
     {
         // Create a test exam
         $exam = $this->createTestRadiologicalExam([
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id,
             'results' => 'Initial results'
         ]);
@@ -153,7 +153,7 @@ class RadiologicalExamTest extends TestCase
         $exam->save();
         
         // Retrieve the exam again
-        $updated_exam = RadiologicalExam::find($exam->id);
+        $updated_exam = RadiologicalExam::find($exam->ID);
         
         $this->assertEquals('Updated results after secondary review', $updated_exam->results);
     }
@@ -165,11 +165,11 @@ class RadiologicalExamTest extends TestCase
     {
         // Create a test exam
         $exam = $this->createTestRadiologicalExam([
-            'visitation_id' => $this->visitation->id,
+            'visitation_id' => $this->visitation->ID,
             'tech_id' => $this->tech_id
         ]);
         
-        $exam_id = $exam->id;
+        $exam_id = $exam->ID;
         
         // Delete the exam
         $exam->delete();

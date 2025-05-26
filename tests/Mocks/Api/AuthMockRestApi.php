@@ -74,7 +74,7 @@ class AuthMockRestApi
                     'success' => true,
                     'data' => [
                         'user' => [
-                            'id' => $user->ID,
+                            'ID' => $user->ID,
                             'role' => 'doctor'
                         ]
                     ]
@@ -102,7 +102,7 @@ class AuthMockRestApi
         return [
             'success' => true,
             'user' => [
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'role' => 'doctor'
             ]
         ];

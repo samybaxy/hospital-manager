@@ -73,7 +73,7 @@ class DashboardControllerTest extends TestCase
         // Create visitation records for the patient
         for ($i = 0; $i < 3; $i++) {
             Visitation::create([
-                'patient_id' => $this->test_patient->id,
+                'patient_id' => $this->test_patient->ID,
                 'doctor_id' => $this->test_users['doctor'],
                 'date' => date('Y-m-d', strtotime("-{$i} days")),
                 'time' => '09:00:00',
@@ -85,7 +85,7 @@ class DashboardControllerTest extends TestCase
         
         // Create pending lab tests for the patient
         LabInvestigation::create([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'lab_tech_id' => $this->test_users['lab_tech'], // Assign to the lab tech
             'test_type' => 'Complete Blood Count',
@@ -96,7 +96,7 @@ class DashboardControllerTest extends TestCase
         
         // Create upcoming appointments
         Appointment::create([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'appointment_date' => date('Y-m-d', strtotime('+3 days')),
             'appointment_time' => '10:00:00',
@@ -107,7 +107,7 @@ class DashboardControllerTest extends TestCase
         
         // Create today's appointments for doctor
         Appointment::create([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'appointment_date' => date('Y-m-d'),
             'appointment_time' => '14:00:00',
@@ -118,7 +118,7 @@ class DashboardControllerTest extends TestCase
         
         // Create pending medical reports for doctor
         MedicalReport::create([
-            'patient_id' => $this->test_patient->id,
+            'patient_id' => $this->test_patient->ID,
             'doctor_id' => $this->test_users['doctor'],
             'diagnosis' => 'Test diagnosis',
             'treatment' => 'Test treatment',
@@ -150,7 +150,7 @@ class DashboardControllerTest extends TestCase
         $this->assertArrayHasKey('upcoming_appointments', $data);
         
         // Verify patient data
-        $this->assertEquals($this->test_patient->id, $data['patient']->id);
+        $this->assertEquals($this->test_patient->ID, $data['patient']->ID);
         $this->assertEquals($this->test_users['patient'], $data['patient']->user_id);
         $this->assertEquals('Test', $data['patient']->first_name);
         $this->assertEquals('Patient', $data['patient']->last_name);
@@ -225,7 +225,7 @@ class DashboardControllerTest extends TestCase
         // Check if at least one test has the expected fields
         if (!empty($data['pending_tests'])) {
             $test = $data['pending_tests'][0];
-            $this->assertEquals($test->id, $test->ID);
+            $this->assertEquals($test->ID, $test->ID);
             $this->assertEquals('pending', $test->status);
         }
         

@@ -75,54 +75,14 @@ class DashboardMockRestApi
             return new \WP_REST_Response(['error' => 'Patient not found'], 404);
         }
 
-        // Ensure patient has both ID and id properties
-        if (isset($patient->id)) {
-            $patient->ID = $patient->id;
-        } elseif (isset($patient->ID)) {
-            $patient->id = $patient->ID;
-        }
-
         // Get recent visitations
-        $visitations = \HospitalManager\Models\Visitation::forPatient($patient->id);
-        
-        // Ensure each visitation has both ID and id properties
-        if (is_array($visitations)) {
-            foreach ($visitations as $visitation) {
-                if (isset($visitation->id)) {
-                    $visitation->ID = $visitation->id;
-                } elseif (isset($visitation->ID)) {
-                    $visitation->id = $visitation->ID;
-                }
-            }
-        }
+        $visitations = \HospitalManager\Models\Visitation::forPatient($patient->ID);
 
         // Get pending lab tests
-        $lab_tests = \HospitalManager\Models\LabInvestigation::getPendingForPatient($patient->id);
-        
-        // Ensure each lab test has both ID and id properties
-        if (is_array($lab_tests)) {
-            foreach ($lab_tests as $test) {
-                if (isset($test->id)) {
-                    $test->ID = $test->id;
-                } elseif (isset($test->ID)) {
-                    $test->id = $test->ID;
-                }
-            }
-        }
+        $lab_tests = \HospitalManager\Models\LabInvestigation::getPendingForPatient($patient->ID);
 
         // Get upcoming appointments
-        $appointments = \HospitalManager\Models\Appointment::getUpcomingForPatient($patient->id);
-        
-        // Ensure each appointment has both ID and id properties
-        if (is_array($appointments)) {
-            foreach ($appointments as $appointment) {
-                if (isset($appointment->id)) {
-                    $appointment->ID = $appointment->id;
-                } elseif (isset($appointment->ID)) {
-                    $appointment->id = $appointment->ID;
-                }
-            }
-        }
+        $appointments = \HospitalManager\Models\Appointment::getUpcomingForPatient($patient->ID);
 
         return new \WP_REST_Response([
             'patient' => $patient,
@@ -140,41 +100,8 @@ class DashboardMockRestApi
      */
     private static function get_doctor_dashboard($user_id)
     {
-        $todays_appointments = \HospitalManager\Models\Appointment::getTodaysForDoctor($user_id);
-        
-        // Ensure each appointment has both ID and id properties
-        if (is_array($todays_appointments)) {
-            foreach ($todays_appointments as $appointment) {
-                if (isset($appointment->id)) {
-                    $appointment->ID = $appointment->id;
-                } elseif (isset($appointment->ID)) {
-                    $appointment->id = $appointment->ID;
-                }
-                
-                // Handle nested properties if they exist
-                if (isset($appointment->meta) && is_object($appointment->meta)) {
-                    // Ensure appointment meta also has ID/id properties if needed
-                    if (isset($appointment->meta->id)) {
-                        $appointment->meta->ID = $appointment->meta->id;
-                    } elseif (isset($appointment->meta->ID)) {
-                        $appointment->meta->id = $appointment->meta->ID;
-                    }
-                }
-            }
-        }
-        
+        $todays_appointments = \HospitalManager\Models\Appointment::getTodaysForDoctor($user_id);        
         $pending_reports = \HospitalManager\Models\MedicalReport::getPendingForDoctor($user_id);
-        
-        // Ensure each report has both ID and id properties
-        if (is_array($pending_reports)) {
-            foreach ($pending_reports as $report) {
-                if (isset($report->id)) {
-                    $report->ID = $report->id;
-                } elseif (isset($report->ID)) {
-                    $report->id = $report->ID;
-                }
-            }
-        }
 
         return new \WP_REST_Response([
             'todays_appointments' => $todays_appointments ?: [],
@@ -191,29 +118,7 @@ class DashboardMockRestApi
      */
     private static function get_lab_dashboard($user_id)
     {
-        $pending_tests = \HospitalManager\Models\LabInvestigation::getPendingForTech($user_id);
-        
-        // Ensure each test has both ID and id properties
-        if (is_array($pending_tests)) {
-            foreach ($pending_tests as $test) {
-                if (isset($test->id)) {
-                    $test->ID = $test->id;
-                } elseif (isset($test->ID)) {
-                    $test->id = $test->ID;
-                }
-                
-                // Handle nested properties if they exist
-                if (isset($test->meta) && is_object($test->meta)) {
-                    // Ensure test meta also has ID/id properties if needed
-                    if (isset($test->meta->id)) {
-                        $test->meta->ID = $test->meta->id;
-                    } elseif (isset($test->meta->ID)) {
-                        $test->meta->id = $test->meta->ID;
-                    }
-                }
-            }
-        }
-        
+        $pending_tests = \HospitalManager\Models\LabInvestigation::getPendingForTech($user_id);        
         $completed_tests = \HospitalManager\Models\LabInvestigation::getCompletedCountForTechToday($user_id);
 
         return new \WP_REST_Response([

@@ -12,15 +12,15 @@ class MockUser
     /**
      * Add a test user
      */
-    public static function addUser($id, $data = []) 
+    public static function addUser($ID, $data = []) 
     {
         $userData = array_merge([
-            'ID' => $id,
-            'display_name' => 'Test User ' . $id,
-            'user_email' => 'user' . $id . '@example.com'
+            'ID' => $ID,
+            'display_name' => 'Test User ' . $ID,
+            'user_email' => 'user' . $ID . '@example.com'
         ], $data);
         
-        self::$users[$id] = (object)$userData;
+        self::$users[$ID] = (object)$userData;
     }
     
     /**

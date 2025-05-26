@@ -76,7 +76,7 @@ class MockWebSocketService
     public static function sendMessage($channel, $data, $user_id)
     {
         $message = [
-            'id' => uniqid(),
+            'ID' => uniqid(),
             'channel' => $channel,
             'data' => $data,
             'timestamp' => time(),
@@ -133,7 +133,7 @@ class MockWebSocketService
         $messages = self::get_transient($key) ?: [];
         
         $messages = array_filter($messages, function($message) use ($message_id) {
-            return $message['id'] !== $message_id;
+            return $message['ID'] !== $message_id;
         });
         
         self::set_transient($key, $messages, self::$message_ttl);

@@ -26,7 +26,7 @@ class LabInvestigationController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/lab-investigations/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/lab-investigations/(?P<ID>\d+)', [
             [
                 'methods' => 'PUT',
                 'callback' => [$this, 'update_investigation'],
@@ -51,7 +51,7 @@ class LabInvestigationController extends BaseController
 
     public function update_investigation($request) 
     {
-        $investigation = LabInvestigation::find($request['id']);
+        $investigation = LabInvestigation::find($request['ID']);
         if (!$investigation) {
             return new WP_REST_Response(['error' => 'Investigation not found'], 404);
         }

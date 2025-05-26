@@ -70,9 +70,9 @@ class NotificationServiceTest extends TestCase
         $this->assertFalse($notification->read, "New notification should be marked as unread");
         
         // Verify the notification was saved to the database
-        $saved_notification = MockNotification::find($notification->id);
+        $saved_notification = MockNotification::find($notification->ID);
         $this->assertNotNull($saved_notification, "Notification should be retrievable from the database after creation");
-        $this->assertEquals($notification->id, $saved_notification->id, "Retrieved notification should have the same ID");
+        $this->assertEquals($notification->ID, $saved_notification->ID, "Retrieved notification should have the same ID");
         
         // Verify WebSocket message was sent
         $this->assertCount(1, MockWebSocketService::$messages, "Real-time notification should be sent via WebSocket");
@@ -130,13 +130,13 @@ class NotificationServiceTest extends TestCase
         );
         
         // Mark it as read
-        $result = MockNotificationService::markAsRead($notification->id);
+        $result = MockNotificationService::markAsRead($notification->ID);
         
         // Verify success
         $this->assertTrue($result, "markAsRead should return true on success");
         
         // Get the notification again and verify it's marked as read
-        $updated = MockNotification::find($notification->id);
+        $updated = MockNotification::find($notification->ID);
         $this->assertTrue($updated->read, "Notification should be marked as read after calling markAsRead");
     }
     
@@ -211,7 +211,7 @@ class NotificationServiceTest extends TestCase
         );
         
         // Mark one as read
-        MockNotificationService::markAsRead($notification1->id);
+        MockNotificationService::markAsRead($notification1->ID);
         
         // Get unread count
         $count = MockNotificationService::getUnreadCount($this->test_user_id);

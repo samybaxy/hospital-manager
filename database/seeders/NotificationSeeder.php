@@ -83,7 +83,7 @@ class NotificationSeeder extends Seeder
      */
     protected function getEntityIds($table)
     {
-        return $this->wpdb->get_col("SELECT id FROM {$this->wpdb->prefix}{$table} LIMIT 30");
+        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table} LIMIT 30");
     }
     
     /**

@@ -27,13 +27,13 @@ class AuditMockRestApi
             'permission_callback' => [self::class, 'checkAdminPermission'],
         ]);
         
-        // GET /audit-logs/patient/{id} - Get audit logs for a specific patient
-        register_rest_route(self::$namespace, '/audit-logs/patient/(?P<id>\d+)', [
+        // GET /audit-logs/patient/{ID} - Get audit logs for a specific patient
+        register_rest_route(self::$namespace, '/audit-logs/patient/(?P<ID>\d+)', [
             'methods' => 'GET',
             'callback' => [self::class, 'getPatientLogs'],
             'permission_callback' => [self::class, 'checkPatientLogAccess'],
             'args' => [
-                'id' => [
+                'ID' => [
                     'required' => true,
                     'validate_callback' => function($param) {
                         return is_numeric($param);
@@ -102,7 +102,7 @@ class AuditMockRestApi
      */
     public static function getPatientLogs($request)
     {
-        $patient_id = (int)$request->get_param('id');
+        $patient_id = (int)$request->get_param('ID');
         
         // Get patient logs
         $logs = \HospitalManager\Models\AuditLog::where('entity_type', 'patient')

@@ -7,7 +7,7 @@ class RadiologicalExam extends BaseModel
 {
     use FindTrait;
 
-    protected $primaryKey = 'id';
+    protected $primaryKey = 'ID';
     protected $tableName = 'hm_radiological_exams';
     protected $fillable = [
         'visitation_id',
@@ -23,27 +23,20 @@ class RadiologicalExam extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        // Ensure both lowercase 'id' and uppercase 'ID' exist for compatibility
-        if (isset($attributes['id']) && !isset($attributes['ID'])) {
-            $attributes['ID'] = $attributes['id'];
-        } elseif (isset($attributes['ID']) && !isset($attributes['id'])) {
-            $attributes['id'] = $attributes['ID'];
-        }
-        
         parent::__construct($attributes);
     }
 
     /**
      * Find a radiological exam by ID
      * 
-     * @param mixed $id Record ID.
+     * @param mixed $ID Record ID.
      * @return RadiologicalExam|null
      */
-    public static function find($id = 0)
+    public static function find($ID = 0)
     {
         global $wpdb;
         
-        if (empty($id)) {
+        if (empty($ID)) {
             return null;
         }
         
@@ -52,18 +45,11 @@ class RadiologicalExam extends BaseModel
         $table = $instance->getTable();
         
         // Fetch the record directly from the database
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
         $data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$data) {
             return null;
-        }
-        
-        // Make sure we have both lowercase 'id' and uppercase 'ID' for compatibility
-        if (isset($data['id']) && !isset($data['ID'])) {
-            $data['ID'] = $data['id'];
-        } elseif (isset($data['ID']) && !isset($data['id'])) {
-            $data['id'] = $data['ID'];
         }
         
         // Create a new instance with the fetched data
@@ -99,8 +85,7 @@ class RadiologicalExam extends BaseModel
             throw new \Exception($wpdb->last_error);
         }
 
-        $attributes['id'] = $wpdb->insert_id;
-        $attributes['ID'] = $attributes['id']; // Add uppercase ID for compatibility
+        $attributes['ID'] = $wpdb->insert_id;
         return new static($attributes);
     }
     
@@ -125,7 +110,7 @@ class RadiologicalExam extends BaseModel
         }
         
         // Return the user ID directly since UserModel is abstract
-        return get_user_by('id', $this->attributes['tech_id']);
+        return get_user_by('ID', $this->attributes['tech_id']);
     }
     
     /**
@@ -151,12 +136,12 @@ class RadiologicalExam extends BaseModel
         $data['updated_at'] = current_time('mysql');
         
         // Determine if this is an update or insert
-        if (isset($this->attributes['id']) && !empty($this->attributes['id'])) {
+        if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
             $result = $wpdb->update(
                 $table,
                 $data,
-                ['id' => $this->attributes['id']],
+                ['ID' => $this->attributes['ID']],
                 array_map(function($field) {
                     return is_numeric($field) ? '%d' : '%s';
                 }, $data),
@@ -175,8 +160,7 @@ class RadiologicalExam extends BaseModel
             );
             
             if ($result !== false) {
-                $this->attributes['id'] = $wpdb->insert_id;
-                $this->attributes['ID'] = $this->attributes['id']; // For compatibility
+                $this->attributes['ID'] = $wpdb->insert_id;
                 return true;
             }
             
@@ -193,14 +177,14 @@ class RadiologicalExam extends BaseModel
     {
         global $wpdb;
         
-        if (!isset($this->attributes['id'])) {
+        if (!isset($this->attributes['ID'])) {
             return false;
         }
         
         $table = $this->getTable();
         $result = $wpdb->delete(
             $table,
-            ['id' => $this->attributes['id']],
+            ['ID' => $this->attributes['ID']],
             ['%d']
         );
         

@@ -27,10 +27,10 @@ class BaseModelTest extends TestCase
         $patient = $this->createTestPatient();
         
         // Test that find() works (inherited from BaseModel)
-        $found_patient = Patient::find($patient->id);
+        $found_patient = Patient::find($patient->ID);
         
         $this->assertInstanceOf(Patient::class, $found_patient);
-        $this->assertEquals($patient->id, $found_patient->id);
+        $this->assertEquals($patient->ID, $found_patient->ID);
     }
     
     /**
@@ -44,7 +44,7 @@ class BaseModelTest extends TestCase
         
         $patient = $this->createTestPatient();
         
-        $this->assertEquals('id', $property->getValue($patient));
+        $this->assertEquals('ID', $property->getValue($patient));
     }
     
     /**
@@ -87,7 +87,7 @@ class BaseModelTest extends TestCase
         $patient->first_name = 'Jane';
         $patient->save();
         
-        $updated_patient = Patient::find($patient->id);
+        $updated_patient = Patient::find($patient->ID);
         $this->assertEquals('Jane', $updated_patient->first_name);
     }
 }

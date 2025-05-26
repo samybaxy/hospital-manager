@@ -10,7 +10,7 @@ namespace HospitalManager\Tests\Mocks\Services;
  */
 class MockLabInvestigation 
 {
-    public $id;
+    public $ID;
     public $patient_id;
     public $doctor_id;
     public $lab_tech_id;
@@ -37,12 +37,12 @@ class MockLabInvestigation
     /**
      * Static method to find a lab investigation
      */
-    public static function find($id) 
+    public static function find($ID) 
     {
         global $mockLabInvestigations;
         
-        if (is_array($mockLabInvestigations) && isset($mockLabInvestigations[$id])) {
-            return $mockLabInvestigations[$id];
+        if (is_array($mockLabInvestigations) && isset($mockLabInvestigations[$ID])) {
+            return $mockLabInvestigations[$ID];
         }
         
         return null;

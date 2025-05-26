@@ -135,7 +135,7 @@ class WebSocketServiceTest extends TestCase
         $messages = MockWebSocketService::getMessages($user_id);
         $this->assertCount(1, $messages, "User should have one message");
         
-        $message_id = $messages[0]['id'];
+        $message_id = $messages[0]['ID'];
         
         // Delete the message
         MockWebSocketService::deleteMessage($user_id, $message_id);
@@ -199,7 +199,7 @@ class WebSocketServiceTest extends TestCase
         // Create a message in the past
         $user_id = 1;
         $message = [
-            'id' => uniqid(),
+            'ID' => uniqid(),
             'channel' => 'test_channel',
             'data' => ['message' => 'Old message'],
             'timestamp' => time() - (MockWebSocketService::$message_ttl + 10) // Make it older than TTL

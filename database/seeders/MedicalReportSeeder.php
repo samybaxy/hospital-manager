@@ -13,7 +13,7 @@ class MedicalReportSeeder extends Seeder
         
         // Get existing visitations
         $visitations = $this->wpdb->get_results(
-            "SELECT v.id, v.patient_id, v.doctor_id, v.diagnosis, v.treatment 
+            "SELECT v.ID, v.patient_id, v.doctor_id, v.diagnosis, v.treatment 
             FROM {$this->wpdb->prefix}hm_visitations v
             ORDER BY v.date DESC
             LIMIT 40"
@@ -32,7 +32,7 @@ class MedicalReportSeeder extends Seeder
             if (rand(1, 10) > 3) {
                 $status = rand(1, 10) > 7 ? 'pending' : 'completed';
                 $created_at = $this->wpdb->get_var(
-                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE id = {$visitation->id}"
+                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation->ID}"
                 );
                 
                 if (!$created_at) {
@@ -49,7 +49,7 @@ class MedicalReportSeeder extends Seeder
                 $data = [
                     'patient_id' => $visitation->patient_id,
                     'doctor_id' => $visitation->doctor_id,
-                    'visitation_id' => $visitation->id,
+                    'visitation_id' => $visitation->ID,
                     'report_content' => $report_content,
                     'status' => $status,
                     'created_at' => $created_at,
@@ -74,12 +74,12 @@ class MedicalReportSeeder extends Seeder
     {
         // Get patient details
         $patient = $this->wpdb->get_row(
-            "SELECT first_name, last_name, gender, age FROM {$this->wpdb->prefix}hm_patients WHERE id = {$visitation->patient_id}"
+            "SELECT first_name, last_name, gender, age FROM {$this->wpdb->prefix}hm_patients WHERE ID = {$visitation->patient_id}"
         );
         
         // Get doctor details
         $doctor = $this->wpdb->get_row(
-            "SELECT first_name, last_name FROM {$this->wpdb->prefix}hm_doctors WHERE id = {$visitation->doctor_id}"
+            "SELECT first_name, last_name FROM {$this->wpdb->prefix}hm_doctors WHERE ID = {$visitation->doctor_id}"
         );
         
         if (!$patient || !$doctor) {

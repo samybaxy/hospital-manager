@@ -76,8 +76,8 @@ class VisitationControllerTest extends TestCase
         
         // Create a test visitation
         $this->test_visitation = $this->createTestVisitation([
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d'),
             'diagnosis' => 'Test diagnosis',
             'treatment' => 'Test treatment'
@@ -114,10 +114,10 @@ class VisitationControllerTest extends TestCase
         // Verify the visitation data is included in the response
         $found = false;
         foreach ($data as $visitation) {
-            if ($visitation->id === $this->test_visitation->id) {
+            if ($visitation->ID === $this->test_visitation->ID) {
                 $found = true;
-                $this->assertEquals($this->test_patient->id, $visitation->patient_id);
-                $this->assertEquals($this->test_doctor->id, $visitation->doctor_id);
+                $this->assertEquals($this->test_patient->ID, $visitation->patient_id);
+                $this->assertEquals($this->test_doctor->ID, $visitation->doctor_id);
                 $this->assertEquals('Test diagnosis', $visitation->diagnosis);
                 break;
             }
@@ -146,7 +146,7 @@ class VisitationControllerTest extends TestCase
         
         // Verify the patient can only see their own visitations
         foreach ($data as $visitation) {
-            $this->assertEquals($this->test_patient->id, $visitation->patient_id, 'Patient can see visitations for other patients');
+            $this->assertEquals($this->test_patient->ID, $visitation->patient_id, 'Patient can see visitations for other patients');
         }
     }
 
@@ -160,8 +160,8 @@ class VisitationControllerTest extends TestCase
         
         // Prepare visitation data
         $visitation_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d', strtotime('+1 day')),
             'diagnosis' => 'New test diagnosis',
             'treatment' => 'New test treatment',
@@ -180,13 +180,13 @@ class VisitationControllerTest extends TestCase
         $this->assertNotEmpty($data);
         
         // Verify the visitation was created with correct data
-        $this->assertEquals($this->test_patient->id, $data->patient_id);
-        $this->assertEquals($this->test_doctor->id, $data->doctor_id);
+        $this->assertEquals($this->test_patient->ID, $data->patient_id);
+        $this->assertEquals($this->test_doctor->ID, $data->doctor_id);
         $this->assertEquals('New test diagnosis', $data->diagnosis);
         $this->assertEquals('New test treatment', $data->treatment);
         
         // Verify the visitation exists in database
-        $visitation_id = $data->id;
+        $visitation_id = $data->ID;
         $created_visitation = Visitation::find($visitation_id);
         $this->assertNotNull($created_visitation);
     }
@@ -201,8 +201,8 @@ class VisitationControllerTest extends TestCase
         
         // Prepare visitation data
         $visitation_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d'),
             'diagnosis' => 'Self diagnosis',
             'treatment' => 'Self treatment'
@@ -229,8 +229,8 @@ class VisitationControllerTest extends TestCase
         ]);
         
         $another_visitation = $this->createTestVisitation([
-            'patient_id' => $another_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $another_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d'),
             'diagnosis' => 'Another diagnosis',
             'treatment' => 'Another treatment'
@@ -241,7 +241,7 @@ class VisitationControllerTest extends TestCase
         
         // Create request to get visitations with patient filter
         $request = new WP_REST_Request('GET', "/{$this->namespace}/visitations");
-        $request->set_param('patient_id', $this->test_patient->id);
+        $request->set_param('patient_id', $this->test_patient->ID);
         $response = $this->server->dispatch($request);
         
         // Check response status
@@ -252,7 +252,7 @@ class VisitationControllerTest extends TestCase
         $this->assertNotEmpty($data);
         
         foreach ($data as $visitation) {
-            $this->assertEquals($this->test_patient->id, $visitation->patient_id, 'Filtered visitations should only include specified patient');
+            $this->assertEquals($this->test_patient->ID, $visitation->patient_id, 'Filtered visitations should only include specified patient');
         }
     }
 
@@ -263,16 +263,16 @@ class VisitationControllerTest extends TestCase
     {
         // Create visitations with different dates
         $past_visitation = $this->createTestVisitation([
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d', strtotime('-30 days')),
             'diagnosis' => 'Past diagnosis',
             'treatment' => 'Past treatment'
         ]);
         
         $future_visitation = $this->createTestVisitation([
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d', strtotime('+30 days')),
             'diagnosis' => 'Future diagnosis',
             'treatment' => 'Future treatment'
@@ -299,11 +299,11 @@ class VisitationControllerTest extends TestCase
         $future_found = false;
         
         foreach ($data as $visitation) {
-            if ($visitation->id === $this->test_visitation->id) {
+            if ($visitation->ID === $this->test_visitation->ID) {
                 $current_day_found = true;
-            } else if ($visitation->id === $past_visitation->id) {
+            } else if ($visitation->ID === $past_visitation->ID) {
                 $past_found = true;
-            } else if ($visitation->id === $future_visitation->id) {
+            } else if ($visitation->ID === $future_visitation->ID) {
                 $future_found = true;
             }
         }
@@ -330,8 +330,8 @@ class VisitationControllerTest extends TestCase
         
         // Try to create a visitation
         $visitation_data = [
-            'patient_id' => $this->test_patient->id,
-            'doctor_id' => $this->test_doctor->id,
+            'patient_id' => $this->test_patient->ID,
+            'doctor_id' => $this->test_doctor->ID,
             'date' => date('Y-m-d'),
             'notes' => 'Unauthorized notes'
         ];

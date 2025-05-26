@@ -42,7 +42,7 @@ class MockNotificationService
         
         // Store in static array for test assertions
         self::$notifications[] = [
-            'id' => $notification->id,
+            'ID' => $notification->ID,
             'user_id' => $userId,
             'type' => $type,
             'title' => $title,
@@ -54,7 +54,7 @@ class MockNotificationService
         MockWebSocketService::sendMessage(
             'notification',
             [
-                'id' => $notification->id,
+                'ID' => $notification->ID,
                 'type' => $type,
                 'title' => $title,
                 'message' => $message

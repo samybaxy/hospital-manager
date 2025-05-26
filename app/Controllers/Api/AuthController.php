@@ -146,7 +146,7 @@ class AuthController extends BaseController
             $response = new WP_REST_Response([
                 'authenticated' => true,
                 'user' => [
-                    'id' => $user->ID,
+                    'ID' => $user->ID,
                     'name' => $user->display_name,
                     'email' => $user->user_email
                 ],
@@ -169,7 +169,7 @@ class AuthController extends BaseController
             $response = new WP_REST_Response([
                 'authenticated' => true,
                 'user' => [
-                    'id' => 0,
+                    'ID' => 0,
                     'name' => 'Guest User',
                     'email' => ''
                 ],
@@ -195,7 +195,7 @@ class AuthController extends BaseController
                 $response = new WP_REST_Response([
                     'authenticated' => true,
                     'user' => [
-                        'id' => 0,
+                        'ID' => 0,
                         'name' => 'Development User',
                         'email' => ''
                     ],
@@ -297,8 +297,7 @@ class AuthController extends BaseController
         
         // Get REST authentication status
         $rest_auth_status = rest_get_authenticated_app_password() ? 'app_password' : 
-                           (rest_get_authenticated_oauth1() ? 'oauth1' : 
-                           (rest_cookie_check_errors() ? 'cookie_error' : 'standard_auth'));
+                           (rest_cookie_check_errors($user) ? 'cookie_error' : 'standard_auth');
         
         // Get more info about the request
         $request_info = [
@@ -312,7 +311,7 @@ class AuthController extends BaseController
         $response = new WP_REST_Response([
             'user_status' => [
                 'authenticated' => is_user_logged_in(),
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'roles' => $user->roles,
                 'capabilities' => $user->ID > 0 ? $user->allcaps : [],
                 'can_access_rest' => $user->ID > 0 ? user_can($user->ID, 'rest_api_access') : false
@@ -330,7 +329,7 @@ class AuthController extends BaseController
             ],
             'rest_api_status' => [
                 'method' => $rest_auth_status,
-                'cookie_check_errors' => rest_cookie_check_errors(),
+                'cookie_check_errors' => rest_cookie_check_errors($user),
                 'current_user_can_access' => current_user_can('rest_api_access'),
             ],
             'server_info' => [
@@ -361,6 +360,7 @@ class AuthController extends BaseController
      */
     private function get_auth_cookie_status()
     {
+        $user = wp_get_current_user();
         $status = [
             'cookie_exists' => false,
             'cookie_valid' => false,
@@ -400,7 +400,7 @@ class AuthController extends BaseController
         $status['user_id'] = $user_id;
         
         if ($user_id > 0) {
-            $user = get_user_by('id', $user_id);
+            $user = get_user_by('ID', $user_id);
             $status['cookie_valid'] = true;
             $status['user_login'] = $user->user_login;
             $status['user_email_hash'] = md5($user->user_email); // Hash the email for privacy
@@ -409,7 +409,7 @@ class AuthController extends BaseController
             $status['cookie_valid'] = false;
             
             // Check for specific WordPress cookie errors
-            $cookie_errors = rest_cookie_check_errors();
+            $cookie_errors = rest_cookie_check_errors($user);
             if (!empty($cookie_errors)) {
                 $status['cookie_errors'] = $cookie_errors;
             }
@@ -606,7 +606,7 @@ class AuthController extends BaseController
             'iat' => time(),
             'exp' => $expire,
             'user' => [
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'email' => $user->user_email
             ]
         ];
@@ -629,7 +629,7 @@ class AuthController extends BaseController
             'authenticated' => true,
             'token' => $token,
             'user' => [
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'name' => $user->display_name,
                 'email' => $user->user_email
             ],
@@ -858,7 +858,7 @@ Regards,
         }
         
         // Generate a fresh token
-        $user = get_user_by('id', $user_id);
+        $user = get_user_by('ID', $user_id);
         if (!$user) {
             return new WP_Error(
                 'invalid_user',
@@ -875,7 +875,7 @@ Regards,
             'iat' => $issued_at,
             'exp' => $expiration,
             'user' => [
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'email' => $user->user_email
             ]
         ];
@@ -891,7 +891,7 @@ Regards,
             'success' => true,
             'token' => $new_token,
             'user' => [
-                'id' => $user->ID,
+                'ID' => $user->ID,
                 'name' => $user->display_name,
                 'email' => $user->user_email
             ],
@@ -1027,10 +1027,10 @@ Regards,
         }
         
         // Check if user exists
-        if (!isset($payload['user']['id'])) {
+        if (!isset($payload['user']['ID'])) {
             return false;
         }
         
-        return $payload['user']['id'];
+        return $payload['user']['ID'];
     }
 }

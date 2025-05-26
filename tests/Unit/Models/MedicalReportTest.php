@@ -47,8 +47,8 @@ class MedicalReportTest extends TestCase
         
         // Create a test visitation
         $this->visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID
         ]);
     }
     
@@ -58,9 +58,9 @@ class MedicalReportTest extends TestCase
     public function testCreateMedicalReport()
     {
         $data = [
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID,
             'report_content' => 'Patient presented with symptoms of acute sinusitis. Prescribed antibiotics and rest.',
             'status' => 'completed',
             'created_at' => current_time('mysql'),
@@ -70,9 +70,9 @@ class MedicalReportTest extends TestCase
         $report = MedicalReport::create($data);
 
         $this->assertInstanceOf(MedicalReport::class, $report);
-        $this->assertEquals($this->patient->id, $report->patient_id);
-        $this->assertEquals($this->doctor->id, $report->doctor_id);
-        $this->assertEquals($this->visitation->id, $report->visitation_id);
+        $this->assertEquals($this->patient->ID, $report->patient_id);
+        $this->assertEquals($this->doctor->ID, $report->doctor_id);
+        $this->assertEquals($this->visitation->ID, $report->visitation_id);
         $this->assertEquals('completed', $report->status);
         $this->assertNotNull($report->created_at);
     }
@@ -84,16 +84,16 @@ class MedicalReportTest extends TestCase
     {
         // Create a test report
         $report = $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID
         ]);
         
         // Find the report by ID
-        $found_report = MedicalReport::find($report->id);
+        $found_report = MedicalReport::find($report->ID);
         
         $this->assertInstanceOf(MedicalReport::class, $found_report);
-        $this->assertEquals($report->id, $found_report->id);
+        $this->assertEquals($report->ID, $found_report->ID);
         $this->assertEquals($report->patient_id, $found_report->patient_id);
         $this->assertEquals($report->doctor_id, $found_report->doctor_id);
         $this->assertEquals($report->visitation_id, $found_report->visitation_id);
@@ -106,34 +106,34 @@ class MedicalReportTest extends TestCase
     {
         // Create multiple reports with different statuses
         $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID,
             'status' => 'pending'
         ]);
         
         $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID,
             'status' => 'pending'
         ]);
         
         $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID,
             'status' => 'completed'
         ]);
         
         // Get pending reports
-        $pending_reports = MedicalReport::getPendingForDoctor($this->doctor->id);
+        $pending_reports = MedicalReport::getPendingForDoctor($this->doctor->ID);
         
         $this->assertNotEmpty($pending_reports);
         $this->assertCount(2, $pending_reports);
         foreach ($pending_reports as $report) {
             $this->assertEquals('pending', $report->status);
-            $this->assertEquals($this->doctor->id, $report->doctor_id);
+            $this->assertEquals($this->doctor->ID, $report->doctor_id);
         }
     }
 
@@ -145,15 +145,15 @@ class MedicalReportTest extends TestCase
         // Create multiple pending reports
         for ($i = 0; $i < 5; $i++) {
             $this->createTestMedicalReport([
-                'patient_id' => $this->patient->id,
-                'doctor_id' => $this->doctor->id,
-                'visitation_id' => $this->visitation->id,
+                'patient_id' => $this->patient->ID,
+                'doctor_id' => $this->doctor->ID,
+                'visitation_id' => $this->visitation->ID,
                 'status' => 'pending'
             ]);
         }
         
         // Get pending reports with limit 3
-        $limited_reports = MedicalReport::getPendingForDoctor($this->doctor->id, 3);
+        $limited_reports = MedicalReport::getPendingForDoctor($this->doctor->ID, 3);
         
         $this->assertNotEmpty($limited_reports);
         $this->assertCount(3, $limited_reports);
@@ -169,9 +169,9 @@ class MedicalReportTest extends TestCase
     {
         // Create a test report
         $report = $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id,
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID,
             'status' => 'pending',
             'report_content' => 'Initial draft of report'
         ]);
@@ -183,7 +183,7 @@ class MedicalReportTest extends TestCase
         $report->save();
         
         // Retrieve the report again
-        $updated_report = MedicalReport::find($report->id);
+        $updated_report = MedicalReport::find($report->ID);
         
         $this->assertEquals('completed', $updated_report->status);
         $this->assertEquals('Final version of the report after review', $updated_report->report_content);
@@ -196,12 +196,12 @@ class MedicalReportTest extends TestCase
     {
         // Create a test report
         $report = $this->createTestMedicalReport([
-            'patient_id' => $this->patient->id,
-            'doctor_id' => $this->doctor->id,
-            'visitation_id' => $this->visitation->id
+            'patient_id' => $this->patient->ID,
+            'doctor_id' => $this->doctor->ID,
+            'visitation_id' => $this->visitation->ID
         ]);
         
-        $report_id = $report->id;
+        $report_id = $report->ID;
         
         // Delete the report
         $report->delete();

@@ -63,7 +63,7 @@ class PatientServiceTest extends TestCase
         $this->assertNotEmpty(MockAuditLogger::$logs, "Patient creation should be audited for compliance and security");
         $this->assertEquals('create_patient', MockAuditLogger::$logs[0]->action, "Incorrect audit action recorded");
         $this->assertEquals('patient', MockAuditLogger::$logs[0]->entity_type, "Incorrect audit entity type");
-        $this->assertEquals($patient->id, MockAuditLogger::$logs[0]->entity_id, "Incorrect patient ID in audit log");
+        $this->assertEquals($patient->ID, MockAuditLogger::$logs[0]->entity_id, "Incorrect patient ID in audit log");
     }
     
     /**
@@ -117,7 +117,7 @@ class PatientServiceTest extends TestCase
         ];
         
         // Update the patient
-        $result = MockPatientService::updatePatient($patient->id, $update_data);
+        $result = MockPatientService::updatePatient($patient->ID, $update_data);
         
         // Verify update was successful
         $this->assertNotNull($result, "updatePatient should return the updated patient object");
@@ -165,11 +165,11 @@ class PatientServiceTest extends TestCase
         $created_patient = MockPatientService::createPatient($patient_data);
         
         // Get the patient
-        $patient = MockPatientService::getPatient($created_patient->id);
+        $patient = MockPatientService::getPatient($created_patient->ID);
         
         // Verify retrieved patient
         $this->assertNotNull($patient, "getPatient should return a patient object");
-        $this->assertEquals($created_patient->id, $patient->id, "Retrieved patient ID doesn't match");
+        $this->assertEquals($created_patient->ID, $patient->ID, "Retrieved patient ID doesn't match");
         $this->assertEquals('Get', $patient->first_name, "Retrieved patient first name doesn't match");
         $this->assertEquals('Patient', $patient->last_name, "Retrieved patient last name doesn't match");
     }
@@ -199,7 +199,7 @@ class PatientServiceTest extends TestCase
         ];
         
         $patient = MockPatientService::createPatient($patient_data);
-        $patient_id = $patient->id;
+        $patient_id = $patient->ID;
         
         // Reset audit logs
         MockAuditLogger::reset();

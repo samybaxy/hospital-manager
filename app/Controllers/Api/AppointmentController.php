@@ -25,7 +25,7 @@ class AppointmentController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/appointments/book/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/appointments/book/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_booking_data'],
@@ -33,7 +33,7 @@ class AppointmentController extends BaseController
                     return is_user_logged_in();
                 },
                 'args' => [
-                    'id' => [
+                    'ID' => [
                         'validate_callback' => function($param, $request, $key) {
                             return is_numeric($param);
                         },
@@ -74,7 +74,7 @@ class AppointmentController extends BaseController
         ]);
 
         // Single appointment route - consolidated
-        register_rest_route($this->namespace, '/appointments/(?P<id>\d+)', [
+        register_rest_route($this->namespace, '/appointments/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_appointment'],
@@ -82,7 +82,7 @@ class AppointmentController extends BaseController
                     return is_user_logged_in();
                 },
                 'args' => [
-                    'id' => [
+                    'ID' => [
                         'validate_callback' => function($param, $request, $key) {
                             return is_numeric($param);
                         },
@@ -97,7 +97,7 @@ class AppointmentController extends BaseController
                     return is_user_logged_in();
                 },
                 'args' => [
-                    'id' => [
+                    'ID' => [
                         'validate_callback' => function($param, $request, $key) {
                             return is_numeric($param);
                         },
@@ -184,7 +184,7 @@ class AppointmentController extends BaseController
             // Main query with LEFT JOINs
             $query = "
                 SELECT 
-                    a.id,
+                    a.ID,
                     a.patient_id,
                     a.doctor_id,
                     a.appointment_date,
@@ -199,8 +199,8 @@ class AppointmentController extends BaseController
                     COALESCE(CONCAT(p.first_name, ' ', p.last_name), 'Unknown Patient') as patient_name,
                     p.phone as patient_phone
                 FROM {$table_name} a
-                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.id
-                LEFT JOIN {$patients_table} p ON a.patient_id = p.id
+                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.ID
+                LEFT JOIN {$patients_table} p ON a.patient_id = p.ID
                 {$where_clause}
                 ORDER BY a.appointment_date DESC, a.appointment_time DESC
                 LIMIT %d OFFSET %d
@@ -236,7 +236,7 @@ class AppointmentController extends BaseController
             // Format appointments data
             $formatted_appointments = array_map(function($appointment) {
                 return [
-                    'id' => (int) $appointment['id'],
+                    'ID' => (int) $appointment['ID'],
                     'patient_id' => (int) $appointment['patient_id'],
                     'doctor_id' => (int) $appointment['doctor_id'],
                     'date' => $appointment['appointment_date'],
@@ -286,7 +286,7 @@ class AppointmentController extends BaseController
      */
     public function get_booking_data($request)
     {
-        $doctor_id = $request->get_param('id');
+        $doctor_id = $request->get_param('ID');
         
         if (!$doctor_id) {
             return new WP_Error(
@@ -302,7 +302,7 @@ class AppointmentController extends BaseController
             $doctors_table = $wpdb->prefix . 'hm_doctors';
             $doctor = $wpdb->get_row(
                 $wpdb->prepare(
-                    "SELECT * FROM {$doctors_table} WHERE id = %d",
+                    "SELECT * FROM {$doctors_table} WHERE ID = %d",
                     $doctor_id
                 ),
                 ARRAY_A
@@ -406,7 +406,7 @@ class AppointmentController extends BaseController
                 $patients_table = $wpdb->prefix . 'hm_patients';
                 $patient_data = $wpdb->get_row(
                     $wpdb->prepare(
-                        "SELECT first_name, last_name FROM {$patients_table} WHERE id = %d",
+                        "SELECT first_name, last_name FROM {$patients_table} WHERE ID = %d",
                         $patient_id
                     )
                 );
@@ -423,7 +423,7 @@ class AppointmentController extends BaseController
                 $doctors_table = $wpdb->prefix . 'hm_doctors';
                 $doctor_user_id = $wpdb->get_var(
                     $wpdb->prepare(
-                        "SELECT user_id FROM {$doctors_table} WHERE id = %d",
+                        "SELECT user_id FROM {$doctors_table} WHERE ID = %d",
                         $doctor_id
                     )
                 );
@@ -476,7 +476,7 @@ class AppointmentController extends BaseController
                                     [
                                         'notification_id' => $notification_id,
                                         'meta_key' => 'appointment_id',
-                                        'meta_value' => $appointment->id
+                                        'meta_value' => $appointment->ID
                                     ],
                                     ['%d', '%s', '%s']
                                 );
@@ -507,7 +507,7 @@ class AppointmentController extends BaseController
             return new WP_REST_Response([
                 'message' => 'Appointment booked successfully',
                 'data' => [
-                    'id' => $appointment->id,
+                    'ID' => $appointment->ID,
                     'doctor_id' => $appointment->doctor_id,
                     'patient_id' => $appointment->patient_id,
                     'appointment_date' => $appointment->appointment_date,
@@ -531,7 +531,7 @@ class AppointmentController extends BaseController
 
     public function update_appointment($request)
     {
-        $appointment_id = $request->get_param('id');
+        $appointment_id = $request->get_param('ID');
         $status = $request->get_param('status');
         $notes = $request->get_param('notes');
 
@@ -588,7 +588,7 @@ class AppointmentController extends BaseController
         $doctor_table = $wpdb->prefix . 'hm_doctors';
         $doctor_data = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
                 $doctor_id
             )
         );
@@ -680,7 +680,7 @@ class AppointmentController extends BaseController
         $doctor_table = $wpdb->prefix . 'hm_doctors';
         $doctor_data = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
                 $doctor_id
             )
         );
@@ -740,9 +740,9 @@ class AppointmentController extends BaseController
     public function get_appointment($request)
     {
         try {
-            $id = (int)$request->get_param('id');
+            $ID = (int)$request->get_param('ID');
             
-            if (!$id) {
+            if (!$ID) {
                 return new WP_Error('missing_id', 'Appointment ID is required', ['status' => 400]);
             }
             
@@ -767,10 +767,10 @@ class AppointmentController extends BaseController
                     CONCAT(p.first_name, ' ', p.last_name) as patient_name,
                     p.phone as patient_phone
                 FROM {$table_name} a
-                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.id
-                LEFT JOIN {$patients_table} p ON a.patient_id = p.id
-                WHERE a.id = %d",
-                $id
+                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.ID
+                LEFT JOIN {$patients_table} p ON a.patient_id = p.ID
+                WHERE a.ID = %d",
+                $ID
             );
             
             $appointment = $wpdb->get_row($query, ARRAY_A);
@@ -781,7 +781,7 @@ class AppointmentController extends BaseController
             
             // Format response data
             $formatted_appointment = [
-                'id' => (int) $appointment['id'],
+                'ID' => (int) $appointment['ID'],
                 'patient_id' => (int) $appointment['patient_id'],
                 'doctor_id' => (int) $appointment['doctor_id'],
                 'date' => $appointment['appointment_date'],
@@ -855,7 +855,7 @@ class AppointmentController extends BaseController
             
             // Debug: Get all appointments for this doctor to see what we have
             $all_appointments_debug = $wpdb->get_results($wpdb->prepare(
-                "SELECT id, status, appointment_date FROM {$table_name} WHERE doctor_id = %d ORDER BY id",
+                "SELECT ID, status, appointment_date FROM {$table_name} WHERE doctor_id = %d ORDER BY ID",
                 $doctor_id
             ), ARRAY_A);
             error_log('Doctor ' . $doctor_id . ' - Total appointments in DB: ' . $all_appointments_count . ', Non-cancelled: ' . $total_appointments);
@@ -928,7 +928,7 @@ class AppointmentController extends BaseController
         // Get doctor's availability settings
         $doctor_data = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT appointment_availability FROM {$doctor_table} WHERE id = %d",
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
                 $doctor_id
             )
         );
