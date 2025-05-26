@@ -39,7 +39,7 @@ const Chat = () => {
         // Set active chat to the first one if available
         if (data.length > 0) {
           setActiveChat(data[0]);
-          fetchMessages(data[0].id);
+          fetchMessages(data[0].ID);
         }
       } catch (err) {
         console.error('Error fetching chats:', err);
@@ -98,7 +98,7 @@ const Chat = () => {
         throw new Error('API URL not available');
       }
       
-      const response = await fetch(`${apiUrl}/chats/${activeChat.id}/messages`, {
+      const response = await fetch(`${apiUrl}/chats/${activeChat.ID}/messages`, {
         method: 'POST',
         headers: {
           'X-WP-Nonce': nonce,
@@ -163,11 +163,11 @@ const Chat = () => {
               {chats.length > 0 ? (
                 chats.map((chat) => (
                   <div 
-                    key={chat.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 ${activeChat && activeChat.id === chat.id ? 'bg-primary-50' : ''}`}
+                    key={chat.ID} 
+                    className={`p-3 cursor-pointer hover:bg-gray-50 ${activeChat && activeChat.ID === chat.ID ? 'bg-primary-50' : ''}`}
                     onClick={() => {
                       setActiveChat(chat);
-                      fetchMessages(chat.id);
+                      fetchMessages(chat.ID);
                     }}
                   >
                     <div className="flex items-center">
@@ -218,7 +218,7 @@ const Chat = () => {
                   ) : messages.length > 0 ? (
                     <div className="space-y-4">
                       {messages.map((message) => (
-                        <div key={message.id} className={`flex ${message.is_mine ? 'justify-end' : 'justify-start'}`}>
+                        <div key={message.ID} className={`flex ${message.is_mine ? 'justify-end' : 'justify-start'}`}>
                           <div 
                             className={`max-w-xs md:max-w-md px-4 py-2 rounded-lg ${message.is_mine 
                               ? 'bg-primary-600 text-white' 

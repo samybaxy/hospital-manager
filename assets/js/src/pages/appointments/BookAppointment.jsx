@@ -345,23 +345,24 @@ const BookAppointment = () => {
         }
         
         // Fetch current patient ID from patients table using logged-in user
-        if (user?.id) {
+        console.log('Fetching patient ID for user:', user);
+        if (user?.ID) {
           try {
             const patientResponse = await api.get(`/patients/me`);
             console.log('Patient response:', patientResponse.data);
             
             // Handle different API response formats
             if (patientResponse.data) {
-              if (patientResponse.data.success && patientResponse.data.data && patientResponse.data.data.id) {
-                // Format: { success: true, data: { id: 123, ... } }
-                const id = patientResponse.data.data.id;
-                setPatientId(id);
-              } else if (patientResponse.data.id) {
-                // Format: { id: 123, ... }
-                setPatientId(patientResponse.data.id);
-              } else if (Array.isArray(patientResponse.data) && patientResponse.data[0]?.id) {
-                // Format: [{ id: 123, ... }]
-                setPatientId(patientResponse.data[0].id);
+              if (patientResponse.data.success && patientResponse.data.data && patientResponse.data.data.ID) {
+                // Format: { success: true, data: { ID: 123, ... } }
+                const ID = patientResponse.data.data.ID;
+                setPatientId(ID);
+              } else if (patientResponse.data.ID) {
+                // Format: { ID: 123, ... }
+                setPatientId(patientResponse.data.ID);
+              } else if (Array.isArray(patientResponse.data) && patientResponse.data[0]?.ID) {
+                // Format: [{ ID: 123, ... }]
+                setPatientId(patientResponse.data[0].ID);
               } else {
                 console.error('No valid patient ID found in response:', patientResponse.data);
                 setError('Could not find your patient record.');
@@ -542,7 +543,7 @@ const BookAppointment = () => {
         setSuccess(true);
         setTimeout(() => {
           // Redirect to appointment details
-          navigate(`/appointments/${response.data.data.id}`);
+          navigate(`/appointments/${response.data.data.ID}`);
         }, 2000);
       }
     } catch (err) {

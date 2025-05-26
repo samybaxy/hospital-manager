@@ -419,7 +419,7 @@ const Doctors = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {doctors.map((doctor) => (
-                  <tr key={doctor.id} className="hover:bg-gray-50">
+                  <tr key={doctor.ID} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div>
@@ -440,7 +440,7 @@ const Doctors = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex justify-center space-x-2">
                         <Link
-                          to={`/doctors/${doctor.id}`}
+                          to={`/doctors/${doctor.ID}`}
                           className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -450,7 +450,7 @@ const Doctors = () => {
                           View
                         </Link>
                         <Link
-                          to={`/appointments/book/${doctor.id}`}
+                          to={`/appointments/book/${doctor.ID}`}
                           className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -459,7 +459,7 @@ const Doctors = () => {
                           Book Appointment
                         </Link>
                         <Link
-                          to={`/doctors/${doctor.id}/edit`}
+                          to={`/doctors/${doctor.ID}/edit`}
                           className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

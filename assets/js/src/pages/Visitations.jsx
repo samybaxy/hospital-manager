@@ -103,9 +103,9 @@ const Visitations = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {visitations.length > 0 ? (
                 visitations.map((visitation) => (
-                  <tr key={visitation.id}>
+                  <tr key={visitation.ID}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {visitation.id}
+                      {visitation.ID}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {visitation.patient_name}

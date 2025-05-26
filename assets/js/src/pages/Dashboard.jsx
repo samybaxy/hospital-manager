@@ -64,13 +64,13 @@ const Dashboard = () => {
         });
         
         setRecentActivities([
-          { id: 1, message: 'Sample activity 1', created_at: 'May 14, 2025 10:45 am' },
-          { id: 2, message: 'Sample activity 2', created_at: 'May 14, 2025 9:30 am' }
+          { ID: 1, message: 'Sample activity 1', created_at: 'May 14, 2025 10:45 am' },
+          { ID: 2, message: 'Sample activity 2', created_at: 'May 14, 2025 9:30 am' }
         ]);
         
         setUpcomingAppointments([
-          { id: 1, first_name: 'John', last_name: 'Doe', formatted_date: 'May 15, 2025', appointment_time: '09:00:00' },
-          { id: 2, first_name: 'Jane', last_name: 'Smith', formatted_date: 'May 16, 2025', appointment_time: '14:30:00' }
+          { ID: 1, first_name: 'John', last_name: 'Doe', formatted_date: 'May 15, 2025', appointment_time: '09:00:00' },
+          { ID: 2, first_name: 'Jane', last_name: 'Smith', formatted_date: 'May 16, 2025', appointment_time: '14:30:00' }
         ]);
       } finally {
         setLoading(false);
@@ -142,7 +142,7 @@ const Dashboard = () => {
             ) : upcomingAppointments.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="py-3 flex justify-between items-center">
+                  <div key={appointment.ID} className="py-3 flex justify-between items-center">
                     <div>
                       <p className="font-medium">
                         {appointment.first_name} {appointment.last_name}
@@ -162,7 +162,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <Link to={`/appointments/${appointment.id}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
+                    <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
                       <Button variant="secondary" className="text-xs px-3 py-1">
                         Details
                       </Button>
@@ -216,7 +216,7 @@ const Dashboard = () => {
             ) : recentActivities.length > 0 ? (
               <ul className="divide-y divide-gray-200">
                 {recentActivities.map((activity) => (
-                  <li key={activity.id} className="py-3">
+                  <li key={activity.ID} className="py-3">
                     <div className="flex space-x-3">
                       <div className="flex-shrink-0">
                         {activity.type === 'appointment' && (

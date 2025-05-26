@@ -275,8 +275,8 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
     try {
       setLoading(true);
       if (isEditing) {
-        await api.put(`/patients/${patient.id}`, payload);
-        navigate(`/patients/${patient.id}`, { replace: true });
+        await api.put(`/patients/${patient.ID}`, payload);
+        navigate(`/patients/${patient.ID}`, { replace: true });
       } else {
         const response = await api.post('/patients', payload);
         // Debug the response
@@ -570,7 +570,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                     >
                       <option key="hmo-none" value="">Select HMO</option>
                       {hmos.map((hmo) => (
-                        <option key={`hmo-${hmo.id}`} value={hmo.id}>
+                        <option key={`hmo-${hmo.ID}`} value={hmo.ID}>
                           {hmo.name}
                         </option>
                       ))}

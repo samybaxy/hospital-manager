@@ -715,7 +715,7 @@ const renderAppointmentList = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {appointments.map((appointment) => (
-                <tr key={appointment.id} className="hover:bg-gray-50">
+                <tr key={appointment.ID} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
                   </td>
@@ -740,7 +740,7 @@ const renderAppointmentList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
                     <div className="flex justify-end space-x-2">
                       <Link 
-                        to={`/appointments/${appointment.id}`} 
+                        to={`/appointments/${appointment.ID}`} 
                         state={{ returnTo: 'appointments', returnPath: '/appointments' }}
                         className="inline-flex items-center px-2 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
@@ -754,7 +754,7 @@ const renderAppointmentList = () => {
                       {appointment.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'confirmed' }).then(fetchAppointments)}
+                            onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments)}
                             className="inline-flex items-center px-2 py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -763,7 +763,7 @@ const renderAppointmentList = () => {
                             Confirm
                           </button>
                           <button
-                            onClick={() => handleCancelClick(appointment.id)}
+                            onClick={() => handleCancelClick(appointment.ID)}
                             className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -776,7 +776,7 @@ const renderAppointmentList = () => {
                       {appointment.status === 'confirmed' && (
                         <>
                           <button
-                            onClick={() => api.put(`/appointments/${appointment.id}`, { status: 'completed' }).then(fetchAppointments)}
+                            onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'completed' }).then(fetchAppointments)}
                             className="inline-flex items-center px-2 py-1 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -785,7 +785,7 @@ const renderAppointmentList = () => {
                             Mark Completed
                           </button>
                           <button
-                            onClick={() => handleCancelClick(appointment.id)}
+                            onClick={() => handleCancelClick(appointment.ID)}
                             className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -137,7 +137,7 @@ const AuditLogs = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {logs.length > 0 ? (
                 logs.map((log) => (
-                  <tr key={log.id}>
+                  <tr key={log.ID}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {log.timestamp}
                     </td>

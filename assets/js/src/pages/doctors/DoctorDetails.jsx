@@ -23,7 +23,7 @@ const fadeOutAnimation = {
 };
 
 const DoctorDetails = () => {
-  const { id } = useParams();
+  const { ID } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [doctor, setDoctor] = useState(null);
@@ -93,12 +93,12 @@ const DoctorDetails = () => {
   
   // Function to fetch doctor's patients when patients tab is clicked
   const fetchPatients = useCallback(async (page = 1) => {
-    if (!id) return;
+    if (!ID) return;
     
     try {
       setPatientsLoading(true);
       setPatientsError(null);
-      const response = await api.get(`/doctors/${id}/patients?page=${page}&per_page=20`);
+      const response = await api.get(`/doctors/${ID}/patients?page=${page}&per_page=20`);
       
       if (response.data && response.data.data) {
         setPatients(response.data.data);
@@ -127,18 +127,18 @@ const DoctorDetails = () => {
     } finally {
       setPatientsLoading(false);
     }
-  }, [id]);
+  }, [ID]);
 
   // Function to fetch doctor's appointments
   const fetchAppointments = useCallback(async () => {
-    if (!id) return;
+    if (!ID) return;
     
     try {
       setAppointmentsLoading(true);
-      console.log('Fetching appointments for doctor:', id);
+      console.log('Fetching appointments for doctor:', ID);
 
       // Get all upcoming appointments (both pending and confirmed)
-      const response = await api.get(`/appointments?doctor_id=${id}&upcoming=true`);
+      const response = await api.get(`/appointments?doctor_id=${ID}&upcoming=true`);
       console.log('Appointments response:', response.data);
       
       if (response.data && response.data.success) {
@@ -210,7 +210,7 @@ const DoctorDetails = () => {
     } finally {
       setAppointmentsLoading(false);
     }
-  }, [id]);
+  }, [ID]);
 
   // Effect to fetch patients when tab changes to patients or page changes
   useEffect(() => {
@@ -230,7 +230,7 @@ const DoctorDetails = () => {
     const fetchDoctor = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/doctors/${id}`);
+        const response = await api.get(`/doctors/${ID}`);
 
         // Check for the structure of the response and extract the doctor data properly
         if (response.data && response.data.data) {
@@ -250,7 +250,7 @@ const DoctorDetails = () => {
 
         // Fetch patient count and statistics early, regardless of tab
         try {
-          const patientResponse = await api.get(`/doctors/${id}/patients`);
+          const patientResponse = await api.get(`/doctors/${ID}/patients`);
           if (patientResponse.data) {
             // Set patient statistics based on the API response
             setPatientStats({
@@ -265,7 +265,7 @@ const DoctorDetails = () => {
 
         // Fetch real appointment statistics
         try {
-          const statsResponse = await api.get(`/appointments/stats?doctor_id=${id}`);
+          const statsResponse = await api.get(`/appointments/stats?doctor_id=${ID}`);
 
           if (statsResponse.data) {
             console.log('Schedule stats received:', statsResponse.data);
@@ -308,7 +308,7 @@ const DoctorDetails = () => {
     };
     
     fetchDoctor();
-  }, [id]);
+  }, [ID]);
 
   // Check for success messages from edit form
   useEffect(() => {
@@ -330,7 +330,7 @@ const DoctorDetails = () => {
 
     try {
       setLoading(true);
-      await api.delete(`/doctors/${id}`);
+      await api.delete(`/doctors/${ID}`);
       navigate('/doctors', { replace: true });
     } catch (err) {
       console.error('Error deleting doctor:', err);
@@ -394,11 +394,11 @@ const DoctorDetails = () => {
         <div>
           <h1 className="text-2xl font-bold">Doctor Details</h1>
           <p className="text-gray-600">
-            Doctor ID: {doctor.id || '-'}
+            Doctor ID: {doctor.ID || '-'}
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
-          <Link to={`/doctors/${id}/edit`}>
+          <Link to={`/doctors/${ID}/edit`}>
             <Button variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -406,9 +406,9 @@ const DoctorDetails = () => {
               Edit Doctor
             </Button>
           </Link>
-          <Link to={`/appointments/book/${id}`} state={{ 
+          <Link to={`/appointments/book/${ID}`} state={{ 
             returnTo: 'doctor',
-            returnPath: `/doctors/${id}`,
+            returnPath: `/doctors/${ID}`,
             doctorName: `${doctor?.first_name} ${doctor?.last_name}`
           }}>
             <Button variant="success">
@@ -649,7 +649,7 @@ const DoctorDetails = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <p className="text-sm">Working hours not set</p>
-                      <Link to={`/doctors/${id}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                      <Link to={`/doctors/${ID}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
                         Set working hours
                       </Link>
                     </div>
@@ -726,7 +726,7 @@ const DoctorDetails = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {patients.map((patient, index) => {
-                      const patientId = patient.id || index + 1;
+                      const patientId = patient.ID || index + 1;
                       const firstName = patient.first_name || `Patient`;
                       const lastName = patient.last_name || `${index + 1}`;
                       const visitDate = patient.last_visit_date || new Date(Date.now() - Math.random() * 10000000000).toISOString().split('T')[0];
@@ -759,7 +759,7 @@ const DoctorDetails = () => {
                             <div className="flex space-x-2">
                               <Link 
                                 to={`/patients/${patientId}`} 
-                                state={{ fromDoctor: { id, name: fullName, specialty: specialty } }}
+                                state={{ fromDoctor: { ID, name: fullName, specialty: specialty } }}
                                 className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -945,7 +945,7 @@ const DoctorDetails = () => {
                       const status = appointment.status || 'pending';
                       
                       return (
-                        <tr key={appointment.id} className="hover:bg-gray-50">
+                        <tr key={appointment.ID} className="hover:bg-gray-50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{formattedDate}</div>
                             <div className="text-sm text-gray-500">
@@ -979,7 +979,7 @@ const DoctorDetails = () => {
                                   onClick={() => {
                                     // Add logic to confirm appointment
                                     // You can call the API endpoint to update the appointment status
-                                    api.put(`/appointments/${appointment.id}`, { status: 'confirmed' })
+                                    api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' })
                                       .then(() => fetchAppointments())
                                       .catch(err => console.error('Error confirming appointment:', err));
                                   }}
@@ -996,7 +996,7 @@ const DoctorDetails = () => {
                                   onClick={() => {
                                     // Add logic to cancel appointment
                                     if (window.confirm('Are you sure you want to cancel this appointment?')) {
-                                      api.put(`/appointments/${appointment.id}`, { status: 'cancelled' })
+                                      api.put(`/appointments/${appointment.ID}`, { status: 'cancelled' })
                                         .then(() => fetchAppointments())
                                         .catch(err => console.error('Error cancelling appointment:', err));
                                     }
@@ -1008,7 +1008,7 @@ const DoctorDetails = () => {
                                   Cancel
                                 </button>
                               )}
-                              <Link to={`/appointments/${appointment.id}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${id}`, doctorName: fullName }}>
+                              <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${ID}`, doctorName: fullName }}>
                                 <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />

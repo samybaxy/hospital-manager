@@ -32,21 +32,21 @@ const appointmentService = {
 
   /**
    * Update an appointment
-   * @param {number} id - Appointment ID
+   * @param {number} ID - Appointment ID
    * @param {Object} appointmentData - Updated appointment data
    * @returns {Promise} Promise with updated appointment
    */
-  updateAppointment: (id, appointmentData) => {
-    return api.put(`/appointments/${id}`, appointmentData);
+  updateAppointment: (ID, appointmentData) => {
+    return api.put(`/appointments/${ID}`, appointmentData);
   },
 
   /**
    * Get a single appointment by ID
-   * @param {number} id - Appointment ID
+   * @param {number} ID - Appointment ID
    * @returns {Promise} Promise with appointment data
    */
-  getAppointment: (id) => {
-    return api.get(`/appointments/${id}`);
+  getAppointment: (ID) => {
+    return api.get(`/appointments/${ID}`);
   },
 
   /**
@@ -63,12 +63,12 @@ const appointmentService = {
 
   /**
    * Cancel an appointment
-   * @param {number} id - Appointment ID
+   * @param {number} ID - Appointment ID
    * @param {string} reason - Reason for cancellation
    * @returns {Promise} Promise with result
    */
-  cancelAppointment: (id, reason = '') => {
-    return api.put(`/appointments/${id}`, { 
+  cancelAppointment: (ID, reason = '') => {
+    return api.put(`/appointments/${ID}`, { 
       status: 'cancelled',
       notes: reason
     });

@@ -40,7 +40,7 @@ const Notifications = () => {
     fetchNotifications();
   }, []);
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (ID) => {
     try {
       const { apiUrl, nonce } = window.hospitalManagerData || {};
       
@@ -48,7 +48,7 @@ const Notifications = () => {
         throw new Error('API URL not available');
       }
       
-      const response = await fetch(`${apiUrl}/notifications/${id}/read`, {
+      const response = await fetch(`${apiUrl}/notifications/${ID}/read`, {
         method: 'POST',
         headers: {
           'X-WP-Nonce': nonce,
@@ -63,7 +63,7 @@ const Notifications = () => {
       // Update the notification in the local state
       setNotifications(prevNotifications => 
         prevNotifications.map(notification => 
-          notification.id === id 
+          notification.ID === ID 
             ? { ...notification, is_read: true } 
             : notification
         )
@@ -144,7 +144,7 @@ const Notifications = () => {
           {notifications.length > 0 ? (
             notifications.map((notification) => (
               <div 
-                key={notification.id} 
+                key={notification.ID} 
                 className={`p-4 ${notification.is_read ? 'bg-white' : 'bg-blue-50'}`}
               >
                 <div className="sm:flex sm:justify-between sm:items-start">
@@ -174,7 +174,7 @@ const Notifications = () => {
                       <Button 
                         variant="secondary" 
                         size="sm"
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => markAsRead(notification.ID)}
                       >
                         Mark as Read
                       </Button>

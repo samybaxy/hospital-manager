@@ -317,8 +317,8 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
       dataToSubmit.appointment_availability = JSON.stringify(convertedAvailability);
       
       if (isEditing) {
-        await api.put(`/doctors/${doctor.id}`, dataToSubmit);
-        navigate(`/doctors/${doctor.id}`, { 
+        await api.put(`/doctors/${doctor.ID}`, dataToSubmit);
+        navigate(`/doctors/${doctor.ID}`, { 
           replace: true, 
           state: { success: 'Doctor information updated successfully!' } 
         });

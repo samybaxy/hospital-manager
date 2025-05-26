@@ -105,7 +105,7 @@ const Patients = () => {
         if (response.data && response.data.data && response.data.data.hmos) {
           // Make sure we have proper numeric IDs for filtering
           const formattedHMOs = response.data.data.hmos.map(hmo => ({
-            id: Number(hmo.id),
+            ID: Number(hmo.ID),
             name: hmo.name
           }));
           setHmoOptions(formattedHMOs);
@@ -336,7 +336,7 @@ const Patients = () => {
                     <option value="all">All HMOs</option>
                     {hmoOptions && hmoOptions.length > 0 ? (
                       hmoOptions.map(hmo => (
-                        <option key={hmo.id} value={hmo.id}>{hmo.name}</option>
+                        <option key={hmo.ID} value={hmo.ID}>{hmo.name}</option>
                       ))
                     ) : (
                       <option value="" disabled>Loading HMO options...</option>
@@ -446,7 +446,7 @@ const Patients = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {patients.map((patient, index) => {
                   // Get patient ID safely for the key and links
-                  const patientId = patient.id || patient.ID || index;
+                  const patientId = patient.ID || index;
                   
                   // Create initials from name or use placeholder
                   let firstInitial = '?';

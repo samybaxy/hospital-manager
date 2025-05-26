@@ -22,7 +22,7 @@ const popupCardStyle = {
 };
 
 const PatientDetails = () => {
-  const { id } = useParams();
+  const { ID } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   // Check if we came from a doctor's page
@@ -94,20 +94,20 @@ const PatientDetails = () => {
   }, [timerId]);
 
   // Function to toggle expanded text with timeout (keeping this for compatibility)
-  const toggleExpandText = useCallback((id) => {
+  const toggleExpandText = useCallback((ID) => {
     setExpandedHistory((prev) => {
-      const newState = { ...prev, [id]: !prev[id] };
+      const newState = { ...prev, [ID]: !prev[ID] };
       return newState;
     });
   }, []);
 
   // Function to fetch patient visitations when medical tab is clicked
   const fetchVisitations = useCallback(async () => {
-    if (!id) return;
+    if (!ID) return;
     
     try {
       setVisitationsLoading(true);
-      const response = await api.get(`/patients/${id}/visitations`);
+      const response = await api.get(`/patients/${ID}/visitations`);
       
       if (response.data && response.data.data) {
         setVisitations(response.data.data);
@@ -122,7 +122,7 @@ const PatientDetails = () => {
     } finally {
       setVisitationsLoading(false);
     }
-  }, [id]);
+  }, [ID]);
 
   // Effect to fetch visitations when tab changes to medical
   useEffect(() => {
@@ -135,7 +135,7 @@ const PatientDetails = () => {
     const fetchPatient = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/patients/${id}`);
+        const response = await api.get(`/patients/${ID}`);
 
         // Check for the structure of the response and extract the patient data properly
         if (response.data && response.data.data) {
@@ -154,7 +154,7 @@ const PatientDetails = () => {
     };
     
     fetchPatient();
-  }, [id]);
+  }, [ID]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
@@ -163,7 +163,7 @@ const PatientDetails = () => {
 
     try {
       setLoading(true);
-      await api.delete(`/patients/${id}`);
+      await api.delete(`/patients/${ID}`);
       navigate('/patients', { replace: true });
     } catch (err) {
       console.error('Error deleting patient:', err);
@@ -189,7 +189,7 @@ const PatientDetails = () => {
           </div>
           <div className="mt-4">
             {fromDoctor ? (
-              <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+              <Link to={`/doctors/${fromDoctor.ID}`} state={{ activeTab: 'patients' }}>
                 <Button variant="secondary">Return to Doctor</Button>
               </Link>
             ) : (
@@ -212,7 +212,7 @@ const PatientDetails = () => {
           </div>
           <div className="mt-4">
             {fromDoctor ? (
-              <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+              <Link to={`/doctors/${fromDoctor.ID}`} state={{ activeTab: 'patients' }}>
                 <Button variant="secondary">Return to Doctor</Button>
               </Link>
             ) : (
@@ -241,11 +241,11 @@ const PatientDetails = () => {
         <div>
           <h1 className="text-2xl font-bold">Patient Details</h1>
           <p className="text-gray-600">
-            Patient ID: {patient.id || '-'}
+            Patient ID: {patient.ID || '-'}
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
-          <Link to={`/patients/${id}/edit`}>
+          <Link to={`/patients/${ID}/edit`}>
             <Button variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -478,7 +478,7 @@ const PatientDetails = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {visitations.map((visit) => (
-                    <tr key={visit.id} className="hover:bg-gray-50">
+                    <tr key={visit.ID} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                         <div>{visit.date || '-'}</div>
                         <div className="text-gray-500 text-xs">{visit.time || ''}</div>
@@ -491,7 +491,7 @@ const PatientDetails = () => {
                           <div>
                             <div style={lineClampStyle}>{visit.medical_history}</div>
                             <button 
-                              onClick={() => openPopup(visit.medical_history, visit.id)}
+                              onClick={() => openPopup(visit.medical_history, visit.ID)}
                               className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-1"
                             >
                               Show more
@@ -512,7 +512,7 @@ const PatientDetails = () => {
 
       <div className="mt-4">
         {fromDoctor ? (
-          <Link to={`/doctors/${fromDoctor.id}`} state={{ activeTab: 'patients' }}>
+          <Link to={`/doctors/${fromDoctor.ID}`} state={{ activeTab: 'patients' }}>
             <Button variant="secondary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />

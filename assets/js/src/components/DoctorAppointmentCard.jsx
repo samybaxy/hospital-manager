@@ -28,7 +28,7 @@ const DoctorAppointmentCard = ({ doctor }) => {
 
     try {
       const appointmentData = {
-        doctor_id: doctor.id,
+        doctor_id: doctor.ID,
         date: selectedDateTime.date,
         time: selectedDateTime.time,
         reason: reason
@@ -83,7 +83,7 @@ const DoctorAppointmentCard = ({ doctor }) => {
             <h3 className="text-lg font-medium mb-4">Book an Appointment</h3>
             <form onSubmit={handleBooking} className="space-y-4">
               <DateTimeSelector 
-                doctorId={doctor.id} 
+                doctorId={doctor.ID} 
                 onSelectDateTime={setSelectedDateTime} 
               />
               
