@@ -345,11 +345,9 @@ const BookAppointment = () => {
         }
         
         // Fetch current patient ID from patients table using logged-in user
-        console.log('Fetching patient ID for user:', user);
         if (user?.ID) {
           try {
             const patientResponse = await api.get(`/patients/me`);
-            console.log('Patient response:', patientResponse.data);
             
             // Handle different API response formats
             if (patientResponse.data) {

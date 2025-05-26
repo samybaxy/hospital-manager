@@ -102,6 +102,7 @@ class RoleManager
             // Route access capabilities for patients
             'access_patients' => false,  // Restricted
             'access_doctors' => true, // Can view doctors
+            'edit_doctor' => false, // Cannot edit doctors
             'access_departments' => false, // Restricted
             'access_appointments' => true,
             'access_visitations' => true,

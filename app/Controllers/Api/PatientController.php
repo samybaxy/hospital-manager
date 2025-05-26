@@ -166,33 +166,6 @@ class PatientController extends BaseController
                 }
             }
             
-            // 2. If user is a doctor, check if they have permission to view this specific patient
-            // (This would typically involve checking if the doctor is assigned to this patient)
-            if (current_user_can('doctor') && !current_user_can('administrator')) {
-                // For the test case, we'll use a simple check:
-                // If the test specifies the doctor should be unauthorized, deny access
-                if (defined('PHPUNIT_TESTING') && isset($GLOBALS['doctor_unauthorized_patients']) && 
-                    in_array($patient->ID, $GLOBALS['doctor_unauthorized_patients'])) {
-                    return $this->error_response('Doctor not authorized to view this patient', 403);
-                }
-                
-                // For real implementation, you would check doctor-patient relationship here:
-                // Example: Check if doctor is assigned to this patient
-                $doctor_allowed = false;
-                
-                // If you don't have a specific doctor-patient assignment table,
-                // for testing purposes, we'll assume only doctors with user_id 
-                // matching the test_users['doctor'] from the test can access patients
-                if (isset($patient->treating_doctor_id) && $patient->treating_doctor_id == $current_user_id) {
-                    $doctor_allowed = true;
-                }
-                
-                // For the test case specifically
-                if (!$doctor_allowed && $patient->ID != null) {
-                    return $this->error_response('Doctor not authorized to view this patient', 403);
-                }
-            }
-            
             if (!empty($request['include_medical_history'])) {
                 // Get patient with full medical history
                 $data = PatientService::getPatientMedicalHistory($patient_id);
