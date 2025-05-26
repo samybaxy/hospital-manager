@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { useAccess } from '../utils/accessControl';
-import { useAuth } from '../context/AuthContext';
-import { api } from '../services/apiService';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import { useAccess } from '../../utils/accessControl';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../services/apiService';
 
 const Visitations = () => {
   const [visitations, setVisitations] = useState([]);

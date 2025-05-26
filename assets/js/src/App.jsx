@@ -28,7 +28,10 @@ import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 // Import new pages based on API controllers
 import LabInvestigations from './pages/LabInvestigations';
-import Visitations from './pages/Visitations';
+import Visitations from './pages/visitations/Visitations';
+import AddVisitForm from './pages/visitations/AddVisitForm';
+import EditVisitForm from './pages/visitations/EditVisitForm';
+import ViewVisitDetails from './pages/visitations/ViewVisitDetails';
 import Chat from './pages/Chat';
 import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
@@ -166,6 +169,21 @@ const AppRoutes = () => {
         <Route path="/visitations" element={
           <ProtectedRoute routeName="visitations">
             <Visitations />
+          </ProtectedRoute>
+        } />
+        <Route path="/visitations/new" element={
+          <ProtectedRoute routeName="visitations">
+            <AddVisitForm />
+          </ProtectedRoute>
+        } />
+        <Route path="/visitations/:visitId/edit" element={
+          <ProtectedRoute routeName="visitations">
+            <EditVisitForm />
+          </ProtectedRoute>
+        } />
+        <Route path="/visitations/:visitId" element={
+          <ProtectedRoute routeName="visitations">
+            <ViewVisitDetails />
           </ProtectedRoute>
         } />
         <Route path="/chat" element={
