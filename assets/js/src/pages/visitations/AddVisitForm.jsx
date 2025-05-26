@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { useAccess } from '../../utils/accessControl';
-import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
 
 const AddVisitForm = () => {
@@ -27,17 +26,15 @@ const AddVisitForm = () => {
   const [error, setError] = useState(null);
   
   const { hasAccess, role } = useAccess();
-  const { user } = useAuth();
+  const { patientId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   // Pre-fill patient ID if coming from patients page
   useEffect(() => {
-    const patientId = searchParams.get('patient_id');
     if (patientId) {
       setFormData(prev => ({ ...prev, patient_id: patientId }));
     }
-  }, [searchParams]);
+  }, [patientId]);
 
   // Fetch required data for dropdowns
   useEffect(() => {

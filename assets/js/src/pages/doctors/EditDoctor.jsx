@@ -5,7 +5,7 @@ import { api } from '../../services/apiService';
 import Button from '../../components/Button';
 
 const EditDoctor = () => {
-  const { ID } = useParams();
+  const { doctorId } = useParams();
   const navigate = useNavigate();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,7 @@ const EditDoctor = () => {
     const fetchDoctor = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/doctors/${ID}`);
+        const response = await api.get(`/doctors/${doctorId}`);
         
         // Check for the structure of the response and extract the doctor data properly
         if (response.data && response.data.data) {
@@ -46,7 +46,7 @@ const EditDoctor = () => {
     };
     
     fetchDoctor();
-  }, [ID]);
+  }, [doctorId]);
 
   if (loading) {
     return (
@@ -86,7 +86,7 @@ const EditDoctor = () => {
     );
   }
 
-  return <DoctorForm doctor={doctor} isEditing={true} cancelUrl={`/doctors/${ID}`} />;
+  return <DoctorForm doctor={doctor} isEditing={true} cancelUrl={`/doctors/${doctorId}`} />;
 };
 
 export default EditDoctor;

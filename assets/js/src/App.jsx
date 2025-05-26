@@ -86,12 +86,12 @@ const AppRoutes = () => {
             <AddPatient />
           </ProtectedRoute>
         } />
-        <Route path="/patients/:ID/edit" element={
+        <Route path="/patients/:patientId/edit" element={
           <ProtectedRoute routeName="patients">
             <EditPatient />
           </ProtectedRoute>
         } />
-        <Route path="/patients/:ID" element={
+        <Route path="/patients/:patientId" element={
           <ProtectedRoute routeName="patients">
             <PatientDetails />
           </ProtectedRoute>
@@ -106,12 +106,12 @@ const AppRoutes = () => {
             <AddDoctor />
           </ProtectedRoute>
         } />
-        <Route path="/doctors/:ID/edit" element={
+        <Route path="/doctors/:doctorId/edit" element={
           <ProtectedRoute routeName="doctors">
             <EditDoctor />
           </ProtectedRoute>
         } />
-        <Route path="/doctors/:ID" element={
+        <Route path="/doctors/:doctorId" element={
           <ProtectedRoute routeName="doctors">
             <DoctorDetails />
           </ProtectedRoute>
@@ -131,7 +131,7 @@ const AppRoutes = () => {
             <BookAppointment />
           </ProtectedRoute>
         } />
-        <Route path="/appointments/:ID" element={
+        <Route path="/appointments/:appointmentId" element={
           <ProtectedRoute routeName="appointments">
             <AppointmentView />
           </ProtectedRoute>
@@ -171,7 +171,7 @@ const AppRoutes = () => {
             <Visitations />
           </ProtectedRoute>
         } />
-        <Route path="/visitations/new" element={
+        <Route path="/visitations/new/:patientId" element={
           <ProtectedRoute routeName="visitations">
             <AddVisitForm />
           </ProtectedRoute>

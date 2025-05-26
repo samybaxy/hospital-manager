@@ -31,7 +31,7 @@ const Layout = ({ children }) => {
   
   // Auto-collapse sidebar for appointments page
   useEffect(() => {
-    if (location.pathname === '/appointments') {
+    if (location.pathname === '/appointments' || location.pathname === '/patients') {
       setSidebarCollapsed(true);
     } else {
       setSidebarCollapsed(false);

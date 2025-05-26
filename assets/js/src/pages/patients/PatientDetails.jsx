@@ -22,7 +22,7 @@ const popupCardStyle = {
 };
 
 const PatientDetails = () => {
-  const { ID } = useParams();
+  const { patientId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   // Check if we came from a doctor's page
@@ -94,20 +94,20 @@ const PatientDetails = () => {
   }, [timerId]);
 
   // Function to toggle expanded text with timeout (keeping this for compatibility)
-  const toggleExpandText = useCallback((ID) => {
+  const toggleExpandText = useCallback((patientId) => {
     setExpandedHistory((prev) => {
-      const newState = { ...prev, [ID]: !prev[ID] };
+      const newState = { ...prev, [patientId]: !prev[patientId] };
       return newState;
     });
   }, []);
 
   // Function to fetch patient visitations when medical tab is clicked
   const fetchVisitations = useCallback(async () => {
-    if (!ID) return;
+    if (!patientId) return;
     
     try {
       setVisitationsLoading(true);
-      const response = await api.get(`/patients/${ID}/visitations`);
+      const response = await api.get(`/patients/${patientId}/visitations`);
       
       if (response.data && response.data.data) {
         setVisitations(response.data.data);
@@ -122,7 +122,7 @@ const PatientDetails = () => {
     } finally {
       setVisitationsLoading(false);
     }
-  }, [ID]);
+  }, [patientId]);
 
   // Effect to fetch visitations when tab changes to medical
   useEffect(() => {
@@ -135,7 +135,7 @@ const PatientDetails = () => {
     const fetchPatient = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/patients/${ID}`);
+        const response = await api.get(`/patients/${patientId}`);
 
         // Check for the structure of the response and extract the patient data properly
         if (response.data && response.data.data) {
@@ -154,7 +154,7 @@ const PatientDetails = () => {
     };
     
     fetchPatient();
-  }, [ID]);
+  }, [patientId]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) {
@@ -163,7 +163,7 @@ const PatientDetails = () => {
 
     try {
       setLoading(true);
-      await api.delete(`/patients/${ID}`);
+      await api.delete(`/patients/${patientId}`);
       navigate('/patients', { replace: true });
     } catch (err) {
       console.error('Error deleting patient:', err);
@@ -241,11 +241,11 @@ const PatientDetails = () => {
         <div>
           <h1 className="text-2xl font-bold">Patient Details</h1>
           <p className="text-gray-600">
-            Patient ID: {patient.ID || '-'}
+            Patient patientId: {patient.ID || '-'}
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
-          <Link to={`/patients/${ID}/edit`}>
+          <Link to={`/patients/${patientId}/edit`}>
             <Button variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />

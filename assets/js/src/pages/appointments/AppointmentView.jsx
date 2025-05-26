@@ -22,7 +22,7 @@ const formatTime = (timeString) => {
 };
 
 const AppointmentView = () => {
-  const { ID } = useParams();
+  const { appointmentId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -42,7 +42,7 @@ const AppointmentView = () => {
   // Fetch appointment details
   useEffect(() => {
     const fetchAppointmentDetails = async () => {
-      if (!ID) {
+      if (!appointmentId) {
         setError('No appointment ID provided');
         setIsLoading(false);
         return;
@@ -50,19 +50,19 @@ const AppointmentView = () => {
       
       try {
         setIsLoading(true);
-        console.log('Fetching appointment with ID:', ID, 'Type:', typeof ID);
+        console.log('Fetching appointment with ID:', appointmentId, 'Type:', typeof appointmentId);
         
         // First try to get the appointment directly
         let response;
         try {
-          response = await api.get(`/appointments/${ID}`);
+          response = await api.get(`/appointments/${appointmentId}`);
         } catch (directError) {
           console.log('Direct fetch failed, trying to find in appointments list:', directError);
           
           // If direct fetch fails, try to get from appointments list
           const listResponse = await api.get('/appointments');
           const appointments = listResponse.data?.data || listResponse.data || [];
-          const foundAppointment = appointments.find(app => app.ID == ID);
+          const foundAppointment = appointments.find(app => app.ID == appointmentId);
           
           if (foundAppointment) {
             response = { data: foundAppointment };
@@ -130,7 +130,7 @@ const AppointmentView = () => {
     };
     
     fetchAppointmentDetails();
-  }, [ID]);
+  }, [appointmentId]);
 
   // Handle cancelling an appointment
   const handleCancelAppointment = async () => {
@@ -140,7 +140,7 @@ const AppointmentView = () => {
     
     try {
       setIsLoading(true);
-      await api.put(`/appointments/${ID}`, { status: 'cancelled' });
+      await api.put(`/appointments/${appointmentId}`, { status: 'cancelled' });
       setSuccessMessage('Appointment cancelled successfully');
       
       // Redirect to the source page after short delay
