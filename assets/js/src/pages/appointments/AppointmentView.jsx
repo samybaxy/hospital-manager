@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
-// Define formatting functions locally since they don't exist in appointmentService
 import { useAuth } from '../../context/AuthContext';
 
 // Helper functions for formatting dates and times
@@ -173,24 +172,31 @@ const AppointmentView = () => {
   const getStatusBadgeColor = (status) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 border border-green-200';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 border border-red-200';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Appointment Details</h1>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header with back button and status */}
+      <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          {appointment && (
+            <span className={`mt-2 inline-block px-3 py-1 text-sm font-medium rounded-full ${getStatusBadgeColor(appointment.status)}`}>
+              {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
+            </span>
+          )}
+        </div>
         <Link to={returnPath}>
-          <Button variant="secondary">
+          <Button variant="secondary" className="whitespace-nowrap">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
             </svg>
@@ -203,10 +209,11 @@ const AppointmentView = () => {
         </Link>
       </div>
 
+      {/* Notifications */}
       {error && (
-        <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700">
+        <div className="bg-red-50 p-4 rounded-lg shadow-sm border border-red-200 text-red-700 animate-fade-in">
           <div className="flex">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             {error}
@@ -215,9 +222,9 @@ const AppointmentView = () => {
       )}
 
       {successMessage && (
-        <div className="bg-green-50 p-4 rounded-md border border-green-200 text-green-700">
+        <div className="bg-green-50 p-4 rounded-lg shadow-sm border border-green-200 text-green-700 animate-fade-in">
           <div className="flex">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             {successMessage}
@@ -226,94 +233,141 @@ const AppointmentView = () => {
       )}
 
       {appointment && (
-        <Card>
-          <div className="space-y-6">
-            {/* Appointment Status */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Appointment Information</h2>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusBadgeColor(appointment.status)}`}>
-                {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
-              </span>
+        <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg border border-gray-100">
+          {/* Date and Time Header - Highlighted area */}
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 opacity-10">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-48 w-48" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
-
-            {/* Appointment Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Date and Time */}
-              <div className="space-y-4">
+            <h2 className="text-2xl font-bold mb-6 relative">Appointment Schedule</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="flex items-center backdrop-blur-sm bg-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/20">
+                <div className="bg-white p-3 rounded-full shadow-md mr-4 text-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <div className="text-lg text-gray-900">
+                  <div className="text-sm font-medium text-blue-100">Date</div>
+                  <div className="text-lg font-bold">
                     {formatDate(appointment.appointment_date || appointment.date)}
                   </div>
                 </div>
+              </div>
+              <div className="flex items-center backdrop-blur-sm bg-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/20">
+                <div className="bg-white p-3 rounded-full shadow-md mr-4 text-blue-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                  <div className="text-lg text-gray-900">
+                  <div className="text-sm font-medium text-blue-100">Time</div>
+                  <div className="text-lg font-bold">
                     {formatTime(appointment.appointment_time || appointment.time)}
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* Doctor Information */}
-              {doctor && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
-                    <div className="text-lg text-gray-900">{doctorName}</div>
+          <div className="p-6 space-y-6">
+            {/* Doctor Information */}
+            {doctor && (
+              <div className="p-6 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                  Doctor Information
+                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full p-3 w-20 h-20 flex items-center justify-center shadow-lg">
+                    <span className="text-2xl text-white font-bold">
+                      {doctor.first_name?.charAt(0)}{doctor.last_name?.charAt(0)}
+                    </span>
                   </div>
-                  {doctor.specialty && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
-                      <div className="text-sm text-gray-600">{doctor.specialty}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Patient Information (if viewing as admin/doctor) */}
-              {patient && user?.role !== 'patient' && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Patient</label>
-                    <div className="text-lg text-gray-900">
-                      {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}
-                    </div>
+                  <div className="flex-1">
+                    <div className="text-xl font-semibold text-gray-900 mb-2">{doctorName}</div>
+                    {doctor.specialty && (
+                      <span className="inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                        {doctor.specialty}
+                      </span>
+                    )}
                   </div>
-                  {patient.phone && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
-                      <div className="text-sm text-gray-600">{patient.phone}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Reason */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Visit</label>
-                <div className="text-gray-900 bg-gray-50 p-3 rounded-md">
-                  {appointment.reason || 'No specific reason provided'}
                 </div>
               </div>
+            )}
 
-              {/* Notes (if any) */}
-              {appointment.notes && (
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <div className="text-gray-900 bg-gray-50 p-3 rounded-md">
-                    {appointment.notes}
+            {/* Patient Information (if viewing as admin/doctor) */}
+            {patient && user?.role !== 'patient' && (
+              <div className="p-6 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                  Patient Information
+                </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+                  <div className="flex-shrink-0 bg-gradient-to-br from-green-500 to-teal-600 rounded-full p-3 w-20 h-20 flex items-center justify-center shadow-lg">
+                    <span className="text-2xl text-white font-bold">
+                      {patient.first_name?.charAt(0)}{patient.last_name?.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xl font-semibold text-gray-900 mb-2">
+                      {`${patient.first_name || ''} ${patient.last_name || ''}`.trim()}
+                    </div>
+                    {patient.phone && (
+                      <div className="flex items-center text-gray-600 bg-gray-50 px-3 py-1 rounded-full inline-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {patient.phone}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+
+            {/* Reason for Visit */}
+            <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+              <h3 className="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-purple-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                Reason for Visit
+              </h3>
+              <div className="text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-100">
+                {appointment.reason || 'No specific reason provided'}
+              </div>
             </div>
+
+            {/* Notes (if any) */}
+            {appointment.notes && (
+              <div className="p-4 rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-all duration-300">
+                <h3 className="text-md font-semibold text-gray-700 mb-3 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-amber-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm0 2h10v10H5V5z" clipRule="evenodd" />
+                  </svg>
+                  Additional Notes
+                </h3>
+                <div className="text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-100">
+                  {appointment.notes}
+                </div>
+              </div>
+            )}
 
             {/* Action Buttons */}
             {appointment.status === 'pending' && user?.role === 'patient' && (
-              <div className="flex justify-end space-x-3 pt-4 border-t">
+              <div className="flex justify-end pt-6">
                 <Button 
                   variant="danger" 
                   onClick={handleCancelAppointment}
                   disabled={isLoading}
+                  className="transition-all duration-200 hover:shadow-md"
                 >
                   {isLoading ? 'Cancelling...' : 'Cancel Appointment'}
                 </Button>
@@ -322,7 +376,7 @@ const AppointmentView = () => {
 
             {/* Doctor Actions */}
             {user?.role === 'doctor' && appointment.status === 'pending' && (
-              <div className="flex justify-end space-x-3 pt-4 border-t">
+              <div className="flex justify-end space-x-3 pt-6">
                 <Button 
                   variant="secondary"
                   onClick={async () => {
@@ -335,6 +389,7 @@ const AppointmentView = () => {
                     }
                   }}
                   disabled={isLoading}
+                  className="transition-all duration-200"
                 >
                   Decline
                 </Button>
@@ -350,6 +405,7 @@ const AppointmentView = () => {
                     }
                   }}
                   disabled={isLoading}
+                  className="transition-all duration-200 hover:shadow-md"
                 >
                   Confirm
                 </Button>
@@ -357,7 +413,7 @@ const AppointmentView = () => {
             )}
 
             {user?.role === 'doctor' && appointment.status === 'confirmed' && (
-              <div className="flex justify-end pt-4 border-t">
+              <div className="flex justify-end pt-6">
                 <Button 
                   variant="primary"
                   onClick={async () => {
@@ -370,13 +426,14 @@ const AppointmentView = () => {
                     }
                   }}
                   disabled={isLoading}
+                  className="transition-all duration-200 hover:shadow-md"
                 >
                   Mark as Completed
                 </Button>
               </div>
             )}
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );
