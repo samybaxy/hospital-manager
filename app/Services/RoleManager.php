@@ -188,6 +188,7 @@ class RoleManager
     /**
      * Get route access map based on user role
      * 
+     * @param string $user_role User role name
      * @return array Route access map with route keys and boolean values
      */
     public static function getRouteAccessMap($user_role)
@@ -202,21 +203,27 @@ class RoleManager
             return [];
         }
         
-        return [
-            'patients' => $role->has_cap('access_patients'),
-            'doctors' => $role->has_cap('access_doctors'),
-            'departments' => $role->has_cap('access_departments'),
-            'appointments' => $role->has_cap('access_appointments'),
-            'visitations' => $role->has_cap('access_visitations'),
-            'chat' => $role->has_cap('access_chat'),
-            'notifications' => $role->has_cap('access_notifications'),
-            'audit_log' => $role->has_cap('access_audit_log'),
-            'billing' => $role->has_cap('access_billing'),
-            'inventory' => $role->has_cap('access_inventory'),
-            'reports' => $role->has_cap('access_reports'),
-            'statistics' => $role->has_cap('access_statistics'),
-            'settings' => $role->has_cap('access_settings'),
-            'lab_dashboard' => $role->has_cap('access_lab_dashboard'),
+        // Get all capabilities for this role
+        $capabilities = $role->capabilities;
+        
+        // Map route access capabilities to route names
+        $route_access_map = [
+            'patients' => isset($capabilities['access_patients']) ? $capabilities['access_patients'] : false,
+            'doctors' => isset($capabilities['access_doctors']) ? $capabilities['access_doctors'] : false,
+            'departments' => isset($capabilities['access_departments']) ? $capabilities['access_departments'] : false,
+            'appointments' => isset($capabilities['access_appointments']) ? $capabilities['access_appointments'] : false,
+            'visitations' => isset($capabilities['access_visitations']) ? $capabilities['access_visitations'] : false,
+            'chat' => isset($capabilities['access_chat']) ? $capabilities['access_chat'] : false,
+            'notifications' => isset($capabilities['access_notifications']) ? $capabilities['access_notifications'] : false,
+            'audit_log' => isset($capabilities['access_audit_log']) ? $capabilities['access_audit_log'] : false,
+            'billing' => isset($capabilities['access_billing']) ? $capabilities['access_billing'] : false,
+            'inventory' => isset($capabilities['access_inventory']) ? $capabilities['access_inventory'] : false,
+            'reports' => isset($capabilities['access_reports']) ? $capabilities['access_reports'] : false,
+            'statistics' => isset($capabilities['access_statistics']) ? $capabilities['access_statistics'] : false,
+            'settings' => isset($capabilities['access_settings']) ? $capabilities['access_settings'] : false,
+            'lab_dashboard' => isset($capabilities['access_lab_dashboard']) ? $capabilities['access_lab_dashboard'] : false,
         ];
+        
+        return $route_access_map;
     }
 }

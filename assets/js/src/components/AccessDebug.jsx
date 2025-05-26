@@ -1,29 +1,20 @@
 import React, { useEffect, useRef } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { selectRole, selectPermissions, selectAccessLoading, selectAccessError } from '../redux/accessSlice';
-import { fetchUserAccess } from '../utils/accessControl.jsx';
+import { useUserAccess } from '../hooks/useUserAccess';
 
 /**
  * Debug component to display current access state
  * Only shown in development mode
  */
 const AccessDebug = () => {
-  const dispatch = useDispatch();
-  const role = useSelector(selectRole);
-  const permissions = useSelector(selectPermissions);
-  const isLoading = useSelector(selectAccessLoading);
-  const error = useSelector(selectAccessError);
+  const { 
+    userRole, 
+    capabilities, 
+    routePermissions, 
+    isLoading, 
+    error,
+    accessData 
+  } = useUserAccess();
   const [isVisible, setIsVisible] = React.useState(false);
-  const fetchedRef = useRef(false);
-  
-  // Fetch access permissions only once on mount
-  useEffect(() => {
-    // Only fetch if we haven't already and there's no data
-    if (!fetchedRef.current && !role && !isLoading) {
-      fetchedRef.current = true;
-      dispatch(fetchUserAccess());
-    }
-  }, [dispatch, role, isLoading]);
   
   // Only show in development mode or when debug is explicitly enabled
   const isDevEnv = process.env.NODE_ENV === 'development';
@@ -75,16 +66,20 @@ const AccessDebug = () => {
           fontSize: '12px',
           fontFamily: 'monospace'
         }}>
-          <h4 style={{margin: '0 0 5px 0'}}>Access Debug</h4>
+          <h4 style={{margin: '0 0 5px 0'}}>Access Debug (Unified Service)</h4>
           {isLoading ? (
             <div>Loading access data...</div>
           ) : error ? (
             <div style={{color: 'red'}}>Error: {error}</div>
           ) : (
             <>
-              <div><strong>Role:</strong> {role || 'undefined'}</div>
-              <div style={{marginTop: '5px'}}><strong>Permissions:</strong></div>
-              <pre>{JSON.stringify(permissions, null, 2)}</pre>
+              <div><strong>Role:</strong> {userRole || 'undefined'}</div>
+              <div style={{marginTop: '5px'}}><strong>Capabilities:</strong></div>
+              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify(capabilities, null, 2)}</pre>
+              <div style={{marginTop: '5px'}}><strong>Route Permissions:</strong></div>
+              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify(routePermissions, null, 2)}</pre>
+              <div style={{marginTop: '5px'}}><strong>Full Access Data:</strong></div>
+              <pre style={{fontSize: '9px', margin: '2px 0'}}>{JSON.stringify(accessData, null, 2)}</pre>
             </>
           )}
         </div>

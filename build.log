@@ -1,0 +1,14 @@
+yarn run v1.22.22
+warning ../../../../../../../package.json: No license field
+$ NODE_ENV=development vite build --mode development
+Building in development mode
+vite v5.4.19 building for development...
+transforming...
+✓ 181 modules transformed.
+rendering chunks...
+computing gzip size...
+assets/js/dist/bundle-CT1dS1en.css     61.05 kB │ gzip:  10.26 kB
+assets/js/dist/bundle.js            2,309.39 kB │ gzip: 330.97 kB │ map: 3,513.23 kB
+✓ built in 10.57s
+Moved CSS file from /home/samuel/local_sites/anioma-root/app/public/wp-content/plugins/hospital-manager/assets/js/dist/bundle-CT1dS1en.css to /home/samuel/local_sites/anioma-root/app/public/wp-content/plugins/hospital-manager/assets/css/dist/frontend.css
+Done in 11.33s.

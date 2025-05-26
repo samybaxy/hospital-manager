@@ -1,8 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
-import { selectHasAccess, selectAccessLoading } from '../redux/accessSlice';
+import { useUserAccess } from '../hooks/useUserAccess';
 
 // Separate loading component to avoid conditional hook calls
 const LoadingSpinner = () => (
@@ -24,8 +23,7 @@ const ProtectedRoute = ({ children, routeName }) => {
   // Always call hooks in the same order and same number on every render
   const location = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const accessLoading = useSelector(selectAccessLoading);
-  const hasAccess = useSelector(state => routeName ? selectHasAccess(state, routeName) : true);
+  const { hasAccess, loading: accessLoading } = useUserAccess();
   
   const loading = authLoading || accessLoading;
 
@@ -36,7 +34,7 @@ const ProtectedRoute = ({ children, routeName }) => {
     content = <LoadingSpinner />;
   } else if (!isAuthenticated) {
     content = <Navigate to="/login" state={{ from: location }} replace />;
-  } else if (routeName && !hasAccess) {
+  } else if (routeName && !hasAccess(routeName)) {
     content = <Navigate to="/unauthorized" state={{ from: location }} replace />;
   }
 

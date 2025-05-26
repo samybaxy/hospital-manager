@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
 import { Link, useLocation } from 'react-router-dom';
-import { fetchUserAccess } from '../utils/accessControl.jsx';
-import { selectHasAccess, selectRole, selectAccessLoading, selectAccessError, selectPermissions } from '../redux/accessSlice';
+import { useUserAccess } from '../hooks/useUserAccess';
 
 /**
  * Navigation item with access control
@@ -13,27 +11,14 @@ import { selectHasAccess, selectRole, selectAccessLoading, selectAccessError, se
  * @param {boolean} props.isCollapsed - Whether the sidebar is collapsed
  */
 const NavItemBase = ({ route, icon, label, isCollapsed }) => {
-  // Get role from Redux
-  const role = useSelector(selectRole);
+  // Call ALL hooks unconditionally at the top - Rules of Hooks compliance
+  const { hasAccess } = useUserAccess();
+  const location = useLocation();
   
-  // Determine access using Redux selectors
-  let hasAccess = false;
-  
-  // Quick check if administrator or if it's the dashboard
-  if (role === 'administrator' || route === "dashboard") {
-    hasAccess = true;
-  } else {
-    // Use the selector for complex permission checks
-    hasAccess = useSelector((state) => selectHasAccess(state, route));
-  }
-  
-  // Don't render if no access
-  if (!hasAccess) {
+  // Check access using the unified service (database-driven)
+  if (!hasAccess(route)) {
     return null;
   }
-  
-  // Get the location to determine if this item is active
-  const location = useLocation();
   
   // Find the item in ALL_NAV_ITEMS to get the correct path
   const navItem = ALL_NAV_ITEMS.find(item => item.route === route);
@@ -68,46 +53,6 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
       </Link>
     </li>
   );
-};
-
-/**
- * Utility function to determine access without using Redux
- * @param {string} role - User role
- * @param {Object} permissions - User permissions map
- * @param {string} routeName - Route to check access for
- * @returns {boolean} - Whether user has access
- */
-const checkAccess = (role, permissions, routeName) => {
-  // Dashboard is always available
-  if (routeName === "dashboard") {
-    return true;
-  }
-  
-  // Administrator has access to everything
-  if (role === 'administrator') {
-    return true;
-  }
-  
-  // Role-based access restrictions
-  if (role === 'doctor') {
-    if (['audit_log', 'billing', 'inventory', 'settings'].includes(routeName)) {
-      return false;
-    }
-  } else if (role === 'patient') {
-    if (['patients', 'departments', 'audit_log', 'billing', 
-         'inventory', 'reports', 'statistics', 'settings'].includes(routeName)) {
-      return false;
-    }
-  } else if (role === 'lab_tech') {
-    return ['lab_dashboard', 'dashboard'].includes(routeName);
-  } else if (role === 'desk_officer') {
-    if (['chat', 'audit_log', 'billing', 'inventory', 'statistics', 'settings'].includes(routeName)) {
-      return false;
-    }
-  }
-  
-  // For other permissions and roles, check the permission map
-  return permissions && permissions[routeName] === true;
 };
 
 // Wrap with React.memo to prevent unnecessary re-renders
@@ -217,23 +162,11 @@ const ALL_NAV_ITEMS = [
  * Main Sidebar Navigation with access control
  */
 const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
-  const dispatch = useDispatch();
-  
-  // Get data from Redux state
-  const role = useSelector(selectRole);
-  const isLoading = useSelector(selectAccessLoading);
-  const error = useSelector(selectAccessError);
-  const user = useSelector(state => state.access?.user);
-  
-  // Fetch access data if needed
-  useEffect(() => {
-    if (!isLoading && !role) {
-      dispatch(fetchUserAccess());
-    }
-  }, [dispatch, isLoading, role]);
+  // Use unified access service for permission checks
+  const { loading, error } = useUserAccess();
   
   // Show loading state
-  if (isLoading) {
+  if (loading) {
     return <div className="py-4 px-2 text-white">Loading navigation...</div>;
   }
   

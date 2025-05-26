@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import { useAccess } from '../../utils/accessControl';
+import { useUserAccess } from '../../hooks/useUserAccess';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
 
@@ -12,7 +12,7 @@ const ViewVisitDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const { hasAccess, role } = useAccess();
+  const { hasAccess, role } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
 

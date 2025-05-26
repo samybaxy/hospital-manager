@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
-import { AccessProvider } from './utils/accessControl.jsx';
 import ProtectedRoute from './components/ProtectedRoute';
 import Unauthorized from './pages/Unauthorized';
 
@@ -206,6 +205,7 @@ const AppRoutes = () => {
             <Statistics />
           </ProtectedRoute>
         } />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
@@ -218,22 +218,20 @@ const App = () => {
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         {/* Wrap the entire application with AccessProvider for permissions check */}
-        <AccessProvider>
-          <Routes>
-            {/* Login route outside of Layout */}
-            <Route path="/login" element={<Login />} />
-            
-            {/* Add an unauthorized page route */}
-            <Route path="/unauthorized" element={<Unauthorized />} />
-            
-            {/* All other routes inside Layout */}
-            <Route path="*" element={
-              <Layout>
-                <AppRoutes />
-              </Layout>
-            } />
-          </Routes>
-        </AccessProvider>
+        <Routes>
+          {/* Login route outside of Layout */}
+          <Route path="/login" element={<Login />} />
+          
+          {/* Add an unauthorized page route */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          
+          {/* All other routes inside Layout */}
+          <Route path="*" element={
+            <Layout>
+              <AppRoutes />
+            </Layout>
+          } />
+        </Routes>
       </AuthProvider>
     </Router>
   );

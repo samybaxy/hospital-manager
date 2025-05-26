@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import { useAccess } from '../../utils/accessControl';
+import { useUserAccess } from '../../hooks/useUserAccess';
 import { api } from '../../services/apiService';
 
 const AddVisitForm = () => {
@@ -25,7 +25,7 @@ const AddVisitForm = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  const { hasAccess, role } = useAccess();
+  const { hasAccess, role } = useUserAccess();
   const { patientId } = useParams();
   const navigate = useNavigate();
 

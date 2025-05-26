@@ -39,10 +39,19 @@ class AccessController extends BaseController
         // Get route access map for this role
         $access_map = RoleManager::getRouteAccessMap($role);
         
+        // Debug logging
+        error_log("Hospital Manager Access Debug - User: {$user->user_login}, Role: {$role}");
+        error_log("Hospital Manager Access Debug - Access Map: " . print_r($access_map, true));
+        
         // Return response using BaseController's success_response method
         return $this->success_response([
             'role' => $role,
-            'access' => $access_map
+            'access' => $access_map,
+            'user_id' => $user->ID,
+            'debug' => [
+                'role_exists' => get_role($role) !== null,
+                'capabilities_count' => count(get_role($role)->capabilities ?? [])
+            ]
         ], 'Access permissions retrieved successfully');
     }
 }

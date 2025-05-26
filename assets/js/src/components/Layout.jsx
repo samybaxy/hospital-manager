@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '../context/AuthContext';
-import { selectAccessLoading, clearAccessData } from '../redux/accessSlice';
-import { fetchUserAccess } from '../utils/accessControl.jsx';
+import { useUserAccess } from '../hooks/useUserAccess';
 import AccessDebug from './AccessDebug';
 import Sidebar from './Sidebar';
 
@@ -22,12 +20,8 @@ const Layout = ({ children }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const accessLoading = useSelector(selectAccessLoading);
-  const accessState = useSelector(state => state.access);
-  const role = accessState?.role;
-  const permissions = accessState?.permissions || {};
+  const { userRole, isLoading: accessLoading } = useUserAccess();
   
   // Auto-collapse sidebar for appointments page
   useEffect(() => {
@@ -37,13 +31,6 @@ const Layout = ({ children }) => {
       setSidebarCollapsed(false);
     }
   }, [location.pathname]);
-  
-  // Prefetch user access data
-  useEffect(() => {
-    if (isAuthenticated && !accessState?.role && !accessLoading) {
-      dispatch(fetchUserAccess());
-    }
-  }, [dispatch, isAuthenticated, accessState?.role, accessLoading]);
   
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
@@ -56,9 +43,6 @@ const Layout = ({ children }) => {
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
       
-      // Ensure Redux state is cleared (though this should be done in logout function already)
-      dispatch(clearAccessData());
-      
       // Short delay to ensure all state changes are processed
       setTimeout(() => {
         // Redirect to WordPress home page
@@ -66,16 +50,14 @@ const Layout = ({ children }) => {
       }, 100);
     } catch (error) {
       console.error("Error during sign out process:", error);
-      // Even if there's an error, try to clear everything and redirect
-      dispatch(clearAccessData());
-      
+      // Even if there's an error, try to redirect
       setTimeout(() => {
         window.location.href = '/';
       }, 100);
     } finally {
       setIsSigningOut(false);
     }
-  }, [logout, dispatch]);
+  }, [logout]);
 
   // We've moved all navigation items to the Sidebar component
   // This allows for proper separation of concerns
@@ -96,8 +78,6 @@ const Layout = ({ children }) => {
   }, []);
 
   // Handle loading and authentication states without conditional hook calls
-  // Only check authLoading and isSigningOut, not accessLoading to prevent infinite loops
-  // caused by Sidebar's fetchUserAccess affecting Layout rendering
   if (authLoading || isSigningOut) {
     return <LoadingSpinner />;
   }
@@ -172,7 +152,7 @@ const Layout = ({ children }) => {
                 <div className="hidden sm:flex items-center ml-3 h-7">
                   <div className="text-primary-700 flex items-center h-full" title="Your current role">
                     <span className="text-xs uppercase tracking-wide font-semibold bg-primary-50 px-3 py-0.5 rounded-full border border-primary-200 shadow-sm inline-flex items-center">
-                      {role || 'Guest'}
+                      {userRole || 'Guest'}
                     </span>
                   </div>
                 </div>
