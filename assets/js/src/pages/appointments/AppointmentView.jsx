@@ -4,6 +4,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 // Helper functions for formatting dates and times
 const formatDate = (dateString) => {
@@ -26,6 +27,7 @@ const AppointmentView = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { role } = useUserAccess();
   
   // Get the source page information from the location state
   const returnTo = location.state?.returnTo || 'appointments';
@@ -301,7 +303,7 @@ const AppointmentView = () => {
             )}
 
             {/* Patient Information (if viewing as admin/doctor) */}
-            {patient && user?.role !== 'patient' && (
+            {patient && role !== 'patient' && (
               <div className="p-6 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-green-600" viewBox="0 0 20 20" fill="currentColor">
@@ -361,7 +363,7 @@ const AppointmentView = () => {
             )}
 
             {/* Action Buttons */}
-            {appointment.status === 'pending' && user?.role === 'patient' && (
+            {appointment.status === 'pending' && role === 'patient' && (
               <div className="flex justify-end pt-6">
                 <Button 
                   variant="danger" 
@@ -375,7 +377,7 @@ const AppointmentView = () => {
             )}
 
             {/* Doctor Actions */}
-            {user?.role === 'doctor' && appointment.status === 'pending' && (
+            {role === 'doctor' && appointment.status === 'pending' && (
               <div className="flex justify-end space-x-3 pt-6">
                 <Button 
                   variant="secondary"
@@ -412,7 +414,7 @@ const AppointmentView = () => {
               </div>
             )}
 
-            {user?.role === 'doctor' && appointment.status === 'confirmed' && (
+            {role === 'doctor' && appointment.status === 'confirmed' && (
               <div className="flex justify-end pt-6">
                 <Button 
                   variant="primary"

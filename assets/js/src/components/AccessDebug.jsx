@@ -7,12 +7,16 @@ import { useUserAccess } from '../hooks/useUserAccess';
  */
 const AccessDebug = () => {
   const { 
-    userRole, 
-    capabilities, 
-    routePermissions, 
-    isLoading, 
+    role, 
+    permissions, 
+    loading, 
     error,
-    accessData 
+    hasAccess,
+    hasCapability,
+    isAdministrator,
+    isDoctor,
+    isNurse,
+    getAccessData
   } = useUserAccess();
   const [isVisible, setIsVisible] = React.useState(false);
   
@@ -67,19 +71,27 @@ const AccessDebug = () => {
           fontFamily: 'monospace'
         }}>
           <h4 style={{margin: '0 0 5px 0'}}>Access Debug (Unified Service)</h4>
-          {isLoading ? (
+          {loading ? (
             <div>Loading access data...</div>
           ) : error ? (
             <div style={{color: 'red'}}>Error: {error}</div>
           ) : (
             <>
-              <div><strong>Role:</strong> {userRole || 'undefined'}</div>
+              <div><strong>Role:</strong> {role || 'undefined'}</div>
               <div style={{marginTop: '5px'}}><strong>Capabilities:</strong></div>
-              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify(capabilities, null, 2)}</pre>
+              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify(permissions, null, 2)}</pre>
               <div style={{marginTop: '5px'}}><strong>Route Permissions:</strong></div>
-              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify(routePermissions, null, 2)}</pre>
+              <pre style={{fontSize: '10px', margin: '2px 0'}}>{JSON.stringify({
+                'patients': hasAccess('patients'),
+                'doctors': hasAccess('doctors'),
+                'appointments': hasAccess('appointments'),
+                'visitations': hasAccess('visitations'),
+                'billing': hasAccess('billing'),
+                'reports': hasAccess('reports'),
+                'settings': hasAccess('settings')
+              }, null, 2)}</pre>
               <div style={{marginTop: '5px'}}><strong>Full Access Data:</strong></div>
-              <pre style={{fontSize: '9px', margin: '2px 0'}}>{JSON.stringify(accessData, null, 2)}</pre>
+              <pre style={{fontSize: '9px', margin: '2px 0'}}>{JSON.stringify(getAccessData(), null, 2)}</pre>
             </>
           )}
         </div>

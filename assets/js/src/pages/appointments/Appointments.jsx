@@ -6,13 +6,14 @@ import { api } from '../../services/apiService';
 
 // Removed unused imports
 import { useAuth } from '../../context/AuthContext';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 const Appointments = () => {
   const { user, loading: authLoading } = useAuth();
+  const { role } = useUserAccess();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userRole, setUserRole] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -33,10 +34,8 @@ const Appointments = () => {
 
 // Update the useEffect to initialize from URL parameters
   useEffect(() => {
-    // Wait for auth to complete before setting user role
+    // Wait for auth to complete before proceeding
     if (!authLoading) {
-      setUserRole(user?.role);
-      
       // Get initial parameters from URL if available
       const urlParams = getUrlParams();
       
@@ -660,12 +659,12 @@ const renderAppointmentList = () => {
                   </div>
                 </th>
                 {/* ...rest of table header remains the same... */}
-                {userRole !== 'patient' && (
+                {role !== 'patient' && (
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Patient
                   </th>
                 )}
-                {userRole !== 'doctor' && (
+                {role !== 'doctor' && (
                   <th 
                     className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('doctor')}
@@ -719,12 +718,12 @@ const renderAppointmentList = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm">
                     {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
                   </td>
-                  {userRole !== 'patient' && (
+                  {role !== 'patient' && (
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {appointment.patient_name || "Unknown Patient"}
                     </td>
                   )}
-                  {userRole !== 'doctor' && (
+                  {role !== 'doctor' && (
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : "Unknown Doctor"}
                     </td>

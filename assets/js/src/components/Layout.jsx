@@ -21,7 +21,7 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const { userRole, isLoading: accessLoading } = useUserAccess();
+  const { role, isLoading: accessLoading } = useUserAccess();
   
   // Auto-collapse sidebar for appointments page
   useEffect(() => {
@@ -152,7 +152,7 @@ const Layout = ({ children }) => {
                 <div className="hidden sm:flex items-center ml-3 h-7">
                   <div className="text-primary-700 flex items-center h-full" title="Your current role">
                     <span className="text-xs uppercase tracking-wide font-semibold bg-primary-50 px-3 py-0.5 rounded-full border border-primary-200 shadow-sm inline-flex items-center">
-                      {userRole || 'Guest'}
+                      {role || 'Guest'}
                     </span>
                   </div>
                 </div>

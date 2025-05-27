@@ -25,7 +25,7 @@ export const useUserAccess = () => {
     });
 
     // Fetch access data when authenticated
-    if (isAuthenticated && !accessData) {
+    if (isAuthenticated && !userAccessService.getAccessData()) {
       userAccessService.fetchAccessData().catch(err => {
         console.error('Failed to fetch access data:', err);
       });
@@ -37,7 +37,7 @@ export const useUserAccess = () => {
     }
 
     return unsubscribe;
-  }, [isAuthenticated, accessData]);
+  }, [isAuthenticated]);
 
   return {
     role: userAccessService.getRole(),
@@ -54,6 +54,7 @@ export const useUserAccess = () => {
     getRoleDisplayName: () => userAccessService.getRoleDisplayName(),
     getAccessibleRoutes: () => userAccessService.getAccessibleRoutes(),
     checkMultipleAccess: (routes) => userAccessService.checkMultipleAccess(routes),
+    getAccessData: () => userAccessService.getAccessData(),
     refreshAccess: () => userAccessService.fetchAccessData()
   };
 };
