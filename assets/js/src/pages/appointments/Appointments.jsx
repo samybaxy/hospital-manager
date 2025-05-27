@@ -395,99 +395,129 @@ const renderPagination = () => {
   }
   
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-      <div className="flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Showing <span className="font-medium">{totalAppointments > 0 ? (currentPage - 1) * perPage + 1 : 0}</span> to{' '}
-            <span className="font-medium">{Math.min(currentPage * perPage, totalAppointments)}</span> of{' '}
-            <span className="font-medium">{totalAppointments}</span> appointments
-          </p>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+      {/* Showing X to Y of Z */}
+      <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+        <p>
+          Showing <span className="font-bold">{totalAppointments > 0 ? (currentPage - 1) * perPage + 1 : 0}</span>{' '}
+          to <span className="font-bold">{Math.min(currentPage * perPage, totalAppointments)}</span>{' '}
+          of <span className="font-bold">{totalAppointments}</span> appointment{totalAppointments !== 1 ? 's' : ''}
+        </p>
+      </div>
+      
+      <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
+        {/* Per page selector - positioned to the left of pagination */}
+        <div className="flex items-center space-x-2 mb-4 mr-4 sm:mb-0">
+          <label htmlFor="perPage" className="text-sm text-gray-600">Items per page:</label>
+          <select
+            id="perPage"
+            value={perPage}
+            onChange={(e) => {
+              handlePerPageChange(e.target.value);
+            }}
+            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+          </select>
         </div>
         
-        <div className="flex items-center space-x-1 mt-3 sm:mt-0">
-          {/* Per page selector */}
-          <div className="mr-4">
-            <select
-              value={perPage}
-              onChange={(e) => {
-                handlePerPageChange(e.target.value);
-              }}
-              className="border border-gray-300 rounded-md text-sm p-1"
+        <div className="flex items-center justify-center w-full sm:w-auto">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <Button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              variant="secondary"
+              size="sm"
             >
-              <option value={5}>5 per page</option>
-              <option value={10}>10 per page</option>
-              <option value={25}>25 per page</option>
-              <option value={50}>50 per page</option>
-            </select>
+              Previous
+            </Button>
+            <Button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              variant="secondary"
+              size="sm"
+            >
+              Next
+            </Button>
           </div>
           
-          {/* Previous page button */}
-          {currentPage > 1 && (
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span className="sr-only">Previous</span>
-              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            </button>
-          )}
-          
-          {/* First page + ellipsis */}
-          {startPage > 1 && (
-            <>
+          <div className="hidden sm:flex">
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
               <button
-                onClick={() => handlePageChange(1)}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                  currentPage === 1 
+                    ? 'text-gray-300 cursor-not-allowed' 
+                    : 'text-gray-500 hover:bg-gray-50'
+                }`}
               >
-                1
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
               </button>
-              {startPage > 2 && <span className="px-2 text-gray-500">...</span>}
-            </>
-          )}
+              
+              {/* First page and ellipsis */}
+              {startPage > 1 && (
+                <>
+                  <button 
+                    onClick={() => handlePageChange(1)}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  >
+                    1
+                  </button>
+                  {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                </>
+              )}
           
-          {/* Page numbers */}
-          {pages.map(page => (
-            <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                page === currentPage
-                  ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-          
-          {/* Last page + ellipsis */}
-          {endPage < totalPages && (
-            <>
-              {endPage < totalPages - 1 && <span className="px-2 text-gray-500">...</span>}
+              {/* Page numbers */}
+              {pages.map(page => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`relative inline-flex items-center px-3 py-2 border ${
+                    currentPage === page
+                      ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                      : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                  } text-sm font-medium`}
+                >
+                  {page}
+                </button>
+              ))}
+              
+              {/* Last page and ellipsis */}
+              {endPage < totalPages && (
+                <>
+                  {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+              
               <button
-                onClick={() => handlePageChange(totalPages)}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                  currentPage === totalPages 
+                    ? 'text-gray-300 cursor-not-allowed' 
+                    : 'text-gray-500 hover:bg-gray-50'
+                }`}
               >
-                {totalPages}
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
               </button>
-            </>
-          )}
-          
-          {/* Next page button */}
-          {currentPage < totalPages && (
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              className="relative inline-flex items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-            >
-              <span className="sr-only">Next</span>
-              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-            </button>
-          )}
+            </nav>
+          </div>
         </div>
       </div>
     </div>
@@ -813,18 +843,26 @@ const renderAppointmentList = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Appointments</h1>
-        <Link to="/doctors">
-          <Button 
-            variant="primary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Book Appointment
-          </Button>
-        </Link>
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Appointments</h1>
+            <p className="text-blue-100 mt-2">
+              Manage patient appointments and scheduling
+            </p>
+          </div>
+          <Link to="/doctors">
+            <Button 
+              variant="secondary"
+              className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Book Appointment
+            </Button>
+          </Link>
+        </div>
       </div>
       <Card>
         {renderAppointmentList()}

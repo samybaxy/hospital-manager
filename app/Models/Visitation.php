@@ -20,6 +20,7 @@ class Visitation extends BaseModel
         'date',
         'time',
         'medical_history',
+        'complaint',
         'diagnosis',
         'treatment'
     ];
@@ -119,6 +120,27 @@ class Visitation extends BaseModel
         
         // Create a new Patient instance with the fetched data
         return new self($patient_visitation_data);
+    }
+
+    /**
+     * Get all visitations
+     * 
+     * @return array
+     */
+    public static function all()
+    {
+        global $wpdb;
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        $results = $wpdb->get_results(
+            "SELECT * FROM {$table} ORDER BY ID DESC",
+            ARRAY_A
+        );
+        
+        return array_map(function($item) {
+            return new self($item);
+        }, $results ?: []);
     }
 
     /**

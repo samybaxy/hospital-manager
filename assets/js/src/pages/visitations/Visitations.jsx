@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -11,11 +11,33 @@ const Visitations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc');
+  // Store the actual input value separately from the search term that triggers API calls
+  const [searchInputValue, setSearchInputValue] = useState('');
   
   const { hasAccess, role } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Check access permission
+  if (!hasAccess('visitations')) {
+    return (
+      <div className="p-6">
+        <Card>
+          <div className="text-center text-red-600">
+            You do not have permission to view visitations.
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   useEffect(() => {
     const fetchVisitations = async () => {
@@ -25,6 +47,17 @@ const Visitations = () => {
         
         // Build query parameters based on user role
         const params = new URLSearchParams();
+        params.append('page', currentPage.toString());
+        params.append('per_page', perPage.toString());
+        
+        // Add search parameter
+        if (searchTerm.trim()) {
+          params.append('search', searchTerm.trim());
+        }
+        
+        // Add sorting parameters
+        params.append('sort_by', sortField);
+        params.append('sort_order', sortOrder);
         
         // For patients, only show their own visits
         if (role === 'patient' && user?.ID) {
@@ -38,12 +71,15 @@ const Visitations = () => {
         }
         
         const queryString = params.toString();
-        const endpoint = queryString ? `/visitations?${queryString}` : '/visitations';
+        const endpoint = `/visitations?${queryString}`;
         
         const response = await api.get(endpoint);
         
         if (response.data && response.data.success) {
-          setVisitations(response.data.data || []);
+          const responseData = response.data.data;
+          setVisitations(responseData.data || []);
+          setTotalPages(responseData.last_page || 1);
+          setTotalRecords(responseData.total || 0);
         } else {
           throw new Error(response.data?.message || 'Failed to fetch visitations');
         }
@@ -55,13 +91,212 @@ const Visitations = () => {
       }
     };
     
-    if (hasAccess('visitations')) {
-      fetchVisitations();
-    } else {
-      setLoading(false);
-      setError('You do not have permission to view visitations');
+    fetchVisitations();
+  }, [role, user?.ID, searchParams, currentPage, perPage, searchTerm, sortField, sortOrder]);
+  
+  // Initialize searchInputValue from searchTerm
+  useEffect(() => {
+    setSearchInputValue(searchTerm);
+  }, [searchTerm]);
+  
+  // Handle search input with debounce
+  const handleSearch = useCallback((e) => {
+    const value = e.target.value;
+    setSearchInputValue(value);
+    
+    // If we have a debounce timer already, clear it
+    if (window.searchTimer) {
+      clearTimeout(window.searchTimer);
     }
-  }, [hasAccess, role, user?.ID, searchParams]);
+    
+    // Set a new debounce timer to trigger search after user stops typing
+    window.searchTimer = setTimeout(() => {
+      setSearchTerm(value);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 500); // 500ms debounce
+  }, []);
+
+  // Handle column sorting
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+    setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  // Handle pagination
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  // Sorting indicator component
+  const SortIndicator = ({ field }) => {
+    if (sortField !== field) return null;
+    return (
+      <span className="ml-1 inline-block">
+        {sortOrder === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Pagination component
+  const renderPagination = () => {
+    if (totalPages <= 1 && totalRecords <= perPage) return null;
+    
+    const pagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+    
+    if (endPage - startPage + 1 < pagesToShow) {
+      startPage = Math.max(1, endPage - pagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return (
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+        {/* Showing X to Y of Z */}
+        <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+          <p>
+            Showing <span className="font-bold">{((currentPage - 1) * perPage) + 1}</span>{' '}
+            to <span className="font-bold">{Math.min(currentPage * perPage, totalRecords)}</span>{' '}
+            of <span className="font-bold">{totalRecords}</span> visit{totalRecords !== 1 ? 's' : ''}
+          </p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
+          {/* Items per page selector - moved to the right but before pagination */}
+          <div className="flex items-center space-x-2 mb-4 mr-4 sm:mb-0">
+            <label htmlFor="perPage" className="text-sm text-gray-600">Items per page:</label>
+            <select
+              id="perPage"
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+          
+          <div className="flex items-center justify-center w-full sm:w-auto">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <Button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                variant="secondary"
+                size="sm"
+              >
+                Previous
+              </Button>
+              <Button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                variant="secondary"
+                size="sm"
+              >
+                Next
+              </Button>
+            </div>
+            
+            <div className="hidden sm:flex">
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {/* First page and ellipsis */}
+                {startPage > 1 && (
+                  <>
+                    <button 
+                      onClick={() => handlePageChange(1)}
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                      1
+                    </button>
+                    {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                  </>
+                )}
+                
+                {/* Page numbers */}
+                {pages.map(page => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`relative inline-flex items-center px-3 py-2 border ${
+                      currentPage === page
+                        ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                        : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                    } text-sm font-medium`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                
+                {/* Last page and ellipsis */}
+                {endPage < totalPages && (
+                  <>
+                    {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+                
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages 
+                      ? 'text-gray-300 cursor-not-allowed' 
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
   // Handle edit visit
   const handleEditVisit = (visitID) => {
@@ -101,11 +336,6 @@ const Visitations = () => {
   // Handle view visit details
   const handleViewVisit = (visitID) => {
     navigate(`/visitations/${visitID}`);
-  };
-  
-  // Navigate to add new visit
-  const handleAddNewVisit = () => {
-    navigate('/visitations/new');
   };
   
   // Format date and time for display
@@ -182,29 +412,22 @@ const Visitations = () => {
         </p>
       </div>
       
-      <div className="flex justify-between items-center">
-        <div className="text-sm text-gray-600">
-          {visitations.length > 0 ? (
-            <span>Showing {visitations.length} visit{visitations.length !== 1 ? 's' : ''}</span>
-          ) : (
-            <span>No visits found</span>
-          )}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-start mb-6">
+        <div className="w-full md:w-1/3">
+          {/* Search - moved to left and given extra width */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search visits..."
+              value={searchInputValue}
+              onChange={handleSearch}
+              className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+            <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
         </div>
-        
-        {(role === 'administrator' || role === 'doctor' || role === 'desk_officer') && (
-          <Button 
-            variant="primary"
-            onClick={handleAddNewVisit}
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-          >
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              New Visit
-            </span>
-          </Button>
-        )}
       </div>
       
       <Card className="shadow-lg">
@@ -212,23 +435,35 @@ const Visitations = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Visit ID
+                <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  S/N
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th 
+                  scope="col" 
+                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort('patient_name')}
+                >
                   Patient Name
+                  <SortIndicator field="patient_name" />
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th 
+                  scope="col" 
+                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort('doctor_name')}
+                >
                   Doctor Name
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Complaint
+                  <SortIndicator field="doctor_name" />
                 </th>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Diagnosis
                 </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th 
+                  scope="col" 
+                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort('date')}
+                >
                   Visit Date & Time
+                  <SortIndicator field="date" />
                 </th>
                 <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Actions
@@ -237,21 +472,16 @@ const Visitations = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {visitations.length > 0 ? (
-                visitations.map((visitation) => (
+                visitations.map((visitation, index) => (
                   <tr key={visitation.ID} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      #{visitation.ID}
+                      {((currentPage - 1) * perPage) + index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="font-medium">{visitation.patient_name || `Patient #${visitation.patient_id}`}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="font-medium">{visitation.doctor_name || `Doctor #${visitation.doctor_id}`}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                      <div className="truncate" title={visitation.complaint}>
-                        {visitation.complaint || '-'}
-                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
                       <div className="truncate" title={visitation.diagnosis}>
@@ -321,6 +551,9 @@ const Visitations = () => {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination - now positioned at the bottom of the table */}
+        {renderPagination()}
       </Card>
     </div>
   );

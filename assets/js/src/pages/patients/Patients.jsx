@@ -269,19 +269,26 @@ const Patients = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-bold">Patients</h1>
-        <Link to="/patients/new">
-          <Button variant="primary" className="mt-2 md:mt-0">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add New Patient
-          </Button>
-        </Link>
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Patients</h1>
+            <p className="text-blue-100 mt-2">
+              Manage patient records, personal information and medical history
+            </p>
+          </div>
+          <Link to="/patients/new">
+            <Button variant="secondary" className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Patient
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      <Card title="Patient Management">
+      <Card>
         {/* Success message */}
         {successMessage && (
           <StatusMessage 
