@@ -8,7 +8,6 @@ use WP_Error;
 use WP_REST_Server;
 use HospitalManager\Models\Appointment;
 use HospitalManager\Models\Doctor;
-use HospitalManager\Models\Patient;
 use HospitalManager\Services\NotificationService;
 
 class AppointmentController extends BaseController
@@ -124,6 +123,7 @@ class AppointmentController extends BaseController
             $upcoming = $request->get_param('upcoming');
             $date_from = $request->get_param('date_from');
             $date_to = $request->get_param('date_to');
+            $search = $request->get_param('search');
 
             // Validate and sanitize parameters
             $page = max(1, $page);
@@ -176,6 +176,13 @@ class AppointmentController extends BaseController
             if ($date_to) {
                 $where_conditions[] = "a.appointment_date <= %s";
                 $prepare_values[] = sanitize_text_field($date_to);
+            }
+            
+            // Handle search query
+            if ($search) {
+                $search_term = '%' . $wpdb->esc_like($search) . '%';
+                $where_conditions[] = "(p.first_name LIKE %s OR p.last_name LIKE %s OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s OR d.first_name LIKE %s OR d.last_name LIKE %s OR CONCAT(d.first_name, ' ', d.last_name) LIKE %s)";
+                array_push($prepare_values, $search_term, $search_term, $search_term, $search_term, $search_term, $search_term);
             }
             
             // Build WHERE clause

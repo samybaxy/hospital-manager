@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -17,6 +17,8 @@ const Appointments = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +54,11 @@ const Appointments = () => {
         setFilterStatus(urlParams.status);
       }
       
+      if (urlParams.search) {
+        setSearchTerm(urlParams.search);
+        setSearchInputValue(urlParams.search);
+      }
+      
       // Fetch appointments with these parameters, ensuring we get all appointments if no status specified
       fetchAppointments(urlParams.status ? urlParams : {...urlParams, status: null});
     }
@@ -66,7 +73,8 @@ const Appointments = () => {
       const params = paramsOverride || {
         page: currentPage,
         per_page: perPage,
-        status: filterStatus !== 'all' ? filterStatus : null
+        status: filterStatus !== 'all' ? filterStatus : null,
+        search: searchTerm
       };
       
       // Make sure we have reasonable values
@@ -350,8 +358,52 @@ const getUrlParams = () => {
     params.status = searchParams.get('status');
   }
   
+  if (searchParams.has('search')) {
+    params.search = searchParams.get('search');
+  }
+  
   return params;
 };
+
+// Handle search input with debounce
+const handleSearch = useCallback((e) => {
+  const value = e.target.value;
+  setSearchInputValue(value);
+  
+  // If we have a debounce timer already, clear it
+  if (window.searchTimer) {
+    clearTimeout(window.searchTimer);
+  }
+  
+  // Set a new debounce timer to trigger search after user stops typing
+  window.searchTimer = setTimeout(() => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+    
+    // Create new parameters for the API call
+    const params = {
+      page: 1,
+      per_page: perPage,
+      search: value
+    };
+    
+    // Only add status filter if not 'all'
+    if (filterStatus !== 'all') {
+      params.status = filterStatus;
+    }
+    
+    // Update URL parameters
+    updateUrlParams({
+      page: 1,
+      search: value,
+      status: filterStatus !== 'all' ? filterStatus : null,
+      per_page: perPage
+    });
+    
+    // Fetch appointments with the search term
+    fetchAppointments(params);
+  }, 500); // 500ms debounce
+}, [perPage, filterStatus, fetchAppointments]);
 
   // Toggle sort direction and set the sort field - note this is only used in UI but sorting is done server-side
   const handleSort = (field) => {
@@ -612,31 +664,64 @@ const renderAppointmentList = () => {
 
   return (
     <>
-      <div className="flex flex-wrap gap-4 mb-4">
-        <div className="flex flex-wrap gap-4">
-          <div>
-            <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
-            <select
-              id="statusFilter"
-              value={filterStatus}
-              onChange={(e) => handleFilterChange(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="all">All Appointments</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+      {/* Search and filters */}
+      <div className="mb-6">
+        <div className="flex flex-col space-y-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="flex-grow">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search by patient or doctor name..."
+                  value={searchInputValue}
+                  onChange={handleSearch}
+                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+          <div className="md:w-1/4">
+            <label htmlFor="statusFilter" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-1">
+              <span>Filter by Status</span>
+              {filterStatus !== 'all' && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Active</span>
+              )}
+            </label>
+            <div className="relative">
+              <select
+                id="statusFilter"
+                value={filterStatus}
+                onChange={(e) => handleFilterChange(e.target.value)}
+                className={`w-full pl-3 pr-10 py-2 border rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                  filterStatus !== 'all' 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-300'
+                }`}
+              >
+                <option value="all">All Appointments</option>
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
           </div>
           
-          <div>
-            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">Items per page</label>
+          <div className="md:w-1/4">
+            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">
+              Rows Per Page
+            </label>
             <select
               id="perPage"
               value={perPage}
               onChange={(e) => handlePerPageChange(e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             >
               <option value={5}>5</option>
               <option value={10}>10</option>
