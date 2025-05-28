@@ -9,6 +9,7 @@ use WP_REST_Server;
 use HospitalManager\Models\Appointment;
 use HospitalManager\Models\Doctor;
 use HospitalManager\Services\NotificationService;
+use HospitalManager\Services\AppointmentService;
 
 class AppointmentController extends BaseController
 {
@@ -113,178 +114,22 @@ class AppointmentController extends BaseController
     public function get_appointments($request)
     {
         try {
-            // Get parameters with better handling of nested params
-            $params = $request->get_param('params') ?? [];
-            $page = (int) ($request->get_param('page') ?? $params['page'] ?? 1);
-            $per_page = (int) ($request->get_param('per_page') ?? $params['per_page'] ?? 10);
-            $doctor_id = $request->get_param('doctor_id');
-            $patient_id = $request->get_param('patient_id');
-            $status = $request->get_param('status');
-            $upcoming = $request->get_param('upcoming');
-            $date_from = $request->get_param('date_from');
-            $date_to = $request->get_param('date_to');
-            $search = $request->get_param('search');
-
-            // Validate and sanitize parameters
-            $page = max(1, $page);
-            $per_page = min(100, max(1, $per_page));
-            $offset = ($page - 1) * $per_page;
+            // Extract parameters from request
+            $params = $request->get_params();
             
-            // Use direct database queries for reliability
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'hm_appointments';
-            $doctors_table = $wpdb->prefix . 'hm_doctors';
-            $patients_table = $wpdb->prefix . 'hm_patients';
+            // Use the service to handle all business logic
+            error_log('Fetching appointments with params: ' . print_r($params, true));
+            $result = AppointmentService::getAppointments($params);
             
-            // Verify tables exist
-            if (!$wpdb->get_var("SHOW TABLES LIKE '{$table_name}'")) {
-                error_log('Appointments table does not exist: ' . $table_name);
-                return new WP_Error('table_not_found', 'Appointments table not found', ['status' => 500]);
-            }
-            
-            // Build WHERE conditions
-            $where_conditions = [];
-            $prepare_values = [];
-            
-            if ($doctor_id) {
-                $where_conditions[] = "a.doctor_id = %d";
-                $prepare_values[] = (int) $doctor_id;
-            }
-            
-            if ($patient_id) {
-                $where_conditions[] = "a.patient_id = %d";
-                $prepare_values[] = (int) $patient_id;
-            }
-            
-            if ($status) {
-                $where_conditions[] = "a.status = %s";
-                $prepare_values[] = sanitize_text_field($status);
-            }
-            
-            // Handle upcoming filter
-            if ($upcoming === 'true' || $upcoming === true) {
-                $today = date('Y-m-d');
-                $where_conditions[] = "(a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
-                $prepare_values[] = $today;
-            }
-            
-            if ($date_from) {
-                $where_conditions[] = "a.appointment_date >= %s";
-                $prepare_values[] = sanitize_text_field($date_from);
-            }
-            
-            if ($date_to) {
-                $where_conditions[] = "a.appointment_date <= %s";
-                $prepare_values[] = sanitize_text_field($date_to);
-            }
-            
-            // Handle search query
-            if ($search) {
-                $search_term = '%' . $wpdb->esc_like($search) . '%';
-                $where_conditions[] = "(p.first_name LIKE %s OR p.last_name LIKE %s OR CONCAT(p.first_name, ' ', p.last_name) LIKE %s OR d.first_name LIKE %s OR d.last_name LIKE %s OR CONCAT(d.first_name, ' ', d.last_name) LIKE %s)";
-                array_push($prepare_values, $search_term, $search_term, $search_term, $search_term, $search_term, $search_term);
-            }
-            
-            // Build WHERE clause
-            $where_clause = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
-            
-            // Main query with LEFT JOINs
-            $query = "
-                SELECT 
-                    a.ID,
-                    a.patient_id,
-                    a.doctor_id,
-                    a.appointment_date,
-                    a.appointment_time,
-                    a.reason,
-                    a.status,
-                    a.notes,
-                    a.created_at,
-                    a.updated_at,
-                    COALESCE(CONCAT(d.first_name, ' ', d.last_name), 'Unknown Doctor') as doctor_name,
-                    COALESCE(d.specialty, 'General Practice') as doctor_specialty,
-                    COALESCE(CONCAT(p.first_name, ' ', p.last_name), 'Unknown Patient') as patient_name,
-                    p.phone as patient_phone
-                FROM {$table_name} a
-                LEFT JOIN {$doctors_table} d ON a.doctor_id = d.ID
-                LEFT JOIN {$patients_table} p ON a.patient_id = p.ID
-                {$where_clause}
-                ORDER BY a.appointment_date DESC, a.appointment_time DESC
-                LIMIT %d OFFSET %d
-            ";
-            
-            // Add pagination to prepare values
-            $prepare_values[] = $per_page;
-            $prepare_values[] = $offset;
-            
-            // Execute main query
-            if (!empty($prepare_values)) {
-                $appointments = $wpdb->get_results($wpdb->prepare($query, $prepare_values), ARRAY_A);
-            } else {
-                $appointments = $wpdb->get_results($query, ARRAY_A);
-            }
-            
-            // Get total count
-            $count_query = "SELECT COUNT(*) FROM {$table_name} a {$where_clause}";
-            if (!empty($where_conditions)) {
-                $count_prepare_values = array_slice($prepare_values, 0, -2); // Remove pagination values
-                $total_count = $wpdb->get_var($wpdb->prepare($count_query, $count_prepare_values));
-            } else {
-                $total_count = $wpdb->get_var($count_query);
-            }
-            
-            // Handle database errors
-            if ($wpdb->last_error) {
-                error_log('Database error in get_appointments: ' . $wpdb->last_error);
-                error_log('Query: ' . $wpdb->last_query);
-                return new WP_Error('database_error', 'Database query failed', ['status' => 500]);
-            }
-            
-            // Format appointments data
-            $formatted_appointments = array_map(function($appointment) {
-                return [
-                    'ID' => (int) $appointment['ID'],
-                    'patient_id' => (int) $appointment['patient_id'],
-                    'doctor_id' => (int) $appointment['doctor_id'],
-                    'date' => $appointment['appointment_date'],
-                    'time' => $appointment['appointment_time'],
-                    'appointment_date' => $appointment['appointment_date'],
-                    'appointment_time' => $appointment['appointment_time'],
-                    'reason' => $appointment['reason'] ?? '',
-                    'status' => $appointment['status'] ?? 'pending',
-                    'notes' => $appointment['notes'] ?? '',
-                    'created_at' => $appointment['created_at'],
-                    'updated_at' => $appointment['updated_at'],
-                    'doctor_name' => $appointment['doctor_name'],
-                    'doctor_specialty' => $appointment['doctor_specialty'],
-                    'patient_name' => $appointment['patient_name'],
-                    'patient_phone' => $appointment['patient_phone']
-                ];
-            }, $appointments ?: []);
-            
-            // Calculate pagination metadata
-            $total_pages = ceil($total_count / $per_page);
-            
-            // Debug logging
-            error_log('get_appointments executed: Found ' . count($formatted_appointments) . ' appointments, Total: ' . $total_count);
-            
-            return new WP_REST_Response([
-                'success' => true,
-                'data' => $formatted_appointments,
-                'meta' => [
-                    'total' => (int) $total_count,
-                    'page' => $page,
-                    'per_page' => $per_page,
-                    'total_pages' => (int) $total_pages,
-                    'current_page' => $page,
-                    'last_page' => (int) $total_pages
-                ]
-            ], 200);
-            
+            return $this->success_response(
+                $result, 
+                'Appointments retrieved successfully'
+            );
         } catch (\Exception $e) {
-            error_log('Exception in get_appointments: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            return new WP_Error('appointments_error', 'Failed to retrieve appointments: ' . $e->getMessage(), ['status' => 500]);
+            return $this->error_response(
+                'Error retrieving appointments: ' . $e->getMessage(), 
+                500
+            );
         }
     }
 

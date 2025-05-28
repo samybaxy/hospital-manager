@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import StatusMessage from '../../components/StatusMessage';
 import { api } from '../../services/apiService';
 
 // Removed unused imports
@@ -18,7 +19,7 @@ const Appointments = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortDirection, setSortDirection] = useState('asc');
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchInputValue, setSearchInputValue] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,95 +35,53 @@ const Appointments = () => {
     reason: '',
   });
 
-// Update the useEffect to initialize from URL parameters
-  useEffect(() => {
-    // Wait for auth to complete before proceeding
-    if (!authLoading) {
-      // Get initial parameters from URL if available
-      const urlParams = getUrlParams();
-      
-      // Set initial state from URL parameters
-      if (urlParams.page) {
-        setCurrentPage(parseInt(urlParams.page, 10));
-      }
-      
-      if (urlParams.per_page) {
-        setPerPage(parseInt(urlParams.per_page, 10));
-      }
-      
-      if (urlParams.status) {
-        setFilterStatus(urlParams.status);
-      }
-      
-      if (urlParams.search) {
-        setSearchTerm(urlParams.search);
-        setSearchInputValue(urlParams.search);
-      }
-      
-      // Fetch appointments with these parameters, ensuring we get all appointments if no status specified
-      fetchAppointments(urlParams.status ? urlParams : {...urlParams, status: null});
-    }
-  }, [user, authLoading]);
-
-  const fetchAppointments = async (paramsOverride = null) => {
-    setLoading(true);
-    setError('');
-    
+  const fetchAppointments = useCallback(async () => {
     try {
-      // Use provided parameters or build from state
-      const params = paramsOverride || {
+      setLoading(true);
+      setError(null);
+
+      // Prepare the parameters for the API call
+      const params = { 
         page: currentPage,
         per_page: perPage,
-        status: filterStatus !== 'all' ? filterStatus : null,
-        search: searchTerm
+        sort_by: sortBy,
+        sort_order: sortDirection
       };
       
-      // Make sure we have reasonable values
-      const apiParams = {
-        page: params.page || 1,
-        per_page: params.per_page || 10
-      };
-      
-      // Only add status filter if explicitly set and not 'all'
-      if (params.status && params.status !== 'all') {
-        apiParams.status = params.status;
+      // Only add status filter if not "all"
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
       }
       
-      // Update URL parameters but don't include status=all
-      const urlParams = {...apiParams};
-      if (urlParams.status === 'all') {
-        delete urlParams.status;
+      // Only add search if it has value
+      if (searchTerm && searchTerm.trim()) {
+        params.search = searchTerm.trim();
       }
-      updateUrlParams(urlParams);
       
-      // Use api directly instead of appointmentService
-      const response = await api.get('/appointments', { params: apiParams });
+      const response = await api.get('/appointments', { params });
       
-      // Handle the response format with pagination metadata
       if (response.data) {
-        if (response.data.data) {
-          // We have a paginated response
-          setAppointments(response.data.data);
+        // Check if data is inside the "data" property (common REST API pattern)
+        const responseData = response.data.data || response.data;
+        
+        if (responseData.appointments && responseData.appointments.items) {
+          // Extract appointment items from the nested structure
+          const appointmentItems = responseData.appointments.items || [];
           
-          // Set pagination data
-          const meta = response.data.meta || {};
-          setTotalPages(meta.last_page || 1);
-          setTotalAppointments(meta.total || 0);
-          
-          // Update current page if it's provided in the response and different
-          if (meta.current_page && Number(meta.current_page) !== currentPage) {
-            setCurrentPage(Number(meta.current_page));
-          }
-          
-          // Update per_page if it's provided and different
-          if (meta.per_page && Number(meta.per_page) !== perPage) {
-            setPerPage(Number(meta.per_page));
-          }
+          // Extract metadata for pagination
+          setAppointments(appointmentItems);
+          setTotalPages(responseData.appointments.lastPage || 1);
+          setTotalAppointments(responseData.appointments.total || 0);
+          console.log(`Loaded ${appointmentItems.length} appointments (page ${currentPage}/${responseData.appointments.lastPage}, total: ${responseData.appointments.total})`);
+        } else if (Array.isArray(responseData.appointments)) {
+          // Handle alternative API response format
+          setAppointments(responseData.appointments);
+          setTotalPages(responseData.total_pages || 1);
+          setTotalAppointments(responseData.total || 0);
+          console.log(`Loaded ${responseData.appointments.length} appointments (page ${currentPage}/${responseData.total_pages}, total: ${responseData.total})`);
         } else {
-          // Legacy response format without pagination
-          setAppointments(response.data);
-          setTotalPages(1);
-          setTotalAppointments(response.data.length);
+          console.error('Unexpected appointment data format:', responseData);
+          setError('Data format error. Please contact support.');
         }
       }
     } catch (err) {
@@ -131,7 +90,36 @@ const Appointments = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, perPage, sortBy, sortDirection, filterStatus]);
+
+  // Keep track of manual fetch requests to prevent duplicate calls
+  const [manualFetchRequested, setManualFetchRequested] = useState(false);
+
+  useEffect(() => {
+    // Wait for auth to complete before proceeding
+    if (!authLoading) {
+        // Only fetch automatically if a manual fetch wasn't requested
+        if (!manualFetchRequested) {
+            const loadAppointments = async () => {
+                try {
+                    await fetchAppointments();
+                
+                    // Only show success message when we have patients
+                    if (appointments.length > 0) {
+                        setSuccessMessage('Appointments data loaded successfully');
+                    }
+                } catch (error) {
+                    console.error('Error in appointments data loading effect:', error);
+                }
+            };
+
+            loadAppointments();
+        }
+      
+      // Reset the flag after the effect runs
+      setManualFetchRequested(false);
+    }
+  }, [fetchAppointments, manualFetchRequested, authLoading, appointments.length]);
 
   const handleCancelClick = (appointmentId) => {
     setCancellationState({
@@ -221,201 +209,40 @@ const Appointments = () => {
       default:
         return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  // These methods are no longer needed since filtering and sorting are done on the backend
-  // Keeping them commented for reference in case we need to implement client-side filtering again
-  /*
-  // Filter appointments based on selected status
-  const getFilteredAppointments = () => {
-    if (filterStatus === 'all') {
-      return appointments;
-    }
-    return appointments.filter(app => app.status === filterStatus);
-  };
-
-  // Sort appointments
-  const getSortedAppointments = () => {
-    // We don't need filtering or sorting logic here anymore
-    // as we get paginated data from the backend
-    return appointments;
-  };
-  */
-
-// Handle page navigation
-const handlePageChange = (page) => {
-  // Only change the page if it's different from the current page and within range
-  if (page !== currentPage && page >= 1 && page <= totalPages) {
-    setCurrentPage(page);
-    
-    // Show loading spinner
-    setLoading(true);
-    
-    // Create parameters for the API call
-    const params = {
-      page: page,
-      per_page: perPage
     };
-    
-    // Only add status filter if not 'all'
-    if (filterStatus !== 'all') {
-      params.status = filterStatus;
-    }
-    
-    // Fetch appointments with the new page
-    fetchAppointments(params);
-    
-    // Scroll to top of the table for better UX
-    window.scrollTo({
-      top: document.querySelector('table')?.getBoundingClientRect().top + window.pageYOffset - 100,
-      behavior: 'smooth'
-    });
-  }
-};
 
-// Handle filter status changes
-const handleFilterChange = (newStatus) => {
-  // Update the filter status state
-  setFilterStatus(newStatus);
-  
-  // Always reset to page 1 when changing filters
-  setCurrentPage(1); 
-  
-  // Create new parameters for the API call
-  const params = {
-    page: 1,
-    per_page: perPage
-  };
-  
-  // Only add status if not 'all'
-  if (newStatus !== 'all') {
-    params.status = newStatus;
-  }
-  
-  // Fetch appointments with the new filter
-  fetchAppointments(params);
-};
-
-// Handle per page selection changes
-const handlePerPageChange = (newPerPage) => {
-  // Convert to number and update state
-  const perPageValue = Number(newPerPage);
-  setPerPage(perPageValue);
-  
-  // Always reset to page 1 when changing items per page
-  setCurrentPage(1); 
-  
-  // Create new parameters for the API call
-  const params = {
-    page: 1,
-    per_page: perPageValue
-  };
-  
-  // Only add status filter if not 'all'
-  if (filterStatus !== 'all') {
-    params.status = filterStatus;
-  }
-  
-  // Fetch appointments with the new per_page
-  fetchAppointments(params);
-};
-
-// Function to update URL parameters without page reload
-const updateUrlParams = (params) => {
-  const url = new URL(window.location.href);
-  const previousParams = new URLSearchParams(url.search).toString();
-  
-  // Update or add each parameter
-  Object.keys(params).forEach(key => {
-    if (params[key] !== null && params[key] !== undefined) {
-      url.searchParams.set(key, params[key]);
-    } else {
-      url.searchParams.delete(key);
-    }
-  });
-  
-  const newParams = url.searchParams.toString();
-  
-  // Replace current URL without reloading the page
-  window.history.replaceState({}, '', url.toString());
-};
-
-// Function to read URL parameters
-const getUrlParams = () => {
-  const searchParams = new URLSearchParams(window.location.search);
-  const params = {};
-  
-  // Get pagination parameters from URL if they exist
-  if (searchParams.has('page')) {
-    params.page = parseInt(searchParams.get('page'), 10);
-  }
-  
-  if (searchParams.has('per_page')) {
-    params.per_page = parseInt(searchParams.get('per_page'), 10);
-  }
-  
-  if (searchParams.has('status')) {
-    params.status = searchParams.get('status');
-  }
-  
-  if (searchParams.has('search')) {
-    params.search = searchParams.get('search');
-  }
-  
-  return params;
-};
-
-// Handle search input with debounce
-const handleSearch = useCallback((e) => {
-  const value = e.target.value;
-  setSearchInputValue(value);
-  
-  // If we have a debounce timer already, clear it
-  if (window.searchTimer) {
-    clearTimeout(window.searchTimer);
-  }
-  
-  // Set a new debounce timer to trigger search after user stops typing
-  window.searchTimer = setTimeout(() => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-    
-    // Create new parameters for the API call
-    const params = {
-      page: 1,
-      per_page: perPage,
-      search: value
+    // Handle page navigation
+    const handlePageChange = (page) => {
+        // Only change the page if it's different from the current page and within range
+        if (page !== currentPage && page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+            setManualFetchRequested(true);
+        }
     };
-    
-    // Only add status filter if not 'all'
-    if (filterStatus !== 'all') {
-      params.status = filterStatus;
-    }
-    
-    // Update URL parameters
-    updateUrlParams({
-      page: 1,
-      search: value,
-      status: filterStatus !== 'all' ? filterStatus : null,
-      per_page: perPage
-    });
-    
-    // Fetch appointments with the search term
-    fetchAppointments(params);
-  }, 500); // 500ms debounce
-}, [perPage, filterStatus, fetchAppointments]);
 
-  // Toggle sort direction and set the sort field - note this is only used in UI but sorting is done server-side
-  const handleSort = (field) => {
+    // Handle filter status changes
+    const handleFilterChange = (newStatus) => {
+        // Update the filter status state
+        setFilterStatus(newStatus);
+        
+        // Always reset to page 1 when changing filters
+        setCurrentPage(1); 
+        
+        // Set manual fetch flag to prevent duplicate calls
+        setManualFetchRequested(true);
+    };
+
+    // Toggle sort direction and set the sort field - note this is only used in UI but sorting is done server-side
+    const handleSort = (field) => {
     if (sortBy === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        // Toggle direction if same field
+        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // Set new field and reset direction to ascending
-      setSortBy(field);
-      setSortDirection('asc');
+        // Set new field and reset direction to ascending
+        setSortBy(field);
+        setSortDirection('asc');
     }
-    
+
     // Note: Currently we're not sending sort parameters to the API - this would be implemented here
     // fetchAppointments({
     //   page: currentPage,
@@ -424,157 +251,144 @@ const handleSearch = useCallback((e) => {
     //   sort_by: field,
     //   sort_dir: sortBy === field && sortDirection === 'asc' ? 'desc' : 'asc'
     // });
-  };
+    };
 
-  // Fix the renderPagination method for better visibility and clarity
-const renderPagination = () => {
-  // Don't render pagination if there's only one page or no pages
-  if (!totalPages || totalPages <= 1) return null;
-  
-  const pagesToShow = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
-  let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
-  
-  // Adjust startPage if we can't show enough pages
-  if (endPage - startPage + 1 < pagesToShow) {
-    startPage = Math.max(1, endPage - pagesToShow + 1);
-  }
-  
-  // Generate array of page numbers to show
-  const pages = [];
-  for (let i = startPage; i <= endPage; i++) {
-    pages.push(i);
-  }
-  
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
-      {/* Showing X to Y of Z */}
-      <div className="mb-4 sm:mb-0 text-sm text-gray-700">
-        <p>
-          Showing <span className="font-bold">{totalAppointments > 0 ? (currentPage - 1) * perPage + 1 : 0}</span>{' '}
-          to <span className="font-bold">{Math.min(currentPage * perPage, totalAppointments)}</span>{' '}
-          of <span className="font-bold">{totalAppointments}</span> appointment{totalAppointments !== 1 ? 's' : ''}
-        </p>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
-        {/* Per page selector - positioned to the left of pagination */}
-        <div className="flex items-center space-x-2 mb-4 mr-4 sm:mb-0">
-          <label htmlFor="perPage" className="text-sm text-gray-600">Items per page:</label>
-          <select
-            id="perPage"
-            value={perPage}
-            onChange={(e) => {
-              handlePerPageChange(e.target.value);
-            }}
-            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-          </select>
+    const handleSearch = (e) => {
+        e.preventDefault();
+        setCurrentPage(1); // Reset to first page on new search
+        setManualFetchRequested(true); // Prevent duplicate fetch
+        fetchAppointments(); // Immediately fetch with new search term
+    };
+    const renderPagination = () => {
+    // Don't render pagination if there's only one page or no pages
+    if (!totalPages || totalPages <= 1) return null;
+    
+    const pagesToShow = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+    
+    // Adjust startPage if we can't show enough pages
+    if (endPage - startPage + 1 < pagesToShow) {
+        startPage = Math.max(1, endPage - pagesToShow + 1);
+    }
+    
+    // Generate array of page numbers to show
+    const pages = [];
+    for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+    }
+    
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+        {/* Showing X to Y of Z */}
+        <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+            <p>
+            Showing <span className="font-bold">{totalAppointments > 0 ? (currentPage - 1) * perPage + 1 : 0}</span>{' '}
+            to <span className="font-bold">{Math.min(currentPage * perPage, totalAppointments)}</span>{' '}
+            of <span className="font-bold">{totalAppointments}</span> appointment{totalAppointments !== 1 ? 's' : ''}
+            </p>
         </div>
         
-        <div className="flex items-center justify-center w-full sm:w-auto">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <Button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              variant="secondary"
-              size="sm"
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              variant="secondary"
-              size="sm"
-            >
-              Next
-            </Button>
-          </div>
-          
-          <div className="hidden sm:flex">
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
+        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">            
+            <div className="flex items-center justify-center w-full sm:w-auto">
+            <div className="flex-1 flex justify-between sm:hidden">
+                <Button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === 1 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Previous</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              {/* First page and ellipsis */}
-              {startPage > 1 && (
-                <>
-                  <button 
-                    onClick={() => handlePageChange(1)}
-                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                  >
-                    1
-                  </button>
-                  {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
-                </>
-              )}
-          
-              {/* Page numbers */}
-              {pages.map(page => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`relative inline-flex items-center px-3 py-2 border ${
-                    currentPage === page
-                      ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                      : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                  } text-sm font-medium`}
+                variant="secondary"
+                size="sm"
                 >
-                  {page}
-                </button>
-              ))}
-              
-              {/* Last page and ellipsis */}
-              {endPage < totalPages && (
-                <>
-                  {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
-                  <button
-                    onClick={() => handlePageChange(totalPages)}
-                    className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                  >
-                    {totalPages}
-                  </button>
-                </>
-              )}
-              
-              <button
+                Previous
+                </Button>
+                <Button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === totalPages 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Next</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
-          </div>
+                variant="secondary"
+                size="sm"
+                >
+                Next
+                </Button>
+            </div>
+            
+            <div className="hidden sm:flex">
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === 1 
+                        ? 'text-gray-300 cursor-not-allowed' 
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                </button>
+                
+                {/* First page and ellipsis */}
+                {startPage > 1 && (
+                    <>
+                    <button 
+                        onClick={() => handlePageChange(1)}
+                        className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                        1
+                    </button>
+                    {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                    </>
+                )}
+            
+                {/* Page numbers */}
+                {pages.map(page => (
+                    <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`relative inline-flex items-center px-3 py-2 border ${
+                        currentPage === page
+                        ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                        : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+                    } text-sm font-medium`}
+                    >
+                    {page}
+                    </button>
+                ))}
+                
+                {/* Last page and ellipsis */}
+                {endPage < totalPages && (
+                    <>
+                    {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
+                    <button
+                        onClick={() => handlePageChange(totalPages)}
+                        className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                    >
+                        {totalPages}
+                    </button>
+                    </>
+                )}
+                
+                <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                    currentPage === totalPages 
+                        ? 'text-gray-300 cursor-not-allowed' 
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
+                >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                </button>
+                </nav>
+            </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
-};
+        </div>
+    );
+    };
 
   const renderCancellationConfirmation = () => {
     if (!cancellationState.showConfirmation) return null;
@@ -666,24 +480,25 @@ const renderAppointmentList = () => {
     <>
       {/* Search and filters */}
       <div className="mb-6">
-        <div className="flex flex-col space-y-4 mb-4">
+        <form onSubmit={handleSearch} className="flex flex-col space-y-4 mb-4">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="flex-grow">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search by patient or doctor name..."
-                  value={searchInputValue}
-                  onChange={handleSearch}
-                  className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                />
-                <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
+              <input
+                type="text"
+                placeholder="Search by patient or doctor name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              />
             </div>
+            <Button type="submit" variant="secondary" className="whitespace-nowrap">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+              Search
+            </Button>
           </div>
-        </div>
+        </form>
 
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
           <div className="md:w-1/4">
@@ -718,9 +533,12 @@ const renderAppointmentList = () => {
               Rows Per Page
             </label>
             <select
-              id="perPage"
-              value={perPage}
-              onChange={(e) => handlePerPageChange(e.target.value)}
+                id="perPage"
+                value={perPage}
+                onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                }}
               className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
             >
               <option value={5}>5</option>
@@ -950,6 +768,16 @@ const renderAppointmentList = () => {
         </div>
       </div>
       <Card>
+        {/* Success message */}
+        {successMessage && (
+          <StatusMessage 
+            type="success"
+            message={successMessage}
+            duration={5000}
+            onDismiss={() => setSuccessMessage('')}
+          />
+        )}
+
         {renderAppointmentList()}
       </Card>
       {renderCancellationConfirmation()}

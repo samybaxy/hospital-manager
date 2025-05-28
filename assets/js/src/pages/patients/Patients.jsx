@@ -23,6 +23,7 @@ const Patients = () => {
   const fetchPatients = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
 
       // Prepare the parameters for the API call
       const params = { 

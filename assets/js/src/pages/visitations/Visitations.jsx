@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { useUserAccess } from '../../hooks/useUserAccess';
@@ -18,13 +18,10 @@ const Visitations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
-  // Store the actual input value separately from the search term that triggers API calls
-  const [searchInputValue, setSearchInputValue] = useState('');
   
   const { hasAccess, role } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   // Check access permission
   if (!hasAccess('visitations')) {
@@ -39,82 +36,62 @@ const Visitations = () => {
     );
   }
 
-  useEffect(() => {
-    const fetchVisitations = async () => {
-      try {
+  const fetchVisitations = useCallback(async () => {
+    try {
         setLoading(true);
         setError(null);
-        
-        // Build query parameters based on user role
-        const params = new URLSearchParams();
-        params.append('page', currentPage.toString());
-        params.append('per_page', perPage.toString());
-        
-        // Add search parameter
-        if (searchTerm.trim()) {
-          params.append('search', searchTerm.trim());
-        }
-        
-        // Add sorting parameters
-        params.append('sort_by', sortField);
-        params.append('sort_order', sortOrder);
-        
+
+        // Prepare the parameters for the API call
+        const params = { 
+            page: currentPage,
+            search: searchTerm,
+            per_page: perPage,
+            sort_by: sortField,
+            sort_order: sortOrder
+        };
+      
         // For patients, only show their own visits
         if (role === 'patient' && user?.ID) {
-          params.append('patient_id', user.ID);
+            params.append('patient_id', user.ID);
         }
         
-        // Add any search filters from URL
-        const patientFilter = searchParams.get('patient_id');
-        if (patientFilter && role !== 'patient') {
-          params.append('patient_id', patientFilter);
-        }
-        
-        const queryString = params.toString();
-        const endpoint = `/visitations?${queryString}`;
-        
-        const response = await api.get(endpoint);
-        
-        if (response.data && response.data.success) {
-          const responseData = response.data.data;
-          setVisitations(responseData.data || []);
-          setTotalPages(responseData.last_page || 1);
-          setTotalRecords(responseData.total || 0);
+        const response = await api.get('/visitations', { params }); // Corrected params format
+        if (response.data) {
+            // Check if data is inside the "data" property (common REST API pattern)
+            const responseData = response.data.data || response.data;
+
+            if (responseData.visitations && responseData.visitations.items) {
+                // Extract patient items from the nested structure
+                const visitItems = responseData.visitations.items || [];
+                
+                // Extract metadata for pagination
+                setVisitations(visitItems);
+                setTotalPages(responseData.visitations.lastPage || 1);
+                setTotalRecords(responseData.visitations.total || 0);
+                console.log(`Loaded ${visitItems.length} visits (page ${currentPage}/${responseData.visitations.lastPage}, total: ${responseData.visitations.total})`);
+            } else if (Array.isArray(responseData.visitations)) {
+                // Handle alternative API response format
+                setVisitations(responseData.visitations);
+                setTotalPages(responseData.total_pages || 1);
+                setTotalRecords(responseData.total || 0);
+                console.log(`Loaded ${responseData.visitations.length} visits (page ${currentPage}/${responseData.total_pages}, total: ${responseData.total})`);
+            } else {
+                console.error('Unexpected visitation data format:', responseData);
+                setError('Data format error. Please contact support.');
+            }
         } else {
-          throw new Error(response.data?.message || 'Failed to fetch visitations');
+            throw new Error(response.data?.message || 'Failed to fetch visitations');
         }
-      } catch (err) {
-        console.error('Error fetching visitations:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to load visitations');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchVisitations();
-  }, [role, user?.ID, searchParams, currentPage, perPage, searchTerm, sortField, sortOrder]);
-  
-  // Initialize searchInputValue from searchTerm
-  useEffect(() => {
-    setSearchInputValue(searchTerm);
-  }, [searchTerm]);
-  
-  // Handle search input with debounce
-  const handleSearch = useCallback((e) => {
-    const value = e.target.value;
-    setSearchInputValue(value);
-    
-    // If we have a debounce timer already, clear it
-    if (window.searchTimer) {
-      clearTimeout(window.searchTimer);
+    } catch (err) {
+      console.error('Error fetching visitations:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to load visitations');
+    } finally {
+      setLoading(false);
     }
-    
-    // Set a new debounce timer to trigger search after user stops typing
-    window.searchTimer = setTimeout(() => {
-      setSearchTerm(value);
-      setCurrentPage(1); // Reset to first page when searching
-    }, 500); // 500ms debounce
-  }, []);
+  }, [currentPage, perPage, searchTerm, sortField, sortOrder]);
+
+  useEffect(() => {
+    fetchVisitations();  }, [fetchVisitations]);
 
   // Handle column sorting
   const handleSort = (field) => {
@@ -413,20 +390,15 @@ const Visitations = () => {
       </div>
       
       <div className="flex flex-col md:flex-row md:items-center md:justify-start mb-6">
-        <div className="w-full md:w-1/3">
-          {/* Search - moved to left and given extra width */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search visits..."
-              value={searchInputValue}
-              onChange={handleSearch}
-              className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            />
-            <svg className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+        <div className="w-full md:w-2/3">
+          {/* Search input - automatic search like Patients page */}
+          <input
+            type="text"
+            placeholder="Search visits..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          />
         </div>
       </div>
       
