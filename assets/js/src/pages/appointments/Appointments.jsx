@@ -103,11 +103,10 @@ const Appointments = () => {
             const loadAppointments = async () => {
                 try {
                     await fetchAppointments();
-                
-                    // Only show success message when we have patients
-                    if (appointments.length > 0) {
-                        setSuccessMessage('Appointments data loaded successfully');
-                    }
+                    
+                    // Success message will be set in the fetchAppointments function
+                    // or can be handled outside this effect to avoid dependencies
+                    setSuccessMessage('Appointments data loaded successfully');
                 } catch (error) {
                     console.error('Error in appointments data loading effect:', error);
                 }
@@ -119,7 +118,7 @@ const Appointments = () => {
       // Reset the flag after the effect runs
       setManualFetchRequested(false);
     }
-  }, [fetchAppointments, manualFetchRequested, authLoading, appointments.length]);
+  }, [fetchAppointments, manualFetchRequested, authLoading]);
 
   const handleCancelClick = (appointmentId) => {
     setCancellationState({
@@ -452,294 +451,16 @@ const Appointments = () => {
     );
   };
 
-// Make the appointment list component simpler and ensure the pagination is visible
-// Make the appointment list component simpler and ensure the pagination is visible
-const renderAppointmentList = () => {
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+// Helper function to check if data is valid for rendering
+const hasValidAppointmentData = () => {
+  // Check if we have a non-empty array
+  if (!Array.isArray(appointments) || appointments.length === 0) {
+    return false;
   }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 p-4 rounded-md border border-red-200 text-red-700">
-        <div className="flex">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
-          {error}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      {/* Search and filters */}
-      <div className="mb-6">
-        <form onSubmit={handleSearch} className="flex flex-col space-y-4 mb-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="flex-grow">
-              <input
-                type="text"
-                placeholder="Search by patient or doctor name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-            </div>
-            <Button type="submit" variant="secondary" className="whitespace-nowrap">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-              </svg>
-              Search
-            </Button>
-          </div>
-        </form>
-
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
-          <div className="md:w-1/4">
-            <label htmlFor="statusFilter" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-1">
-              <span>Filter by Status</span>
-              {filterStatus !== 'all' && (
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Active</span>
-              )}
-            </label>
-            <div className="relative">
-              <select
-                id="statusFilter"
-                value={filterStatus}
-                onChange={(e) => handleFilterChange(e.target.value)}
-                className={`w-full pl-3 pr-10 py-2 border rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                  filterStatus !== 'all' 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-300'
-                }`}
-              >
-                <option value="all">All Appointments</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="md:w-1/4">
-            <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">
-              Rows Per Page
-            </label>
-            <select
-                id="perPage"
-                value={perPage}
-                onChange={(e) => {
-                    setPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                }}
-              className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-            >
-              <option value={5}>5</option>
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {appointments.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-gray-500 mb-4">
-            {filterStatus !== 'all' 
-              ? `You don't have any ${filterStatus} appointments.` 
-              : "You don't have any appointments yet."}
-          </p>
-          <Link to="/doctors">
-            <Button
-              variant="primary" 
-              className="px-4 py-2"
-            >
-              Book an Appointment
-            </Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            {/* ... table header and content remain unchanged ... */}
-            <thead className="bg-gray-50">
-              <tr>
-                <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('date')}
-                >
-                  <div className="flex items-center">
-                    Date & Time
-                    {sortBy === 'date' && (
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                    )}
-                  </div>
-                </th>
-                {/* ...rest of table header remains the same... */}
-                {role !== 'patient' && (
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Patient
-                  </th>
-                )}
-                {role !== 'doctor' && (
-                  <th 
-                    className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleSort('doctor')}
-                  >
-                    <div className="flex items-center">
-                      Doctor
-                      {sortBy === 'doctor' && (
-                        <svg 
-                          xmlns="http://www.w3.org/2000/svg" 
-                          className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
-                          fill="none" 
-                          viewBox="0 0 24 24" 
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </th>
-                )}
-                <th 
-                  className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                  onClick={() => handleSort('status')}
-                >
-                  <div className="flex items-center">
-                    Status
-                    {sortBy === 'status' && (
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                    )}
-                  </div>
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reason
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {appointments.map((appointment) => (
-                <tr key={appointment.ID} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
-                  </td>
-                  {role !== 'patient' && (
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      {appointment.patient_name || "Unknown Patient"}
-                    </td>
-                  )}
-                  {role !== 'doctor' && (
-                    <td className="px-4 py-3 whitespace-nowrap text-sm">
-                      {appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : "Unknown Doctor"}
-                    </td>
-                  )}
-                  <td className="px-4 py-3 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(appointment.status)}`}>
-                      {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="max-w-xs truncate">{appointment.reason || 'No reason provided'}</div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
-                    <div className="flex justify-end space-x-2">
-                      <Link 
-                        to={`/appointments/${appointment.ID}`} 
-                        state={{ returnTo: 'appointments', returnPath: '/appointments' }}
-                        className="inline-flex items-center px-2 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Details
-                      </Link>
-                    
-                      {appointment.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments)}
-                            className="inline-flex items-center px-2 py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            Confirm
-                          </button>
-                          <button
-                            onClick={() => handleCancelClick(appointment.ID)}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      {appointment.status === 'confirmed' && (
-                        <>
-                          <button
-                            onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'completed' }).then(fetchAppointments)}
-                            className="inline-flex items-center px-2 py-1 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Mark Completed
-                          </button>
-                          <button
-                            onClick={() => handleCancelClick(appointment.ID)}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      {/* Always render pagination component for consistency */}
-      {renderPagination()}
-    </>
-  );
+  
+  // Even if we have empty objects, we should try to display them
+  // The rendering code has fallbacks for missing properties
+  return true;
 };
 
 // Remove unused effect that doesn't perform any actions
@@ -767,6 +488,7 @@ const renderAppointmentList = () => {
           </Link>
         </div>
       </div>
+      
       <Card>
         {/* Success message */}
         {successMessage && (
@@ -778,8 +500,285 @@ const renderAppointmentList = () => {
           />
         )}
 
-        {renderAppointmentList()}
+        {/* Search and filters */}
+        <div className="mb-6">
+          <form onSubmit={handleSearch} className="flex flex-col space-y-4 mb-4">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-grow">
+                <input
+                  type="text"
+                  placeholder="Search by patient or doctor name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <Button type="submit" variant="secondary" className="whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+                Search
+              </Button>
+            </div>
+          </form>
+
+          <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
+            <div className="md:w-1/4">
+              <label htmlFor="statusFilter" className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-1">
+                <span>Filter by Status</span>
+                {filterStatus !== 'all' && (
+                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">Active</span>
+                )}
+              </label>
+              <div className="relative">
+                <select
+                  id="statusFilter"
+                  value={filterStatus}
+                  onChange={(e) => handleFilterChange(e.target.value)}
+                  className={`w-full pl-3 pr-10 py-2 border rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
+                    filterStatus !== 'all' 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  <option value="all">All Appointments</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="md:w-1/4">
+              <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">
+                Rows Per Page
+              </label>
+              <select
+                  id="perPage"
+                  value={perPage}
+                  onChange={(e) => {
+                      setPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                  }}
+                className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 p-4 mb-6 rounded-md border border-red-200 text-red-700">
+            <div className="flex">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {error}
+            </div>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
+          </div>
+        ) : hasValidAppointmentData() ? (
+          <div className="overflow-x-auto rounded-md border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center">
+                      Date & Time
+                      {sortBy === 'date' && (
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </th>
+                  {role !== 'patient' && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Patient
+                    </th>
+                  )}
+                  {role !== 'doctor' && (
+                    <th 
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSort('doctor')}
+                    >
+                      <div className="flex items-center">
+                        Doctor
+                        {sortBy === 'doctor' && (
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </th>
+                  )}
+                  <th 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      {sortBy === 'status' && (
+                        <svg 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          className={`ml-1 h-4 w-4 ${sortDirection === 'desc' ? 'transform rotate-180' : ''}`} 
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Reason
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {appointments.map((appointment) => (
+                  <tr key={appointment.ID} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {formatDateTime(appointment.appointment_date, appointment.appointment_time)}
+                    </td>
+                    {role !== 'patient' && (
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {appointment.patient_name || "Unknown Patient"}
+                      </td>
+                    )}
+                    {role !== 'doctor' && (
+                      <td className="px-4 py-3 whitespace-nowrap text-sm">
+                        {appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : "Unknown Doctor"}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadgeClass(appointment.status)}`}>
+                        {appointment.status ? appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1) : 'Pending'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="max-w-xs truncate">{appointment.reason || 'No reason provided'}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm">
+                      <div className="flex justify-end space-x-2">
+                        <Link 
+                          to={`/appointments/${appointment.ID}`} 
+                          state={{ returnTo: 'appointments', returnPath: '/appointments' }}
+                          className="inline-flex items-center px-2 5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Details
+                        </Link>
+                      
+                        {appointment.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => handleCancelClick(appointment.ID)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                        {appointment.status === 'confirmed' && (
+                          <>
+                            <button
+                              onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'completed' }).then(fetchAppointments)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Mark Completed
+                            </button>
+                            <button
+                              onClick={() => handleCancelClick(appointment.ID)}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-md border border-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-lg font-medium mb-1">No appointments found</p>
+            <p className="text-sm">
+              {filterStatus !== 'all' 
+                ? `You don't have any ${filterStatus} appointments.` 
+                : "You don't have any appointments yet."}
+            </p>
+            <Link to="/doctors" className="inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Book an Appointment
+            </Link>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && hasValidAppointmentData() && renderPagination()}
       </Card>
+      
       {renderCancellationConfirmation()}
     </div>
   );
