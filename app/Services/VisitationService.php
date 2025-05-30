@@ -23,102 +23,19 @@ class VisitationService
         global $wpdb;
 
         try {
-            $user = wp_get_current_user();
-            $params = $query_params;
-
-            // Add pagination parameters
+            // Initialize parameters
+            $params = $query_params['params'] ?? $query_params;
+            
+            // Default parameters
             $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
-            $per_page = isset($params['per_page']) ? min(100, max(1, intval($params['per_page']))) : 20;
-            $offset = ($page - 1) * $per_page;
-
-            // Apply patient role restrictions
-            if (in_array('patient', $user->roles)) {
-                // Patients can only see their own visitations
-                $params['patient_id'] = $user->ID;
-            }
-
-            // Initialize table names
+            $perPage = isset($params['per_page']) ? min(100, max(1, intval($params['per_page']))) : 20;
+            
+            // Initialize tables
             $visitations_table = $wpdb->prefix . 'hm_visitations';
             $patients_table = $wpdb->prefix . 'hm_patients';
             $doctors_table = $wpdb->prefix . 'hm_doctors';
-
-            // Build WHERE clause
-            $where_conditions = ['1=1'];
-            $where_values = [];
-
-            if (!empty($params['patient_id'])) {
-                $where_conditions[] = 'v.patient_id = %d';
-                $where_values[] = intval($params['patient_id']);
-            }
             
-            if (!empty($params['doctor_id'])) {
-                $where_conditions[] = 'v.doctor_id = %d';
-                $where_values[] = intval($params['doctor_id']);
-            }
-            
-            if (!empty($params['date'])) {
-                $where_conditions[] = 'DATE(v.date) = %s';
-                $where_values[] = $params['date'];
-            }
-
-            // Handle date range filtering
-            if (!empty($params['date_from'])) {
-                $where_conditions[] = 'DATE(v.date) >= %s';
-                $where_values[] = sanitize_text_field($params['date_from']);
-            }
-            
-            if (!empty($params['date_to'])) {
-                $where_conditions[] = 'DATE(v.date) <= %s';
-                $where_values[] = sanitize_text_field($params['date_to']);
-            }
-
-            // Add search functionality
-            if (!empty($params['search'])) {
-                $search_term = '%' . $wpdb->esc_like($params['search']) . '%';
-                $where_conditions[] = '(
-                    CONCAT(p.first_name, " ", p.last_name) LIKE %s OR
-                    CONCAT(d.first_name, " ", d.last_name) LIKE %s OR
-                    v.complaint LIKE %s OR
-                    v.diagnosis LIKE %s OR
-                    v.treatment LIKE %s
-                )';
-                $where_values = array_merge($where_values, [$search_term, $search_term, $search_term, $search_term, $search_term]);
-            }
-
-            // Handle status filtering if applicable
-            if (!empty($params['status'])) {
-                $where_conditions[] = 'v.status = %s';
-                $where_values[] = sanitize_text_field($params['status']);
-            }
-
-            $where_clause = implode(' AND ', $where_conditions);
-
-            // Build ORDER BY clause
-            $allowed_sort_fields = ['date', 'patient_name', 'doctor_name', 'complaint', 'diagnosis'];
-            $sort_field = !empty($params['sort_by']) && in_array($params['sort_by'], $allowed_sort_fields) ? $params['sort_by'] : 'date';
-            $sort_order = !empty($params['sort_order']) && strtolower($params['sort_order']) === 'asc' ? 'ASC' : 'DESC';
-            
-            // Map sort fields to actual column names
-            $sort_mapping = [
-                'date' => 'v.date',
-                'patient_name' => 'patient_name',
-                'doctor_name' => 'doctor_name',
-                'complaint' => 'v.complaint',
-                'diagnosis' => 'v.diagnosis'
-            ];
-            $order_by = $sort_mapping[$sort_field] . ' ' . $sort_order;
-
-            // Count total records for pagination
-            $count_query = "
-                SELECT COUNT(*) 
-                FROM {$visitations_table} v 
-                LEFT JOIN {$patients_table} p ON v.patient_id = p.ID
-                LEFT JOIN {$doctors_table} d ON v.doctor_id = d.ID
-                WHERE {$where_clause}
-            ";
-            $total = $wpdb->get_var($where_values ? $wpdb->prepare($count_query, $where_values) : $count_query);
-
-            // Get visitations with patient and doctor names
+            // Base query - join with patient and doctor tables to get names
             $query = "
                 SELECT 
                     v.*,
@@ -127,61 +44,183 @@ class VisitationService
                 FROM {$visitations_table} v
                 LEFT JOIN {$patients_table} p ON v.patient_id = p.ID
                 LEFT JOIN {$doctors_table} d ON v.doctor_id = d.ID
-                WHERE {$where_clause}
-                ORDER BY {$order_by}
-                LIMIT %d OFFSET %d
+                WHERE 1=1
             ";
-
-            $query_values = array_merge($where_values, [$per_page, $offset]);
-            $visitations = $wpdb->get_results($wpdb->prepare($query, $query_values), ARRAY_A);
-
+            
+            $countQuery = "SELECT COUNT(v.ID) FROM {$visitations_table} v WHERE 1=1";
+            $values = [];
+            
+            // Apply role-based restrictions
+            $user = wp_get_current_user();
+            if (in_array('patient', $user->roles)) {
+                // Patients can only see their own visitations
+                $query .= " AND v.patient_id = %d";
+                $countQuery .= " AND v.patient_id = %d";
+                $values[] = $user->ID;
+                error_log('VisitationService::getVisitations - Role restriction: patient can only see own visitations');
+            }
+            
+            // Apply filters if provided
+            if (!empty($params['patient_id'])) {
+                $query .= " AND v.patient_id = %d";
+                $countQuery .= " AND v.patient_id = %d";
+                $values[] = intval($params['patient_id']);
+                error_log('VisitationService::getVisitations - Filter by patient: ' . $params['patient_id']);
+            }
+            
+            if (!empty($params['doctor_id'])) {
+                $query .= " AND v.doctor_id = %d";
+                $countQuery .= " AND v.doctor_id = %d";
+                $values[] = intval($params['doctor_id']);
+                error_log('VisitationService::getVisitations - Filter by doctor: ' . $params['doctor_id']);
+            }
+            
+            if (!empty($params['date'])) {
+                $query .= " AND DATE(v.date) = %s";
+                $countQuery .= " AND DATE(v.date) = %s";
+                $values[] = $params['date'];
+                error_log('VisitationService::getVisitations - Filter by exact date: ' . $params['date']);
+            }
+            
+            // Handle date range filtering
+            if (!empty($params['date_from'])) {
+                $query .= " AND DATE(v.date) >= %s";
+                $countQuery .= " AND DATE(v.date) >= %s";
+                $values[] = sanitize_text_field($params['date_from']);
+                error_log('VisitationService::getVisitations - Filter by date from: ' . $params['date_from']);
+            }
+            
+            if (!empty($params['date_to'])) {
+                $query .= " AND DATE(v.date) <= %s";
+                $countQuery .= " AND DATE(v.date) <= %s";
+                $values[] = sanitize_text_field($params['date_to']);
+                error_log('VisitationService::getVisitations - Filter by date to: ' . $params['date_to']);
+            }
+            
+            // Add search functionality
+            if (!empty($params['search'])) {
+                $search = '%' . $wpdb->esc_like($params['search']) . '%';
+                $query .= " AND (
+                    CONCAT(p.first_name, ' ', p.last_name) LIKE %s OR
+                    CONCAT(d.first_name, ' ', d.last_name) LIKE %s 
+                )";
+                $countQuery .= " AND (
+                    v.patient_id IN (SELECT ID FROM {$patients_table} WHERE CONCAT(first_name, ' ', last_name) LIKE %s) OR
+                    v.doctor_id IN (SELECT ID FROM {$doctors_table} WHERE CONCAT(first_name, ' ', last_name) LIKE %s) 
+                )";
+                $values[] = $search;
+                $values[] = $search;
+                error_log('VisitationService::getVisitations - Filter by search: ' . print_r($params, true));
+            }
+            
+            // Handle status filtering if applicable
+            if (!empty($params['status'])) {
+                $query .= " AND v.status = %s";
+                $countQuery .= " AND v.status = %s";
+                $values[] = sanitize_text_field($params['status']);
+                error_log('VisitationService::getVisitations - Filter by status: ' . $params['status']);
+            }
+            
+            // Get total count for pagination
+            $count_values = $values; // Copy values for count query
+            $prepared_count = $wpdb->prepare($countQuery, $count_values);
+            $total = (int)$wpdb->get_var($prepared_count);
+            
+            // Apply sorting
+            $sortField = !empty($params['sort_by']) ? $params['sort_by'] : 'date';
+            $sortOrder = !empty($params['sort_order']) && strtolower($params['sort_order']) === 'asc' ? 'ASC' : 'DESC';
+            
+            // Validate sort field to prevent SQL injection
+            $allowed_sort_fields = ['date', 'patient_name', 'doctor_name', 'complaint', 'diagnosis', 'created_at'];
+            if (!in_array($sortField, $allowed_sort_fields)) {
+                $sortField = 'date'; // Default to date if invalid sort field
+            }
+            
+            // Special case for patient name sorting
+            if ($sortField === 'patient_name') {
+                $query .= " ORDER BY patient_name {$sortOrder}, v.date DESC";
+            } 
+            // Special case for doctor name sorting
+            else if ($sortField === 'doctor_name') {
+                $query .= " ORDER BY doctor_name {$sortOrder}, v.date DESC";
+            }
+            // Standard field sorting
+            else {
+                // Add 'v.' prefix if the field is from the main visitations table
+                $prefix = in_array($sortField, ['date', 'complaint', 'diagnosis', 'created_at']) ? 'v.' : '';
+                $query .= " ORDER BY {$prefix}{$sortField} {$sortOrder}";
+            }
+            
+            // Apply pagination
+            $offset = ($page - 1) * $perPage;
+            $query .= " LIMIT %d OFFSET %d";
+            $values[] = $perPage;
+            $values[] = $offset;
+            
+            // Execute query
+            $prepared_query = $wpdb->prepare($query, $values);
+            $items = $wpdb->get_results($prepared_query);
+            error_log('Query returned ' . count($items) . ' visitations');
+            
+            // Process results
+            $visitations = [];
+            if ($items) {
+                foreach ($items as $item) {
+                    $visitationArray = (array)$item;
+                    
+                    // Ensure numeric values are properly typed
+                    $visitationArray['ID'] = (int) $visitationArray['ID'];
+                    $visitationArray['patient_id'] = (int) $visitationArray['patient_id'];
+                    $visitationArray['doctor_id'] = (int) $visitationArray['doctor_id'];
+                    
+                    // Handle nullable or empty fields with defaults
+                    $visitationArray['time'] = $visitationArray['time'] ?? null;
+                    $visitationArray['complaint'] = $visitationArray['complaint'] ?? '';
+                    $visitationArray['diagnosis'] = $visitationArray['diagnosis'] ?? '';
+                    $visitationArray['treatment'] = $visitationArray['treatment'] ?? '';
+                    $visitationArray['notes'] = $visitationArray['notes'] ?? '';
+                    $visitationArray['status'] = $visitationArray['status'] ?? '';
+                    
+                    // Handle JSON fields if needed
+                    if (!empty($visitationArray['vital_signs']) && is_string($visitationArray['vital_signs'])) {
+                        $decoded = json_decode($visitationArray['vital_signs'], true);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            $visitationArray['vital_signs'] = $decoded;
+                        }
+                    } else {
+                        $visitationArray['vital_signs'] = null;
+                    }
+                    
+                    $visitations[] = $visitationArray;
+                }
+            }
+            
+            // Calculate pagination info
+            $last_page = ceil($total / $perPage);
+            
             // Handle database errors
             if ($wpdb->last_error) {
                 error_log('Database error in VisitationService::getVisitations: ' . $wpdb->last_error);
                 error_log('Query: ' . $wpdb->last_query);
                 throw new Exception('Database query failed');
             }
-
-            // Format visitations data
-            $formatted_visitations = array_map(function($visitation) {
-                return [
-                    'ID' => (int) $visitation['ID'],
-                    'patient_id' => (int) $visitation['patient_id'],
-                    'doctor_id' => (int) $visitation['doctor_id'],
-                    'date' => $visitation['date'],
-                    'time' => $visitation['time'] ?? null,
-                    'complaint' => $visitation['complaint'] ?? '',
-                    'diagnosis' => $visitation['diagnosis'] ?? '',
-                    'treatment' => $visitation['treatment'] ?? '',
-                    'notes' => $visitation['notes'] ?? '',
-                    'status' => $visitation['status'] ?? '',
-                    'vital_signs' => $visitation['vital_signs'] ?? null,
-                    'created_at' => $visitation['created_at'],
-                    'updated_at' => $visitation['updated_at'],
-                    'patient_name' => $visitation['patient_name'],
-                    'doctor_name' => $visitation['doctor_name']
-                ];
-            }, $visitations ?: []);
-
-            // Calculate pagination metadata
-            $last_page = ceil($total / $per_page);
-
+            
             // Debug logging
-            error_log('VisitationService::getVisitations executed: Found ' . count($formatted_visitations) . ' visitations, Total: ' . $total);
-
-            // Format response data consistent with other services
+            error_log('VisitationService::getVisitations executed: Found ' . count($visitations) . ' visitations, Total: ' . $total);
+            
+            // Return data in a format consistent with existing API
             return [
                 'visitations' => (object)[
-                    'items' => $formatted_visitations,
+                    'items' => $visitations,
                     'currentPage' => (int)$page,
                     'lastPage' => $last_page,
-                    'perPage' => (int)$per_page,
+                    'perPage' => (int)$perPage,
                     'total' => (int)$total
                 ],
                 'meta' => [
                     'current_page' => (int)$page,
                     'last_page' => $last_page,
-                    'per_page' => (int)$per_page,
+                    'per_page' => (int)$perPage,
                     'total' => (int)$total
                 ]
             ];

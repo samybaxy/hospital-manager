@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import StatusMessage from '../../components/StatusMessage';
 import { useUserAccess } from '../../hooks/useUserAccess';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
@@ -18,6 +19,7 @@ const Visitations = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const { hasAccess, role } = useUserAccess();
   const { user } = useAuth();
@@ -90,8 +92,29 @@ const Visitations = () => {
     }
   }, [currentPage, perPage, searchTerm, sortField, sortOrder]);
 
+  // Keep track of manual fetch requests to prevent duplicate calls
+  const [manualFetchRequested, setManualFetchRequested] = useState(false);
+
   useEffect(() => {
-    fetchVisitations();  }, [fetchVisitations]);
+    // Only fetch automatically if a manual fetch wasn't requested
+    if (!manualFetchRequested) {
+      const loadVisitations = async () => {
+        try {
+          await fetchVisitations();
+          
+          // Show success message when we have successful data load
+          setSuccessMessage('Visitation data loaded successfully');
+        } catch (error) {
+          console.error('Error in visitation data loading effect:', error);
+        }
+      };
+      
+      loadVisitations();
+    }
+    
+    // Reset the flag after the effect runs
+    setManualFetchRequested(false);
+  }, [fetchVisitations, manualFetchRequested]);
 
   // Handle column sorting
   const handleSort = (field) => {
@@ -122,15 +145,19 @@ const Visitations = () => {
     if (sortField !== field) return null;
     return (
       <span className="ml-1 inline-block">
-        {sortOrder === 'asc' ? '↑' : '↓'}
+        {sortOrder === 'asc' ? 
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg> : 
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        }
       </span>
     );
   };
 
-  // Pagination component
   const renderPagination = () => {
-    if (totalPages <= 1 && totalRecords <= perPage) return null;
-    
     const pagesToShow = 5;
     const pages = [];
     let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
@@ -145,132 +172,44 @@ const Visitations = () => {
     }
     
     return (
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
-        {/* Showing X to Y of Z */}
-        <div className="mb-4 sm:mb-0 text-sm text-gray-700">
-          <p>
-            Showing <span className="font-bold">{((currentPage - 1) * perPage) + 1}</span>{' '}
-            to <span className="font-bold">{Math.min(currentPage * perPage, totalRecords)}</span>{' '}
-            of <span className="font-bold">{totalRecords}</span> visit{totalRecords !== 1 ? 's' : ''}
-          </p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
-          {/* Items per page selector - moved to the right but before pagination */}
-          <div className="flex items-center space-x-2 mb-4 mr-4 sm:mb-0">
-            <label htmlFor="perPage" className="text-sm text-gray-600">Items per page:</label>
-            <select
-              id="perPage"
-              value={perPage}
-              onChange={(e) => {
-                setPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <div className="flex items-center gap-1">
+        {startPage > 1 && (
+          <>
+            <button 
+              onClick={() => handlePageChange(1)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </div>
-          
-          <div className="flex items-center justify-center w-full sm:w-auto">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <Button
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                variant="secondary"
-                size="sm"
-              >
-                Previous
-              </Button>
-              <Button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                variant="secondary"
-                size="sm"
-              >
-                Next
-              </Button>
-            </div>
-            
-            <div className="hidden sm:flex">
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <button
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === 1 
-                      ? 'text-gray-300 cursor-not-allowed' 
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="sr-only">Previous</span>
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                
-                {/* First page and ellipsis */}
-                {startPage > 1 && (
-                  <>
-                    <button 
-                      onClick={() => handlePageChange(1)}
-                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    >
-                      1
-                    </button>
-                    {startPage > 2 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
-                  </>
-                )}
-                
-                {/* Page numbers */}
-                {pages.map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`relative inline-flex items-center px-3 py-2 border ${
-                      currentPage === page
-                        ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                        : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                    } text-sm font-medium`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                
-                {/* Last page and ellipsis */}
-                {endPage < totalPages && (
-                  <>
-                    {endPage < totalPages - 1 && <span className="px-2 relative inline-flex items-center border border-gray-300 bg-white text-sm font-medium text-gray-700">...</span>}
-                    <button
-                      onClick={() => handlePageChange(totalPages)}
-                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    >
-                      {totalPages}
-                    </button>
-                  </>
-                )}
-                
-                <button
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                    currentPage === totalPages 
-                      ? 'text-gray-300 cursor-not-allowed' 
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="sr-only">Next</span>
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </nav>
-            </div>
-          </div>
-        </div>
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+        
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            className={`relative inline-flex items-center px-3 py-2 border ${
+              currentPage === page
+                ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+            } text-sm font-medium`}
+          >
+            {page}
+          </button>
+        ))}
+        
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
       </div>
     );
   };
@@ -354,103 +293,201 @@ const Visitations = () => {
     return hasAccess('visitations') && role === 'administrator';
   };
   
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
-  
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-4">
-        <p>Error: {error}</p>
-        <Button 
-          variant="primary" 
-          className="mt-4"
-          onClick={() => window.location.reload()}
-        >
-          Try Again
-        </Button>
-      </div>
-    );
-  }
+  // Function to check if data is valid for rendering
+  const hasValidVisitationData = () => {
+    // Check if we have a non-empty array
+    if (!Array.isArray(visitations) || visitations.length === 0) {
+      return false;
+    }
+    
+    // Even if we have empty objects, we should try to display them
+    // The rendering code has fallbacks for missing properties
+    return true;
+  };
 
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold">Patient Visitations</h1>
-        <p className="text-blue-100 mt-2">
-          {role === 'patient' 
-            ? 'View your visit history and medical records' 
-            : 'Manage patient visitations and medical consultations'
-          }
-        </p>
-      </div>
-      
-      <div className="flex flex-col md:flex-row md:items-center md:justify-start mb-6">
-        <div className="w-full md:w-2/3">
-          {/* Search input - automatic search like Patients page */}
-          <input
-            type="text"
-            placeholder="Search visits..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-          />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Patient Visitations</h1>
+            <p className="text-blue-100 mt-2">
+              {role === 'patient' 
+                ? 'View your visit history and medical records' 
+                : 'Manage patient visitations and medical consultations'
+              }
+            </p>
+          </div>
+          {hasAccess('visitations', 'create') && (
+            <Button 
+              variant="secondary" 
+              className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700"
+              onClick={() => navigate('/visitations/new')}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Visit
+            </Button>
+          )}
         </div>
       </div>
-      
-      <Card className="shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-              <tr>
-                <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  S/N
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                  onClick={() => handleSort('patient_name')}
+
+      <Card>
+        {/* Success message */}
+        {successMessage && (
+          <StatusMessage 
+            type="success"
+            message={successMessage}
+            duration={5000}
+            onDismiss={() => setSuccessMessage('')}
+          />
+        )}
+        
+        {/* Search and filters */}
+        <div className="mb-6">
+          <form onSubmit={(e) => { e.preventDefault(); fetchVisitations(); }} className="flex flex-col space-y-4">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex-grow">
+                <input
+                  type="text"
+                  placeholder="Search by patient name, doctor name, diagnosis..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Button type="submit" variant="secondary" className="whitespace-nowrap">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                </svg>
+                Search
+              </Button>
+            </div>
+            
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="md:w-1/4">
+                <label htmlFor="perPage" className="block text-sm font-medium text-gray-700 mb-1">
+                  Rows Per Page
+                </label>
+                <select
+                  id="perPage"
+                  value={perPage}
+                  onChange={(e) => {
+                    setPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 >
-                  Patient Name
-                  <SortIndicator field="patient_name" />
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                  onClick={() => handleSort('doctor_name')}
-                >
-                  Doctor Name
-                  <SortIndicator field="doctor_name" />
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Diagnosis
-                </th>
-                <th 
-                  scope="col" 
-                  className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200"
-                  onClick={() => handleSort('date')}
-                >
-                  Visit Date & Time
-                  <SortIndicator field="date" />
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {visitations.length > 0 ? (
-                visitations.map((visitation, index) => (
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="bg-red-50 p-4 mb-6 rounded-md border border-red-200 text-red-700">
+            <div className="flex">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {error}
+            </div>
+            <Button 
+              variant="primary" 
+              className="mt-4"
+              onClick={() => fetchVisitations()}
+            >
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading ? (
+          <div className="flex justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
+          </div>
+        ) : hasValidVisitationData() ? (
+          <div className="overflow-x-auto rounded-md border border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th 
+                    scope="col" 
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    <div className="flex items-center">
+                      S/N
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('patient_name')}
+                  >
+                    <div className="flex items-center">
+                      Patient
+                      <SortIndicator field="patient_name" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('doctor_name')}
+                  >
+                    <div className="flex items-center">
+                      Doctor
+                      <SortIndicator field="doctor_name" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('diagnosis')}
+                  >
+                    <div className="flex items-center">
+                      Diagnosis
+                      <SortIndicator field="diagnosis" />
+                    </div>
+                  </th>
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center">
+                      Visit Date
+                      <SortIndicator field="date" />
+                    </div>
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {visitations.map((visitation, index) => (
                   <tr key={visitation.ID} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {((currentPage - 1) * perPage) + index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="font-medium">{visitation.patient_name || `Patient #${visitation.patient_id}`}</div>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
+                          {visitation.patient_name ? visitation.patient_name.charAt(0) : 'P'}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {visitation.patient_name || `Patient #${visitation.patient_id}`}
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="font-medium">{visitation.doctor_name || `Doctor #${visitation.doctor_id}`}</div>
@@ -465,14 +502,18 @@ const Visitations = () => {
                         {formatDateTime(visitation.date, visitation.time)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex justify-end space-x-2">
                         <Button 
                           variant="secondary" 
                           size="sm" 
                           onClick={() => handleViewVisit(visitation.ID)}
-                          className="bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
                           View
                         </Button>
                         {canEditVisit(visitation) && (
@@ -480,8 +521,11 @@ const Visitations = () => {
                             variant="primary" 
                             size="sm" 
                             onClick={() => handleEditVisit(visitation.ID)}
-                            className="bg-green-100 text-green-700 hover:bg-green-200"
+                            className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
                             Edit
                           </Button>
                         )}
@@ -491,41 +535,151 @@ const Visitations = () => {
                             size="sm" 
                             onClick={() => handleDeleteVisit(visitation.ID)} 
                             disabled={deleteLoading === visitation.ID}
-                            className="bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                            className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                           >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
                             {deleteLoading === visitation.ID ? 'Deleting...' : 'Delete'}
                           </Button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
-                    <div className="flex flex-col items-center space-y-3">
-                      <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-md border border-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-lg font-medium mb-1">No visits found</p>
+            <p className="text-sm">
+              {searchTerm ? 'No visits match your search criteria. Try a different search term.' : 'There are no visit records in the system yet.'}
+            </p>
+            {hasAccess('visitations', 'create') && (
+              <Button
+                variant="primary"
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                onClick={() => navigate('/visitations/new')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add a visit
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {!loading && hasValidVisitationData() && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+            <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+              <p>
+                Showing <span className="font-semibold">{((currentPage - 1) * perPage) + 1}</span>{' '}
+                to <span className="font-semibold">{Math.min(currentPage * perPage, totalRecords)}</span>{' '}
+                of <span className="font-semibold">{totalRecords}</span> visits
+              </p>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
+              <div className="flex items-center justify-center w-full sm:w-auto">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <Button
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Next
+                  </Button>
+                </div>
+                
+                <div className="hidden sm:flex">
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={handlePreviousPage}
+                      disabled={currentPage === 1}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === 1 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <div>
-                        <p className="font-medium text-gray-900">No visits found</p>
-                        <p className="text-gray-500 mt-1">
-                          {role === 'patient' 
-                            ? 'You have no visit records yet.' 
-                            : 'Start by adding a new patient visit.'
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {renderPagination()}
+                    
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === totalPages 
+                          ? 'text-gray-300 cursor-not-allowed' 
+                          : 'text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
-        {/* Pagination - now positioned at the bottom of the table */}
-        {renderPagination()}
+        {/* Export options */}
+        {!loading && hasValidVisitationData() && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+            <div className="flex space-x-3">
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="flex items-center"
+                onClick={() => {
+                  alert('Export to CSV feature will be implemented');
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export to CSV
+              </Button>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                className="flex items-center"
+                onClick={() => {
+                  alert('Print report feature will be implemented');
+                }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-1 1v3M4 7h16" />
+                </svg>
+                Print Report
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );
