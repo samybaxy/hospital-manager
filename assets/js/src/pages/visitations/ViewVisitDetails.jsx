@@ -118,12 +118,32 @@ const ViewVisitDetails = () => {
   }, [navigate]);
 
   const handleViewPatient = useCallback(() => {
-    if (visit?.patient_id) navigate(`/patients/${visit.patient_id}`);
-  }, [navigate, visit?.patient_id]);
+    if (visit?.patient_id) {
+      navigate(`/patients/${visit.patient_id}`, {
+        state: { 
+          fromVisitation: { 
+            visitId: visit.ID,
+            returnPath: `/visitations/${visit.ID}`,
+            returnLabel: 'Back to Visit Details'
+          } 
+        }
+      });
+    }
+  }, [navigate, visit?.patient_id, visit?.ID]);
 
   const handleViewDoctor = useCallback(() => {
-    if (visit?.doctor_id) navigate(`/doctors/${visit.doctor_id}`);
-  }, [navigate, visit?.doctor_id]);
+    if (visit?.doctor_id) {
+      navigate(`/doctors/${visit.doctor_id}`, {
+        state: { 
+          fromVisitation: { 
+            visitId: visit.ID,
+            returnPath: `/visitations/${visit.ID}`,
+            returnLabel: 'Back to Visit Details'
+          } 
+        }
+      });
+    }
+  }, [navigate, visit?.doctor_id, visit?.ID]);
 
   const handleViewAppointment = useCallback(() => {
     if (visit?.appointment_id) navigate(`/appointments/${visit.appointment_id}`);
