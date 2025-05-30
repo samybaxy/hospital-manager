@@ -7,6 +7,7 @@ use \HospitalManager\Models\Doctor;
 use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
+use WP_REST_Request;
 
 class DoctorController extends BaseController
 {
@@ -97,74 +98,86 @@ class DoctorController extends BaseController
     /**
      * Get all doctors with optional search and pagination
      */
-    public function get_doctors($request)
-    {
+    public function get_doctors(WP_REST_Request $request) {
         try {
-            $params = $request->get_params()['params'] ?? [];
-            // Get the search parameter - ensuring it's properly sanitized
-            $search = $params['search'];
-            $search = is_string($search) ? sanitize_text_field(trim($search)) : '';
-            $page = $params['page'] ? intval($params['page']) : 1;
-            $per_page = $params['per_page'] ? intval($params['per_page']) : 20;
-            $specialty = $params['specialty'] !== 'all' ? sanitize_text_field($params['specialty']) : null;
-            $orderby = $params['orderby'] ? sanitize_text_field($params['orderby']) : 'last_name';
-            $order = $params['order'] ? sanitize_text_field($params['order']) : 'asc';
+            error_log('Hospital Manager API Request: GET /hospital-manager/v1/doctors - Params: ' . print_r($request->get_params(), true));
             
-            // For debugging purposes
-            error_log("Doctor search parameters: " . 
-                      "search='$search', page=$page, per_page=$per_page, " . 
-                      "specialty='$specialty', orderby='$orderby', order='$order'");
+            // Safely get parameters with default values
+            $search = $request->get_param('search') ?? '';
+            $per_page = (int) ($request->get_param('per_page') ?? 10);
+            $page = (int) ($request->get_param('page') ?? 1);
+            $specialty = $request->get_param('specialty') ?? '';
+            $status = $request->get_param('status') ?? 'active';
             
-            // Use Doctor model to fetch paginated results with search
-            $results = Doctor::searchAndPaginate(
-                $search,
-                $page,
-                $per_page,
-                'active',
-                $specialty,
-                $orderby,
-                $order
-            );
+            global $wpdb;
+            $table_name = $wpdb->prefix . 'hm_doctors';
             
-            // Format doctors to include all required fields and fullName
-            $doctors = array_map(function($doctor) {
-                $formatted_doctor = [
-                    'ID' => $doctor->ID,
-                    'user_id' => $doctor->user_id,
-                    'first_name' => $doctor->first_name,
-                    'last_name' => $doctor->last_name,
-                    'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
-                    'phone' => $doctor->phone,
-                    'specialty' => $doctor->specialty,
-                    'status' => $doctor->status,
-                    'created_at' => $doctor->created_at,
-                    'updated_at' => $doctor->updated_at
-                ];
-                return $formatted_doctor;
-            }, $results['data']);
+            // Build the WHERE clause
+            $where_conditions = [];
+            $where_values = [];
             
-            // Return paginated response
-            return new WP_REST_Response([
-                'data' => $doctors,
-                'meta' => [
-                    'current_page' => $results['current_page'],
-                    'last_page' => $results['last_page'],
-                    'per_page' => $results['per_page'],
-                    'total' => $results['total']
-                ]
-            ]);
+            if (!empty($search)) {
+                $where_conditions[] = "(first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
+                $search_term = '%' . $wpdb->esc_like($search) . '%';
+                $where_values[] = $search_term;
+                $where_values[] = $search_term;
+                $where_values[] = $search_term;
+            }
+            
+            if (!empty($specialty)) {
+                $where_conditions[] = "specialty = %s";
+                $where_values[] = $specialty;
+            }
+            
+            if (!empty($status)) {
+                $where_conditions[] = "status = %s";
+                $where_values[] = $status;
+            }
+            
+            $where_clause = '';
+            if (!empty($where_conditions)) {
+                $where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+            }
+            
+            // Get total count
+            $count_query = "SELECT COUNT(*) FROM {$table_name} {$where_clause}";
+            if (!empty($where_values)) {
+                $count_query = $wpdb->prepare($count_query, ...$where_values);
+            }
+            $total = (int) $wpdb->get_var($count_query);
+            
+            // Calculate pagination
+            $offset = ($page - 1) * $per_page;
+            $last_page = ceil($total / $per_page);
+            
+            // Get doctors
+            $query = "SELECT * FROM {$table_name} {$where_clause} ORDER BY first_name, last_name LIMIT %d OFFSET %d";
+            $query_values = array_merge($where_values, [$per_page, $offset]);
+            $doctors = $wpdb->get_results($wpdb->prepare($query, ...$query_values));
+            
+            $response_data = [
+                'success' => true,
+                'message' => 'Doctors retrieved successfully',
+                'data' => [
+                    'doctors' => [
+                        'items' => $doctors,
+                        'currentPage' => $page,
+                        'lastPage' => $last_page,
+                        'perPage' => $per_page,
+                        'total' => $total
+                    ]
+                ],
+                'status' => 200,
+                'version' => 'v1'
+            ];
+            
+            error_log('Hospital Manager API Response: GET /hospital-manager/v1/doctors - Status: 200 - Found: ' . count($doctors) . ' doctors');
+            
+            return rest_ensure_response($response_data);
+            
         } catch (\Exception $e) {
             error_log('Error fetching doctors: ' . $e->getMessage());
-            return new WP_REST_Response([
-                'data' => [],
-                'meta' => [
-                    'current_page' => 1,
-                    'last_page' => 1,
-                    'per_page' => $per_page,
-                    'total' => 0
-                ],
-                'error' => 'Failed to load doctors. Please try again.'
-            ], 200); // Return 200 with empty data
+            return $this->error_response('Failed to fetch doctors: ' . $e->getMessage(), 500);
         }
     }
 

@@ -54,10 +54,10 @@ const Visitations = () => {
       
         // For patients, only show their own visits
         if (role === 'patient' && user?.ID) {
-            params.append('patient_id', user.ID);
+            params.patient_id = user.ID;
         }
         
-        const response = await api.get('/visitations', { params }); // Corrected params format
+        const response = await api.get('/visitations', { params });
         if (response.data) {
             // Check if data is inside the "data" property (common REST API pattern)
             const responseData = response.data.data || response.data;
@@ -90,7 +90,7 @@ const Visitations = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, perPage, searchTerm, sortField, sortOrder]);
+  }, [currentPage, perPage, searchTerm, sortField, sortOrder, role, user?.ID]);
 
   // Keep track of manual fetch requests to prevent duplicate calls
   const [manualFetchRequested, setManualFetchRequested] = useState(false);
@@ -351,7 +351,7 @@ const Visitations = () => {
               <div className="flex-grow">
                 <input
                   type="text"
-                  placeholder="Search by patient name, doctor name, diagnosis..."
+                  placeholder="Search by patient name, doctor name..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -493,8 +493,13 @@ const Visitations = () => {
                       <div className="font-medium">{visitation.doctor_name || `Doctor #${visitation.doctor_id}`}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
-                      <div className="truncate" title={visitation.diagnosis}>
-                        {visitation.diagnosis || '-'}
+                      <div title={visitation.diagnosis}>
+                        {visitation.diagnosis 
+                          ? (visitation.diagnosis.length > 21 
+                              ? `${visitation.diagnosis.substring(0, 21)}...` 
+                              : visitation.diagnosis)
+                          : '-'
+                        }
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

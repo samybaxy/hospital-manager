@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import { useUserAccess } from '../../hooks/useUserAccess';
-import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
 
-const EditVisitForm = () => {
-  const { visitId } = useParams();
+const VisitForm = ({ 
+  initialData = {}, 
+  onSubmit, 
+  submitButtonText = 'Save Visit',
+  title,
+  subtitle,
+  loading = false,
+  error = null
+}) => {
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
@@ -17,93 +22,104 @@ const EditVisitForm = () => {
     medical_history: '',
     diagnosis: '',
     treatment: '',
-    complaint: ''
+    complaint: '',
+    ...initialData
   });
   
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [visit, setVisit] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
   
-  const { hasAccess, role } = useUserAccess();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch visit data and form options
+  // Fetch required data for dropdowns only once
   useEffect(() => {
     const fetchData = async () => {
+      setDataLoading(true);
+      setDataError(null);
+      
       try {
-        setLoading(true);
-        setError(null);
-
-        const [visitRes, patientsRes, doctorsRes, appointmentsRes] = await Promise.all([
-          api.get(`/visitations/${visitId}`),
-          api.get('/patients'),
-          api.get('/doctors'),
-          api.get('/appointments')
+        const [patientsRes, doctorsRes, appointmentsRes] = await Promise.all([
+          api.get('/patients').catch(() => ({ data: { success: false, data: [] } })),
+          api.get('/doctors').catch(() => ({ data: { success: false, data: [] } })),
+          api.get('/appointments').catch(() => ({ data: { success: false, data: [] } }))
         ]);
 
-        if (visitRes.data?.success) {
-          const visitData = visitRes.data.data;
-          setVisit(visitData);
-          setFormData({
-            patient_id: visitData.patient_id || '',
-            doctor_id: visitData.doctor_id || '',
-            appointment_id: visitData.appointment_id || '',
-            date: visitData.date || '',
-            time: visitData.time || '',
-            medical_history: visitData.medical_history || '',
-            diagnosis: visitData.diagnosis || '',
-            treatment: visitData.treatment || '',
-            complaint: visitData.complaint || ''
-          });
+        // Handle patients response
+        if (patientsRes.data?.success && patientsRes.data.data) {
+          if (patientsRes.data.data.patients && Array.isArray(patientsRes.data.data.patients.items)) {
+            setPatients(patientsRes.data.data.patients.items);
+          } else if (Array.isArray(patientsRes.data.data)) {
+            setPatients(patientsRes.data.data);
+          }
+        } else if (Array.isArray(patientsRes.data)) {
+          setPatients(patientsRes.data);
         } else {
-          throw new Error('Visit not found');
+          console.warn('Patients API returned unexpected format:', patientsRes.data);
+          setPatients([]);
         }
 
-        if (patientsRes.data?.success) {
-          setPatients(patientsRes.data.data || []);
+        // Handle doctors response
+        if (doctorsRes.data?.success && doctorsRes.data.data) {
+          if (doctorsRes.data.data.doctors && Array.isArray(doctorsRes.data.data.doctors.items)) {
+            setDoctors(doctorsRes.data.data.doctors.items);
+          } else if (Array.isArray(doctorsRes.data.data)) {
+            setDoctors(doctorsRes.data.data);
+          }
+        } else if (Array.isArray(doctorsRes.data)) {
+          setDoctors(doctorsRes.data);
+        } else {
+          console.warn('Doctors API returned unexpected format:', doctorsRes.data);
+          setDoctors([]);
         }
-        if (doctorsRes.data?.success) {
-          setDoctors(doctorsRes.data.data || []);
+
+        // Handle appointments response
+        if (appointmentsRes.data?.success && appointmentsRes.data.data) {
+          if (appointmentsRes.data.data.appointments && Array.isArray(appointmentsRes.data.data.appointments.items)) {
+            setAppointments(appointmentsRes.data.data.appointments.items);
+          } else if (Array.isArray(appointmentsRes.data.data)) {
+            setAppointments(appointmentsRes.data.data);
+          }
+        } else if (Array.isArray(appointmentsRes.data)) {
+          setAppointments(appointmentsRes.data);
+        } else {
+          console.warn('Appointments API returned unexpected format:', appointmentsRes.data);
+          setAppointments([]);
         }
-        if (appointmentsRes.data?.success) {
-          setAppointments(appointmentsRes.data.data || []);
-        }
+
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(err.response?.data?.message || err.message || 'Failed to load visit data');
+        console.error('Error fetching form data:', err);
+        setDataError('Failed to load form data. Some dropdowns may be empty.');
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
 
-    if (hasAccess('visitations') && visitId) {
-      fetchData();
-    } else {
-      setLoading(false);
-      setError('You do not have permission to edit visits');
-    }
-  }, [hasAccess, visitId]);
+    fetchData();
+  }, []); // Empty dependency array - only run once
 
-  // Check if user can edit this visit
-  const canEditVisit = (visitData) => {
-    if (!hasAccess('visitations') || !visitData) return false;
-    
-    // Admins can edit any visit
-    if (role === 'administrator') return true;
-    
-    // Doctors can edit visits they conducted
-    if (role === 'doctor' && visitData.doctor_id === user?.ID) return true;
-    
-    // Desk officers can edit any visit
-    if (role === 'desk_officer') return true;
-    
-    return false;
-  };
+  // Update form data when initialData changes
+  useEffect(() => {
+    setFormData(prev => {
+      const newData = { ...prev, ...initialData };
+      
+      // Format date to YYYY-MM-DD if it's not already in that format
+      if (newData.date && newData.date.includes(' ')) {
+        // Handle datetime format like "2023-12-15 14:30:00"
+        newData.date = newData.date.split(' ')[0];
+      }
+      
+      // Format time to HH:mm if it's not already in that format
+      if (newData.time && newData.time.includes(':') && newData.time.length > 5) {
+        // Handle time format like "14:30:00"
+        newData.time = newData.time.substring(0, 5);
+      }
+      
+      return newData;
+    });
+  }, [initialData]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -115,37 +131,21 @@ const EditVisitForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!canEditVisit(visit)) {
-      setError('You do not have permission to edit this visit');
+    // Validate required fields
+    if (!formData.patient_id || !formData.doctor_id || !formData.date || !formData.time) {
+      setDataError('Please fill in all required fields (Patient, Doctor, Date, and Time)');
       return;
     }
 
-    setSubmitLoading(true);
-    setError(null);
+    // Clear any existing errors
+    setDataError(null);
 
-    try {
-      // Validate required fields
-      if (!formData.patient_id || !formData.doctor_id || !formData.date || !formData.time) {
-        throw new Error('Please fill in all required fields');
-      }
-
-      const response = await api.put(`/visitations/${visitId}`, formData);
-
-      if (response.data?.success) {
-        // Redirect back to visitations page with success message
-        navigate('/visitations?success=Visit updated successfully');
-      } else {
-        throw new Error(response.data?.message || 'Failed to update visit');
-      }
-    } catch (err) {
-      console.error('Error updating visit:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to update visit');
-    } finally {
-      setSubmitLoading(false);
+    if (onSubmit) {
+      await onSubmit(formData);
     }
   };
 
-  if (loading) {
+  if (dataLoading) {
     return (
       <div className="flex justify-center items-center py-16">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
@@ -153,48 +153,18 @@ const EditVisitForm = () => {
     );
   }
 
-  if (error || !visit) {
-    return (
-      <div className="max-w-2xl mx-auto py-8">
-        <Card>
-          <div className="text-center py-8">
-            <p className="text-red-600">{error || 'Visit not found'}</p>
-            <Button variant="secondary" className="mt-4" onClick={() => navigate('/visitations')}>
-              Back to Visitations
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
-  if (!canEditVisit(visit)) {
-    return (
-      <div className="max-w-2xl mx-auto py-8">
-        <Card>
-          <div className="text-center py-8">
-            <p className="text-red-600">You do not have permission to edit this visit.</p>
-            <Button variant="secondary" className="mt-4" onClick={() => navigate('/visitations')}>
-              Back to Visitations
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold">Edit Visit #{visit.ID}</h1>
-        <p className="text-purple-100 mt-2">Update visit details and consultation information</p>
+      <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-6 text-white">
+        <h1 className="text-3xl font-bold">{title}</h1>
+        <p className="text-green-100 mt-2">{subtitle}</p>
       </div>
 
       <Card className="shadow-lg">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
+          {(error || dataError) && (
             <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4">
-              <p>{error}</p>
+              <p>{error || dataError}</p>
             </div>
           )}
 
@@ -258,7 +228,7 @@ const EditVisitForm = () => {
                 <option value="">Select an appointment (optional)</option>
                 {appointments.map(appointment => (
                   <option key={appointment.ID} value={appointment.ID}>
-                    Appointment #{appointment.ID} - {appointment.appointment_date}
+                    Appointment #{appointment.ID} - {appointment.appointment_date || appointment.date}
                   </option>
                 ))}
               </select>
@@ -367,23 +337,23 @@ const EditVisitForm = () => {
               type="button"
               variant="secondary"
               onClick={() => navigate('/visitations')}
-              disabled={submitLoading}
+              disabled={loading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
               variant="primary"
-              disabled={submitLoading}
-              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+              disabled={loading}
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
             >
-              {submitLoading ? (
+              {loading ? (
                 <span className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                  Updating Visit...
+                  {submitButtonText}...
                 </span>
               ) : (
-                'Update Visit'
+                submitButtonText
               )}
             </Button>
           </div>
@@ -393,4 +363,4 @@ const EditVisitForm = () => {
   );
 };
 
-export default EditVisitForm;
+export default VisitForm;

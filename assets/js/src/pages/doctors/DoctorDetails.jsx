@@ -26,6 +26,8 @@ const DoctorDetails = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  // Check if we came from a visitation page
+  const fromVisitation = location.state?.fromVisitation || null;
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -355,9 +357,15 @@ const DoctorDetails = () => {
             {error}
           </div>
           <div className="mt-4">
-            <Link to="/doctors">
-              <Button variant="secondary">Return to Doctors</Button>
-            </Link>
+            {fromVisitation ? (
+              <Link to={`/visitations/${fromVisitation.visitId}`}>
+                <Button variant="secondary">Return to Visit Details</Button>
+              </Link>
+            ) : (
+              <Link to="/doctors">
+                <Button variant="secondary">Return to Doctors</Button>
+              </Link>
+            )}
           </div>
         </Card>
       </div>
@@ -372,9 +380,15 @@ const DoctorDetails = () => {
             <p className="text-gray-600">Doctor not found</p>
           </div>
           <div className="mt-4">
-            <Link to="/doctors">
-              <Button variant="secondary">Return to Doctors</Button>
-            </Link>
+            {fromVisitation ? (
+              <Link to={`/visitations/${fromVisitation.visitId}`}>
+                <Button variant="secondary">Return to Visit Details</Button>
+              </Link>
+            ) : (
+              <Link to="/doctors">
+                <Button variant="secondary">Return to Doctors</Button>
+              </Link>
+            )}
           </div>
         </Card>
       </div>
@@ -759,7 +773,7 @@ const DoctorDetails = () => {
                             <div className="flex space-x-2">
                               <Link 
                                 to={`/patients/${patientId}`} 
-                                state={{ fromDoctor: { doctorId, name: fullName, specialty: specialty } }}
+                                state={{ fromDoctor: { ID: doctorId, doctorId, name: fullName, specialty: specialty } }}
                                 className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1048,14 +1062,25 @@ const DoctorDetails = () => {
       )}
 
       <div className="mt-4">
-        <Link to="/doctors">
-          <Button variant="secondary">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-            </svg>
-            Back to Doctors
-          </Button>
-        </Link>
+        {fromVisitation ? (
+          <Link to={`/visitations/${fromVisitation.visitId}`}>
+            <Button variant="secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              Back to Visit Details
+            </Button>
+          </Link>
+        ) : (
+          <Link to="/doctors">
+            <Button variant="secondary">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+              </svg>
+              Back to Doctors
+            </Button>
+          </Link>
+        )}
       </div>
     </div>
   );

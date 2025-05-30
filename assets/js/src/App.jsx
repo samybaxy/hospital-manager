@@ -28,8 +28,8 @@ import Login from './pages/Login';
 // Import new pages based on API controllers
 import LabInvestigations from './pages/LabInvestigations';
 import Visitations from './pages/visitations/Visitations';
-import AddVisitForm from './pages/visitations/AddVisitForm';
-import EditVisitForm from './pages/visitations/EditVisitForm';
+import AddVisit from './pages/visitations/AddVisit';
+import EditVisit from './pages/visitations/EditVisit';
 import ViewVisitDetails from './pages/visitations/ViewVisitDetails';
 import Chat from './pages/Chat';
 import AuditLogs from './pages/AuditLogs';
@@ -170,14 +170,19 @@ const AppRoutes = () => {
             <Visitations />
           </ProtectedRoute>
         } />
+        <Route path="/visitations/new" element={
+          <ProtectedRoute routeName="visitations">
+            <AddVisit />
+          </ProtectedRoute>
+        } />
         <Route path="/visitations/new/:patientId" element={
           <ProtectedRoute routeName="visitations">
-            <AddVisitForm />
+            <AddVisit />
           </ProtectedRoute>
         } />
         <Route path="/visitations/:visitId/edit" element={
           <ProtectedRoute routeName="visitations">
-            <EditVisitForm />
+            <EditVisit />
           </ProtectedRoute>
         } />
         <Route path="/visitations/:visitId" element={

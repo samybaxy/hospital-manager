@@ -231,4 +231,88 @@ class VisitationService
             throw new Exception('Failed to retrieve visitations: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * Get a single visitation record by ID with related information
+     * 
+     * @param int $id The visitation ID
+     * @return array|false Visitation data with related information, or false if not found
+     * @throws Exception If there's a database error
+     */
+    public static function getVisitation(int $id)
+    {
+        global $wpdb;
+
+        try {
+            // Initialize tables
+            $visitations_table = $wpdb->prefix . 'hm_visitations';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            
+            // Query to get visitation with patient and doctor information
+            $query = "
+                SELECT 
+                    v.*,
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name
+                FROM {$visitations_table} v
+                LEFT JOIN {$patients_table} p ON v.patient_id = p.ID
+                LEFT JOIN {$doctors_table} d ON v.doctor_id = d.ID
+                WHERE v.ID = %d
+                LIMIT 1
+            ";
+            
+            $prepared_query = $wpdb->prepare($query, $id);
+            $visitation = $wpdb->get_row($prepared_query);
+            
+            // Check if visitation exists
+            if (!$visitation) {
+                return false;
+            }
+            
+            // Convert to array
+            $visitationArray = (array)$visitation;
+            
+            // Ensure numeric values are properly typed
+            $visitationArray['ID'] = (int) $visitationArray['ID'];
+            $visitationArray['patient_id'] = (int) $visitationArray['patient_id'];
+            $visitationArray['doctor_id'] = (int) $visitationArray['doctor_id'];
+            
+            // Handle nullable or empty fields with defaults
+            $visitationArray['time'] = $visitationArray['time'] ?? null;
+            $visitationArray['complaint'] = $visitationArray['complaint'] ?? '';
+            $visitationArray['diagnosis'] = $visitationArray['diagnosis'] ?? '';
+            $visitationArray['treatment'] = $visitationArray['treatment'] ?? '';
+            $visitationArray['notes'] = $visitationArray['notes'] ?? '';
+            $visitationArray['status'] = $visitationArray['status'] ?? '';
+            
+            // Handle JSON fields if needed
+            if (!empty($visitationArray['vital_signs']) && is_string($visitationArray['vital_signs'])) {
+                $decoded = json_decode($visitationArray['vital_signs'], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $visitationArray['vital_signs'] = $decoded;
+                }
+            } else {
+                $visitationArray['vital_signs'] = null;
+            }
+            
+            // Check user permission to view this visitation
+            $user = wp_get_current_user();
+            if (in_array('patient', $user->roles) && $visitationArray['patient_id'] !== $user->ID) {
+                // Patients can only see their own visitations
+                error_log('VisitationService::getVisitation - Permission denied: patient attempted to view another patient\'s visitation');
+                return false;
+            }
+            
+            // Log successful retrieval
+            error_log('VisitationService::getVisitation - Successfully retrieved visitation #' . $id);
+            
+            return $visitationArray;
+            
+        } catch (\Exception $e) {
+            error_log('Exception in VisitationService::getVisitation: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            throw new Exception('Failed to retrieve visitation: ' . $e->getMessage());
+        }
+    }
 }

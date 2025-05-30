@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -16,8 +16,10 @@ const ViewVisitDetails = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch visit details
+  // Fetch visit details - only run once per visitId
   useEffect(() => {
+    if (!visitId) return;
+    
     const fetchVisit = async () => {
       try {
         setLoading(true);
@@ -25,10 +27,13 @@ const ViewVisitDetails = () => {
 
         const response = await api.get(`/visitations/${visitId}`);
 
+        // Check if response has data and success flag
         if (response.data?.success) {
           setVisit(response.data.data);
+          console.log('Visit data loaded:', response.data.data);
         } else {
-          throw new Error('Visit not found');
+          console.error('Unexpected API response format:', response.data);
+          throw new Error('Visit data format is invalid');
         }
       } catch (err) {
         console.error('Error fetching visit:', err);
@@ -38,51 +43,45 @@ const ViewVisitDetails = () => {
       }
     };
 
-    if (hasAccess('visitations') && visitId) {
-      fetchVisit();
-    } else {
-      setLoading(false);
-      setError('You do not have permission to view visits');
-    }
-  }, [hasAccess, visitId]);
+    fetchVisit();
+  }, [visitId]); // Only depend on visitId
 
-  // Check if user can view this visit
-  const canViewVisit = (visitData) => {
-    if (!hasAccess('visitations') || !visitData) return false;
+  // Check permissions once when data is loaded
+  const hasVisitAccess = useMemo(() => {
+    if (!visit) return false;
     
     // Admins can view any visit
     if (role === 'administrator') return true;
     
     // Doctors can view visits they conducted
-    if (role === 'doctor' && visitData.doctor_id === user?.ID) return true;
+    if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
     
     // Desk officers can view any visit
     if (role === 'desk_officer') return true;
     
     // Patients can only view their own visits
-    if (role === 'patient' && visitData.patient_id === user?.ID) return true;
+    if (role === 'patient' && visit.patient_id === user?.ID) return true;
     
     return false;
-  };
+  }, [visit, role, user?.ID]);
 
-  // Check if user can edit this visit
-  const canEditVisit = (visitData) => {
-    if (!hasAccess('visitations') || !visitData) return false;
+  const hasEditAccess = useMemo(() => {
+    if (!visit) return false;
     
     // Admins can edit any visit
     if (role === 'administrator') return true;
     
     // Doctors can edit visits they conducted
-    if (role === 'doctor' && visitData.doctor_id === user?.ID) return true;
+    if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
     
     // Desk officers can edit any visit
     if (role === 'desk_officer') return true;
     
     return false;
-  };
+  }, [visit, role, user?.ID]);
 
   // Format date and time for display
-  const formatDateTime = (date, time) => {
+  const formatDateTime = useCallback((date, time) => {
     if (!date) return '-';
     
     try {
@@ -107,8 +106,29 @@ const ViewVisitDetails = () => {
     } catch (err) {
       return date;
     }
-  };
+  }, []);
 
+  // Navigation handlers with useCallback to prevent recreation
+  const handleEditVisit = useCallback(() => {
+    if (visit?.ID) navigate(`/visitations/${visit.ID}/edit`);
+  }, [navigate, visit?.ID]);
+
+  const handleBackToList = useCallback(() => {
+    navigate('/visitations');
+  }, [navigate]);
+
+  const handleViewPatient = useCallback(() => {
+    if (visit?.patient_id) navigate(`/patients/${visit.patient_id}`);
+  }, [navigate, visit?.patient_id]);
+
+  const handleViewDoctor = useCallback(() => {
+    if (visit?.doctor_id) navigate(`/doctors/${visit.doctor_id}`);
+  }, [navigate, visit?.doctor_id]);
+
+  const handleViewAppointment = useCallback(() => {
+    if (visit?.appointment_id) navigate(`/appointments/${visit.appointment_id}`);
+  }, [navigate, visit?.appointment_id]);
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center py-16">
@@ -117,13 +137,13 @@ const ViewVisitDetails = () => {
     );
   }
 
-  if (error || !visit || !canViewVisit(visit)) {
+  if (error || !visit || !hasVisitAccess) {
     return (
       <div className="max-w-2xl mx-auto py-8">
         <Card>
           <div className="text-center py-8">
             <p className="text-red-600">{error || 'You do not have permission to view this visit'}</p>
-            <Button variant="secondary" className="mt-4" onClick={() => navigate('/visitations')}>
+            <Button variant="secondary" className="mt-4" onClick={handleBackToList}>
               Back to Visitations
             </Button>
           </div>
@@ -141,10 +161,10 @@ const ViewVisitDetails = () => {
             <p className="text-indigo-100 mt-2">Complete information about this patient visit</p>
           </div>
           <div className="flex space-x-3">
-            {canEditVisit(visit) && (
+            {hasEditAccess && (
               <Button
                 variant="secondary"
-                onClick={() => navigate(`/visitations/${visit.ID}/edit`)}
+                onClick={handleEditVisit}
                 className="bg-white/20 text-white border-white/30 hover:bg-white/30"
               >
                 Edit Visit
@@ -152,7 +172,7 @@ const ViewVisitDetails = () => {
             )}
             <Button
               variant="secondary"
-              onClick={() => navigate('/visitations')}
+              onClick={handleBackToList}
               className="bg-white/20 text-white border-white/30 hover:bg-white/30"
             >
               Back to List
@@ -208,11 +228,11 @@ const ViewVisitDetails = () => {
           </div>
           
           <div className="space-y-3">
-            {canEditVisit(visit) && (
+            {hasEditAccess && (
               <Button
                 variant="primary"
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
-                onClick={() => navigate(`/visitations/${visit.ID}/edit`)}
+                onClick={handleEditVisit}
               >
                 Edit Visit
               </Button>
@@ -221,7 +241,7 @@ const ViewVisitDetails = () => {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => navigate(`/patients/${visit.patient_id}`)}
+              onClick={handleViewPatient}
             >
               View Patient Profile
             </Button>
@@ -229,7 +249,7 @@ const ViewVisitDetails = () => {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => navigate(`/doctors/${visit.doctor_id}`)}
+              onClick={handleViewDoctor}
             >
               View Doctor Profile
             </Button>
@@ -238,7 +258,7 @@ const ViewVisitDetails = () => {
               <Button
                 variant="secondary"
                 className="w-full"
-                onClick={() => navigate(`/appointments/${visit.appointment_id}`)}
+                onClick={handleViewAppointment}
               >
                 View Related Appointment
               </Button>
