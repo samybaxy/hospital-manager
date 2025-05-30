@@ -41,7 +41,6 @@ class AccessController extends BaseController
         
         // Debug logging
         error_log("Hospital Manager Access Debug - User: {$user->user_login}, Role: {$role}");
-        error_log("Hospital Manager Access Debug - Access Map: " . print_r($access_map, true));
         
         // Return response using BaseController's success_response method
         return $this->success_response([

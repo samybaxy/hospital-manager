@@ -146,8 +146,18 @@ const ViewVisitDetails = () => {
   }, [navigate, visit?.doctor_id, visit?.ID]);
 
   const handleViewAppointment = useCallback(() => {
-    if (visit?.appointment_id) navigate(`/appointments/${visit.appointment_id}`);
-  }, [navigate, visit?.appointment_id]);
+    if (visit?.appointment_id) {
+      navigate(`/appointments/${visit.appointment_id}`, {
+        state: { 
+          fromVisitation: { 
+            visitId: visit.ID,
+            returnPath: `/visitations/${visit.ID}`,
+            returnLabel: 'Back to Visit Details'
+          } 
+        }
+      });
+    }
+  }, [navigate, visit?.appointment_id, visit?.ID]);
   
   if (loading) {
     return (

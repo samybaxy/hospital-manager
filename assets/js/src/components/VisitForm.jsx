@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from './Card';
 import Button from './Button';
@@ -49,21 +49,42 @@ const VisitForm = ({
 
         // Handle patients response
         if (patientsRes.data?.success && patientsRes.data.data) {
-          setPatients(Array.isArray(patientsRes.data.data) ? patientsRes.data.data : []);
+          // Check for nested structure with items array (pagination)
+          if (patientsRes.data.data.patients && patientsRes.data.data.patients.items) {
+            setPatients(patientsRes.data.data.patients.items);
+          } else if (Array.isArray(patientsRes.data.data)) {
+            setPatients(patientsRes.data.data);
+          } else {
+            setPatients([]);
+          }
         } else if (Array.isArray(patientsRes.data)) {
           setPatients(patientsRes.data);
         }
 
         // Handle doctors response
         if (doctorsRes.data?.success && doctorsRes.data.data) {
-          setDoctors(Array.isArray(doctorsRes.data.data) ? doctorsRes.data.data : []);
+          // Check for nested structure with items array (pagination)
+          if (doctorsRes.data.data.doctors && doctorsRes.data.data.doctors.items) {
+            setDoctors(doctorsRes.data.data.doctors.items);
+          } else if (Array.isArray(doctorsRes.data.data)) {
+            setDoctors(doctorsRes.data.data);
+          } else {
+            setDoctors([]);
+          }
         } else if (Array.isArray(doctorsRes.data)) {
           setDoctors(doctorsRes.data);
         }
 
         // Handle appointments response
         if (appointmentsRes.data?.success && appointmentsRes.data.data) {
-          setAppointments(Array.isArray(appointmentsRes.data.data) ? appointmentsRes.data.data : []);
+          // Check for nested structure with items array (pagination)
+          if (appointmentsRes.data.data.appointments && appointmentsRes.data.data.appointments.items) {
+            setAppointments(appointmentsRes.data.data.appointments.items);
+          } else if (Array.isArray(appointmentsRes.data.data)) {
+            setAppointments(appointmentsRes.data.data);
+          } else {
+            setAppointments([]);
+          }
         } else if (Array.isArray(appointmentsRes.data)) {
           setAppointments(appointmentsRes.data);
         }
@@ -79,8 +100,17 @@ const VisitForm = ({
     fetchData();
   }, []); // Empty dependency array - only run once
 
-  // Update form data when initialData changes
+  // Update form data when initialData changes - only run when initialData actually changes
+  const initialDataRef = useRef(initialData);
   useEffect(() => {
+    // Only update if initialData has actually changed
+    if (JSON.stringify(initialDataRef.current) === JSON.stringify(initialData)) {
+      return;
+    }
+    
+    // Store the new initialData reference
+    initialDataRef.current = initialData;
+    
     setFormData(prev => {
       const newData = { ...prev, ...initialData };
       
