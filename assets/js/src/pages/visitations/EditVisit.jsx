@@ -18,8 +18,11 @@ const EditVisit = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch visit data only
+  // Fetch visit data only once when component mounts
   useEffect(() => {
+    // Create a flag to track if component is mounted
+    let isMounted = true;
+    
     const fetchVisitData = async () => {
       if (!hasAccess('visitations') || !visitId) {
         setLoading(false);
@@ -33,6 +36,9 @@ const EditVisit = () => {
 
         const visitRes = await api.get(`/visitations/${visitId}`);
 
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
         if (visitRes.data?.success) {
           const visitData = visitRes.data.data;
           setVisitData(visitData);
@@ -40,15 +46,28 @@ const EditVisit = () => {
           throw new Error('Visit not found');
         }
       } catch (err) {
+        // Only update state if component is still mounted
+        if (!isMounted) return;
         console.error('Error fetching visit data:', err);
         setError(err.response?.data?.message || err.message || 'Failed to load visit data');
       } finally {
-        setLoading(false);
+        // Only update state if component is still mounted
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchVisitData();
-  }, [hasAccess, visitId]);
+    
+    // Cleanup function to set flag when component unmounts
+    return () => {
+      isMounted = false;
+    };
+    
+    // hasAccess is triggering re-renders, so we'll exclude it from dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visitId]);
 
   // Check if user can edit this visit
   const canEditVisit = (visitData) => {

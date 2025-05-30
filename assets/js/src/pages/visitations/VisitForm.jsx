@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -13,6 +13,7 @@ const VisitForm = ({
   loading = false,
   error = null
 }) => {
+  // Initialize form data with empty strings to avoid null values in form controls
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: '',
@@ -23,7 +24,12 @@ const VisitForm = ({
     diagnosis: '',
     treatment: '',
     complaint: '',
-    ...initialData
+    // Handle potential null values in initialData by converting them to empty strings
+    ...(initialData ? Object.fromEntries(
+      Object.entries(initialData).map(([key, value]) => 
+        [key, value === null ? '' : value]
+      )
+    ) : {})
   });
   
   const [patients, setPatients] = useState([]);
@@ -33,9 +39,54 @@ const VisitForm = ({
   const [dataError, setDataError] = useState(null);
   
   const navigate = useNavigate();
+  
+  // Use refs to prevent unnecessary re-renders
+  const isInitialMount = useRef(true);
+  const hasFetchedData = useRef(false);
+
+  // Memoize initialData to detect actual changes
+  const memoizedInitialData = useMemo(() => 
+    JSON.stringify(initialData), [initialData]
+  );
+
+  // Load initial data only once
+  useEffect(() => {
+    if (!isInitialMount.current) return;
+    
+    setFormData(prev => {
+      // Create a new object with the previous state and initialData
+      const newData = { ...prev };
+      
+      // Process each property from initialData, handling potential null values
+      if (initialData) {
+        Object.entries(initialData).forEach(([key, value]) => {
+          // Convert null values to empty strings to avoid React warnings
+          newData[key] = value === null ? '' : value;
+        });
+      }
+      
+      // Format date to YYYY-MM-DD if it's not already in that format
+      if (newData.date && newData.date.includes(' ')) {
+        newData.date = newData.date.split(' ')[0];
+      }
+      
+      // Format time to HH:mm if it's not already in that format
+      if (newData.time && newData.time.includes(':') && newData.time.length > 5) {
+        newData.time = newData.time.substring(0, 5);
+      }
+      
+      return newData;
+    });
+    
+    isInitialMount.current = false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoizedInitialData]);
 
   // Fetch required data for dropdowns only once
   useEffect(() => {
+    if (hasFetchedData.current) return;
+    hasFetchedData.current = true;
+    
     const fetchData = async () => {
       setDataLoading(true);
       setDataError(null);
@@ -49,46 +100,45 @@ const VisitForm = ({
 
         // Handle patients response
         if (patientsRes.data?.success && patientsRes.data.data) {
-          if (patientsRes.data.data.patients && Array.isArray(patientsRes.data.data.patients.items)) {
+          // Check for nested structure with items array (pagination)
+          if (patientsRes.data.data.patients && patientsRes.data.data.patients.items) {
             setPatients(patientsRes.data.data.patients.items);
           } else if (Array.isArray(patientsRes.data.data)) {
             setPatients(patientsRes.data.data);
+          } else {
+            setPatients([]);
           }
         } else if (Array.isArray(patientsRes.data)) {
           setPatients(patientsRes.data);
-        } else {
-          console.warn('Patients API returned unexpected format:', patientsRes.data);
-          setPatients([]);
         }
 
         // Handle doctors response
         if (doctorsRes.data?.success && doctorsRes.data.data) {
-          if (doctorsRes.data.data.doctors && Array.isArray(doctorsRes.data.data.doctors.items)) {
+          // Check for nested structure with items array (pagination)
+          if (doctorsRes.data.data.doctors && doctorsRes.data.data.doctors.items) {
             setDoctors(doctorsRes.data.data.doctors.items);
           } else if (Array.isArray(doctorsRes.data.data)) {
             setDoctors(doctorsRes.data.data);
+          } else {
+            setDoctors([]);
           }
         } else if (Array.isArray(doctorsRes.data)) {
           setDoctors(doctorsRes.data);
-        } else {
-          console.warn('Doctors API returned unexpected format:', doctorsRes.data);
-          setDoctors([]);
         }
 
         // Handle appointments response
         if (appointmentsRes.data?.success && appointmentsRes.data.data) {
-          if (appointmentsRes.data.data.appointments && Array.isArray(appointmentsRes.data.data.appointments.items)) {
+          // Check for nested structure with items array (pagination)
+          if (appointmentsRes.data.data.appointments && appointmentsRes.data.data.appointments.items) {
             setAppointments(appointmentsRes.data.data.appointments.items);
           } else if (Array.isArray(appointmentsRes.data.data)) {
             setAppointments(appointmentsRes.data.data);
+          } else {
+            setAppointments([]);
           }
         } else if (Array.isArray(appointmentsRes.data)) {
           setAppointments(appointmentsRes.data);
-        } else {
-          console.warn('Appointments API returned unexpected format:', appointmentsRes.data);
-          setAppointments([]);
         }
-
       } catch (err) {
         console.error('Error fetching form data:', err);
         setDataError('Failed to load form data. Some dropdowns may be empty.');
@@ -98,33 +148,14 @@ const VisitForm = ({
     };
 
     fetchData();
-  }, []); // Empty dependency array - only run once
+  }, []);
 
-  // Update form data when initialData changes
-  useEffect(() => {
-    setFormData(prev => {
-      const newData = { ...prev, ...initialData };
-      
-      // Format date to YYYY-MM-DD if it's not already in that format
-      if (newData.date && newData.date.includes(' ')) {
-        // Handle datetime format like "2023-12-15 14:30:00"
-        newData.date = newData.date.split(' ')[0];
-      }
-      
-      // Format time to HH:mm if it's not already in that format
-      if (newData.time && newData.time.includes(':') && newData.time.length > 5) {
-        // Handle time format like "14:30:00"
-        newData.time = newData.time.substring(0, 5);
-      }
-      
-      return newData;
-    });
-  }, [initialData]);
-
-  // Handle form input changes
+  // Handle form input changes - ensure we never set null values
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    // Ensure we never set null values, use empty string instead
+    const safeValue = value === null ? '' : value;
+    setFormData(prev => ({ ...prev, [name]: safeValue }));
   };
 
   // Handle form submission
@@ -177,7 +208,7 @@ const VisitForm = ({
               <select
                 id="patient_id"
                 name="patient_id"
-                value={formData.patient_id}
+                value={formData.patient_id || ''}
                 onChange={handleInputChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -199,7 +230,7 @@ const VisitForm = ({
               <select
                 id="doctor_id"
                 name="doctor_id"
-                value={formData.doctor_id}
+                value={formData.doctor_id || ''}
                 onChange={handleInputChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -221,7 +252,7 @@ const VisitForm = ({
               <select
                 id="appointment_id"
                 name="appointment_id"
-                value={formData.appointment_id}
+                value={formData.appointment_id || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
@@ -243,7 +274,7 @@ const VisitForm = ({
                 type="date"
                 id="date"
                 name="date"
-                value={formData.date}
+                value={formData.date || ''}
                 onChange={handleInputChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -259,7 +290,7 @@ const VisitForm = ({
                 type="time"
                 id="time"
                 name="time"
-                value={formData.time}
+                value={formData.time || ''}
                 onChange={handleInputChange}
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -275,7 +306,7 @@ const VisitForm = ({
             <textarea
               id="complaint"
               name="complaint"
-              value={formData.complaint}
+              value={formData.complaint || ''}
               onChange={handleInputChange}
               rows={3}
               placeholder="Describe the patient's complaint or reason for visit..."
@@ -291,7 +322,7 @@ const VisitForm = ({
             <textarea
               id="medical_history"
               name="medical_history"
-              value={formData.medical_history}
+              value={formData.medical_history || ''}
               onChange={handleInputChange}
               rows={3}
               placeholder="Relevant medical history for this visit..."
@@ -307,7 +338,7 @@ const VisitForm = ({
             <textarea
               id="diagnosis"
               name="diagnosis"
-              value={formData.diagnosis}
+              value={formData.diagnosis || ''}
               onChange={handleInputChange}
               rows={3}
               placeholder="Medical diagnosis..."
@@ -323,7 +354,7 @@ const VisitForm = ({
             <textarea
               id="treatment"
               name="treatment"
-              value={formData.treatment}
+              value={formData.treatment || ''}
               onChange={handleInputChange}
               rows={3}
               placeholder="Treatment plan and recommendations..."

@@ -38,11 +38,30 @@ const Doctors = () => {
         
         const response = await api.get('/doctors', { params });
         // Extract data and metadata from response
-        const { data, meta } = response.data;
-        setDoctors(data || []);
-        setTotalDoctors(meta?.total || 0);
-        setTotalPages(meta?.last_page || 1);
-        setCurrentPage(meta?.current_page || 1);
+        // Extract data and metadata from response
+        const responseData = response.data;
+        // Handle both API response formats (nested or flat)
+        if (responseData.data && responseData.data.doctors) {
+            // New format with nested structure
+            const { doctors } = responseData.data;
+            setDoctors(doctors.items || []);
+            setTotalDoctors(doctors.total || 0);
+            setTotalPages(doctors.lastPage || 1);
+            setCurrentPage(doctors.currentPage || 1);
+        } else if (responseData.data && Array.isArray(responseData.data)) {
+            // Original format with flat array and separate meta
+            const { data, meta } = responseData;
+            setDoctors(data || []);
+            setTotalDoctors(meta?.total || 0);
+            setTotalPages(meta?.last_page || 1);
+            setCurrentPage(meta?.current_page || 1);
+        } else {
+            console.error('Unexpected API response format:', responseData);
+            setDoctors([]);
+            setTotalDoctors(0);
+            setTotalPages(1);
+            setCurrentPage(1);
+        }
     } catch (err) {
       console.error('Error fetching doctors:', err);
       setError('Failed to fetch doctors. Please try again.');

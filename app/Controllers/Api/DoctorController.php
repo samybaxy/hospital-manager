@@ -98,16 +98,26 @@ class DoctorController extends BaseController
     /**
      * Get all doctors with optional search and pagination
      */
+    /**
+     * Get all doctors with optional search and pagination
+     */
     public function get_doctors(WP_REST_Request $request) {
         try {
             error_log('Hospital Manager API Request: GET /hospital-manager/v1/doctors - Params: ' . print_r($request->get_params(), true));
-            
+            // Extract parameters from request
+            $params = $request->get_params()['params'] ?? [];
+
             // Safely get parameters with default values
-            $search = $request->get_param('search') ?? '';
-            $per_page = (int) ($request->get_param('per_page') ?? 10);
-            $page = (int) ($request->get_param('page') ?? 1);
-            $specialty = $request->get_param('specialty') ?? '';
-            $status = $request->get_param('status') ?? 'active';
+            $search = $params['search'] ?? '';
+            $per_page = (int) ($params['per_page'] ?? 10);
+            $page = (int) ($params['page'] ?? 1);
+            $orderby = $params['orderby'] ?? 'last_name';
+            $order = $params['order'] ?? 'asc';
+            $specialty = $params['specialty'] ?? '';
+            if ($specialty === 'all') {
+                $specialty = ''; // Treat 'all' as empty string to not filter by specialty
+            }
+            $status = $params['status'] ?? 'active';
             
             global $wpdb;
             $table_name = $wpdb->prefix . 'hm_doctors';
@@ -122,8 +132,9 @@ class DoctorController extends BaseController
                 $where_values[] = $search_term;
                 $where_values[] = $search_term;
                 $where_values[] = $search_term;
+                error_log("Search term: " . print_r($search_term, true));
             }
-            
+
             if (!empty($specialty)) {
                 $where_conditions[] = "specialty = %s";
                 $where_values[] = $specialty;
@@ -150,10 +161,12 @@ class DoctorController extends BaseController
             $offset = ($page - 1) * $per_page;
             $last_page = ceil($total / $per_page);
             
-            // Get doctors
-            $query = "SELECT * FROM {$table_name} {$where_clause} ORDER BY first_name, last_name LIMIT %d OFFSET %d";
+            // Get doctors with proper ordering based on request parameters
+            $query = "SELECT * FROM {$table_name} {$where_clause} ORDER BY {$orderby} {$order} LIMIT %d OFFSET %d";
             $query_values = array_merge($where_values, [$per_page, $offset]);
-            $doctors = $wpdb->get_results($wpdb->prepare($query, ...$query_values));
+            $prepared_query = $wpdb->prepare($query, ...$query_values);
+            error_log("Doctor query: {$prepared_query}");
+            $doctors = $wpdb->get_results($prepared_query);
             
             $response_data = [
                 'success' => true,
