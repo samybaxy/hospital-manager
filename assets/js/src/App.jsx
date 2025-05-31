@@ -18,7 +18,6 @@ import DoctorDetails from './pages/doctors/DoctorDetails';
 import Appointments from './pages/appointments/Appointments';
 import AppointmentView from './pages/appointments/AppointmentView';
 import BookAppointment from './pages/appointments/BookAppointment';
-import Departments from './pages/Departments';
 import Billing from './pages/Billing';
 import Inventory from './pages/Inventory';
 import Reports from './pages/Reports';
@@ -133,11 +132,6 @@ const AppRoutes = () => {
         <Route path="/appointments/:appointmentId" element={
           <ProtectedRoute routeName="appointments">
             <AppointmentView />
-          </ProtectedRoute>
-        } />
-        <Route path="/departments" element={
-          <ProtectedRoute routeName="departments">
-            <Departments />
           </ProtectedRoute>
         } />
         <Route path="/billing" element={
