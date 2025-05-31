@@ -127,7 +127,7 @@ const Dashboard = () => {
             <Link to="/patients">
               <Button variant="secondary">View All Patients</Button>
             </Link>
-            <Link to="/doctors">
+            <Link to="/doctors?from=dashboard" state={{ from: 'dashboard' }}>
               <Button variant="secondary">Book Appointment</Button>
             </Link>
           </div>

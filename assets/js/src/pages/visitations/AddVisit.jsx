@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import VisitForm from './VisitForm';
 import Card from '../../components/Card';
@@ -9,13 +9,49 @@ import { api } from '../../services/apiService';
 const AddVisit = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [initialData, setInitialData] = useState(null); // Changed to null initially
+  const [loading, setLoading] = useState(true);
   
   const { hasAccess, role } = useUserAccess();
   const { patientId } = useParams();
   const navigate = useNavigate();
 
-  // Initial form data - include patient ID if coming from patients page
-  const initialData = patientId ? { patient_id: patientId } : {};
+  // Fetch patient details when component mounts
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      if (!patientId) {
+        navigate('/patients?error=Please select a patient first');
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        console.log('Fetching patient data for ID:', patientId);
+        const response = await api.get(`/patients/${patientId}`);
+        
+        if (response.data?.success) {
+          const patientData = response.data.data;
+          const patientFormData = {
+            patient_id: patientData.ID,
+            patient_name: `${patientData.first_name} ${patientData.last_name}`
+          };
+          console.log('Successfully loaded patient data:', patientFormData);
+          setInitialData(patientFormData);
+        } else {
+          setError('Failed to load patient data');
+          setInitialData({ patient_id: patientId });
+        }
+      } catch (err) {
+        console.error('Error fetching patient data:', err);
+        setError('Failed to load patient data');
+        setInitialData({ patient_id: patientId });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPatientData();
+  }, [patientId, navigate]);
 
   // Handle form submission
   const handleSubmit = async (formData) => {
@@ -56,6 +92,16 @@ const AddVisit = () => {
             </Button>
           </div>
         </Card>
+      </div>
+    );
+  }
+
+  // Show loading indicator while patient data is being fetched
+  if (loading || initialData === null) {
+    return (
+      <div className="flex justify-center items-center py-16">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+        <span className="ml-3 text-gray-700">Loading patient data...</span>
       </div>
     );
   }

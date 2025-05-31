@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
 import { api } from '../../services/apiService';
 
 const Doctors = () => {
+  const location = useLocation();
+  
   // State management
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,7 @@ const Doctors = () => {
   const [specialtyOptions, setSpecialtyOptions] = useState([]);
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showBookingTooltip, setShowBookingTooltip] = useState(false);
 
   // Fetch doctors from API
   const fetchDoctors = useCallback(async () => {
@@ -98,6 +101,37 @@ const Doctors = () => {
     
     // We don't need a return function here as we're not setting up any timers or subscriptions
   }, [fetchDoctors, manualFetchRequested, doctors.length]);
+  
+  // State to control button highlight effect
+  const [showButtonHighlight, setShowButtonHighlight] = useState(false);
+
+  // Check if user came from dashboard and show the booking tooltip and button highlights
+  useEffect(() => {
+    // Check if referrer is the dashboard
+    const fromDashboard = location.state?.from === 'dashboard' || 
+                          location.search.includes('from=dashboard');
+    
+    // Show tooltip and button highlight if coming from dashboard
+    if (fromDashboard) {
+      setShowBookingTooltip(true);
+      setShowButtonHighlight(true);
+      
+      // Hide tooltip after 10 seconds but keep button highlight longer
+      const tooltipTimer = setTimeout(() => {
+        setShowBookingTooltip(false);
+      }, 10000);
+      
+      // Keep button highlight effect for 20 seconds
+      const buttonHighlightTimer = setTimeout(() => {
+        setShowButtonHighlight(false);
+      }, 20000);
+      
+      return () => {
+        clearTimeout(tooltipTimer);
+        clearTimeout(buttonHighlightTimer);
+      };
+    }
+  }, [location]);
 
   // Fetch specialty options from API
   useEffect(() => {
@@ -405,7 +439,8 @@ const Doctors = () => {
             <p className="text-gray-500">No doctors found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative">
+            {/* Add a positioned container for the tooltip */}
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -477,7 +512,7 @@ const Doctors = () => {
                         </Link>
                         <Link
                           to={`/appointments/book/${doctor.ID}`}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          className={`inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${showButtonHighlight ? 'ring-2 ring-green-500 ring-offset-2 animate-pulse' : ''}`}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -499,6 +534,20 @@ const Doctors = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        
+        {/* Booking tooltip */}
+        {showBookingTooltip && (
+          <div className="fixed inset-x-0 top-1/4 flex justify-center items-center pointer-events-none z-50">
+            <div className="animate-bounce-slow w-64">
+              <div className="relative bg-green-600 text-white p-3 rounded-lg shadow-lg">
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-green-600 rotate-45"></div>
+                <p className="text-sm font-medium whitespace-normal text-center">
+                  Click "Book Appointment" with any doctor
+                </p>
+              </div>
+            </div>
           </div>
         )}
         

@@ -33,6 +33,7 @@ const EditVisit = () => {
       try {
         setLoading(true);
         setError(null);
+        console.log(`Fetching visit data for ID: ${visitId}`);
 
         const visitRes = await api.get(`/visitations/${visitId}`);
 
@@ -41,6 +42,25 @@ const EditVisit = () => {
 
         if (visitRes.data?.success) {
           const visitData = visitRes.data.data;
+          console.log('Visit data loaded:', visitData);
+          
+          // Fetch associated patient data to ensure we have patient_name
+          if (visitData.patient_id) {
+            try {
+              console.log(`Fetching patient data for ID: ${visitData.patient_id}`);
+              const patientRes = await api.get(`/patients/${visitData.patient_id}`);
+              if (patientRes.data?.success) {
+                const patientData = patientRes.data.data;
+                visitData.patient_name = `${patientData.first_name} ${patientData.last_name}`;
+                console.log('Patient name set to:', visitData.patient_name);
+              }
+            } catch (err) {
+              console.error('Error fetching patient data:', err);
+              // If we can't fetch patient name, use a fallback format
+              visitData.patient_name = `Patient #${visitData.patient_id}`;
+            }
+          }
+          
           setVisitData(visitData);
         } else {
           throw new Error('Visit not found');
@@ -159,6 +179,7 @@ const EditVisit = () => {
       subtitle="Update visit details and consultation information"
       loading={submitLoading}
       error={error}
+      isEditMode={true}
     />
   );
 };

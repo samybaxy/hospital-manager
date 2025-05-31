@@ -11,25 +11,34 @@ const VisitForm = ({
   title,
   subtitle,
   loading = false,
-  error = null
+  error = null,
+  isEditMode = false
 }) => {
+    console.log('VisitForm rendered with initialData:', initialData);
   // Initialize form data with empty strings to avoid null values in form controls
-  const [formData, setFormData] = useState({
-    patient_id: '',
-    doctor_id: '',
-    appointment_id: '',
-    date: '',
-    time: '',
-    medical_history: '',
-    diagnosis: '',
-    treatment: '',
-    complaint: '',
+  const [formData, setFormData] = useState(() => {
+    const initialFormData = {
+      patient_id: '',
+      doctor_id: '',
+      appointment_id: '',
+      date: '',
+      time: '',
+      medical_history: '',
+      diagnosis: '',
+      treatment: '',
+      complaint: '',
+    };
+    
     // Handle potential null values in initialData by converting them to empty strings
-    ...(initialData ? Object.fromEntries(
-      Object.entries(initialData).map(([key, value]) => 
-        [key, value === null ? '' : value]
-      )
-    ) : {})
+    if (initialData) {
+      Object.entries(initialData).forEach(([key, value]) => {
+        initialFormData[key] = value === null ? '' : value;
+      });
+      
+      console.log('Initial form data from props:', initialFormData);
+    }
+    
+    return initialFormData;
   });
   
   const [patients, setPatients] = useState([]);
@@ -53,6 +62,8 @@ const VisitForm = ({
   useEffect(() => {
     if (!isInitialMount.current) return;
     
+    console.log('Processing initialData in useEffect:', initialData);
+    
     setFormData(prev => {
       // Create a new object with the previous state and initialData
       const newData = { ...prev };
@@ -75,6 +86,7 @@ const VisitForm = ({
         newData.time = newData.time.substring(0, 5);
       }
       
+      console.log('Updated formData with initialData:', newData);
       return newData;
     });
     
@@ -92,25 +104,64 @@ const VisitForm = ({
       setDataError(null);
       
       try {
-        const [patientsRes, doctorsRes, appointmentsRes] = await Promise.all([
-          api.get('/patients').catch(() => ({ data: { success: false, data: [] } })),
-          api.get('/doctors').catch(() => ({ data: { success: false, data: [] } })),
-          api.get('/appointments').catch(() => ({ data: { success: false, data: [] } }))
-        ]);
-
-        // Handle patients response
-        if (patientsRes.data?.success && patientsRes.data.data) {
-          // Check for nested structure with items array (pagination)
-          if (patientsRes.data.data.patients && patientsRes.data.data.patients.items) {
-            setPatients(patientsRes.data.data.patients.items);
-          } else if (Array.isArray(patientsRes.data.data)) {
-            setPatients(patientsRes.data.data);
-          } else {
-            setPatients([]);
+        // If we have patient_id from initial data but no name, fetch patient details
+        const patientId = formData.patient_id || initialData.patient_id;
+        
+        if (patientId && !formData.patient_name) {
+          try {
+            console.log(`Fetching patient data for ID: ${patientId}`);
+            const patientRes = await api.get(`/patients/${patientId}`);
+            console.log('Patient Response:', patientRes);
+            if (patientRes.data?.success && patientRes.data.data) {
+              const patientData = patientRes.data.data;
+              // Update the form data with patient information
+              setFormData(prev => ({
+                ...prev,
+                patient_id: patientId,
+                patient_name: `${patientData.first_name} ${patientData.last_name}`
+              }));
+            }
+          } catch (err) {
+            console.error('Error fetching patient details:', err);
           }
-        } else if (Array.isArray(patientsRes.data)) {
-          setPatients(patientsRes.data);
+        } else {
+          console.log('Patient data already available:', {
+            patient_id: formData.patient_id,
+            patient_name: formData.patient_name
+          });
         }
+        
+        // In edit mode with a doctor_id, fetch only that specific doctor
+        let doctorsRes;
+        if (isEditMode && formData.doctor_id && formData.doctor_name) {
+          console.log('Edit mode: Using existing doctor data instead of fetching all doctors');
+          // Create a response structure that matches the expected format but only includes the current doctor
+          doctorsRes = {
+            data: {
+              success: true,
+              data: [{
+                ID: formData.doctor_id,
+                first_name: formData.doctor_name.split(' ')[0] || '',
+                last_name: formData.doctor_name.split(' ').slice(1).join(' ') || '',
+                specialty: formData.doctor_specialty || 'Doctor'
+              }]
+            }
+          };
+        } else {
+          // For new visits, fetch all doctors
+          doctorsRes = await api.get('/doctors').catch(() => ({ data: { success: false, data: [] } }));
+        }
+        
+        // Always fetch appointments but filter for valid ones (confirmed & future dates)
+        const appointmentsRes = await api.get('/appointments').catch(() => ({ data: { success: false, data: [] } }));
+        
+        console.log('Doctors Response:', doctorsRes.data);
+        console.log('Appointments Response:', appointmentsRes.data);
+        
+        // Current date for filtering appointments
+        const currentDate = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        
+        // No need to set patients array anymore since patient is pre-selected and field is disabled
 
         // Handle doctors response
         if (doctorsRes.data?.success && doctorsRes.data.data) {
@@ -127,18 +178,43 @@ const VisitForm = ({
         }
 
         // Handle appointments response
+        let allAppointments = [];
         if (appointmentsRes.data?.success && appointmentsRes.data.data) {
           // Check for nested structure with items array (pagination)
           if (appointmentsRes.data.data.appointments && appointmentsRes.data.data.appointments.items) {
-            setAppointments(appointmentsRes.data.data.appointments.items);
+            allAppointments = appointmentsRes.data.data.appointments.items;
           } else if (Array.isArray(appointmentsRes.data.data)) {
-            setAppointments(appointmentsRes.data.data);
-          } else {
-            setAppointments([]);
+            allAppointments = appointmentsRes.data.data;
           }
         } else if (Array.isArray(appointmentsRes.data)) {
-          setAppointments(appointmentsRes.data);
+          allAppointments = appointmentsRes.data;
         }
+        
+        // Filter appointments to show only confirmed future appointments
+        // In edit mode, also include the current appointment if set
+        const currentAppointmentId = isEditMode ? formData.appointment_id : null;
+        
+        const filteredAppointments = allAppointments.filter(appointment => {
+          // Always include the current appointment in edit mode
+          if (currentAppointmentId && appointment.ID == currentAppointmentId) {
+            return true;
+          }
+          
+          // Convert appointment date to YYYY-MM-DD format for comparison
+          const appointmentDate = appointment.appointment_date || appointment.date;
+          const formattedDate = appointmentDate ? 
+            (appointmentDate.includes(' ') ? appointmentDate.split(' ')[0] : appointmentDate) : 
+            '';
+            
+          // Check if appointment is confirmed and in the future
+          const isConfirmed = appointment.status === 'confirmed' || appointment.status === 'approved';
+          const isFutureDate = formattedDate >= currentDate;
+          
+          return isConfirmed && isFutureDate;
+        });
+        
+        console.log(`Found ${filteredAppointments.length} valid future confirmed appointments out of ${allAppointments.length} total`);
+        setAppointments(filteredAppointments);
       } catch (err) {
         console.error('Error fetching form data:', err);
         setDataError('Failed to load form data. Some dropdowns may be empty.');
@@ -200,69 +276,131 @@ const VisitForm = ({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Patient Selection */}
+            {/* Patient Selection - Always disabled and populated */}
             <div>
-              <label htmlFor="patient_id" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="patient_name" className="block text-sm font-semibold text-gray-700 mb-2">
                 Patient <span className="text-red-500">*</span>
               </label>
-              <select
-                id="patient_id"
-                name="patient_id"
-                value={formData.patient_id || ''}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a patient</option>
-                {patients.map(patient => (
-                  <option key={patient.ID} value={patient.ID}>
-                    {patient.first_name} {patient.last_name} (ID: {patient.ID})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="patient_name"
+                  name="patient_name"
+                  value={formData.patient_name || `Patient #${formData.patient_id}` || ''}
+                  readOnly
+                  disabled
+                  required
+                  className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed focus:outline-none"
+                />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input 
+                  type="hidden" 
+                  name="patient_id" 
+                  id="patient_id" 
+                  value={formData.patient_id || ''} 
+                />
+              </div>
+              <p className="mt-1 text-xs text-gray-500 italic">This field is locked and cannot be changed</p>
             </div>
 
             {/* Doctor Selection */}
             <div>
               <label htmlFor="doctor_id" className="block text-sm font-semibold text-gray-700 mb-2">
                 Doctor <span className="text-red-500">*</span>
+                {isEditMode && <span className="ml-2 text-xs text-blue-500">(Locked in edit mode)</span>}
               </label>
-              <select
-                id="doctor_id"
-                name="doctor_id"
-                value={formData.doctor_id || ''}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a doctor</option>
-                {doctors.map(doctor => (
-                  <option key={doctor.ID} value={doctor.ID}>
-                    Dr. {doctor.first_name} {doctor.last_name} - {doctor.specialty}
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                {isEditMode ? (
+                  // In edit mode, show a disabled text input instead of a dropdown
+                  <input
+                    type="text"
+                    id="doctor_name"
+                    name="doctor_name"
+                    value={formData.doctor_name || `Doctor #${formData.doctor_id}` || ''}
+                    readOnly
+                    disabled
+                    required
+                    className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed focus:outline-none"
+                  />
+                ) : (
+                  // In add mode, show the dropdown
+                  <select
+                    id="doctor_id"
+                    name="doctor_id"
+                    value={formData.doctor_id || ''}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select a doctor</option>
+                    {doctors.map(doctor => (
+                      <option key={doctor.ID} value={doctor.ID}>
+                        Dr. {doctor.first_name} {doctor.last_name} - {doctor.specialty}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {isEditMode && (
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+                <input 
+                  type="hidden" 
+                  name="doctor_id" 
+                  id="doctor_id" 
+                  value={formData.doctor_id || ''} 
+                />
+              </div>
+              {isEditMode && (
+                <p className="mt-1 text-xs text-gray-500 italic">Doctor cannot be changed in edit mode</p>
+              )}
             </div>
 
             {/* Appointment (Optional) */}
             <div>
               <label htmlFor="appointment_id" className="block text-sm font-semibold text-gray-700 mb-2">
                 Related Appointment (Optional)
+                {appointments.length === 0 && (
+                  <span className="ml-2 text-xs text-gray-500">(No eligible appointments available)</span>
+                )}
               </label>
               <select
                 id="appointment_id"
                 name="appointment_id"
                 value={formData.appointment_id || ''}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={appointments.length === 0}
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
+                  appointments.length === 0 
+                    ? 'bg-gray-100 cursor-not-allowed' 
+                    : 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                }`}
               >
-                <option value="">Select an appointment (optional)</option>
+                <option value="">
+                  {appointments.length > 0 
+                    ? 'Select an appointment (optional)' 
+                    : 'No confirmed future appointments available'
+                  }
+                </option>
                 {appointments.map(appointment => (
                   <option key={appointment.ID} value={appointment.ID}>
                     Appointment #{appointment.ID} - {appointment.appointment_date || appointment.date}
+                    {appointment.appointment_time && ` at ${appointment.appointment_time.substring(0, 5)}`}
                   </option>
                 ))}
               </select>
+              {appointments.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500 italic">
+                  Only confirmed future appointments can be linked to a visit
+                </p>
+              )}
             </div>
 
             {/* Visit Date */}

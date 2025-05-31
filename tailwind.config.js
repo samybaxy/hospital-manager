@@ -19,7 +19,10 @@ export default {
           900: '#0c4a6e',
           950: '#082f49',
         }
-      }
+      },
+      animation: {
+        'bounce-slow': 'bounce 1.5s infinite',
+      },
     },
   },
   plugins: [],
