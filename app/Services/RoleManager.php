@@ -10,6 +10,9 @@ class RoleManager
     public static function initializeRoles()
     {
         self::add_roles();
+        
+        // Initialize inventory-specific roles and permissions
+        RoleService::initializeRoles();
     }
 
     private static function add_roles()

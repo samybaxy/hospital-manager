@@ -34,6 +34,7 @@ use WPMVC\Config;
 use HospitalManager\Controllers\FrontendController;
 use HospitalManager\Helpers\MenuHelper;
 use HospitalManager\Services\RoleManager;
+use HospitalManager\Services\RoleService;
 use HospitalManager\Services\ApiService;
 use HospitalManager\Services\WebSocketService;
 use HospitalManager\Services\AuthService;
@@ -127,6 +128,10 @@ class HospitalManager extends Bridge
             remove_role('receptionist');
             remove_role('lab_tech');
             remove_role('desk_officer');
+            
+            // Cleanup inventory-specific roles
+            RoleService::cleanupRoles();
+            
             error_log('Hospital Manager: Custom roles removed successfully');
             
             error_log('Hospital Manager: Plugin deactivation completed successfully');

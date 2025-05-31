@@ -145,6 +145,37 @@ class DashboardController extends WP_REST_Controller
                 "SELECT COUNT(*) FROM {$wpdb->prefix}hm_departments"
             ) ?: 0;
             
+            // Get inventory summary
+            $inventory_summary = null;
+            if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}hm_inventory'")) {
+                $inventory_summary = $wpdb->get_row("
+                    SELECT 
+                        COUNT(*) as total_items,
+                        COUNT(CASE WHEN quantity <= reorder_level THEN 1 END) as critical_items,
+                        COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND expiry_date >= CURDATE() THEN 1 END) as expiring_soon,
+                        COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date < CURDATE() THEN 1 END) as expired_items,
+                        COUNT(CASE WHEN status = 'Out of Stock' THEN 1 END) as out_of_stock,
+                        SUM(quantity * COALESCE(cost, 0)) as total_value
+                    FROM {$wpdb->prefix}hm_inventory
+                ", ARRAY_A) ?: [
+                    'total_items' => 0,
+                    'critical_items' => 0,
+                    'expiring_soon' => 0,
+                    'expired_items' => 0,
+                    'out_of_stock' => 0,
+                    'total_value' => 0
+                ];
+            } else {
+                $inventory_summary = [
+                    'total_items' => 0,
+                    'critical_items' => 0,
+                    'expiring_soon' => 0,
+                    'expired_items' => 0,
+                    'out_of_stock' => 0,
+                    'total_value' => 0
+                ];
+            }
+            
             // Get recent activities (last 5)
             $recent_activities = $wpdb->get_results(
                 "SELECT * FROM {$wpdb->prefix}hm_audit_logs 
@@ -178,6 +209,7 @@ class DashboardController extends WP_REST_Controller
                 'doctors_count' => (int)$doctors_count,
                 'appointments_count' => (int)$appointments_count,
                 'departments_count' => (int)$departments_count,
+                'inventory_summary' => $inventory_summary,
                 'recent_activities' => $recent_activities,
                 'upcoming_appointments' => $upcoming_appointments,
             ], 200);
@@ -192,6 +224,14 @@ class DashboardController extends WP_REST_Controller
                 'doctors_count' => 0,
                 'appointments_count' => 0,
                 'departments_count' => 0,
+                'inventory_summary' => [
+                    'total_items' => 0,
+                    'critical_items' => 0,
+                    'expiring_soon' => 0,
+                    'expired_items' => 0,
+                    'out_of_stock' => 0,
+                    'total_value' => 0
+                ],
                 'recent_activities' => [],
                 'upcoming_appointments' => [],
                 'error' => 'Failed to fetch dashboard statistics'

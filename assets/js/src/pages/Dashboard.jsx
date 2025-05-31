@@ -10,7 +10,15 @@ const Dashboard = () => {
     patients: 0,
     doctors: 0,
     appointments: 0,
-    departments: 0
+    departments: 0,
+    inventory_summary: {
+      total_items: 0,
+      critical_items: 0,
+      expiring_soon: 0,
+      expired_items: 0,
+      out_of_stock: 0,
+      total_value: 0
+    }
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,7 +36,15 @@ const Dashboard = () => {
             patients: response.data.patients_count || 0,
             doctors: response.data.doctors_count || 0,
             appointments: response.data.appointments_count || 0,
-            departments: response.data.departments_count || 0
+            departments: response.data.departments_count || 0,
+            inventory_summary: response.data.inventory_summary || {
+              total_items: 0,
+              critical_items: 0,
+              expiring_soon: 0,
+              expired_items: 0,
+              out_of_stock: 0,
+              total_value: 0
+            }
           });
           
           // Set recent activities if available
@@ -60,7 +76,15 @@ const Dashboard = () => {
           patients: 12,
           doctors: 5,
           appointments: 24,
-          departments: 8
+          departments: 8,
+          inventory_summary: {
+            total_items: 250,
+            critical_items: 15,
+            expiring_soon: 8,
+            expired_items: 3,
+            out_of_stock: 5,
+            total_value: 45000
+          }
         });
         
         setRecentActivities([
@@ -186,21 +210,98 @@ const Dashboard = () => {
           </Card>
           
           <Card title="Hospital Resources">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span>Available Beds</span>
-                <span className="font-medium">12/20</span>
+            <div className="space-y-4">
+              {/* Inventory Summary */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                  Inventory Overview
+                </h3>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="bg-white p-3 rounded shadow-sm text-center">
+                    <span className="block text-lg font-bold text-gray-700">{stats.inventory_summary.total_items}</span>
+                    <span className="text-xs text-gray-500">Total Items</span>
+                  </div>
+                  <div className="bg-white p-3 rounded shadow-sm text-center">
+                    <span className="block text-lg font-bold text-red-600">{stats.inventory_summary.critical_items}</span>
+                    <span className="text-xs text-gray-500">Critical</span>
+                  </div>
+                  <div className="bg-white p-3 rounded shadow-sm text-center">
+                    <span className="block text-lg font-bold text-orange-600">{stats.inventory_summary.expiring_soon}</span>
+                    <span className="text-xs text-gray-500">Expiring Soon</span>
+                  </div>
+                </div>
+                
+                {/* Critical Items Alert */}
+                {stats.inventory_summary.critical_items > 0 && (
+                  <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-md">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.982 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-sm text-red-700">
+                        {stats.inventory_summary.critical_items} items need restocking
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Expiring Soon Alert */}
+                {stats.inventory_summary.expiring_soon > 0 && (
+                  <div className="mt-2 p-2 bg-orange-100 border border-orange-300 rounded-md">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-orange-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm text-orange-700">
+                        {stats.inventory_summary.expiring_soon} items expiring within 30 days
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: '60%' }}></div>
+
+              {/* Bed Management */}
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 className="font-semibold text-green-900 mb-3 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  Bed Management
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span>Available Beds</span>
+                    <span className="font-medium">12/20</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '60%' }}></div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center mt-4">
+                    <span>ICU Capacity</span>
+                    <span className="font-medium">4/8</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-green-600 h-2.5 rounded-full" style={{ width: '50%' }}></div>
+                  </div>
+                </div>
               </div>
-              
-              <div className="flex justify-between items-center mt-4">
-                <span>ICU Capacity</span>
-                <span className="font-medium">4/8</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: '50%' }}></div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2">
+                <Link to="/inventory" className="flex-1 min-w-0">
+                  <Button variant="outline" className="w-full text-sm">
+                    View Inventory
+                  </Button>
+                </Link>
+                <Link to="/inventory/new" className="flex-1 min-w-0">
+                  <Button variant="secondary" className="w-full text-sm">
+                    Add Item
+                  </Button>
+                </Link>
               </div>
             </div>
           </Card>

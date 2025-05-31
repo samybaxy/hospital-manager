@@ -210,6 +210,144 @@ class CreateHospitalTables
             KEY visitation_id (visitation_id)
         ) $charset_collate;";
 
+        // Inventory table
+        $sql_inventory = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            item_name varchar(255) NOT NULL,
+            category varchar(100) NOT NULL DEFAULT 'Supplies',
+            quantity int NOT NULL DEFAULT 0,
+            unit varchar(50) NOT NULL DEFAULT 'units',
+            reorder_level int NOT NULL DEFAULT 10,
+            expiry_date date NULL,
+            location varchar(255) NULL,
+            cost decimal(10,2) NULL,
+            status varchar(20) NOT NULL DEFAULT 'In Stock',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY category (category),
+            KEY status (status),
+            KEY expiry_date (expiry_date),
+            KEY location (location),
+            INDEX idx_quantity_reorder (quantity, reorder_level)
+        ) $charset_collate;";
+
+        // Inventory transactions table for tracking movements and changes
+        $sql_inventory_transactions = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_transactions (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            inventory_id bigint(20) NOT NULL,
+            user_id bigint(20) NOT NULL,
+            transaction_type ENUM('stock_in', 'stock_out', 'adjustment', 'transfer', 'expired', 'damaged', 'returned') NOT NULL,
+            quantity_changed int NOT NULL,
+            previous_quantity int NOT NULL,
+            new_quantity int NOT NULL,
+            reference_number varchar(100) NULL,
+            notes text NULL,
+            location_from varchar(255) NULL,
+            location_to varchar(255) NULL,
+            supplier_id bigint(20) NULL,
+            batch_number varchar(100) NULL,
+            expiry_date date NULL,
+            cost_per_unit decimal(10,2) NULL,
+            total_cost decimal(10,2) NULL,
+            status varchar(20) NOT NULL DEFAULT 'completed',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY inventory_id (inventory_id),
+            KEY user_id (user_id),
+            KEY transaction_type (transaction_type),
+            KEY reference_number (reference_number),
+            KEY created_at (created_at),
+            INDEX idx_inventory_date (inventory_id, created_at)
+        ) $charset_collate;";
+
+        // Inventory alerts table for system notifications
+        $sql_inventory_alerts = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_alerts (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            inventory_id bigint(20) NOT NULL,
+            alert_type ENUM('low_stock', 'out_of_stock', 'expired', 'expiring_soon', 'critical_level', 'reorder_point') NOT NULL,
+            severity ENUM('low', 'medium', 'high', 'critical') NOT NULL DEFAULT 'medium',
+            title varchar(255) NOT NULL,
+            message text NOT NULL,
+            threshold_value int NULL,
+            current_value int NULL,
+            is_active tinyint(1) NOT NULL DEFAULT 1,
+            acknowledged_at datetime NULL,
+            acknowledged_by bigint(20) NULL,
+            resolved_at datetime NULL,
+            resolved_by bigint(20) NULL,
+            next_check_at datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY inventory_id (inventory_id),
+            KEY alert_type (alert_type),
+            KEY severity (severity),
+            KEY is_active (is_active),
+            KEY acknowledged_by (acknowledged_by),
+            KEY resolved_by (resolved_by),
+            KEY created_at (created_at),
+            INDEX idx_active_alerts (is_active, alert_type, severity)
+        ) $charset_collate;";
+
+        // Inventory suppliers table for supplier management
+        $sql_inventory_suppliers = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_suppliers (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            contact_person varchar(255) NULL,
+            email varchar(255) NULL,
+            phone varchar(20) NULL,
+            address text NULL,
+            city varchar(100) NULL,
+            state varchar(100) NULL,
+            country varchar(100) NULL,
+            postal_code varchar(20) NULL,
+            tax_id varchar(100) NULL,
+            payment_terms varchar(255) NULL,
+            delivery_time_days int NULL,
+            minimum_order_amount decimal(10,2) NULL,
+            is_active tinyint(1) NOT NULL DEFAULT 1,
+            notes text NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY name (name),
+            KEY is_active (is_active),
+            KEY email (email)
+        ) $charset_collate;";
+
+        // Inventory reorder suggestions table
+        $sql_inventory_reorders = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_reorders (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            inventory_id bigint(20) NOT NULL,
+            supplier_id bigint(20) NULL,
+            suggested_quantity int NOT NULL,
+            current_quantity int NOT NULL,
+            reorder_level int NOT NULL,
+            max_stock_level int NULL,
+            priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
+            status ENUM('pending', 'approved', 'ordered', 'received', 'cancelled') NOT NULL DEFAULT 'pending',
+            estimated_cost decimal(10,2) NULL,
+            order_reference varchar(100) NULL,
+            expected_delivery_date date NULL,
+            notes text NULL,
+            created_by bigint(20) NOT NULL,
+            approved_by bigint(20) NULL,
+            approved_at datetime NULL,
+            ordered_at datetime NULL,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            KEY inventory_id (inventory_id),
+            KEY supplier_id (supplier_id),
+            KEY status (status),
+            KEY priority (priority),
+            KEY created_by (created_by),
+            KEY approved_by (approved_by),
+            KEY created_at (created_at)
+        ) $charset_collate;";
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         
         dbDelta($sql_patients);
@@ -224,6 +362,11 @@ class CreateHospitalTables
         dbDelta($sql_chats);
         dbDelta($sql_messages);
         dbDelta($sql_medical_reports);
+        dbDelta($sql_inventory);
+        dbDelta($sql_inventory_transactions);
+        dbDelta($sql_inventory_alerts);
+        dbDelta($sql_inventory_suppliers);
+        dbDelta($sql_inventory_reorders);
     }
 
     public static function down()
@@ -231,6 +374,11 @@ class CreateHospitalTables
         global $wpdb;
         
         $tables = [
+            'hm_inventory_reorders',
+            'hm_inventory_suppliers',
+            'hm_inventory_alerts',
+            'hm_inventory_transactions',
+            'hm_inventory',
             'hm_radiological_exams',
             'hm_lab_investigations',
             'hm_visitations',

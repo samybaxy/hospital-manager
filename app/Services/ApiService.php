@@ -14,6 +14,7 @@ use HospitalManager\Controllers\Api\AuditController;
 use HospitalManager\Controllers\Api\DashboardController;
 use HospitalManager\Controllers\Api\StatsController;
 use HospitalManager\Controllers\Api\HMOController;
+use HospitalManager\Controllers\Api\InventoryController;
 use HospitalManager\Models\HMO;
 
 /**
@@ -48,6 +49,7 @@ class ApiService
             new DashboardController(),
             new StatsController(),
             new HMOController(),
+            new InventoryController(),
         ];
     }
 

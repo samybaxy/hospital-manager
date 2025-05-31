@@ -39,6 +39,7 @@ require_once dirname(__FILE__) . '/seeders/MedicalReportSeeder.php';
 require_once dirname(__FILE__) . '/seeders/NotificationSeeder.php';
 require_once dirname(__FILE__) . '/seeders/ChatSeeder.php';
 require_once dirname(__FILE__) . '/seeders/AuditLogSeeder.php';
+require_once dirname(__FILE__) . '/seeders/InventorySeeder.php';
 require_once dirname(__FILE__) . '/seeders/ResetSeeder.php';
 
 use HospitalManager\Database\Seeders\DatabaseSeeder;
@@ -55,6 +56,7 @@ use HospitalManager\Database\Seeders\MedicalReportSeeder;
 use HospitalManager\Database\Seeders\NotificationSeeder;
 use HospitalManager\Database\Seeders\ChatSeeder;
 use HospitalManager\Database\Seeders\AuditLogSeeder;
+use HospitalManager\Database\Seeders\InventorySeeder;
 use HospitalManager\Database\Seeders\ResetSeeder;
 
 // Map of seeder aliases to class names
@@ -73,6 +75,7 @@ $seeder_map = [
     'notifications' => NotificationSeeder::class,
     'chats' => ChatSeeder::class,
     'audit-logs' => AuditLogSeeder::class,
+    'inventory' => InventorySeeder::class,
     'reset' => ResetSeeder::class
 ];
 
