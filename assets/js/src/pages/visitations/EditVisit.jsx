@@ -119,8 +119,13 @@ const EditVisit = () => {
       const response = await api.put(`/visitations/${visitId}`, formData);
 
       if (response.data?.success) {
-        // Redirect back to visitations page with success message
-        navigate('/visitations?success=Visit updated successfully');
+        // Get more detailed information about the visit
+        const visitNumber = visitData.ID;
+        const patientName = visitData.patient_name || `Patient #${visitData.patient_id}`;
+        const message = `Visit #${visitNumber} for ${patientName} has been updated successfully`;
+        
+        // Redirect back to visitations page with detailed success message
+        navigate(`/visitations?success=${encodeURIComponent(message)}`);
       } else {
         throw new Error(response.data?.message || 'Failed to update visit');
       }

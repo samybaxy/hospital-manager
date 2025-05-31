@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -20,6 +20,10 @@ const Visitations = () => {
   const [sortField, setSortField] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [successMessage, setSuccessMessage] = useState('');
+  const [manualFetchRequested, setManualFetchRequested] = useState(false);
+  
+  // Use a ref to track if this is the first render
+  const isFirstRender = useRef(true);
   
   const { hasAccess, role } = useUserAccess();
   const { user } = useAuth();
@@ -39,6 +43,7 @@ const Visitations = () => {
   }
 
   const fetchVisitations = useCallback(async () => {
+    console.log('Fetching visitations with searchTerm:', searchTerm, 'length:', searchTerm ? searchTerm.length : 0);
     try {
         setLoading(true);
         setError(null);
@@ -46,11 +51,20 @@ const Visitations = () => {
         // Prepare the parameters for the API call
         const params = { 
             page: currentPage,
-            search: searchTerm,
             per_page: perPage,
             sort_by: sortField,
             sort_order: sortOrder
         };
+        
+        // Only add search parameter if it's not empty
+        if (searchTerm && searchTerm.trim() !== '') {
+            params.search = searchTerm.trim();
+            console.log('Searching for:', searchTerm.trim());
+        } else {
+            // Make sure to clear any search parameter when empty
+            params.search = '';
+            console.log('Search term empty, showing all records');
+        }
       
         // For patients, only show their own visits
         if (role === 'patient' && user?.ID) {
@@ -92,29 +106,60 @@ const Visitations = () => {
     }
   }, [currentPage, perPage, searchTerm, sortField, sortOrder, role, user?.ID]);
 
-  // Keep track of manual fetch requests to prevent duplicate calls
-  const [manualFetchRequested, setManualFetchRequested] = useState(false);
+  // Extract URL parameters for messages - this needs to run to catch navigation changes
+  // like coming back from EditVisit
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const successParam = params.get('success');
+    
+    if (successParam) {
+      console.log('Found success message in URL:', decodeURIComponent(successParam));
+      setSuccessMessage(decodeURIComponent(successParam));
+      
+      // Clear success parameter from URL without page reload
+      const newUrl = window.location.pathname + 
+        window.location.search.replace(/[&?]success=[^&]+/, '').replace(/\?$/, '');
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
 
   useEffect(() => {
-    // Only fetch automatically if a manual fetch wasn't requested
-    if (!manualFetchRequested) {
+    // Only fetch on first render or if manual fetch was requested
+    if (isFirstRender.current || manualFetchRequested) {
+      const isFirstLoad = isFirstRender.current;
+      isFirstRender.current = false;
+      
       const loadVisitations = async () => {
         try {
           await fetchVisitations();
           
-          // Show success message when we have successful data load
-          setSuccessMessage('Visitation data loaded successfully');
+          // Set "data loaded" message only on initial page load and if no other success message exists
+          if (!successMessage && isFirstLoad) {
+            setSuccessMessage('Visitations loaded successfully');
+          } else if (!successMessage && manualFetchRequested) {
+            setSuccessMessage('Visitation data refreshed');
+          }
         } catch (error) {
           console.error('Error in visitation data loading effect:', error);
         }
       };
       
       loadVisitations();
+      
+      // Reset the flag after the effect runs
+      if (manualFetchRequested) {
+        setManualFetchRequested(false);
+      }
     }
-    
-    // Reset the flag after the effect runs
-    setManualFetchRequested(false);
-  }, [fetchVisitations, manualFetchRequested]);
+  }, [fetchVisitations, manualFetchRequested, successMessage]);
+  
+  // Monitor search term changes that require a refetch
+  useEffect(() => {
+    // Skip the first render
+    if (!isFirstRender.current) {
+      console.log('Search term changed, will refetch if needed:', searchTerm);
+    }
+  }, [searchTerm]);
 
   // Handle column sorting
   const handleSort = (field) => {
@@ -125,19 +170,23 @@ const Visitations = () => {
       setSortOrder('asc');
     }
     setCurrentPage(1); // Reset to first page when sorting
+    setManualFetchRequested(true); // Set flag to trigger fetch on next render
   };
 
   // Handle pagination
   const handlePageChange = (page) => {
     setCurrentPage(page);
+    setManualFetchRequested(true); // Set flag to trigger fetch after page change
   };
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
+    setManualFetchRequested(true); // Set flag to trigger fetch after page change
   };
 
   const handleNextPage = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+    setManualFetchRequested(true); // Set flag to trigger fetch after page change
   };
 
   // Sorting indicator component
@@ -238,12 +287,29 @@ const Visitations = () => {
       if (response.data && response.data.success) {
         // Remove the deleted visit from the list
         setVisitations(prev => prev.filter(visit => visit.ID !== visitID));
+           // Find the visit details to include in the success message
+      const deletedVisit = visitations.find(v => v.ID === visitID);
+      const patientName = deletedVisit?.patient_name || `Patient #${deletedVisit?.patient_id || visitID}`;
+      
+      // Show success message with patient details
+      setSuccessMessage(`Visit #${visitID} for ${patientName} has been successfully deleted`);
+      
+      // If we're on a paginated view and this was the last item on the page,
+      // we might need to go to the previous page
+      if (visitations.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
       } else {
-        throw new Error(response.data?.message || 'Failed to delete visit');
+        // Otherwise just refresh the current page
+        fetchVisitations();
       }
-    } catch (err) {
-      console.error('Error deleting visit:', err);
-      alert(err.response?.data?.message || err.message || 'Failed to delete visit');
+    } else {
+      throw new Error(response.data?.message || 'Failed to delete visit');
+    }
+  } catch (err) {
+    console.error('Error deleting visit:', err);
+    setError(err.response?.data?.message || err.message || 'Failed to delete visit');        // Don't set the error message twice
+    // Only need the first setError call above
+    
     } finally {
       setDeleteLoading(null);
     }
@@ -297,12 +363,29 @@ const Visitations = () => {
   const hasValidVisitationData = () => {
     // Check if we have a non-empty array
     if (!Array.isArray(visitations) || visitations.length === 0) {
+      console.log('No valid visitation data found:', visitations);
       return false;
     }
     
     // Even if we have empty objects, we should try to display them
     // The rendering code has fallbacks for missing properties
     return true;
+  };
+
+  // Function to render success messages if not already defined
+  const renderSuccessMessage = () => {
+    if (!successMessage) return null;
+    
+    return (
+      <div className="mb-6">
+        <StatusMessage 
+          type="success"
+          message={successMessage}
+          duration={5000}
+          onDismiss={() => setSuccessMessage('')}
+        />
+      </div>
+    );
   };
 
   return (
@@ -335,18 +418,22 @@ const Visitations = () => {
 
       <Card>
         {/* Success message */}
-        {successMessage && (
-          <StatusMessage 
-            type="success"
-            message={successMessage}
-            duration={5000}
-            onDismiss={() => setSuccessMessage('')}
-          />
-        )}
+        {renderSuccessMessage()}
         
         {/* Search and filters */}
         <div className="mb-6">
-          <form onSubmit={(e) => { e.preventDefault(); fetchVisitations(); }} className="flex flex-col space-y-4">
+          <form onSubmit={(e) => { 
+              e.preventDefault(); 
+              setCurrentPage(1);
+              // Reset search timeout to prevent race conditions
+              if (window.searchTimeout) {
+                clearTimeout(window.searchTimeout);
+              } 
+              setManualFetchRequested(true);
+              // Immediate search on form submission
+              fetchVisitations(); 
+              console.log('Form submitted, searching with term:', searchTerm);
+            }} className="flex flex-col space-y-4">
             <div className="flex flex-col md:flex-row gap-3">
               <div className="flex-grow">
                 <input
@@ -354,15 +441,57 @@ const Visitations = () => {
                   placeholder="Search by patient name, doctor name..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    const newSearchTerm = e.target.value;
+                    setSearchTerm(newSearchTerm);
+                    // Reset to page 1 whenever search changes
+                    setCurrentPage(1);
+                    // Set manual fetch request flag
+                    setManualFetchRequested(true);
+                    
+                    // Clear any existing timeout
+                    if (window.searchTimeout) {
+                      clearTimeout(window.searchTimeout);
+                    }
+                    
+                    // Set a timer to perform search automatically after user stops typing
+                    window.searchTimeout = setTimeout(() => {
+                      // Always fetch when the search field is empty (to show all results)
+                      // or when there are at least 3 characters (for actual searching)
+                      fetchVisitations();
+                      console.log('Search triggered with term:', newSearchTerm);
+                    }, 500);
+                  }}
                 />
               </div>
-              <Button type="submit" variant="secondary" className="whitespace-nowrap">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-                Search
-              </Button>
+              <div className="flex space-x-2">
+                <Button type="submit" variant="secondary" className="whitespace-nowrap">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                  Search
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  className="whitespace-nowrap"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setCurrentPage(1);
+                    setManualFetchRequested(true);
+                    // Clear any search timeout
+                    if (window.searchTimeout) {
+                      clearTimeout(window.searchTimeout);
+                    }
+                    // Immediately fetch all records
+                    fetchVisitations();
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
+                </Button>
+              </div>
             </div>
             
             <div className="flex flex-col md:flex-row md:items-center gap-3">
@@ -401,7 +530,10 @@ const Visitations = () => {
             <Button 
               variant="primary" 
               className="mt-4"
-              onClick={() => fetchVisitations()}
+              onClick={() => {
+                setError(null);
+                fetchVisitations();
+              }}
             >
               Try Again
             </Button>
@@ -562,7 +694,9 @@ const Visitations = () => {
             </svg>
             <p className="text-lg font-medium mb-1">No visits found</p>
             <p className="text-sm">
-              {searchTerm ? 'No visits match your search criteria. Try a different search term.' : 'There are no visit records in the system yet.'}
+              {searchTerm && searchTerm.trim() !== '' ? 
+                'No visits match your search criteria. Try a different search term.' : 
+                'There are no visit records in the system yet.'}
             </p>
             {hasAccess('visitations', 'create') && (
               <Button

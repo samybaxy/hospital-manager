@@ -153,10 +153,22 @@ class VisitationController extends BaseController
             
             // Remove the ID from params to avoid conflicts
             unset($params['id']);
+            unset($params['ID']);
+            
+            // Remove any non-table fields that might cause SQL errors
+            $allowed_fields = ['patient_id', 'doctor_id', 'appointment_id', 'date', 'time', 
+                              'medical_history', 'diagnosis', 'treatment', 'complaint'];
+            
+            $filtered_params = array_intersect_key($params, array_flip($allowed_fields));
+            
+            // Convert empty strings to null for nullable fields
+            if (isset($filtered_params['appointment_id']) && $filtered_params['appointment_id'] === '') {
+                $filtered_params['appointment_id'] = null;
+            }
             
             // Validate required fields
-            if (empty($params['patient_id']) || empty($params['doctor_id']) || 
-                empty($params['date']) || empty($params['time'])) {
+            if (empty($filtered_params['patient_id']) || empty($filtered_params['doctor_id']) || 
+                empty($filtered_params['date']) || empty($filtered_params['time'])) {
                 return $this->error_response(
                     'Missing required fields: patient_id, doctor_id, date, time',
                     400
@@ -174,18 +186,23 @@ class VisitationController extends BaseController
             
             // Use a method that we know exists to update the record
             global $wpdb;
-            $table_name = $wpdb->prefix . 'hospital_visitations';
+            $table_name = $wpdb->prefix . 'hm_visitations';
+            
+            // Debug the query being executed
+            error_log("Updating visitation ID {$id} in table {$table_name}");
+            error_log("Update data: " . json_encode($params));
             
             $result = $wpdb->update(
                 $table_name,
-                $params,
+                $filtered_params,
                 ['ID' => $id],
                 null,
                 ['%d']
             );
             
             if ($result === false) {
-                throw new \Exception('Failed to update visitation');
+                error_log("Database error: " . $wpdb->last_error);
+                throw new \Exception('Failed to update visitation: ' . $wpdb->last_error);
             }
             
             // Get the updated record
@@ -225,7 +242,7 @@ class VisitationController extends BaseController
             
             // Delete the record using wpdb
             global $wpdb;
-            $table_name = $wpdb->prefix . 'hospital_visitations';
+            $table_name = $wpdb->prefix . 'hm_visitations';
             
             $result = $wpdb->delete(
                 $table_name,

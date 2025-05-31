@@ -67,8 +67,15 @@ const AddVisit = () => {
       const response = await api.post('/visitations', formData);
 
       if (response.data?.success) {
+        // Get the ID of the newly created visit if available, or use a generic message
+        const newVisitId = response.data.data?.ID || '';
+        const patientName = initialData?.patient_name || `Patient #${initialData.patient_id}`;
+        const successMessage = newVisitId 
+          ? `Visit #${newVisitId} for ${patientName} has been added successfully` 
+          : `New visit for ${patientName} has been added successfully`;
+          
         // Redirect back to visitations page with success message
-        navigate('/visitations?success=Visit added successfully');
+        navigate(`/visitations?success=${encodeURIComponent(successMessage)}`);
       } else {
         throw new Error(response.data?.message || 'Failed to add visit');
       }

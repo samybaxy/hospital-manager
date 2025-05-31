@@ -247,8 +247,23 @@ const VisitForm = ({
     // Clear any existing errors
     setDataError(null);
 
+    // Create a sanitized version of formData with only the fields that match the table structure
+    const sanitizedData = {
+      patient_id: formData.patient_id,
+      doctor_id: formData.doctor_id,
+      appointment_id: formData.appointment_id || null,
+      date: formData.date,
+      time: formData.time,
+      medical_history: formData.medical_history || '',
+      diagnosis: formData.diagnosis || '',
+      treatment: formData.treatment || '',
+      complaint: formData.complaint || ''
+    };
+    
+    console.log('Submitting sanitized data:', sanitizedData);
+
     if (onSubmit) {
-      await onSubmit(formData);
+      await onSubmit(sanitizedData);
     }
   };
 
@@ -408,15 +423,17 @@ const VisitForm = ({
               <label htmlFor="date" className="block text-sm font-semibold text-gray-700 mb-2">
                 Visit Date <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                id="date"
-                name="date"
-                value={formData.date || ''}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="relative" onClick={() => document.getElementById('date').showPicker()}>
+                <input
+                  type="date"
+                  id="date"
+                  name="date"
+                  value={formData.date || ''}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                />
+              </div>
             </div>
 
             {/* Visit Time */}
@@ -424,15 +441,22 @@ const VisitForm = ({
               <label htmlFor="time" className="block text-sm font-semibold text-gray-700 mb-2">
                 Visit Time <span className="text-red-500">*</span>
               </label>
-              <input
-                type="time"
-                id="time"
-                name="time"
-                value={formData.time || ''}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+              <div className="relative" onClick={() => document.getElementById('time').showPicker()}>
+                <input
+                  type="time"
+                  id="time"
+                  name="time"
+                  value={formData.time || ''}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
