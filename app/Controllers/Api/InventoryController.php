@@ -17,6 +17,11 @@ use HospitalManager\Services\InventoryService;
 
 class InventoryController extends BaseController
 {
+    public function __construct()
+    {
+        // Set default namespace for inventory routes
+        $this->namespace = 'hospital-manager/v1';
+    }
     /**
      * Register all routes for the Inventory API
      * 

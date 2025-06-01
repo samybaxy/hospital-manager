@@ -2,7 +2,7 @@ import { apiClient } from './apiClient';
 
 class InventoryService {
   constructor() {
-    this.baseURL = '/api/inventory';
+    this.baseURL = '/wp-json/hospital-manager/v1/inventory';
   }
 
   /**
@@ -11,7 +11,7 @@ class InventoryService {
   async getItems(params = {}) {
     try {
       const response = await apiClient.get(this.baseURL, { params });
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching inventory items:', error);
       throw error;
@@ -24,7 +24,7 @@ class InventoryService {
   async getItem(id) {
     try {
       const response = await apiClient.get(`${this.baseURL}/${id}`);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error fetching inventory item:', error);
       throw error;
@@ -37,7 +37,7 @@ class InventoryService {
   async createItem(itemData) {
     try {
       const response = await apiClient.post(this.baseURL, itemData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error creating inventory item:', error);
       throw error;
@@ -50,7 +50,7 @@ class InventoryService {
   async updateItem(id, itemData) {
     try {
       const response = await apiClient.put(`${this.baseURL}/${id}`, itemData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error updating inventory item:', error);
       throw error;
@@ -63,7 +63,7 @@ class InventoryService {
   async deleteItem(id) {
     try {
       const response = await apiClient.delete(`${this.baseURL}/${id}`);
-      return response.data;
+      return response.data || null;
     } catch (error) {
       console.error('Error deleting inventory item:', error);
       throw error;
@@ -76,7 +76,7 @@ class InventoryService {
   async getCriticalItems() {
     try {
       const response = await apiClient.get(`${this.baseURL}/critical`);
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching critical items:', error);
       throw error;
@@ -91,7 +91,7 @@ class InventoryService {
       const response = await apiClient.get(`${this.baseURL}/expiring`, {
         params: { days }
       });
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching expiring items:', error);
       throw error;
@@ -104,7 +104,7 @@ class InventoryService {
   async getSummary() {
     try {
       const response = await apiClient.get(`${this.baseURL}/summary`);
-      return response.data;
+      return response.data.data || {};
     } catch (error) {
       console.error('Error fetching inventory summary:', error);
       throw error;
@@ -119,7 +119,7 @@ class InventoryService {
       const response = await apiClient.post(`${this.baseURL}/bulk-update`, {
         updates
       });
-      return response.data;
+      return response.data.data || {};
     } catch (error) {
       console.error('Error performing bulk update:', error);
       throw error;
@@ -132,69 +132,25 @@ class InventoryService {
   async exportCSV(filters = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/export`, {
-        params: { ...filters, format: 'csv' },
-        responseType: 'blob'
+        params: { ...filters, format: 'csv' }
       });
       
-      // Create a blob URL and trigger download
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `inventory_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      if (response.data.data) {
+        // Create blob and download
+        const blob = new Blob([response.data.data], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = response.data.filename || 'inventory.csv';
+        link.click();
+        window.URL.revokeObjectURL(url);
+      }
       
-      return { success: true };
+      return response.data;
     } catch (error) {
-      console.error('Error exporting inventory:', error);
+      console.error('Error exporting CSV:', error);
       throw error;
     }
-  }
-
-  /**
-   * Get available categories
-   */
-  getCategories() {
-    return [
-      'Medication',
-      'Equipment',
-      'Supplies',
-      'PPE',
-      'Consumables',
-      'Surgical'
-    ];
-  }
-
-  /**
-   * Get available statuses
-   */
-  getStatuses() {
-    return [
-      'in_stock',
-      'low_stock', 
-      'out_of_stock',
-      'expired',
-      'damaged',
-      'on_order'
-    ];
-  }
-
-  /**
-   * Get status display text and color
-   */
-  getStatusInfo(status) {
-    const statusMap = {
-      'in_stock': { text: 'In Stock', color: 'green' },
-      'low_stock': { text: 'Low Stock', color: 'yellow' },
-      'out_of_stock': { text: 'Out of Stock', color: 'red' },
-      'expired': { text: 'Expired', color: 'red' },
-      'damaged': { text: 'Damaged', color: 'red' },
-      'on_order': { text: 'On Order', color: 'blue' }
-    };
-    
-    return statusMap[status] || { text: status, color: 'gray' };
   }
 
   // ============ INVENTORY TRANSACTIONS ============
@@ -205,7 +161,7 @@ class InventoryService {
   async getTransactions(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/transactions`, { params });
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching transactions:', error);
       throw error;
@@ -218,7 +174,7 @@ class InventoryService {
   async recordTransaction(transactionData) {
     try {
       const response = await apiClient.post(`${this.baseURL}/transactions`, transactionData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error recording transaction:', error);
       throw error;
@@ -233,7 +189,7 @@ class InventoryService {
   async getAlerts(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/alerts`, { params });
-      return response.data;
+      return response.data || { data: [], total: 0 };
     } catch (error) {
       console.error('Error fetching alerts:', error);
       throw error;
@@ -245,8 +201,8 @@ class InventoryService {
    */
   async acknowledgeAlert(alertId) {
     try {
-      const response = await apiClient.patch(`${this.baseURL}/alerts/${alertId}/acknowledge`);
-      return response.data;
+      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/alerts/${alertId}/acknowledge`);
+      return response.data.data || null;
     } catch (error) {
       console.error('Error acknowledging alert:', error);
       throw error;
@@ -258,8 +214,8 @@ class InventoryService {
    */
   async resolveAlert(alertId) {
     try {
-      const response = await apiClient.patch(`${this.baseURL}/alerts/${alertId}/resolve`);
-      return response.data;
+      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/alerts/${alertId}/resolve`);
+      return response.data.data || null;
     } catch (error) {
       console.error('Error resolving alert:', error);
       throw error;
@@ -272,7 +228,7 @@ class InventoryService {
   async generateAlerts() {
     try {
       const response = await apiClient.post(`${this.baseURL}/alerts/generate`);
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error generating alerts:', error);
       throw error;
@@ -287,7 +243,7 @@ class InventoryService {
   async getSuppliers(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/suppliers`, { params });
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       throw error;
@@ -300,7 +256,7 @@ class InventoryService {
   async getSupplier(id) {
     try {
       const response = await apiClient.get(`${this.baseURL}/suppliers/${id}`);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error fetching supplier:', error);
       throw error;
@@ -313,7 +269,7 @@ class InventoryService {
   async createSupplier(supplierData) {
     try {
       const response = await apiClient.post(`${this.baseURL}/suppliers`, supplierData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error creating supplier:', error);
       throw error;
@@ -326,7 +282,7 @@ class InventoryService {
   async updateSupplier(id, supplierData) {
     try {
       const response = await apiClient.put(`${this.baseURL}/suppliers/${id}`, supplierData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error updating supplier:', error);
       throw error;
@@ -339,7 +295,7 @@ class InventoryService {
   async deleteSupplier(id) {
     try {
       const response = await apiClient.delete(`${this.baseURL}/suppliers/${id}`);
-      return response.data;
+      return response.data || null;
     } catch (error) {
       console.error('Error deleting supplier:', error);
       throw error;
@@ -354,7 +310,7 @@ class InventoryService {
   async getReorders(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/reorders`, { params });
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching reorders:', error);
       throw error;
@@ -367,7 +323,7 @@ class InventoryService {
   async createReorder(reorderData) {
     try {
       const response = await apiClient.post(`${this.baseURL}/reorders`, reorderData);
-      return response.data;
+      return response.data.data || null;
     } catch (error) {
       console.error('Error creating reorder:', error);
       throw error;
@@ -379,8 +335,8 @@ class InventoryService {
    */
   async approveReorder(reorderId) {
     try {
-      const response = await apiClient.patch(`${this.baseURL}/reorders/${reorderId}/approve`);
-      return response.data;
+      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/reorders/${reorderId}/approve`);
+      return response.data.data || null;
     } catch (error) {
       console.error('Error approving reorder:', error);
       throw error;
@@ -392,8 +348,8 @@ class InventoryService {
    */
   async completeReorder(reorderId, completionData = {}) {
     try {
-      const response = await apiClient.patch(`${this.baseURL}/reorders/${reorderId}/complete`, completionData);
-      return response.data;
+      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/reorders/${reorderId}/complete`, completionData);
+      return response.data.data || null;
     } catch (error) {
       console.error('Error completing reorder:', error);
       throw error;
@@ -406,7 +362,7 @@ class InventoryService {
   async getReorderSuggestions() {
     try {
       const response = await apiClient.get(`${this.baseURL}/reorders/suggestions`);
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching reorder suggestions:', error);
       throw error;
@@ -421,27 +377,88 @@ class InventoryService {
   async getDashboardData() {
     try {
       const response = await apiClient.get(`${this.baseURL}/dashboard`);
-      return response.data;
+      return response.data.data || {};
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       throw error;
     }
   }
 
-  // ============ UTILITY METHODS ============
+  // ============ HELPER FUNCTIONS ============
+
+  /**
+   * Get available categories
+   */
+  getCategories() {
+    return [
+      'Medication',
+      'Equipment', 
+      'Supplies',
+      'PPE',
+      'Consumables',
+      'Instruments',
+      'Furniture',
+      'Electronics',
+      'Safety',
+      'Cleaning'
+    ];
+  }
+
+  /**
+   * Get available statuses
+   */
+  getStatuses() {
+    return ['In Stock', 'Low Stock', 'Out of Stock', 'Expired'];
+  }
+
+  /**
+   * Get status display text and color
+   */
+  getStatusInfo(status) {
+    const statusMap = {
+      'In Stock': { text: 'In Stock', color: 'green' },
+      'Low Stock': { text: 'Low Stock', color: 'yellow' },
+      'Out of Stock': { text: 'Out of Stock', color: 'red' },
+      'Expired': { text: 'Expired', color: 'red' }
+    };
+    return statusMap[status] || { text: status, color: 'gray' };
+  }
+
+  /**
+   * Get available units of measure
+   */
+  getUnits() {
+    return [
+      'units',
+      'boxes',
+      'packs', 
+      'bottles',
+      'vials',
+      'tubes',
+      'pieces',
+      'sets',
+      'pairs',
+      'rolls',
+      'sheets',
+      'ml',
+      'mg',
+      'g',
+      'kg'
+    ];
+  }
 
   /**
    * Get transaction types
    */
   getTransactionTypes() {
     return [
-      { value: 'stock_in', label: 'Stock In', color: 'green' },
-      { value: 'stock_out', label: 'Stock Out', color: 'red' },
-      { value: 'adjustment', label: 'Adjustment', color: 'blue' },
-      { value: 'transfer', label: 'Transfer', color: 'purple' },
-      { value: 'expired', label: 'Expired', color: 'orange' },
-      { value: 'damaged', label: 'Damaged', color: 'red' },
-      { value: 'returned', label: 'Returned', color: 'teal' }
+      { value: 'stock_in', label: 'Stock In' },
+      { value: 'stock_out', label: 'Stock Out' },
+      { value: 'adjustment', label: 'Adjustment' },
+      { value: 'transfer', label: 'Transfer' },
+      { value: 'expired', label: 'Expired' },
+      { value: 'damaged', label: 'Damaged' },
+      { value: 'returned', label: 'Returned' }
     ];
   }
 
@@ -450,51 +467,36 @@ class InventoryService {
    */
   getAlertTypes() {
     return [
-      { value: 'low_stock', label: 'Low Stock', severity: 'medium' },
-      { value: 'out_of_stock', label: 'Out of Stock', severity: 'high' },
-      { value: 'expired', label: 'Expired', severity: 'critical' },
-      { value: 'expiring_soon', label: 'Expiring Soon', severity: 'medium' },
-      { value: 'critical_level', label: 'Critical Level', severity: 'critical' },
-      { value: 'reorder_point', label: 'Reorder Point', severity: 'medium' }
+      { value: 'low_stock', label: 'Low Stock' },
+      { value: 'out_of_stock', label: 'Out of Stock' }, 
+      { value: 'expired', label: 'Expired' },
+      { value: 'expiring_soon', label: 'Expiring Soon' },
+      { value: 'critical_level', label: 'Critical Level' },
+      { value: 'reorder_point', label: 'Reorder Point' }
     ];
   }
 
   /**
-   * Get alert severity info
+   * Get severity levels for alerts
    */
-  getAlertSeverityInfo(severity) {
-    const severityMap = {
-      'low': { text: 'Low', color: 'blue', bgColor: 'bg-blue-100' },
-      'medium': { text: 'Medium', color: 'yellow', bgColor: 'bg-yellow-100' },
-      'high': { text: 'High', color: 'orange', bgColor: 'bg-orange-100' },
-      'critical': { text: 'Critical', color: 'red', bgColor: 'bg-red-100' }
-    };
-    
-    return severityMap[severity] || { text: severity, color: 'gray', bgColor: 'bg-gray-100' };
-  }
-
-  /**
-   * Get reorder priorities
-   */
-  getReorderPriorities() {
+  getSeverityLevels() {
     return [
-      { value: 'low', label: 'Low', color: 'green' },
+      { value: 'low', label: 'Low', color: 'blue' },
       { value: 'medium', label: 'Medium', color: 'yellow' },
       { value: 'high', label: 'High', color: 'orange' },
-      { value: 'urgent', label: 'Urgent', color: 'red' }
+      { value: 'critical', label: 'Critical', color: 'red' }
     ];
   }
 
   /**
-   * Get reorder statuses
+   * Get priority levels for reorders
    */
-  getReorderStatuses() {
+  getPriorityLevels() {
     return [
-      { value: 'pending', label: 'Pending', color: 'yellow' },
-      { value: 'approved', label: 'Approved', color: 'blue' },
-      { value: 'ordered', label: 'Ordered', color: 'purple' },
-      { value: 'received', label: 'Received', color: 'green' },
-      { value: 'cancelled', label: 'Cancelled', color: 'red' }
+      { value: 'low', label: 'Low', color: 'gray' },
+      { value: 'medium', label: 'Medium', color: 'blue' },
+      { value: 'high', label: 'High', color: 'yellow' },
+      { value: 'urgent', label: 'Urgent', color: 'red' }
     ];
   }
 }

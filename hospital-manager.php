@@ -33,7 +33,6 @@ use WPMVC\Bridge;
 use WPMVC\Config;
 use HospitalManager\Controllers\FrontendController;
 use HospitalManager\Helpers\MenuHelper;
-use HospitalManager\Services\RoleManager;
 use HospitalManager\Services\RoleService;
 use HospitalManager\Services\ApiService;
 use HospitalManager\Services\WebSocketService;
@@ -167,7 +166,7 @@ class HospitalManager extends Bridge
             
             // Step 3: Initialize roles
             error_log('Hospital Manager: Initializing roles');
-            RoleManager::initializeRoles();
+            RoleService::initializeRoles();
             error_log('Hospital Manager: Roles initialized successfully');
 
             // Register Menu Helper

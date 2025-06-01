@@ -103,60 +103,56 @@ class InventorySupplier extends BaseModel
 
     /**
      * Get all suppliers
+     *
+     * @return array
      */
-    public static function getAll($activeOnly = true)
+    public static function getAll()
     {
         global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory_suppliers';
-
-        $where = $activeOnly ? 'WHERE is_active = 1' : '';
-        $query = "SELECT * FROM {$table} {$where} ORDER BY name ASC";
-
-        return $wpdb->get_results($query);
+        
+        $query = "SELECT * FROM {$wpdb->prefix}hm_inventory_suppliers WHERE is_active = 1 ORDER BY name ASC";
+        return $wpdb->get_results($query) ?: [];
     }
-
+    
     /**
-     * Update supplier by ID (static method)
+     * Update supplier by ID
+     *
+     * @param int $id
+     * @param array $data
+     * @return object|false
      */
-    public static function updateById($id, array $attributes)
+    public static function updateById($id, $data)
     {
         global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory_suppliers';
-
-        $attributes['updated_at'] = current_time('mysql');
-
+        
+        $data['updated_at'] = current_time('mysql');
+        
         $result = $wpdb->update(
-            $table,
-            $attributes,
+            $wpdb->prefix . 'hm_inventory_suppliers',
+            $data,
             ['ID' => $id],
-            array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
-            }, $attributes),
+            null,
             ['%d']
         );
-
-        if ($result !== false) {
-            return self::findById($id);
-        }
-
-        return false;
+        
+        return $result !== false ? self::findById($id) : false;
     }
-
+    
     /**
-     * Delete supplier by ID (static method)
+     * Delete supplier by ID
+     *
+     * @param int $id
+     * @return bool
      */
     public static function deleteById($id)
     {
         global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory_suppliers';
-
-        $result = $wpdb->delete(
-            $table,
+        
+        return $wpdb->delete(
+            $wpdb->prefix . 'hm_inventory_suppliers',
             ['ID' => $id],
             ['%d']
-        );
-
-        return $result !== false;
+        ) !== false;
     }
 
     /**
