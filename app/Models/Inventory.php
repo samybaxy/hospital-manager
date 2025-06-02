@@ -180,6 +180,8 @@ class Inventory extends BaseModel
         $stats = $wpdb->get_row("
             SELECT 
                 COUNT(*) as total_items,
+                COUNT(CASE WHEN quantity <= reorder_level AND quantity > 0 THEN 1 END) as low_stock,
+                COUNT(CASE WHEN quantity > reorder_level THEN 1 END) as in_stock,
                 COUNT(CASE WHEN quantity <= reorder_level THEN 1 END) as critical_items,
                 COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND expiry_date >= CURDATE() THEN 1 END) as expiring_soon,
                 COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date < CURDATE() THEN 1 END) as expired_items,

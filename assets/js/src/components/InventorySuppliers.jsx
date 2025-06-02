@@ -9,7 +9,7 @@ import Badge from './Badge';
 import inventoryService from '../services/inventoryService';
 import { usePermissions } from '../hooks/usePermissions.jsx';
 
-const InventorySuppliers = ({ onRefresh }) => {
+const InventorySuppliers = ({ isOpen, onClose, onRefresh }) => {
   const permissions = usePermissions();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);

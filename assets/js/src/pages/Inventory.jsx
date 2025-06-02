@@ -65,7 +65,7 @@ const Inventory = () => {
       };
       
       const response = await inventoryService.getItems(params);
-      setItems(response.data || []);
+      setItems(response || []);
       setTotalPages(Math.ceil((response.total || 0) / itemsPerPage));
     } catch (err) {
       setError('Failed to load inventory items');
@@ -360,7 +360,9 @@ const Inventory = () => {
                 variant={showReports ? "primary" : "secondary"} 
                 size="sm"
                 onClick={() => setShowReports(!showReports)}
-                className={`whitespace-nowrap ${showReports ? 'bg-white text-blue-600 hover:bg-gray-100' : 'bg-blue-500 text-white hover:bg-blue-400'}`}
+                className={`whitespace-nowrap ${showReports ? 
+                  'bg-yellow-300 text-blue-800 hover:bg-yellow-200 border border-yellow-400' : 
+                  'bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300'}`}
               >
                 {showReports ? '📊 Hide Reports' : '📊 Show Reports'}
               </Button>
@@ -370,7 +372,7 @@ const Inventory = () => {
                 variant="secondary" 
                 size="sm"
                 onClick={handleExport}
-                className="whitespace-nowrap bg-blue-500 text-white hover:bg-blue-400 border-blue-400"
+                className="whitespace-nowrap bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300"
               >
                 📄 Export CSV
               </Button>
@@ -379,7 +381,7 @@ const Inventory = () => {
               <Button 
                 variant="primary" 
                 onClick={() => setShowAddModal(true)}
-                className="whitespace-nowrap bg-white text-blue-600 hover:bg-gray-100 font-medium"
+                className="whitespace-nowrap bg-green-400 text-white hover:bg-green-500 border border-green-500 font-medium shadow-sm"
               >
                 ➕ Add New Item
                 <span className="ml-2 text-xs opacity-75 hidden sm:inline">(Ctrl+N)</span>

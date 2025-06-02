@@ -24,10 +24,8 @@ const InventoryAlerts = ({ onRefresh }) => {
   });
 
   useEffect(() => {
-    if (isOpen) {
-      loadAlerts();
-    }
-  }, [isOpen, filters]);
+    loadAlerts();
+  }, [filters]);
 
   const loadAlerts = async () => {
     setLoading(true);
@@ -116,8 +114,8 @@ const InventoryAlerts = ({ onRefresh }) => {
 
   const alertColumns = [
     {
-      key: 'item_name',
       header: 'Item',
+      accessor: 'item_name',
       render: (alert) => (
         <div>
           <div className="font-medium">{alert.item_name}</div>
@@ -126,18 +124,18 @@ const InventoryAlerts = ({ onRefresh }) => {
       )
     },
     {
-      key: 'alert_type',
       header: 'Type',
+      accessor: 'alert_type',
       render: (alert) => <Badge {...getTypeBadgeProps(alert.alert_type)} />
     },
     {
-      key: 'severity',
       header: 'Severity',
+      accessor: 'severity',
       render: (alert) => <Badge {...getSeverityBadgeProps(alert.severity)} />
     },
     {
-      key: 'current_value',
       header: 'Current/Threshold',
+      accessor: 'current_value',
       render: (alert) => (
         <div className="text-sm">
           <div>Current: {alert.current_value || 'N/A'}</div>
@@ -146,8 +144,8 @@ const InventoryAlerts = ({ onRefresh }) => {
       )
     },
     {
-      key: 'created_at',
       header: 'Created',
+      accessor: 'created_at',
       render: (alert) => (
         <div className="text-sm">
           {formatDate(alert.created_at)}
@@ -155,8 +153,8 @@ const InventoryAlerts = ({ onRefresh }) => {
       )
     },
     {
-      key: 'status',
       header: 'Status',
+      accessor: 'status',
       render: (alert) => (
         <div>
           {alert.acknowledged_at && (
@@ -176,8 +174,8 @@ const InventoryAlerts = ({ onRefresh }) => {
       )
     },
     {
-      key: 'actions',
       header: 'Actions',
+      accessor: 'actions',
       render: (alert) => (
         <div className="flex space-x-2">
           {!alert.acknowledged_at && permissions.canUpdate && (
@@ -205,129 +203,130 @@ const InventoryAlerts = ({ onRefresh }) => {
     }
   ];
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4">
-        <div className="fixed inset-0 bg-black opacity-50" onClick={onClose}></div>
-        <div className="relative bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-screen overflow-y-auto">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Inventory Alerts</h2>
-              <div className="flex space-x-3">
-                {permissions.canUpdate && (
-                  <Button
-                    variant="outline"
-                    onClick={handleGenerateAlerts}
-                    disabled={loading}
-                  >
-                    Generate Alerts
-                  </Button>
-                )}
-                <Button variant="outline" onClick={onClose}>
-                  Close
-                </Button>
-              </div>
-            </div>
-
-            {error && (
-              <Alert type="error" className="mb-4">
-                {error}
-              </Alert>
+    <div className="space-y-6">
+      <Card className="bg-white">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Inventory Alerts</h2>
+          <div className="flex space-x-3">
+            {permissions.canUpdate && (
+              <Button
+                variant="primary"
+                onClick={handleGenerateAlerts}
+                disabled={loading}
+                className="bg-blue-500 hover:bg-blue-600 text-white"
+              >
+                Generate Alerts
+              </Button>
             )}
-
-            {success && (
-              <Alert type="success" className="mb-4">
-                {success}
-              </Alert>
-            )}
-
-            {/* Filters */}
-            <Card className="mb-6">
-              <Card.Header>
-                <h3 className="text-lg font-semibold">Filters</h3>
-              </Card.Header>
-              <Card.Body>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Alert Type
-                    </label>
-                    <select
-                      value={filters.type}
-                      onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">All Types</option>
-                      {inventoryService.getAlertTypes().map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Severity
-                    </label>
-                    <select
-                      value={filters.severity}
-                      onChange={(e) => setFilters(prev => ({ ...prev, severity: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="">All Severities</option>
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="critical">Critical</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status
-                    </label>
-                    <select
-                      value={filters.status}
-                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="active">Active Only</option>
-                      <option value="acknowledged">Acknowledged</option>
-                      <option value="resolved">Resolved</option>
-                      <option value="">All Statuses</option>
-                    </select>
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-
-            {/* Alerts Table */}
-            <Card>
-              <Card.Header>
-                <h3 className="text-lg font-semibold">
-                  Alerts ({alerts.length})
-                </h3>
-              </Card.Header>
-              <Card.Body>
-                {loading ? (
-                  <LoadingState />
-                ) : alerts.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    No alerts found matching the current filters.
-                  </div>
-                ) : (
-                  <Table
-                    columns={alertColumns}
-                    data={alerts}
-                    keyField="ID"
-                  />
-                )}
-              </Card.Body>
-            </Card>
           </div>
         </div>
-      </div>
+
+        {error && (
+          <Alert 
+            type="error" 
+            className="mb-4"
+            title="Error"
+            onClose={() => setError(null)}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {success && (
+          <Alert 
+            type="success" 
+            className="mb-4"
+            title="Success"
+            onClose={() => setSuccess(null)}
+          >
+            {success}
+          </Alert>
+        )}
+
+        {/* Filters */}
+        <Card className="mb-6">
+          <div className="py-3 px-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">Filters</h3>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Alert Type
+                </label>
+                <select
+                  value={filters.type}
+                  onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">All Types</option>
+                  {inventoryService.getAlertTypes().map(type => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Severity
+                </label>
+                <select
+                  value={filters.severity}
+                  onChange={(e) => setFilters(prev => ({ ...prev, severity: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">All Severities</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="active">Active Only</option>
+                  <option value="acknowledged">Acknowledged</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="">All Statuses</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Alerts Table */}
+        <Card>
+          <div className="py-3 px-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">
+              Alerts ({alerts.length})
+            </h3>
+          </div>
+          <div className="p-4">
+            {loading ? (
+              <LoadingState message="Loading alerts..." />
+            ) : alerts.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No alerts found matching the current filters.
+              </div>
+            ) : (
+              <Table
+                columns={alertColumns}
+                data={alerts}
+                emptyMessage="No alerts found"
+              />
+            )}
+          </div>
+        </Card>
+      </Card>
     </div>
   );
 };

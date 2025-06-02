@@ -28,7 +28,8 @@ const Layout = ({ children }) => {
     if (location.pathname === '/patients' || 
         location.pathname === '/doctors' || 
         location.pathname === '/appointments' ||
-        location.pathname === '/visitations'
+        location.pathname === '/visitations' || 
+        location.pathname === '/inventory' 
     ) {
       setSidebarCollapsed(true);
     } else {
