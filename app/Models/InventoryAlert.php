@@ -20,22 +20,22 @@ class InventoryAlert extends BaseModel
         $params = [];
         
         if (!empty($filters['type'])) {
-            $where_conditions[] = 'alert_type = %s';
+            $where_conditions[] = 'a.alert_type = %s';
             $params[] = sanitize_text_field($filters['type']);
         }
         
         if (!empty($filters['severity'])) {
-            $where_conditions[] = 'severity = %s';
+            $where_conditions[] = 'a.severity = %s';
             $params[] = sanitize_text_field($filters['severity']);
         }
         
         if (!empty($filters['status'])) {
             if ($filters['status'] === 'active') {
-                $where_conditions[] = 'is_active = 1';
+                $where_conditions[] = 'a.is_active = 1';
             } elseif ($filters['status'] === 'resolved') {
-                $where_conditions[] = 'resolved_at IS NOT NULL';
+                $where_conditions[] = 'a.resolved_at IS NOT NULL';
             } elseif ($filters['status'] === 'acknowledged') {
-                $where_conditions[] = 'acknowledged_at IS NOT NULL AND resolved_at IS NULL';
+                $where_conditions[] = 'a.acknowledged_at IS NOT NULL AND a.resolved_at IS NULL';
             }
         }
         
@@ -43,7 +43,21 @@ class InventoryAlert extends BaseModel
         
         $limit = isset($filters['limit']) ? intval($filters['limit']) : 50;
         
-        $query = "SELECT * FROM {$wpdb->prefix}hm_inventory_alerts WHERE {$where_clause} ORDER BY created_at DESC LIMIT %d";
+        $query = "SELECT 
+                    a.*,
+                    i.item_name,
+                    i.category,
+                    i.quantity,
+                    i.unit,
+                    i.reorder_level,
+                    i.expiry_date,
+                    i.location,
+                    i.cost
+                  FROM {$wpdb->prefix}hm_inventory_alerts a
+                  LEFT JOIN {$wpdb->prefix}hm_inventory i ON a.inventory_id = i.ID
+                  WHERE {$where_clause} 
+                  ORDER BY a.created_at DESC 
+                  LIMIT %d";
         $params[] = $limit;
         
         if (!empty($params)) {

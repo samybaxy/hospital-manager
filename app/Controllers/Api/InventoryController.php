@@ -622,9 +622,6 @@ class InventoryController extends BaseController
             $limit = $request->get_param('limit');
             $offset = $request->get_param('offset');
 
-            // DEBUG: Log incoming parameters
-            error_log("Inventory API - Raw params: page=$page, per_page=$per_page, limit=$limit, offset=$offset");
-
             // Convert page/per_page to limit/offset if needed
             if ($page && $per_page) {
                 $limit = intval($per_page);
@@ -635,9 +632,6 @@ class InventoryController extends BaseController
                 $page = $offset > 0 ? floor($offset / $limit) + 1 : 1;
                 $per_page = $limit;
             }
-
-            // DEBUG: Log calculated values
-            error_log("Inventory API - Calculated: page=$page, per_page=$per_page, limit=$limit, offset=$offset");
 
             $filters = [
                 'category' => $request->get_param('category'),

@@ -492,15 +492,17 @@ class InventoryService {
   }
 
   /**
-   * Get priority levels for reorders
+   * Get alert severity information for badges
    */
-  getPriorityLevels() {
-    return [
-      { value: 'low', label: 'Low', color: 'gray' },
-      { value: 'medium', label: 'Medium', color: 'blue' },
-      { value: 'high', label: 'High', color: 'yellow' },
-      { value: 'urgent', label: 'Urgent', color: 'red' }
-    ];
+  getAlertSeverityInfo(severity) {
+    const severityMap = {
+      'low': { color: 'blue', text: 'Low' },
+      'medium': { color: 'yellow', text: 'Medium' },
+      'high': { color: 'orange', text: 'High' },
+      'critical': { color: 'red', text: 'Critical' }
+    };
+    
+    return severityMap[severity] || { color: 'gray', text: severity || 'Unknown' };
   }
 }
 

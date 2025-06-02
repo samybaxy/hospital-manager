@@ -68,10 +68,6 @@ const Inventory = () => {
         ...filters
       };
       
-      console.log('LoadInventory params:', params);
-      console.log('Expected offset:', (currentPage - 1) * itemsPerPage);
-      console.log('Expected limit:', itemsPerPage);
-      
       const response = await inventoryService.getItems(params);
       
       // Handle different response structures
@@ -235,7 +231,6 @@ const Inventory = () => {
 
   // Handle items per page change
   const handleItemsPerPageChange = (newItemsPerPage) => {
-    console.log('Items per page changed from', itemsPerPage, 'to', newItemsPerPage);
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page when changing items per page
   };

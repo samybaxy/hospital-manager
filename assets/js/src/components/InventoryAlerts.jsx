@@ -114,19 +114,27 @@ const InventoryAlerts = ({ onRefresh }) => {
 
   const alertColumns = [
     {
-      header: 'Item',
+      header: 'Item Details',
       accessor: 'item_name',
       render: (alert) => (
         <div>
-          <div className="font-medium">{alert.item_name}</div>
-          <div className="text-sm text-gray-500">{alert.title}</div>
+          <div className="font-medium text-gray-900">{alert.item_name || 'Unknown Item'}</div>
+          <div className="text-sm text-gray-500">{alert.category}</div>
+          {alert.location && (
+            <div className="text-xs text-gray-400">Location: {alert.location}</div>
+          )}
         </div>
       )
     },
     {
-      header: 'Type',
+      header: 'Alert Type',
       accessor: 'alert_type',
-      render: (alert) => <Badge {...getTypeBadgeProps(alert.alert_type)} />
+      render: (alert) => (
+        <div>
+          <Badge {...getTypeBadgeProps(alert.alert_type)} />
+          <div className="text-xs text-gray-500 mt-1">{alert.title}</div>
+        </div>
+      )
     },
     {
       header: 'Severity',
@@ -134,22 +142,89 @@ const InventoryAlerts = ({ onRefresh }) => {
       render: (alert) => <Badge {...getSeverityBadgeProps(alert.severity)} />
     },
     {
-      header: 'Current/Threshold',
+      header: 'Stock Info',
       accessor: 'current_value',
       render: (alert) => (
         <div className="text-sm">
-          <div>Current: {alert.current_value || 'N/A'}</div>
-          <div className="text-gray-500">Threshold: {alert.threshold_value || 'N/A'}</div>
+          <div className="flex justify-between">
+            <span>Current:</span>
+            <span className="font-medium">
+              {alert.current_value !== null ? `${alert.current_value} ${alert.unit || ''}` : 'N/A'}
+            </span>
+          </div>
+          <div className="flex justify-between text-gray-500">
+            <span>Threshold:</span>
+            <span>
+              {alert.threshold_value !== null ? `${alert.threshold_value} ${alert.unit || ''}` : 'N/A'}
+            </span>
+          </div>
+          {alert.alert_type === 'reorder_point' && alert.reorder_level && (
+            <div className="flex justify-between text-orange-600 text-xs">
+              <span>Reorder Level:</span>
+              <span>{alert.reorder_level} {alert.unit || ''}</span>
+            </div>
+          )}
         </div>
       )
+    },
+    {
+      header: 'Expiry Info',
+      accessor: 'expiry_date',
+      render: (alert) => {
+        if (!alert.expiry_date) return <span className="text-gray-400">No expiry</span>;
+        
+        const expiryDate = new Date(alert.expiry_date);
+        const now = new Date();
+        const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+        
+        let statusColor = 'text-gray-600';
+        if (daysUntilExpiry <= 0) {
+          statusColor = 'text-red-600';
+        } else if (daysUntilExpiry <= 30) {
+          statusColor = 'text-orange-600';
+        } else if (daysUntilExpiry <= 90) {
+          statusColor = 'text-yellow-600';
+        }
+        
+        return (
+          <div className="text-sm">
+            <div className={`font-medium ${statusColor}`}>
+              {expiryDate.toLocaleDateString()}
+            </div>
+            <div className={`text-xs ${statusColor}`}>
+              {daysUntilExpiry <= 0 
+                ? `Expired ${Math.abs(daysUntilExpiry)} days ago`
+                : `${daysUntilExpiry} days remaining`
+              }
+            </div>
+          </div>
+        );
+      }
+    },
+    {
+      header: 'Cost Impact',
+      accessor: 'cost',
+      render: (alert) => {
+        if (!alert.cost || !alert.current_value) {
+          return <span className="text-gray-400">N/A</span>;
+        }
+        
+        const totalValue = parseFloat(alert.cost) * parseInt(alert.current_value);
+        return (
+          <div className="text-sm">
+            <div className="font-medium">₦{totalValue.toLocaleString()}</div>
+            <div className="text-xs text-gray-500">
+              ₦{parseFloat(alert.cost).toLocaleString()}/{alert.unit || 'unit'}
+            </div>
+          </div>
+        );
+      }
     },
     {
       header: 'Created',
       accessor: 'created_at',
       render: (alert) => (
-        <div className="text-sm">
-          {formatDate(alert.created_at)}
-        </div>
+        <div className="text-sm">{formatDate(alert.created_at)}</div>
       )
     },
     {

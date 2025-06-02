@@ -119,10 +119,7 @@ class Inventory extends BaseModel
             }
         }
 
-        // DEBUG: Log the final query
         $query = "SELECT * FROM {$table} WHERE {$where_clause} {$order_by} {$limit}";
-        error_log("Inventory Model - Final query: $query");
-        error_log("Inventory Model - Filters: " . json_encode($filters));
         
         if (!empty($values)) {
             $query = $wpdb->prepare($query, $values);
