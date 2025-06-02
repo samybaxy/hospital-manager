@@ -8,19 +8,31 @@ const InventoryQuickActions = ({ onReload }) => {
   const [loading, setLoading] = useState(true);
   const [critical, setCritical] = useState([]);
   const [expiring, setExpiring] = useState([]);
+  const [summary, setSummary] = useState(null);
 
   // Load data on component mount
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       try {
+        // Fetch summary data directly (this is what Inventory.jsx uses)
+        const summaryData = await inventoryService.getSummary();
+        setSummary(summaryData);
+        
         // Fetch critical items
         const criticalItems = await inventoryService.getCriticalItems();
-        setCritical(criticalItems);
+        
+        // Ensure criticalItems is an array
+        const validItems = Array.isArray(criticalItems) ? criticalItems : [];
+        setCritical(validItems);
         
         // Fetch expiring items (next 30 days)
         const expiringItems = await inventoryService.getExpiringItems(30);
-        setExpiring(expiringItems);
+        
+        // Ensure expiringItems is an array
+        const validExpiringItems = Array.isArray(expiringItems) ? expiringItems : [];
+        setExpiring(validExpiringItems);
+        
       } catch (error) {
         console.error('Error loading quick actions data:', error);
       } finally {
@@ -31,6 +43,19 @@ const InventoryQuickActions = ({ onReload }) => {
     loadData();
   }, []);
 
+  // Get total count of active items (excluding out-of-stock)
+  const totalActiveItems = summary ? (summary.total_items - summary.out_of_stock) : 0;
+  
+  // Get in stock count directly from summary
+  // Make sure it's a number using parseInt to avoid type issues
+  const inStockCount = summary ? parseInt(summary.in_stock || 0) : 0;
+  
+  // Get low stock count directly from summary
+  const lowStockCount = summary ? parseInt(summary.low_stock || 0) : 0;
+  
+  // Get out of stock count directly from summary
+  const outOfStockCount = summary ? parseInt(summary.out_of_stock || 0) : 0;
+  
   // Quick filter buttons configuration
   const quickFilters = [
     { 
@@ -38,7 +63,7 @@ const InventoryQuickActions = ({ onReload }) => {
       label: 'Low Stock', 
       description: 'Items below reorder level',
       filter: { low_stock: true },
-      count: critical.filter(item => item.quantity <= item.reorder_level && item.quantity > 0).length,
+      count: lowStockCount,
       variant: 'warning'
     },
     { 
@@ -46,7 +71,7 @@ const InventoryQuickActions = ({ onReload }) => {
       label: 'Out of Stock', 
       description: 'Items with zero quantity',
       filter: { status: 'Out of Stock' },
-      count: critical.filter(item => item.quantity <= 0).length,
+      count: outOfStockCount,
       variant: 'danger'
     },
     { 
@@ -60,9 +85,18 @@ const InventoryQuickActions = ({ onReload }) => {
     { 
       id: 'active-items',
       label: 'All Active Items', 
-      description: 'Currently in stock items',
+      description: 'Items with quantity > 0',
       filter: { status: 'In Stock' },
+      count: totalActiveItems,
       variant: 'primary'
+    },
+    { 
+      id: 'currently-in-stock',
+      label: 'Currently in Stock', 
+      description: 'Healthy stock levels',
+      filter: { status: 'In Stock', low_stock: false },
+      count: inStockCount,
+      variant: 'success'
     }
   ];
 
@@ -90,9 +124,11 @@ const InventoryQuickActions = ({ onReload }) => {
               {filter.count !== undefined && (
                 <div className="mt-2 mb-3">
                   <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                    filter.count > 0 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-green-100 text-green-800'
+                    filter.variant === 'danger' ? 'bg-red-100 text-red-800' :
+                    filter.variant === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                    filter.variant === 'success' ? 'bg-green-100 text-green-800' :
+                    filter.variant === 'primary' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
                   }`}>
                     {filter.count} items
                   </span>
@@ -106,6 +142,7 @@ const InventoryQuickActions = ({ onReload }) => {
                 className={`w-full mt-2 ${
                   filter.variant === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600 text-white' :
                   filter.variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                  filter.variant === 'success' ? 'bg-green-500 hover:bg-green-600 text-white' :
                   filter.variant === 'primary' ? 'bg-blue-500 hover:bg-blue-600 text-white' : 
                   'bg-gray-500 hover:bg-gray-600 text-white'
                 }`}

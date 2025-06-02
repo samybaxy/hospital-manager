@@ -15,6 +15,9 @@ import InventoryReorders from '../components/InventoryReorders';
 import inventoryService from '../services/inventoryService';
 import { usePermissions, PermissionGate, useInventoryActions } from '../hooks/usePermissions.jsx';
 
+// Adding inventory debug tools
+import { exposeDebugger } from '../utils/inventoryDebug';
+
 const Inventory = () => {
   // Get permissions and actions
   const permissions = usePermissions();
@@ -79,6 +82,15 @@ const Inventory = () => {
   const loadSummary = useCallback(async () => {
     try {
       const summaryData = await inventoryService.getSummary();
+      
+      // Ensure we have numeric values for all counts
+      if (summaryData) {
+        summaryData.in_stock = parseInt(summaryData.in_stock || 0);
+        summaryData.low_stock = parseInt(summaryData.low_stock || 0);
+        summaryData.out_of_stock = parseInt(summaryData.out_of_stock || 0);
+        summaryData.total_items = parseInt(summaryData.total_items || 0);
+      }
+      
       setSummary(summaryData);
     } catch (err) {
       console.error('Error loading summary:', err);
@@ -109,6 +121,9 @@ const Inventory = () => {
     loadInventory();
     loadSummary();
     loadAlertCounts();
+    
+    // Expose the debugger tool to the window
+    exposeDebugger();
   }, [loadInventory, loadSummary, loadAlertCounts]);
 
   // Keyboard shortcuts
