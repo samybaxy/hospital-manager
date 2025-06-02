@@ -2,114 +2,203 @@ import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import Button from './Button';
 import inventoryService from '../services/inventoryService';
+import LoadingState from './LoadingState';
 
 const InventoryQuickActions = ({ onReload }) => {
-  const [criticalItems, setCriticalItems] = useState([]);
-  const [expiringItems, setExpiringItems] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [critical, setCritical] = useState([]);
+  const [expiring, setExpiring] = useState([]);
 
+  // Load data on component mount
   useEffect(() => {
-    loadQuickData();
+    async function loadData() {
+      setLoading(true);
+      try {
+        // Fetch critical items
+        const criticalItems = await inventoryService.getCriticalItems();
+        setCritical(criticalItems);
+        
+        // Fetch expiring items (next 30 days)
+        const expiringItems = await inventoryService.getExpiringItems(30);
+        setExpiring(expiringItems);
+      } catch (error) {
+        console.error('Error loading quick actions data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    loadData();
   }, []);
 
-  const loadQuickData = async () => {
-    setLoading(true);
-    try {
-      const [critical, expiring] = await Promise.all([
-        inventoryService.getCriticalItems(),
-        inventoryService.getExpiringItems(30)
-      ]);
-      
-      setCriticalItems(critical.slice(0, 5)); // Show only top 5
-      setExpiringItems(expiring.slice(0, 5)); // Show only top 5
-    } catch (error) {
-      console.error('Error loading quick data:', error);
-    } finally {
-      setLoading(false);
+  // Quick filter buttons configuration
+  const quickFilters = [
+    { 
+      id: 'low-stock',
+      label: 'Low Stock', 
+      description: 'Items below reorder level',
+      filter: { low_stock: true },
+      count: critical.filter(item => item.quantity <= item.reorder_level && item.quantity > 0).length,
+      variant: 'warning'
+    },
+    { 
+      id: 'out-of-stock',
+      label: 'Out of Stock', 
+      description: 'Items with zero quantity',
+      filter: { status: 'Out of Stock' },
+      count: critical.filter(item => item.quantity <= 0).length,
+      variant: 'danger'
+    },
+    { 
+      id: 'expiring-soon',
+      label: 'Expiring Soon', 
+      description: 'Items expiring in 30 days',
+      filter: { expiring: true },
+      count: expiring.length,
+      variant: 'warning'
+    },
+    { 
+      id: 'active-items',
+      label: 'All Active Items', 
+      description: 'Currently in stock items',
+      filter: { status: 'In Stock' },
+      variant: 'primary'
     }
-  };
+  ];
 
   if (loading) {
     return (
       <Card title="Quick Actions">
-        <div className="text-center py-4">Loading...</div>
+        <LoadingState message="Loading..." />
       </Card>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Critical Items */}
-      <Card title="Critical Items (Low Stock)" className="border-l-4 border-l-red-500">
-        {criticalItems.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">No critical items found</p>
-        ) : (
-          <div className="space-y-3">
-            {criticalItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-center p-3 bg-red-50 rounded">
-                <div>
-                  <div className="font-medium text-red-900">{item.item_name}</div>
-                  <div className="text-sm text-red-700">
-                    {item.quantity} {item.unit} remaining (Min: {item.reorder_level})
-                  </div>
+    <Card title="Quick Actions">
+      <div className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Quick filters to view specific inventory conditions
+        </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickFilters.map((filter) => (
+            <div key={filter.id} className="bg-white border rounded-md p-4 shadow-sm hover:shadow transition-shadow">
+              <h3 className="font-medium">{filter.label}</h3>
+              <p className="text-sm text-gray-600 mt-1">{filter.description}</p>
+              
+              {filter.count !== undefined && (
+                <div className="mt-2 mb-3">
+                  <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
+                    filter.count > 0 
+                      ? 'bg-yellow-100 text-yellow-800' 
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {filter.count} items
+                  </span>
                 </div>
-                <div className="text-sm text-red-600 font-medium">
-                  {item.location}
-                </div>
-              </div>
-            ))}
-            
-            <div className="pt-2 border-t border-red-200">
-              <Button 
-                variant="danger" 
-                size="sm" 
-                className="w-full"
-                onClick={() => onReload && onReload({ low_stock: true })}
+              )}
+              
+              <Button
+                variant={filter.variant || 'secondary'}
+                size="sm"
+                onClick={() => onReload(filter.filter)}
+                className={`w-full mt-2 ${
+                  filter.variant === 'warning' ? 'bg-yellow-500 hover:bg-yellow-600 text-white' :
+                  filter.variant === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                  filter.variant === 'primary' ? 'bg-blue-500 hover:bg-blue-600 text-white' : 
+                  'bg-gray-500 hover:bg-gray-600 text-white'
+                }`}
               >
-                View All Critical Items
+                View Items
               </Button>
+            </div>
+          ))}
+        </div>
+        
+        {critical.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-3">Critical Items</h3>
+            <div className="bg-red-50 p-3 rounded-md border border-red-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {critical.slice(0, 6).map((item, index) => (
+                  <div key={`critical-${item.id || index}`} className="bg-white p-2 rounded border border-red-100 flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">{item.item_name}</div>
+                      <div className="text-xs text-gray-500">
+                        {item.quantity > 0 ? `${item.quantity} ${item.unit} (Low)` : 'Out of stock!'}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="link"
+                      size="xs"
+                      onClick={() => onReload({ search: item.item_name })}
+                      className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                    >
+                      Details
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              {critical.length > 6 && (
+                <div className="text-center mt-3">
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={() => onReload({ low_stock: true })}
+                    className="text-red-600 hover:text-red-800 font-medium"
+                  >
+                    View all {critical.length} critical items
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
-      </Card>
-
-      {/* Expiring Items */}
-      <Card title="Expiring Soon (Next 30 Days)" className="border-l-4 border-l-yellow-500">
-        {expiringItems.length === 0 ? (
-          <p className="text-gray-600 text-center py-4">No expiring items found</p>
-        ) : (
-          <div className="space-y-3">
-            {expiringItems.map((item) => (
-              <div key={item.id} className="flex justify-between items-center p-3 bg-yellow-50 rounded">
-                <div>
-                  <div className="font-medium text-yellow-900">{item.item_name}</div>
-                  <div className="text-sm text-yellow-700">
-                    Expires: {new Date(item.expiry_date).toLocaleDateString()}
+        
+        {expiring.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-medium mb-3">Expiring Soon</h3>
+            <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {expiring.slice(0, 6).map((item, index) => (
+                  <div key={`expiring-${item.id || index}`} className="bg-white p-2 rounded border border-yellow-100 flex justify-between items-center">
+                    <div>
+                      <div className="font-medium">{item.item_name}</div>
+                      <div className="text-xs text-gray-500">
+                        Expires: {new Date(item.expiry_date).toLocaleDateString()}
+                      </div>
+                    </div>
+                    
+                    <Button
+                      variant="link"
+                      size="xs"
+                      onClick={() => onReload({ search: item.item_name })}
+                      className="text-yellow-600 hover:text-yellow-700 bg-yellow-50 hover:bg-yellow-100 px-2 py-1 rounded"
+                    >
+                      Details
+                    </Button>
                   </div>
-                </div>
-                <div className="text-sm text-yellow-600 font-medium">
-                  {(() => {
-                    const days = Math.ceil((new Date(item.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
-                    return days <= 0 ? 'EXPIRED' : `${days} days`;
-                  })()}
-                </div>
+                ))}
               </div>
-            ))}
-            
-            <div className="pt-2 border-t border-yellow-200">
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="w-full border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-                onClick={() => onReload && onReload({ expiring: true })}
-              >
-                View All Expiring Items
-              </Button>
+              {expiring.length > 6 && (
+                <div className="text-center mt-3">
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    onClick={() => onReload({ expiring: true })}
+                    className="text-yellow-600 hover:text-yellow-800 font-medium"
+                  >
+                    View all {expiring.length} expiring items
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </Card>
   );
 };
 

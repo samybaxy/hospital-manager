@@ -2,7 +2,8 @@ import { apiClient } from './apiClient';
 
 class InventoryService {
   constructor() {
-    this.baseURL = '/wp-json/hospital-manager/v1/inventory';
+    const { nonce, siteUrl } = window.hospitalManagerData || {};
+    this.baseURL =`${siteUrl}/wp-json/hospital-manager/v1/inventory`;
   }
 
   /**
@@ -103,6 +104,7 @@ class InventoryService {
    */
   async getSummary() {
     try {
+        console.log( 'Fetching inventory summary from:', `${this.baseURL}/summary`);
       const response = await apiClient.get(`${this.baseURL}/summary`);
       return response.data.data || {};
     } catch (error) {

@@ -2,7 +2,7 @@
 
 namespace HospitalManager\Http\Controllers;
 
-use HospitalManager\Services\RoleManager;
+use HospitalManager\Services\RoleService;
 use HospitalManager\Controllers\Api\BaseController;
 use WP_Error;
 use WP_REST_Request;
@@ -37,7 +37,7 @@ class AccessController extends BaseController
         $role = $user->roles[0];
         
         // Get route access map for this role
-        $access_map = RoleManager::getRouteAccessMap($role);
+        $access_map = RoleService::getRouteAccessMap($role);
         
         // Debug logging
         error_log("Hospital Manager Access Debug - User: {$user->user_login}, Role: {$role}");
