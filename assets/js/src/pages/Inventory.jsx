@@ -49,7 +49,8 @@ const Inventory = () => {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Tab states
   const [activeTab, setActiveTab] = useState('inventory');
@@ -67,12 +68,55 @@ const Inventory = () => {
         ...filters
       };
       
+      console.log('LoadInventory params:', params);
+      console.log('Expected offset:', (currentPage - 1) * itemsPerPage);
+      console.log('Expected limit:', itemsPerPage);
+      
       const response = await inventoryService.getItems(params);
-      setItems(response || []);
-      setTotalPages(Math.ceil((response.total || 0) / itemsPerPage));
+      
+      // Handle different response structures
+      if (Array.isArray(response)) {
+        // If response is just an array, it means no pagination was implemented
+        setItems(response);
+        setTotalPages(Math.max(1, Math.ceil(response.length / itemsPerPage)));
+        setTotalItems(response.length);
+        console.warn('Backend is returning all items instead of paginated data');
+      } else if (response && typeof response === 'object') {
+        // Handle nested response structure from ApiService::formatResponse()
+        const responseData = response.data || response;
+        const itemsData = responseData.data || responseData.items || [];
+        // Ensure itemsData is always an array
+        const items = Array.isArray(itemsData) ? itemsData : [];
+        
+        // Check if we have pagination metadata
+        if (responseData.pagination) {
+          const { total_items, total_pages, current_page } = responseData.pagination;
+          setItems(items);
+          setTotalPages(total_pages || 1);
+          setTotalItems(total_items || 0);
+        } else {
+          // Fallback to old method if no pagination object
+          const totalItemsCount = responseData.total || responseData.total_items || responseData.total_count || 0;
+          const totalPages = response.total_pages || Math.max(1, Math.ceil(totalItemsCount / itemsPerPage));
+          
+          setItems(items);
+          setTotalPages(totalPages);
+          setTotalItems(totalItemsCount);
+        }
+        
+        // Also update summary data if it's included in the response
+        if (responseData.summary) {
+          setSummary(responseData.summary);
+        }
+      } else {
+        setItems([]);
+        setTotalPages(1);
+      }
     } catch (err) {
       setError('Failed to load inventory items');
       console.error('Error loading inventory:', err);
+      setItems([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -114,7 +158,15 @@ const Inventory = () => {
     loadInventory();
     loadSummary();
     loadAlertCounts();
-  }, [loadInventory, loadSummary, loadAlertCounts]);
+  }, []);
+
+  // Update totalPages when summary data loads
+  useEffect(() => {
+    if (summary?.total_items) {
+      const calculatedPages = Math.max(1, Math.ceil(summary.total_items / itemsPerPage));
+      setTotalPages(calculatedPages);
+    }
+  }, [summary?.total_items, itemsPerPage]);
 
   // Initial load
   useEffect(() => {
@@ -124,7 +176,12 @@ const Inventory = () => {
     
     // Expose the debugger tool to the window
     exposeDebugger();
-  }, [loadInventory, loadSummary, loadAlertCounts]);
+  }, []);
+
+  // Reload inventory data when pagination or filters change
+  useEffect(() => {
+    loadInventory();
+  }, [loadInventory]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -169,6 +226,18 @@ const Inventory = () => {
       ...quickFilters
     }));
     setCurrentPage(1);
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    console.log('Items per page changed from', itemsPerPage, 'to', newItemsPerPage);
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
   };
 
   // Handle adding new item
@@ -653,6 +722,26 @@ const Inventory = () => {
                       ⏰ Expiring Soon
                     </label>
                   </div>
+                  <div className="flex items-center bg-gray-50 px-3 py-2 rounded-lg">
+                    <label htmlFor="itemsPerPage" className="text-sm font-medium text-gray-700 mr-2">
+                      Items per page:
+                    </label>
+                    <select
+                      id="itemsPerPage"
+                      value={itemsPerPage}
+                      onChange={(e) => {
+                        setItemsPerPage(Number(e.target.value));
+                        setCurrentPage(1); // Reset to first page when changing items per page
+                      }}
+                      className="text-sm border border-gray-300 rounded-md py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
                 </div>
                 
                 <div className="flex items-center gap-3 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
@@ -714,46 +803,21 @@ const Inventory = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <Table
-                columns={columns}
-                data={items}
-                emptyMessage="No inventory items found matching your criteria"
-              />
-            </div>
-            
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t border-gray-200 gap-4">
-                <div className="text-sm text-gray-700 font-medium">
-                  Showing page {currentPage} of {totalPages} 
-                  <span className="text-gray-500 ml-2">({items.length} items on this page)</span>
-                </div>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-4"
-                  >
-                    ← Previous
-                  </Button>
-                  <div className="flex items-center px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded border">
-                    {currentPage}
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-4"
-                  >
-                    Next →
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Table
+              columns={columns}
+              data={items}
+              emptyMessage="No inventory items found matching your criteria"
+              pagination={true}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={summary?.total_items || items.length}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+              showExportButtons={true}
+              onExport={handleExport}
+              onPrint={() => window.print()}
+            />
           </>
         )}
       </Card>

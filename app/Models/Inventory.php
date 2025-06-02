@@ -73,42 +73,137 @@ class Inventory extends BaseModel
             $values[] = $search_term;
         }
 
+        // Handle expiring filter (from frontend 'expiring' parameter)
+        if (isset($filters['expiring']) && $filters['expiring'] !== '') {
+            $is_expiring = filter_var($filters['expiring'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($is_expiring === true) {
+                $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
+            } elseif ($is_expiring === false) {
+                $where[] = '(expiry_date IS NULL OR expiry_date > DATE_ADD(CURDATE(), INTERVAL 30 DAY))';
+            }
+        }
+
+        // Backward compatibility for expiring_soon with custom days
         if (!empty($filters['expiring_soon'])) {
             $days = intval($filters['expiring_soon']);
             $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL %d DAY)';
             $values[] = $days;
         }
 
-        if (!empty($filters['low_stock'])) {
-            $where[] = 'quantity <= reorder_level';
+        // Handle low_stock filter
+        if (isset($filters['low_stock']) && $filters['low_stock'] !== '') {
+            $is_low_stock = filter_var($filters['low_stock'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($is_low_stock === true) {
+                $where[] = 'quantity <= reorder_level';
+            } elseif ($is_low_stock === false) {
+                $where[] = 'quantity > reorder_level';
+            }
         }
 
         $where_clause = implode(' AND ', $where);
         
-        $order_by = 'ORDER BY created_at DESC';
+        $order_by = 'ORDER BY created_at DESC, ID DESC';
         if (!empty($filters['sort_by'])) {
             $allowed_sorts = ['item_name', 'category', 'quantity', 'status', 'expiry_date', 'created_at'];
             if (in_array($filters['sort_by'], $allowed_sorts)) {
                 $direction = (!empty($filters['sort_direction']) && $filters['sort_direction'] === 'asc') ? 'ASC' : 'DESC';
-                $order_by = "ORDER BY {$filters['sort_by']} {$direction}";
+                $order_by = "ORDER BY {$filters['sort_by']} {$direction}, ID {$direction}";
             }
         }
 
         $limit = '';
         if (!empty($filters['limit'])) {
             $limit = 'LIMIT ' . intval($filters['limit']);
-            if (!empty($filters['offset'])) {
+            if (isset($filters['offset']) && $filters['offset'] >= 0) {
                 $limit = 'LIMIT ' . intval($filters['offset']) . ', ' . intval($filters['limit']);
             }
         }
 
+        // DEBUG: Log the final query
         $query = "SELECT * FROM {$table} WHERE {$where_clause} {$order_by} {$limit}";
+        error_log("Inventory Model - Final query: $query");
+        error_log("Inventory Model - Filters: " . json_encode($filters));
         
         if (!empty($values)) {
             $query = $wpdb->prepare($query, $values);
         }
 
         return $wpdb->get_results($query);
+    }
+
+    /**
+     * Get count of filtered inventory items (for pagination)
+     *
+     * @param array $filters
+     * @return int
+     */
+    public static function getFilteredCount($filters = [])
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $where = ['1=1'];
+        $values = [];
+
+        if (!empty($filters['category'])) {
+            $where[] = 'category = %s';
+            $values[] = $filters['category'];
+        }
+
+        if (!empty($filters['status'])) {
+            $where[] = 'status = %s';
+            $values[] = $filters['status'];
+        }
+
+        if (!empty($filters['location'])) {
+            $where[] = 'location = %s';
+            $values[] = $filters['location'];
+        }
+
+        if (!empty($filters['search'])) {
+            $where[] = '(item_name LIKE %s OR category LIKE %s OR location LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
+            $values[] = $search_term;
+            $values[] = $search_term;
+            $values[] = $search_term;
+        }
+
+        // Handle expiring filter (from frontend 'expiring' parameter)
+        if (isset($filters['expiring']) && $filters['expiring'] !== '') {
+            $is_expiring = filter_var($filters['expiring'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($is_expiring === true) {
+                $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
+            } elseif ($is_expiring === false) {
+                $where[] = '(expiry_date IS NULL OR expiry_date > DATE_ADD(CURDATE(), INTERVAL 30 DAY))';
+            }
+        }
+
+        // Backward compatibility for expiring_soon with custom days
+        if (!empty($filters['expiring_soon'])) {
+            $days = intval($filters['expiring_soon']);
+            $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL %d DAY)';
+            $values[] = $days;
+        }
+
+        // Handle low_stock filter
+        if (isset($filters['low_stock']) && $filters['low_stock'] !== '') {
+            $is_low_stock = filter_var($filters['low_stock'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($is_low_stock === true) {
+                $where[] = 'quantity <= reorder_level';
+            } elseif ($is_low_stock === false) {
+                $where[] = 'quantity > reorder_level';
+            }
+        }
+
+        $where_clause = implode(' AND ', $where);
+        
+        $query = "SELECT COUNT(*) FROM {$table} WHERE {$where_clause}";
+        
+        if (!empty($values)) {
+            $query = $wpdb->prepare($query, $values);
+        }
+
+        return intval($wpdb->get_var($query));
     }
 
     /**

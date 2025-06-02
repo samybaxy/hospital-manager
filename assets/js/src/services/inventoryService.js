@@ -12,7 +12,8 @@ class InventoryService {
   async getItems(params = {}) {
     try {
       const response = await apiClient.get(this.baseURL, { params });
-      return response.data.data || [];
+      // Return the full response data to preserve pagination metadata
+      return response.data;
     } catch (error) {
       console.error('Error fetching inventory items:', error);
       throw error;

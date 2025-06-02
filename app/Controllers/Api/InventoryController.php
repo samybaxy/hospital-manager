@@ -58,6 +58,16 @@ class InventoryController extends BaseController
                         'type' => 'string',
                         'sanitize_callback' => 'sanitize_text_field'
                     ],
+                    'low_stock' => [
+                        'description' => 'Filter for low stock items only',
+                        'type' => 'boolean',
+                        'default' => false
+                    ],
+                    'expiring' => [
+                        'description' => 'Filter for expiring items only',
+                        'type' => 'boolean',
+                        'default' => false
+                    ],
                     'sort_by' => [
                         'description' => 'Sort by field',
                         'type' => 'string',
@@ -79,6 +89,16 @@ class InventoryController extends BaseController
                         'description' => 'Number of items to skip',
                         'type' => 'integer',
                         'default' => 0
+                    ],
+                    'page' => [
+                        'description' => 'Page number (alternative to offset)',
+                        'type' => 'integer',
+                        'default' => 1
+                    ],
+                    'per_page' => [
+                        'description' => 'Items per page (alternative to limit)',
+                        'type' => 'integer',
+                        'default' => 20
                     ]
                 ]
             ],
@@ -596,26 +616,76 @@ class InventoryController extends BaseController
     public function get_inventory($request)
     {
         try {
+            // Handle both limit/offset and page/per_page formats
+            $page = $request->get_param('page');
+            $per_page = $request->get_param('per_page');
+            $limit = $request->get_param('limit');
+            $offset = $request->get_param('offset');
+
+            // DEBUG: Log incoming parameters
+            error_log("Inventory API - Raw params: page=$page, per_page=$per_page, limit=$limit, offset=$offset");
+
+            // Convert page/per_page to limit/offset if needed
+            if ($page && $per_page) {
+                $limit = intval($per_page);
+                $offset = (intval($page) - 1) * $limit;
+            } else {
+                $limit = $limit ? intval($limit) : 20;
+                $offset = $offset ? intval($offset) : 0;
+                $page = $offset > 0 ? floor($offset / $limit) + 1 : 1;
+                $per_page = $limit;
+            }
+
+            // DEBUG: Log calculated values
+            error_log("Inventory API - Calculated: page=$page, per_page=$per_page, limit=$limit, offset=$offset");
+
             $filters = [
                 'category' => $request->get_param('category'),
                 'status' => $request->get_param('status'),
                 'location' => $request->get_param('location'),
                 'search' => $request->get_param('search'),
+                'low_stock' => $request->get_param('low_stock'),
+                'expiring' => $request->get_param('expiring'),
                 'sort_by' => $request->get_param('sort_by'),
                 'sort_direction' => $request->get_param('sort_direction'),
-                'limit' => $request->get_param('limit'),
-                'offset' => $request->get_param('offset')
+                'limit' => $limit,
+                'offset' => $offset
             ];
 
-            // Remove null values
-            $filters = array_filter($filters, function($value) {
+            // Remove null values except for limit and offset
+            $filters = array_filter($filters, function($value, $key) {
+                if (in_array($key, ['limit', 'offset'])) {
+                    return true; // Keep limit and offset even if 0
+                }
                 return $value !== null && $value !== '';
-            });
+            }, ARRAY_FILTER_USE_BOTH);
 
+            // Get total count first (without limit/offset)
+            $count_filters = $filters;
+            unset($count_filters['limit']);
+            unset($count_filters['offset']);
+            $total_items = Inventory::getFilteredCount($count_filters);
+
+            // Get paginated items
             $items = Inventory::getFiltered($filters);
 
+            // Calculate pagination metadata
+            $total_pages = $per_page > 0 ? ceil($total_items / $per_page) : 1;
+
+            $response_data = [
+                'data' => $items,
+                'pagination' => [
+                    'current_page' => intval($page),
+                    'per_page' => intval($per_page),
+                    'total_items' => intval($total_items),
+                    'total_pages' => intval($total_pages),
+                    'has_next' => $page < $total_pages,
+                    'has_prev' => $page > 1
+                ]
+            ];
+
             return new WP_REST_Response(
-                ApiService::formatResponse($items, 'Inventory items retrieved successfully'),
+                ApiService::formatResponse($response_data, 'Inventory items retrieved successfully'),
                 200
             );
 
