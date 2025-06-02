@@ -23,19 +23,50 @@ const InventoryAlerts = ({ onRefresh }) => {
     status: 'active'
   });
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
   useEffect(() => {
     loadAlerts();
-  }, [filters]);
+  }, [filters, currentPage, itemsPerPage]);
 
   const loadAlerts = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await inventoryService.getAlerts(filters);
-      setAlerts(response.data || []);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        ...filters
+      };
+      
+      const response = await inventoryService.getAlerts(params);
+      
+      // Handle different response structures
+      if (response.data && Array.isArray(response.data.data)) {
+        // Response with pagination metadata
+        setAlerts(response.data.data);
+        setTotalItems(response.data.pagination?.total || 0);
+        setTotalPages(response.data.pagination?.pages || 1);
+      } else if (Array.isArray(response.data)) {
+        // Simple array response
+        setAlerts(response.data);
+        setTotalItems(response.data.length);
+        setTotalPages(1);
+      } else {
+        setAlerts([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
     } catch (err) {
       setError('Failed to load alerts');
       console.error('Error loading alerts:', err);
+      setAlerts([]);
+      setTotalItems(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -81,6 +112,23 @@ const InventoryAlerts = ({ onRefresh }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Handle filter changes with pagination reset
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const getSeverityBadgeProps = (severity) => {
@@ -325,14 +373,14 @@ const InventoryAlerts = ({ onRefresh }) => {
             <h3 className="text-lg font-semibold">Filters</h3>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Alert Type
                 </label>
                 <select
                   value={filters.type}
-                  onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                  onChange={(e) => handleFilterChange('type', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Types</option>
@@ -349,7 +397,7 @@ const InventoryAlerts = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.severity}
-                  onChange={(e) => setFilters(prev => ({ ...prev, severity: e.target.value }))}
+                  onChange={(e) => handleFilterChange('severity', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Severities</option>
@@ -365,13 +413,29 @@ const InventoryAlerts = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="active">Active Only</option>
                   <option value="acknowledged">Acknowledged</option>
                   <option value="resolved">Resolved</option>
                   <option value="">All Statuses</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Items per page
+                </label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
                 </select>
               </div>
             </div>
@@ -381,9 +445,16 @@ const InventoryAlerts = ({ onRefresh }) => {
         {/* Alerts Table */}
         <Card>
           <div className="py-3 px-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold">
-              Alerts ({alerts.length})
-            </h3>
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">
+                Alerts ({totalItems})
+              </h3>
+              {totalItems > 0 && (
+                <div className="text-sm text-gray-500">
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} alerts
+                </div>
+              )}
+            </div>
           </div>
           <div className="p-4">
             {loading ? (
@@ -397,6 +468,14 @@ const InventoryAlerts = ({ onRefresh }) => {
                 columns={alertColumns}
                 data={alerts}
                 emptyMessage="No alerts found"
+                pagination={true}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                showItemsPerPageSelector={false} // Already shown in filters
               />
             )}
           </div>

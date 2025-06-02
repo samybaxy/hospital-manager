@@ -1271,7 +1271,10 @@ class InventoryController extends BaseController
                 'type' => $request->get_param('type'),
                 'severity' => $request->get_param('severity'),
                 'status' => $request->get_param('status'),
-                'limit' => $request->get_param('limit')
+                'page' => $request->get_param('page'),
+                'per_page' => $request->get_param('per_page'),
+                'limit' => $request->get_param('limit'),
+                'offset' => $request->get_param('offset')
             ];
 
             // Remove null values
@@ -1279,10 +1282,34 @@ class InventoryController extends BaseController
                 return $value !== null && $value !== '';
             });
 
+            // Handle both page/per_page and limit/offset pagination
+            if (isset($filters['page']) && isset($filters['per_page'])) {
+                $page = intval($filters['page']);
+                $per_page = intval($filters['per_page']);
+                $filters['limit'] = $per_page;
+                $filters['offset'] = ($page - 1) * $per_page;
+            }
+
             $alerts = InventoryAlert::getFiltered($filters);
+            $total_count = InventoryAlert::getFilteredCount($filters);
+            
+            // Calculate pagination metadata
+            $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 50;
+            $current_page = isset($filters['page']) ? intval($filters['page']) : 1;
+            $total_pages = $per_page > 0 ? ceil($total_count / $per_page) : 1;
+
+            $response_data = [
+                'data' => $alerts,
+                'pagination' => [
+                    'current_page' => $current_page,
+                    'per_page' => $per_page,
+                    'total' => $total_count,
+                    'pages' => $total_pages
+                ]
+            ];
 
             return new WP_REST_Response(
-                ApiService::formatResponse($alerts, 'Alerts retrieved successfully'),
+                ApiService::formatResponse($response_data, 'Alerts retrieved successfully'),
                 200
             );
 

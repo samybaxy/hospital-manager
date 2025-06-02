@@ -140,12 +140,23 @@ const Inventory = () => {
   // Load alert counts
   const loadAlertCounts = useCallback(async () => {
     try {
-      const alerts = await inventoryService.getAlerts({ page: 1, per_page: 1000 });
-      const total = alerts.total || 0;
-      const unacknowledged = alerts.data?.filter(alert => !alert.acknowledged_at).length || 0;
+      const response = await inventoryService.getAlerts({ page: 1, per_page: 1000 });
+      
+      // Handle nested response structure from ApiService::formatResponse()
+      const responseData = response.data || response;
+      const alertsData = responseData.data || responseData.alerts || [];
+      
+      // Ensure alertsData is always an array
+      const alerts = Array.isArray(alertsData) ? alertsData : [];
+      
+      // Get total from pagination metadata or fall back to counting alerts
+      const total = responseData.pagination?.total || alerts.length;
+      const unacknowledged = alerts.filter(alert => !alert.acknowledged_at).length;
+      
       setAlertCounts({ total, unacknowledged });
     } catch (err) {
       console.error('Error loading alert counts:', err);
+      setAlertCounts({ total: 0, unacknowledged: 0 });
     }
   }, []);
 
