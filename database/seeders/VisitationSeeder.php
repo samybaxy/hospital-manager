@@ -150,29 +150,26 @@ class VisitationSeeder extends Seeder
             // Generate medical history
             $medical_history = $this->generateMedicalHistory();
             
-            // Calculate end time (30-60 min after start)
-            $duration = mt_rand(30, 60);
-            $start_time = strtotime($appointment['time']);
-            $end_time_str = date('H:i:s', $start_time + ($duration * 60));
-            
             $data = [
                 'appointment_id' => $appointment['appointment_id'],
                 'patient_id' => $appointment['patient_id'],
                 'doctor_id' => $appointment['doctor_id'],
                 'date' => $appointment['date'],
-                'start_time' => $appointment['time'],
-                'end_time' => $end_time_str,
+                'time' => $appointment['time'],
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
                 'medical_history' => json_encode($medical_history),
-                'notes' => 'Visitation created from appointment',
                 'created_at' => date('Y-m-d H:i:s', strtotime("{$appointment['date']} {$appointment['time']}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            $wpdb->insert($visitations_table, $data);
-            $count++;
+            $result = $wpdb->insert($visitations_table, $data);
+            if ($result === false) {
+                $this->log("Error inserting visitation for appointment {$appointment['appointment_id']}: " . $wpdb->last_error, 'error');
+            } else {
+                $count++;
+            }
         }
         
         return $count;
@@ -197,11 +194,7 @@ class VisitationSeeder extends Seeder
             // Random time during office hours
             $hour = mt_rand(8, 16); // 8 AM to 4 PM
             $minute = [0, 15, 30, 45][array_rand([0, 15, 30, 45])];
-            $start_time = sprintf('%02d:%02d:00', $hour, $minute);
-            
-            // Visit duration between 30-60 minutes
-            $duration = mt_rand(30, 60);
-            $end_time = date('H:i:s', strtotime($start_time) + ($duration * 60));
+            $time = sprintf('%02d:%02d:00', $hour, $minute);
             
             // Generate medical data
             $complaint = $this->complaints[array_rand($this->complaints)];
@@ -214,19 +207,21 @@ class VisitationSeeder extends Seeder
                 'patient_id' => $patient_id,
                 'doctor_id' => $doctor_id,
                 'date' => $date,
-                'start_time' => $start_time,
-                'end_time' => $end_time,
+                'time' => $time,
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
                 'medical_history' => json_encode($medical_history),
-                'notes' => 'Walk-in visitation',
-                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$start_time}")),
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            $wpdb->insert($visitations_table, $data);
-            $count++;
+            $result = $wpdb->insert($visitations_table, $data);
+            if ($result === false) {
+                $this->log("Error inserting walk-in visitation: " . $wpdb->last_error, 'error');
+            } else {
+                $count++;
+            }
         }
         
         return $count;
@@ -251,11 +246,7 @@ class VisitationSeeder extends Seeder
             // Random time during office hours
             $hour = mt_rand(9, 17); // 9 AM to 5 PM
             $minute = [0, 15, 30, 45][array_rand([0, 15, 30, 45])];
-            $start_time = sprintf('%02d:%02d:00', $hour, $minute);
-            
-            // Visit duration between 15-45 minutes (follow-ups typically shorter)
-            $duration = mt_rand(15, 45);
-            $end_time = date('H:i:s', strtotime($start_time) + ($duration * 60));
+            $time = sprintf('%02d:%02d:00', $hour, $minute);
             
             // Generate medical data
             $complaint = $this->complaints[array_rand($this->complaints)];
@@ -268,19 +259,21 @@ class VisitationSeeder extends Seeder
                 'patient_id' => $patient_id,
                 'doctor_id' => $doctor_id,
                 'date' => $date,
-                'start_time' => $start_time,
-                'end_time' => $end_time,
+                'time' => $time,
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
                 'medical_history' => json_encode($medical_history),
-                'notes' => 'Follow-up visitation',
-                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$start_time}")),
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
-            $wpdb->insert($visitations_table, $data);
-            $count++;
+            $result = $wpdb->insert($visitations_table, $data);
+            if ($result === false) {
+                $this->log("Error inserting follow-up visitation: " . $wpdb->last_error, 'error');
+            } else {
+                $count++;
+            }
         }
         
         return $count;
