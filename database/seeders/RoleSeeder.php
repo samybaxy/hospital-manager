@@ -20,12 +20,12 @@ class RoleSeeder extends Seeder
             $this->log("Initializing roles with RoleService::initializeRoles()...");
             RoleService::initializeRoles();
             
-            $this->log("Roles initialized successfully");
-            $this->log("Created roles: ");
+            $this->log("Roles initialized successfully", 'success');
+            $this->log("Created roles: ", 'success');
             $roles = RoleService::getAvailableRoles();
             
             foreach ($roles as $role => $display_name) {
-                $this->log(" - $display_name ($role)");
+                $this->log(" - $display_name ($role)", 'success');
             }
             
             // Create example users for each role
@@ -84,10 +84,10 @@ class RoleSeeder extends Seeder
                     update_user_meta($user_id, 'first_name', $prefix);
                     update_user_meta($user_id, 'last_name', 'User');
                     
-                    $this->log(" - Created user: $username with role: $role");
+                    $this->log(" - Created user: $username with role: $role", 'success');
                 }
             } else {
-                $this->log(" - User $username already exists, skipping");
+                $this->log(" - User $username already exists, skipping", 'warning');
             }
         }
     }

@@ -1,115 +1,156 @@
 <?php
 /**
- * Hospital Manager Database Seeder Runner
- * 
- * This script provides a simple command-line interface to run the hospital manager
- * database seeders without requiring WP-CLI.
- * 
- * Usage: php run-seeders.php [seeder_name]
+ * Fixed Hospital Manager Seeders Runner
+ * This script properly handles dependencies between seeders and ensures roles exist
  */
 
-// Define the plugin path
-define('HOSPITAL_MANAGER_PLUGIN_DIR', __DIR__);
+// Enable error display
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Bootstrap WordPress
-// Find the wp-load.php file by traversing up to the WordPress root directory
-$path = __DIR__;
-while (!file_exists($path . '/wp-load.php') && dirname($path) !== $path) {
-    $path = dirname($path);
-}
-require_once $path . '/wp-load.php';
+echo "=== Hospital Manager Seeders Runner ===\n";
 
-// Check if Faker is available
-if (!class_exists('Faker\Factory')) {
-    echo "\033[31mError: Faker library is not available. Please run 'composer install' first.\033[0m\n";
-    exit(1);
+// Find and load WordPress
+$wp_load_path = __DIR__ . '/../../../../wp-load.php';
+if (!file_exists($wp_load_path)) {
+    die("Error: WordPress not found at $wp_load_path\n");
 }
 
-// Import base seeder class
+require_once $wp_load_path;
+echo "WordPress loaded successfully\n";
+
+// Load the base Seeder class
 require_once __DIR__ . '/seeders/Seeder.php';
 
-// Map of available seeders
-$available_seeders = [
-    'roles' => 'RoleSeeder',
-    'users' => 'UserSeeder',
-    'hmos' => 'HMOSeeder',
-    'patients' => 'PatientSeeder',
-    'doctors' => 'DoctorSeeder',
-    'appointments' => 'AppointmentSeeder',
-    'visitations' => 'VisitationSeeder',
-    'lab-investigations' => 'LabInvestigationSeeder',
-    'medical-reports' => 'MedicalReportSeeder',
-    'notifications' => 'NotificationSeeder',
-    'chats' => 'ChatSeeder',
-    'audit-logs' => 'AuditLogSeeder',
-    'all' => 'DatabaseSeeder'
+// Define seeders in the correct dependency order
+$ordered_seeders = [
+    'UserSeeder',          // Creates users with roles (must be first)
+    'HMOSeeder',           // Creates HMOs
+    'PatientSeeder',       // Creates patients (depends on users & HMOs)
+    'DoctorSeeder',        // Creates doctors (depends on users)
+    'InventorySuppliersSeeder', // Creates suppliers
+    'InventorySeeder',     // Creates inventory items
+    'InventoryTransactionsSeeder', // Creates transactions
+    'InventoryAlertsSeeder', // Creates alerts
+    'InventoryReordersSeeder', // Creates reorders
+    'AppointmentSeeder',   // Creates appointments
+    'VisitationSeeder',    // Creates visitations
+    'LabInvestigationSeeder', // Creates lab tests
+    'RadiologicalExamSeeder', // Creates radiology exams
+    'NotificationSeeder',  // Creates notifications
+    'ChatSeeder',          // Creates chats
+    'MedicalReportSeeder', // Creates reports
+    'AuditLogSeeder'       // Creates audit logs (should be last)
 ];
 
-// Display help information
-function show_help() {
-    global $available_seeders;
+// Parse command line arguments
+$seeder_arg = isset($argv[1]) ? strtolower($argv[1]) : 'all';
+$seeders_to_run = [];
+
+if ($seeder_arg === 'all') {
+    $seeders_to_run = $ordered_seeders;
+} elseif ($seeder_arg === 'users') {
+    $seeders_to_run = ['UserSeeder'];
+} elseif ($seeder_arg === 'patients') {
+    $seeders_to_run = ['PatientSeeder'];
+} elseif ($seeder_arg === 'doctors') {
+    $seeders_to_run = ['DoctorSeeder'];
+} elseif ($seeder_arg === 'inventory') {
+    $seeders_to_run = [
+        'InventorySuppliersSeeder',
+        'InventorySeeder',
+        'InventoryTransactionsSeeder',
+        'InventoryAlertsSeeder',
+        'InventoryReordersSeeder'
+    ];
+} else {
+    $seeder_name = ucfirst($seeder_arg) . 'Seeder';
+    if (in_array($seeder_name, $ordered_seeders)) {
+        $seeders_to_run = [$seeder_name];
+    } else {
+        echo "Invalid seeder: $seeder_arg\n";
+        echo "Available options: all, users, patients, doctors, inventory, " . 
+             implode(', ', array_map(function($s) { 
+                 return strtolower(str_replace('Seeder', '', $s)); 
+             }, $ordered_seeders)) . "\n";
+        exit(1);
+    }
+}
+
+// Ensure all required roles exist before running any seeders
+ensureRolesExist();
+
+// Run each seeder with proper error handling
+$success_count = 0;
+$failed_count = 0;
+
+foreach ($seeders_to_run as $seeder) {
+    $seeder_file = __DIR__ . '/seeders/' . $seeder . '.php';
     
-    echo "\nHospital Manager Database Seeder Runner\n";
-    echo "=====================================\n\n";
-    echo "Usage: php run-seeders.php [seeder_name]\n\n";
-    echo "Available seeders:\n";
-    
-    foreach ($available_seeders as $key => $seeder) {
-        echo "  - $key\n";
+    if (!file_exists($seeder_file)) {
+        echo "ERROR: Seeder file not found: {$seeder_file}\n";
+        $failed_count++;
+        continue;
     }
     
-    echo "\nUse 'all' to run all seeders in the proper sequence.\n";
+    echo "\n=== Running: {$seeder} ===\n";
+    
+    try {
+        require_once $seeder_file;
+        
+        $class_name = 'HospitalManager\\Database\\Seeders\\' . $seeder;
+        
+        if (!class_exists($class_name)) {
+            echo "ERROR: Class {$class_name} not found in {$seeder_file}\n";
+            $failed_count++;
+            continue;
+        }
+        
+        $instance = new $class_name();
+        $instance->run();
+        $success_count++;
+        
+        echo "✓ {$seeder} completed successfully\n";
+        
+    } catch (Throwable $e) {
+        echo "✗ ERROR in {$seeder}: " . $e->getMessage() . "\n";
+        echo "  File: " . $e->getFile() . " Line: " . $e->getLine() . "\n";
+        $failed_count++;
+    }
 }
 
-// Get the seeder name from command line arguments
-$seeder_name = isset($argv[1]) ? strtolower($argv[1]) : 'help';
+// Summary
+echo "\n=== Seeding Complete ===\n";
+echo "Successful: {$success_count}\n";
+echo "Failed: {$failed_count}\n";
 
-// Show help if requested or no arguments provided
-if ($seeder_name === 'help' || $seeder_name === '--help' || $seeder_name === '-h') {
-    show_help();
-    exit;
-}
+exit($failed_count > 0 ? 1 : 0);
 
-// Check if the requested seeder exists
-if (!isset($available_seeders[$seeder_name])) {
-    echo "\033[31mError: Unknown seeder '$seeder_name'.\033[0m\n";
-    show_help();
-    exit(1);
-}
-
-// Load the DatabaseSeeder if running all seeders
-if ($seeder_name === 'all') {
-    require_once __DIR__ . '/seeders/DatabaseSeeder.php';
-    foreach ($available_seeders as $name => $class) {
-        if ($name !== 'all') {
-            require_once __DIR__ . "/seeders/{$class}.php";
+/**
+ * Ensure all required roles exist
+ */
+function ensureRolesExist() {
+    echo "Checking required roles...\n";
+    
+    $roles = [
+        'doctor' => 'Doctor',
+        'patient' => 'Patient', 
+        'lab_tech' => 'Laboratory Technician',
+        'desk_officer' => 'Desk Officer',
+        'administrator' => 'Administrator'
+    ];
+    
+    foreach ($roles as $role_key => $role_name) {
+        if (!get_role($role_key)) {
+            add_role($role_key, $role_name, [
+                'read' => true,
+                'edit_posts' => $role_key !== 'patient', // Only non-patients can edit posts
+                'upload_files' => $role_key !== 'patient', // Only non-patients can upload files
+            ]);
+            echo "✓ Created '{$role_name}' role\n";
+        } else {
+            echo "✓ '{$role_name}' role already exists\n";
         }
     }
-    
-    $seeder_class = "HospitalManager\\Database\\Seeders\\{$available_seeders[$seeder_name]}";
-    $seeder = new $seeder_class();
-    $seeder->run();
-    exit;
-}
-
-// Otherwise, load just the requested seeder
-require_once __DIR__ . "/seeders/{$available_seeders[$seeder_name]}.php";
-$seeder_class = "HospitalManager\\Database\\Seeders\\{$available_seeders[$seeder_name]}";
-
-// Run the seeder
-try {
-    $seeder = new $seeder_class();
-    
-    echo "\n\033[36m" . "=====================================" . "\033[0m\n";
-    echo "\033[36m" . "Running {$available_seeders[$seeder_name]}" . "\033[0m\n";
-    echo "\033[36m" . "=====================================" . "\033[0m\n\n";
-    
-    $seeder->run();
-    
-    echo "\n\033[36m" . "=====================================" . "\033[0m\n";
-    echo "\033[36m" . "Seeding Complete!" . "\033[0m\n";
-    echo "\033[36m" . "=====================================" . "\033[0m\n\n";
-} catch (Exception $e) {
-    echo "\033[31mError: " . $e->getMessage() . "\033[0m\n";
-    exit(1);
 }

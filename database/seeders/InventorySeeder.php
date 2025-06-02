@@ -170,7 +170,7 @@ class InventorySeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} inventory items successfully");
+        $this->log("Created {$created} inventory items successfully", 'success');
         
         // Update all statuses after creation
         global $wpdb;

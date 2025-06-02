@@ -76,7 +76,7 @@ class InventoryAlertsSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} inventory alerts successfully");
+        $this->log("Created {$created} inventory alerts successfully", 'success');
     }
     
     private function getItemsWithIssues()

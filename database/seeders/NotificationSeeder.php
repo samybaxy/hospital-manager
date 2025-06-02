@@ -80,6 +80,6 @@ class NotificationSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} notifications");
+        $this->log("Created {$count} notifications", 'success');
     }
 }

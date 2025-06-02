@@ -40,6 +40,10 @@ require_once dirname(__FILE__) . '/seeders/NotificationSeeder.php';
 require_once dirname(__FILE__) . '/seeders/ChatSeeder.php';
 require_once dirname(__FILE__) . '/seeders/AuditLogSeeder.php';
 require_once dirname(__FILE__) . '/seeders/InventorySeeder.php';
+require_once dirname(__FILE__) . '/seeders/InventorySuppliersSeeder.php';
+require_once dirname(__FILE__) . '/seeders/InventoryTransactionsSeeder.php';
+require_once dirname(__FILE__) . '/seeders/InventoryAlertsSeeder.php';
+require_once dirname(__FILE__) . '/seeders/InventoryReordersSeeder.php';
 require_once dirname(__FILE__) . '/seeders/ResetSeeder.php';
 
 use HospitalManager\Database\Seeders\DatabaseSeeder;
@@ -57,6 +61,10 @@ use HospitalManager\Database\Seeders\NotificationSeeder;
 use HospitalManager\Database\Seeders\ChatSeeder;
 use HospitalManager\Database\Seeders\AuditLogSeeder;
 use HospitalManager\Database\Seeders\InventorySeeder;
+use HospitalManager\Database\Seeders\InventorySuppliersSeeder;
+use HospitalManager\Database\Seeders\InventoryTransactionsSeeder;
+use HospitalManager\Database\Seeders\InventoryAlertsSeeder;
+use HospitalManager\Database\Seeders\InventoryReordersSeeder;
 use HospitalManager\Database\Seeders\ResetSeeder;
 
 // Map of seeder aliases to class names
@@ -76,6 +84,10 @@ $seeder_map = [
     'chats' => ChatSeeder::class,
     'audit-logs' => AuditLogSeeder::class,
     'inventory' => InventorySeeder::class,
+    'inventory-suppliers' => InventorySuppliersSeeder::class,
+    'inventory-transactions' => InventoryTransactionsSeeder::class,
+    'inventory-alerts' => InventoryAlertsSeeder::class,
+    'inventory-reorders' => InventoryReordersSeeder::class,
     'reset' => ResetSeeder::class
 ];
 

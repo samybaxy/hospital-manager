@@ -50,11 +50,17 @@ $tables = [
     $wpdb->prefix . 'hm_appointments',
     $wpdb->prefix . 'hm_visitations',
     $wpdb->prefix . 'hm_lab_investigations',
+    $wpdb->prefix . 'hm_radiological_exams',
     $wpdb->prefix . 'hm_medical_reports',
     $wpdb->prefix . 'hm_notifications',
     $wpdb->prefix . 'hm_chats',
     $wpdb->prefix . 'hm_audit_logs',
     $wpdb->prefix . 'hm_hmos',
+    $wpdb->prefix . 'hm_inventory',
+    $wpdb->prefix . 'hm_inventory_suppliers',
+    $wpdb->prefix . 'hm_inventory_transactions',
+    $wpdb->prefix . 'hm_inventory_alerts',
+    $wpdb->prefix . 'hm_inventory_reorders',
 ];
 
 foreach ($tables as $table) {
@@ -72,7 +78,7 @@ foreach ($tables as $table) {
 // Remove users with plugin-specific roles
 echo "\n\033[33m" . "Removing users with plugin roles..." . "\033[0m\n";
 
-$roles = ['doctor', 'patient', 'lab_tech', 'desk_officer'];
+$roles = ['doctor', 'patient', 'lab_tech', 'desk_officer', 'hospital_admin', 'inventory_manager', 'pharmacy_staff', 'hospital_nurse', 'hospital_staff'];
 $deleted_users = 0;
 
 try {
@@ -118,7 +124,15 @@ $meta_keys = [
     'hospital_doctor_id',
     'hospital_lab_tech_id',
     'hospital_preferred_doctor',
-    'hospital_medical_history'
+    'hospital_medical_history',
+    'hospital_license_number',
+    'hospital_years_of_experience',
+    'hospital_education',
+    'hospital_certifications',
+    'hospital_staff_id',
+    'hospital_role_permissions',
+    'hospital_shift_schedule',
+    'hospital_contact_info'
 ];
 
 foreach ($meta_keys as $meta_key) {

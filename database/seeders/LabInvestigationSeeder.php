@@ -163,7 +163,7 @@ class LabInvestigationSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} lab investigations");
+        $this->log("Created {$count} lab investigations", 'success');
     }
     
     /**

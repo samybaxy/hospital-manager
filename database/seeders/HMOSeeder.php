@@ -42,6 +42,6 @@ class HMOSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} HMOs successfully");
+        $this->log("Created {$created} HMOs successfully", 'success');
     }
 }

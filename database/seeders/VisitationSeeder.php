@@ -1,16 +1,7 @@
 <?php
 
-namespace HospitalManager\Database\    public function run()
-    {
-        $this->log("Creating visitation records...");
-        
-        global $wpdb;
-        
-        // Get patient and doctor IDs
-        $patients_table = $wpdb->prefix . 'hm_patients';
-        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table}");
-        
-        $doctors_table = $wpdb->prefix . 'hm_doctors';
+namespace HospitalManager\Database\Seeders;
+
 class VisitationSeeder extends Seeder
 {
     protected $complaints = [
@@ -32,30 +23,28 @@ class VisitationSeeder extends Seeder
 
     protected $treatments = [
         'Prescribed medication: {medication}', 'Rest and hydration',
-        'Physical therapy referral', 'Dietary modifications',
-        'Lab tests ordered', 'Radiological examination',
-        'Follow-up in 2 weeks', 'Referred to specialist',
-        'Prescribed antibiotics for 7 days', 'Pain management protocol',
-        'Lifestyle counseling', 'Wound care instructions',
-        'Medication adjustment', 'Surgery recommended',
-        'Observation and monitoring'
+        'Antibiotics course', 'Physical therapy', 'Dietary modifications',
+        'Regular monitoring', 'Surgical intervention', 'Symptomatic management',
+        'Lifestyle counseling', 'Wound care', 'Respiratory therapy'
     ];
     
     protected $medications = [
-        'Paracetamol 500mg', 'Ibuprofen 400mg', 'Amoxicillin 500mg',
-        'Loratadine 10mg', 'Omeprazole 20mg', 'Metformin 500mg',
-        'Amlodipine 5mg', 'Salbutamol inhaler', 'Cetirizine 10mg',
-        'Ciprofloxacin 500mg', 'Aspirin 75mg', 'Prednisolone 5mg',
-        'Chloroquine 250mg', 'Artemether/Lumefantrine', 'Multivitamin tablets'
+        'Paracetamol 500mg', 'Amoxicillin 500mg', 'Ibuprofen 400mg',
+        'Omeprazole 20mg', 'Amlodipine 5mg', 'Hydrochlorothiazide 25mg',
+        'Ciprofloxacin 250mg', 'Azithromycin 500mg', 'Loratadine 10mg',
+        'Metformin 500mg', 'Atorvastatin 10mg', 'Salbutamol inhaler',
+        'Fluoxetine 20mg', 'Diazepam 5mg', 'Lisinopril 10mg'
     ];
 
     public function run()
     {
-        $this->log("Creating visitation records with appointment relationships...");
+        $this->log("Creating visitation records...");
+        
+        global $wpdb;
         
         // Get patient and doctor IDs
-        $patients_table = $this->wpdb->prefix . 'hm_patients';
-        $patient_ids = $this->wpdb->get_col("SELECT ID FROM {$patients_table}");
+        $patients_table = $wpdb->prefix . 'hm_patients';
+        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table}");
         
         $doctors_table = $wpdb->prefix . 'hm_doctors';
         $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table}");
@@ -66,242 +55,293 @@ class VisitationSeeder extends Seeder
         }
         
         $visitations_table = $wpdb->prefix . 'hm_visitations';
-        $count = 0;
         
-        // Step 1: Create visitations from completed appointments (70% of completed appointments)
-        $count += $this->createVisitationsFromAppointments($visitations_table);
+        // Get appointments for creating visitations
+        $appointments = $this->getAppointmentsForVisitations();
         
-        // Step 2: Create walk-in visitations (no prior appointment)
-        $count += $this->createWalkInVisitations($patient_ids, $doctor_ids, $visitations_table, 40);
+        // Create visitations from appointments
+        $count = $this->createVisitationsFromAppointments($visitations_table, $appointments, $wpdb);
         
-        // Step 3: Create follow-up visitations
-        $count += $this->createFollowUpVisitations($patient_ids, $doctor_ids, $visitations_table, 20);
+        // Create some walk-in visitations (not tied to appointments)
+        $count += $this->createWalkInVisitations($patient_ids, $doctor_ids, $visitations_table, 20, $wpdb);
         
-        // Clean up transient data
-        delete_transient('hm_appointments_for_visitations');
+        // Create some follow-up visitations
+        $count += $this->createFollowUpVisitations($patient_ids, $doctor_ids, $visitations_table, 15, $wpdb);
         
-        $this->log("Created {$count} visitation records with realistic appointment relationships");
+        $this->log("Created {$count} visitation records", 'success');
     }
     
     /**
-     * Create visitations from completed appointments
+     * Get appointments to create visitations for
      */
-    private function createVisitationsFromAppointments($visitations_table)
+    private function getAppointmentsForVisitations()
     {
-        $appointments_table = $this->wpdb->prefix . 'hm_appointments';
-        $count = 0;
+        // Get from transient if available
+        $appointments = get_transient('hm_appointments_for_visitations');
+        if (!empty($appointments)) {
+            return $appointments;
+        }
         
-        // Get completed appointments
-        $completed_appointments = $this->wpdb->get_results(
-            "SELECT * FROM {$appointments_table} WHERE status = 'completed'",
+        // Otherwise get completed appointments from database
+        global $wpdb;
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        
+        $completed_appointments = $wpdb->get_results(
+            "SELECT ID, patient_id, doctor_id, appointment_date, appointment_time, reason 
+             FROM {$appointments_table} 
+             WHERE status = 'completed' 
+             ORDER BY RAND() 
+             LIMIT 30",
             ARRAY_A
         );
         
-        foreach ($completed_appointments as $appointment) {
-            // 80% chance that a completed appointment has a visitation
-            if (rand(1, 100) <= 80) {
-                $visit_time = $appointment['appointment_time'];
-                
-                // Sometimes the visit time is slightly different from appointment time
-                if (rand(1, 100) <= 30) {
-                    $datetime = new \DateTime($appointment['appointment_time']);
-                    $datetime->modify('+' . rand(-15, 30) . ' minutes');
-                    $visit_time = $datetime->format('H:i:s');
-                }
-                
-                $medical_history = $this->generateMedicalHistory();
-                $complaint = $this->getComplaintFromReason($appointment['reason']);
-                $diagnosis = $this->faker->randomElement($this->diagnoses);
-                $treatment = $this->generateTreatment();
-                
-                $result = $this->wpdb->insert(
-                    $visitations_table,
-                    [
-                        'patient_id' => $appointment['patient_id'],
-                        'doctor_id' => $appointment['doctor_id'],
-                        'appointment_id' => $appointment['ID'], // Link to appointment
-                        'date' => $appointment['appointment_date'],
-                        'time' => $visit_time,
-                        'medical_history' => $medical_history,
-                        'complaint' => $complaint,
-                        'diagnosis' => $diagnosis,
-                        'treatment' => $treatment,
-                        'created_at' => $appointment['appointment_date'] . ' ' . $visit_time,
-                        'updated_at' => $appointment['appointment_date'] . ' ' . $visit_time,
-                    ],
-                    [
-                        '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
-                    ]
-                );
-                
-                if ($result) {
-                    $count++;
-                }
-            }
+        if (empty($completed_appointments)) {
+            return [];
         }
         
-        $this->log("Created {$count} visitations from completed appointments");
-        return $count;
+        // Format for use in visitations
+        $formatted = [];
+        foreach ($completed_appointments as $appointment) {
+            $formatted[] = [
+                'appointment_id' => $appointment['ID'],
+                'patient_id' => $appointment['patient_id'],
+                'doctor_id' => $appointment['doctor_id'],
+                'date' => $appointment['appointment_date'],
+                'time' => $appointment['appointment_time'],
+                'status' => 'completed',
+                'reason' => $appointment['reason']
+            ];
+        }
+        
+        return $formatted;
     }
     
     /**
-     * Create walk-in visitations (no appointment)
+     * Create visitations from appointments
      */
-    private function createWalkInVisitations($patient_ids, $doctor_ids, $visitations_table, $target)
+    private function createVisitationsFromAppointments($visitations_table, $appointments, $wpdb)
     {
         $count = 0;
         
-        for ($i = 0; $i < $target; $i++) {
-            $patient_id = $this->faker->randomElement($patient_ids);
-            $doctor_id = $this->faker->randomElement($doctor_ids);
-            
-            $visit_date = $this->faker->dateTimeBetween('-6 months', 'now');
-            $visit_time = $this->faker->time('H:i:s', '18:00:00');
-            
-            // Check if this exact combination already exists
-            $exists = $this->wpdb->get_var($this->wpdb->prepare(
-                "SELECT COUNT(*) FROM {$visitations_table} 
-                 WHERE patient_id = %d AND doctor_id = %d AND DATE(date) = %s AND time = %s",
-                $patient_id, $doctor_id, $visit_date->format('Y-m-d'), $visit_time
+        if (empty($appointments)) {
+            return $count;
+        }
+        
+        foreach ($appointments as $appointment) {
+            // First check if visitation already exists for this appointment
+            $exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$visitations_table} WHERE appointment_id = %d",
+                $appointment['appointment_id']
             ));
             
             if ($exists) {
                 continue;
             }
             
-            $medical_history = $this->generateMedicalHistory();
-            $complaint = $this->faker->randomElement($this->complaints);
-            $diagnosis = $this->faker->randomElement($this->diagnoses);
+            // Generate visitation data
+            $complaint = $this->getComplaintFromReason($appointment['reason']);
+            $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
             $treatment = $this->generateTreatment();
+            $medication = $this->medications[array_rand($this->medications)];
             
-            $result = $this->wpdb->insert(
-                $visitations_table,
-                [
-                    'patient_id' => $patient_id,
-                    'doctor_id' => $doctor_id,
-                    'appointment_id' => null, // Walk-in, no appointment
-                    'date' => $visit_date->format('Y-m-d'),
-                    'time' => $visit_time,
-                    'medical_history' => $medical_history,
-                    'complaint' => $complaint,
-                    'diagnosis' => $diagnosis,
-                    'treatment' => $treatment,
-                    'created_at' => $visit_date->format('Y-m-d H:i:s'),
-                    'updated_at' => $visit_date->format('Y-m-d H:i:s'),
-                ],
-                [
-                    '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
-                ]
-            );
+            // Replace placeholders in treatment string
+            $treatment = str_replace('{medication}', $medication, $treatment);
             
-            if ($result) {
-                $count++;
-            }
+            // Generate medical history
+            $medical_history = $this->generateMedicalHistory();
+            
+            // Calculate end time (30-60 min after start)
+            $duration = mt_rand(30, 60);
+            $start_time = strtotime($appointment['time']);
+            $end_time_str = date('H:i:s', $start_time + ($duration * 60));
+            
+            $data = [
+                'appointment_id' => $appointment['appointment_id'],
+                'patient_id' => $appointment['patient_id'],
+                'doctor_id' => $appointment['doctor_id'],
+                'date' => $appointment['date'],
+                'start_time' => $appointment['time'],
+                'end_time' => $end_time_str,
+                'complaint' => $complaint,
+                'diagnosis' => $diagnosis,
+                'treatment' => $treatment,
+                'medical_history' => json_encode($medical_history),
+                'notes' => 'Visitation created from appointment',
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$appointment['date']} {$appointment['time']}")),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $wpdb->insert($visitations_table, $data);
+            $count++;
         }
         
-        $this->log("Created {$count} walk-in visitations");
+        return $count;
+    }
+    
+    /**
+     * Create walk-in visitations (not tied to appointments)
+     */
+    private function createWalkInVisitations($patient_ids, $doctor_ids, $visitations_table, $target, $wpdb)
+    {
+        $count = 0;
+        
+        for ($i = 0; $i < $target; $i++) {
+            // Random patient and doctor
+            $patient_id = $patient_ids[array_rand($patient_ids)];
+            $doctor_id = $doctor_ids[array_rand($doctor_ids)];
+            
+            // Random date within last 3 months
+            $days_ago = mt_rand(1, 90); // 1-90 days ago
+            $date = date('Y-m-d', strtotime("-{$days_ago} days"));
+            
+            // Random time during office hours
+            $hour = mt_rand(8, 16); // 8 AM to 4 PM
+            $minute = [0, 15, 30, 45][array_rand([0, 15, 30, 45])];
+            $start_time = sprintf('%02d:%02d:00', $hour, $minute);
+            
+            // Visit duration between 30-60 minutes
+            $duration = mt_rand(30, 60);
+            $end_time = date('H:i:s', strtotime($start_time) + ($duration * 60));
+            
+            // Generate medical data
+            $complaint = $this->complaints[array_rand($this->complaints)];
+            $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
+            $treatment = $this->generateTreatment();
+            $medical_history = $this->generateMedicalHistory();
+            
+            $data = [
+                'appointment_id' => null, // walk-in, no appointment
+                'patient_id' => $patient_id,
+                'doctor_id' => $doctor_id,
+                'date' => $date,
+                'start_time' => $start_time,
+                'end_time' => $end_time,
+                'complaint' => $complaint,
+                'diagnosis' => $diagnosis,
+                'treatment' => $treatment,
+                'medical_history' => json_encode($medical_history),
+                'notes' => 'Walk-in visitation',
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$start_time}")),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $wpdb->insert($visitations_table, $data);
+            $count++;
+        }
+        
         return $count;
     }
     
     /**
      * Create follow-up visitations
      */
-    private function createFollowUpVisitations($patient_ids, $doctor_ids, $visitations_table, $target)
+    private function createFollowUpVisitations($patient_ids, $doctor_ids, $visitations_table, $target, $wpdb)
     {
         $count = 0;
         
-        // Get some existing visitations to create follow-ups for
-        $existing_visitations = $this->wpdb->get_results(
-            "SELECT patient_id, doctor_id, date FROM {$visitations_table} 
-             WHERE DATE(date) < CURDATE() - INTERVAL 14 DAY 
-             ORDER BY RAND() LIMIT {$target}",
-            ARRAY_A
-        );
-        
-        foreach ($existing_visitations as $original_visit) {
-            $original_date = new \DateTime($original_visit['date']);
-            $follow_up_date = clone $original_date;
-            $follow_up_date->modify('+' . rand(14, 45) . ' days');
+        for ($i = 0; $i < $target; $i++) {
+            // Random patient and doctor
+            $patient_id = $patient_ids[array_rand($patient_ids)];
+            $doctor_id = $doctor_ids[array_rand($doctor_ids)];
             
-            // Don't create future follow-ups
-            if ($follow_up_date > new \DateTime()) {
-                $follow_up_date = $this->faker->dateTimeBetween($original_date->format('Y-m-d'), 'now');
-            }
+            // Random date within last 30 days
+            $days_ago = mt_rand(1, 30); // 1-30 days ago
+            $date = date('Y-m-d', strtotime("-{$days_ago} days"));
             
-            $visit_time = $this->faker->time('H:i:s', '18:00:00');
+            // Random time during office hours
+            $hour = mt_rand(9, 17); // 9 AM to 5 PM
+            $minute = [0, 15, 30, 45][array_rand([0, 15, 30, 45])];
+            $start_time = sprintf('%02d:%02d:00', $hour, $minute);
             
-            $result = $this->wpdb->insert(
-                $visitations_table,
-                [
-                    'patient_id' => $original_visit['patient_id'],
-                    'doctor_id' => $original_visit['doctor_id'],
-                    'appointment_id' => null,
-                    'date' => $follow_up_date->format('Y-m-d'),
-                    'time' => $visit_time,
-                    'medical_history' => 'Follow-up visit for previous condition',
-                    'complaint' => 'Follow-up consultation',
-                    'diagnosis' => 'Condition improving, continue treatment',
-                    'treatment' => 'Continue current medication, return if symptoms worsen',
-                    'created_at' => $follow_up_date->format('Y-m-d H:i:s'),
-                    'updated_at' => $follow_up_date->format('Y-m-d H:i:s'),
-                ],
-                [
-                    '%d', '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
-                ]
-            );
+            // Visit duration between 15-45 minutes (follow-ups typically shorter)
+            $duration = mt_rand(15, 45);
+            $end_time = date('H:i:s', strtotime($start_time) + ($duration * 60));
             
-            if ($result) {
-                $count++;
-            }
+            // Generate medical data
+            $complaint = $this->complaints[array_rand($this->complaints)];
+            $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
+            $treatment = $this->generateTreatment();
+            $medical_history = $this->generateMedicalHistory();
+            
+            $data = [
+                'appointment_id' => null, // no appointment
+                'patient_id' => $patient_id,
+                'doctor_id' => $doctor_id,
+                'date' => $date,
+                'start_time' => $start_time,
+                'end_time' => $end_time,
+                'complaint' => $complaint,
+                'diagnosis' => $diagnosis,
+                'treatment' => $treatment,
+                'medical_history' => json_encode($medical_history),
+                'notes' => 'Follow-up visitation',
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$start_time}")),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            
+            $wpdb->insert($visitations_table, $data);
+            $count++;
         }
         
-        $this->log("Created {$count} follow-up visitations");
         return $count;
     }
     
     /**
-     * Generate realistic medical history
+     * Generate medical history sample data
      */
     private function generateMedicalHistory()
     {
-        $histories = [
-            "No significant past medical history.",
-            "History of hypertension, well controlled on medication.",
-            "Previous history of diabetes mellitus type 2.",
-            "Past surgical history includes appendectomy in 2015.",
-            "Family history of cardiovascular disease.",
-            "Known allergies to penicillin and sulfa drugs.",
-            "Previous hospitalization for pneumonia last year.",
-            "Chronic back pain due to occupational hazards.",
-            "History of asthma since childhood.",
-            "Previous treatment for malaria 6 months ago."
+        $allergies = ['None', 'Penicillin', 'Aspirin', 'Sulfa drugs', 'Peanuts', 'Shellfish', 'Eggs', 'Dairy products'];
+        $past_surgeries = ['None', 'Appendectomy', 'Tonsillectomy', 'Hernia repair', 'Cholecystectomy'];
+        $chronic_conditions = ['None', 'Hypertension', 'Diabetes', 'Asthma', 'Arthritis', 'Migraine'];
+        $family_history = [
+            'None significant',
+            'Diabetes in father',
+            'Hypertension in mother',
+            'Heart disease in family',
+            'Cancer in siblings'
         ];
         
-        return rand(1, 10) <= 7 ? $this->faker->randomElement($histories) : "No significant past medical history.";
+        return [
+            'allergies' => $allergies[array_rand($allergies)],
+            'past_surgeries' => $past_surgeries[array_rand($past_surgeries)],
+            'chronic_conditions' => $chronic_conditions[array_rand($chronic_conditions)],
+            'family_history' => $family_history[array_rand($family_history)],
+            'smoker' => (bool)mt_rand(0, 1),
+            'alcohol' => ['None', 'Occasional', 'Moderate', 'Heavy'][array_rand(['None', 'Occasional', 'Moderate', 'Heavy'])],
+        ];
     }
     
     /**
-     * Get appropriate complaint based on appointment reason
+     * Extract complaint from appointment reason
      */
     private function getComplaintFromReason($reason)
     {
         $reason_to_complaint = [
             'General checkup' => 'Routine health assessment',
             'Follow-up consultation' => 'Follow-up on previous condition',
-            'Symptoms evaluation' => $this->faker->randomElement($this->complaints),
-            'Emergency consultation' => $this->faker->randomElement(['Severe pain', 'High fever', 'Difficulty breathing']),
+            'Prescription renewal' => 'Medication refill needed',
         ];
         
-        return $reason_to_complaint[$reason] ?? $this->faker->randomElement($this->complaints);
+        if (isset($reason_to_complaint[$reason])) {
+            return $reason_to_complaint[$reason];
+        }
+        
+        return $this->complaints[array_rand($this->complaints)];
     }
     
     /**
-     * Generate treatment with medication
+     * Generate treatment text
      */
     private function generateTreatment()
     {
-        $treatment_template = $this->faker->randomElement($this->treatments);
-        $medication = $this->faker->randomElement($this->medications);
-        return str_replace('{medication}', $medication, $treatment_template);
+        $treatment = $this->treatments[array_rand($this->treatments)];
+        
+        // 50% chance of adding a second treatment recommendation
+        if (mt_rand(0, 1) === 1) {
+            $treatment .= '; ' . $this->treatments[array_rand($this->treatments)];
+        }
+        
+        return $treatment;
     }
 }

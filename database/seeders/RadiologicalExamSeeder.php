@@ -158,7 +158,7 @@ class RadiologicalExamSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} radiological exams");
+        $this->log("Created {$count} radiological exams", 'success');
     }
     
     /**

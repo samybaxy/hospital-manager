@@ -100,7 +100,7 @@ class InventoryTransactionsSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} inventory transactions successfully");
+        $this->log("Created {$created} inventory transactions successfully", 'success');
     }
     
     private function generateTransactionData($item, $transactionType, $supplier, $userId, $transactionDate)

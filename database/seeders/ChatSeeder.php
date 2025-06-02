@@ -79,6 +79,6 @@ class ChatSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} chat messages");
+        $this->log("Created {$count} chat messages", 'success');
     }
 }

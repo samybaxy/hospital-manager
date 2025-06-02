@@ -24,16 +24,22 @@ class DoctorSeeder extends Seeder
     {
         global $wpdb;
         
+        $this->log("Creating doctors");
+        
         // Get users with doctor role
         $doctor_users = get_users([
             'role' => 'doctor',
             'fields' => ['ID', 'display_name'],
         ]);
         
+        // If no doctor users found, create some fake ones
+        if (empty($doctor_users)) {
+            $this->log("No doctor users found. Please create some users with the 'doctor' role first.");
+            return;
+        }
+        
         $doctors_table = $wpdb->prefix . 'hm_doctors';
         $created = 0;
-        
-        $this->log("Creating doctors");
         
         foreach ($doctor_users as $user) {
             // Check if doctor already exists
@@ -43,6 +49,8 @@ class DoctorSeeder extends Seeder
             ));
             
             if (!$exists) {
+                $this->log("Creating doctor for user ID: {$user->ID}", 'success');
+                
                 $first_name = get_user_meta($user->ID, 'first_name', true);
                 $last_name = get_user_meta($user->ID, 'last_name', true);
                 
@@ -101,9 +109,6 @@ class DoctorSeeder extends Seeder
                         'appointment_availability' => json_encode($availability),
                         'created_at' => $created_at,
                         'updated_at' => current_time('mysql'),
-                    ],
-                    [
-                        '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s'
                     ]
                 );
                 
@@ -113,14 +118,13 @@ class DoctorSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} doctor records");
+        $this->log("Created {$created} doctor records", 'success');
     }
 
     /**
      * Generate a random working hours availability schedule for a doctor
      * 
-     * @return array Working hours for each day of the week in the format:
-     * {"friday": [{"end": "14:00", "start": "08:00"}], "thursday": [{"end": "14:00", "start": "07:00"}], ...}
+     * @return array Working hours for each day of the week
      */
     protected function generateAvailability()
     {
@@ -129,27 +133,28 @@ class DoctorSeeder extends Seeder
         
         // Randomly select 4-6 working days
         $workingDaysCount = rand(4, 6);
-        $workingDays = (array) array_rand(array_flip($days), $workingDaysCount);
+        $workingDays = array_slice($days, 0, $workingDaysCount);
         
         foreach ($days as $day) {
-            // If it's a working day, generate time slot
             if (in_array($day, $workingDays)) {
-                // Randomly choose a start time between 6 AM and 12 PM
-                $startHour = rand(6, 12);
+                // This is a working day - generate morning shift and maybe afternoon shift
+                $shifts = [];
                 
-                // End time is 2-6 hours after start time, but no later than 6 PM
-                $endHour = min(rand($startHour + 2, $startHour + 6), 18);
+                // Morning shift (between 8-10 AM to 12-2 PM)
+                $morningStart = sprintf('%02d:00', rand(8, 10));
+                $morningEnd = sprintf('%02d:00', rand(12, 14));
+                $shifts[] = ['start' => $morningStart, 'end' => $morningEnd];
                 
-                // Format as 24-hour time for storage in JSON - each day has a single slot in an array
-                $availability[$day] = [
-                    [
-                        'start' => sprintf('%02d:00', $startHour),
-                        'end' => sprintf('%02d:00', $endHour)
-                    ]
-                ];
+                // 40% chance of afternoon shift
+                if (rand(1, 10) <= 4) {
+                    $afternoonStart = sprintf('%02d:00', rand(14, 16));
+                    $afternoonEnd = sprintf('%02d:00', rand(17, 19));
+                    $shifts[] = ['start' => $afternoonStart, 'end' => $afternoonEnd];
+                }
+                
+                $availability[$day] = $shifts;
             } else {
-                // Not a working day - empty array
-                $availability[$day] = [];
+                $availability[$day] = []; // Not working this day
             }
         }
         

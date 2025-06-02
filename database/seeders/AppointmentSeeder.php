@@ -135,7 +135,7 @@ class AppointmentSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} appointment records");
+        $this->log("Created {$count} appointment records", 'success');
     }
     
     /**

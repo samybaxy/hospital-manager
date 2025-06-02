@@ -36,6 +36,8 @@ class PatientSeeder extends Seeder
             ));
             
             if (!$exists) {
+                $this->log("Creating patient for user ID: {$user->ID}", 'success');
+                
                 $first_name = get_user_meta($user->ID, 'first_name', true);
                 $last_name = get_user_meta($user->ID, 'last_name', true);
                 
@@ -114,6 +116,6 @@ class PatientSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} patient records");
+        $this->log("Created {$created} patient records", 'success');
     }
 }

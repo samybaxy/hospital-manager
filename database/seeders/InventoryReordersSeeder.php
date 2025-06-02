@@ -54,12 +54,17 @@ class InventoryReordersSeeder extends Seeder
         $startDate = strtotime('-3 months');
         $endDate = time();
         
-        // Use a subset of items to create reorders
-        $selectedItems = $this->faker->randomElements($lowStockItems, $totalReorders);
+        // Create reorders (use all available items multiple times if necessary)
+        $itemCount = count($lowStockItems);
         
-        foreach ($selectedItems as $item) {
+        // Safety check to prevent errors if we have few items
+        $totalReorders = min($totalReorders, $itemCount * 5); // Limit to 5 reorders per item max
+        
+        for ($i = 0; $i < $totalReorders; $i++) {
+            // Select a random item from our low stock items
+            $item = $lowStockItems[$i % $itemCount];
             // Create random timestamp in the past 3 months
-            $createdAt = date('Y-m-d H:i:s', $this->faker->numberBetween($startDate, $endDate));
+            $createdAt = date('Y-m-d H:i:s', mt_rand($startDate, $endDate));
             
             // Generate reorder status - weighted distribution
             $status = $this->getRandomWeightedElement($this->statusDistribution);
@@ -88,7 +93,7 @@ class InventoryReordersSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} inventory reorders successfully");
+        $this->log("Created {$created} inventory reorders successfully", 'success');
     }
     
     private function getLowStockItems()
@@ -109,18 +114,17 @@ class InventoryReordersSeeder extends Seeder
     }
     
     private function generateReorderData($item, $supplier, $userId, $status, $createdAt, $approvedBy)
-    {
-        // Calculate suggested quantity - between 1.5x and 3x the difference between reorder level and current quantity
+    {            // Calculate suggested quantity - between 1.5x and 3x the difference between reorder level and current quantity
         $shortfall = max(0, $item['reorder_level'] - $item['quantity']);
         $suggestedQuantity = $shortfall > 0 ? 
-            $shortfall + $this->faker->numberBetween(
+            $shortfall + mt_rand(
                 ceil($shortfall * 0.5), 
                 ceil($shortfall * 2)
             ) : 
-            $this->faker->numberBetween(5, 20);
+            mt_rand(5, 20);
             
         // Calculate max stock level - approximately 1.5-2x reorder level
-        $maxStockLevel = ceil($item['reorder_level'] * $this->faker->randomFloat(2, 1.5, 2));
+        $maxStockLevel = ceil($item['reorder_level'] * (mt_rand(15, 20) / 10));
         
         // Determine priority based on how low the stock is
         $ratio = $item['quantity'] / max(1, $item['reorder_level']);
@@ -129,7 +133,7 @@ class InventoryReordersSeeder extends Seeder
                    ($ratio <= 0.7 ? 'medium' : 'low'));
         
         // Select a random priority, with weighting toward the determined priority
-        if ($this->faker->boolean(70)) {
+        if (mt_rand(1, 100) <= 70) {
             // 70% chance to use the calculated priority
             $selectedPriority = $priority;
         } else {
@@ -148,21 +152,21 @@ class InventoryReordersSeeder extends Seeder
         // For approved, ordered and received statuses, generate approved date
         if (in_array($status, ['approved', 'ordered', 'received'])) {
             // Approved 1-3 days after creation
-            $approvedAt = date('Y-m-d H:i:s', strtotime('+' . $this->faker->numberBetween(1, 3) . ' days', strtotime($createdAt)));
+            $approvedAt = date('Y-m-d H:i:s', strtotime('+' . mt_rand(1, 3) . ' days', strtotime($createdAt)));
             
             // For ordered and received, generate ordered date
             if (in_array($status, ['ordered', 'received'])) {
                 // Ordered 1-2 days after approval
-                $orderedAt = date('Y-m-d H:i:s', strtotime('+' . $this->faker->numberBetween(1, 2) . ' days', strtotime($approvedAt)));
+                $orderedAt = date('Y-m-d H:i:s', strtotime('+' . mt_rand(1, 2) . ' days', strtotime($approvedAt)));
                 
                 // Expected delivery 3-14 days after order
-                $expectedDeliveryDate = date('Y-m-d', strtotime('+' . $this->faker->numberBetween(3, 14) . ' days', strtotime($orderedAt)));
+                $expectedDeliveryDate = date('Y-m-d', strtotime('+' . mt_rand(3, 14) . ' days', strtotime($orderedAt)));
             }
         }
         
         // Generate notes
         $notes = null;
-        if ($this->faker->boolean(70)) { // 70% chance to have notes
+        if (mt_rand(1, 100) <= 70) { // 70% chance to have notes
             $noteTemplates = [
                 'pending' => [
                     'Standard reorder based on inventory levels.',
@@ -178,7 +182,7 @@ class InventoryReordersSeeder extends Seeder
                 ],
                 'ordered' => [
                     'Order placed with supplier, awaiting confirmation.',
-                    'Order #REF-' . $this->faker->randomNumber(5) . ' sent to supplier.',
+                    'Order #REF-' . str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT) . ' sent to supplier.',
                     'Bulk order placed, delivery expected soon.',
                     'Partial order placed due to supplier limitations.'
                 ],
@@ -201,7 +205,7 @@ class InventoryReordersSeeder extends Seeder
         
         // Generate order reference for ordered/received statuses
         $orderReference = in_array($status, ['ordered', 'received']) ? 
-            'PO-' . strtoupper($this->faker->bothify('##???')) : 
+            'PO-' . mt_rand(10, 99) . strtoupper(substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 3)) : 
             null;
         
         return [

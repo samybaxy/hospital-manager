@@ -72,7 +72,7 @@ class InventorySuppliersSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$created} inventory suppliers successfully");
+        $this->log("Created {$created} inventory suppliers successfully", 'success');
     }
 
     private function generateSupplierData($name)

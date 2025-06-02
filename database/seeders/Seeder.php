@@ -82,10 +82,23 @@ abstract class Seeder
     }
     
     /**
-     * Print progress message
+     * Print progress message with color formatting
+     * 
+     * @param string $message The message to display
+     * @param string $type The type of message: 'info', 'success', 'warning', 'error'
      */
-    protected function log($message)
+    protected function log($message, $type = 'info')
     {
-        echo $message . PHP_EOL;
+        $colors = [
+            'info' => "",             // No color (default terminal color)
+            'success' => "\033[32m",  // Green
+            'warning' => "\033[33m",  // Yellow  
+            'error' => "\033[31m",    // Red
+            'reset' => "\033[0m"      // Reset
+        ];
+        
+        $color = isset($colors[$type]) ? $colors[$type] : $colors['info'];
+        $reset = ($color !== "") ? $colors['reset'] : "";
+        echo $color . $message . $reset . PHP_EOL;
     }
 }

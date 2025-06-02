@@ -89,7 +89,7 @@ class AuditLogSeeder extends Seeder
             $count++;
         }
         
-        $this->log("Created {$count} audit logs");
+        $this->log("Created {$count} audit logs", 'success');
     }
     
     /**

@@ -106,6 +106,6 @@ class MedicalReportSeeder extends Seeder
             }
         }
         
-        $this->log("Created {$count} medical reports");
+        $this->log("Created {$count} medical reports", 'success');
     }
 }
