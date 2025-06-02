@@ -2,8 +2,6 @@
 
 namespace HospitalManager\Database\Seeders;
 
-use HospitalManager\Models\InventorySupplier;
-
 class InventorySuppliersSeeder extends Seeder
 {
     private $supplierNames = [
@@ -36,18 +34,41 @@ class InventorySuppliersSeeder extends Seeder
     {
         $this->log("Creating inventory suppliers");
         
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory_suppliers';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table'");
+        if (!$table_exists) {
+            $this->log("Error: Table $table does not exist!");
+            return;
+        }
+        
         $created = 0;
         
         foreach ($this->supplierNames as $supplierName) {
-            $data = $this->generateSupplierData($supplierName);
-            
-            $supplier_id = InventorySupplier::create($data);
-            
-            if ($supplier_id) {
-                $created++;
-                if ($created % 5 == 0) {
-                    $this->log("Created {$created} inventory suppliers...");
+            try {
+                $data = $this->generateSupplierData($supplierName);
+                
+                // Insert directly into database
+                $result = $wpdb->insert($table, $data);
+                
+                if ($result === false) {
+                    $this->log("Error inserting supplier '$supplierName': " . $wpdb->last_error);
+                    continue;
                 }
+                
+                $supplier_id = $wpdb->insert_id;
+                
+                if ($supplier_id) {
+                    $created++;
+                    if ($created % 5 == 0) {
+                        $this->log("Created {$created} inventory suppliers...");
+                    }
+                }
+            } catch (\Exception $e) {
+                $this->log("Exception creating supplier '$supplierName': " . $e->getMessage());
+                continue;
             }
         }
         
@@ -68,27 +89,56 @@ class InventorySuppliersSeeder extends Seeder
         // Generate email from company name
         $emailPrefix = strtolower(str_replace(' ', '.', $name));
         $emailPrefix = preg_replace('/[^a-z0-9\.]/', '', $emailPrefix);
-        $email = 'info@' . substr($emailPrefix, 0, 10) . '.' . substr($domains[array_rand($domains)], 0, strpos($domains[array_rand($domains)], '.') + 4);
+        $selectedDomain = $domains[array_rand($domains)];
+        $email = 'info@' . substr($emailPrefix, 0, 10) . '.' . $selectedDomain;
         
         // Generate realistic phone numbers for Nigeria
-        $phone = '+234' . rand(700000000, 999999999);
+        $phone = '+234' . mt_rand(700000000, 999999999);
+        
+        // Use basic functions instead of faker if faker is not available
+        $streetAddresses = [
+            'Plot 123 Victoria Island',
+            '45 Allen Avenue',
+            'Suite 67 Marina Street',
+            '12 Independence Way',
+            '89 Constitution Avenue',
+            'Block C Industrial Estate',
+            '156 Market Road',
+            '23 Government House Road'
+        ];
         
         return [
             'name' => $name,
             'contact_person' => $contactPerson,
             'email' => $email,
             'phone' => $phone,
-            'address' => $this->faker->streetAddress(),
+            'address' => $streetAddresses[array_rand($streetAddresses)],
             'city' => $this->cities[$cityIndex],
             'state' => $this->states[$cityIndex], // Match city and state
             'country' => 'Nigeria',
-            'postal_code' => $this->faker->numberBetween(100001, 999999),
-            'tax_id' => 'TX-' . $this->faker->numberBetween(1000000, 9999999),
+            'postal_code' => mt_rand(100001, 999999),
+            'tax_id' => 'TX-' . mt_rand(1000000, 9999999),
             'payment_terms' => $paymentTerms[array_rand($paymentTerms)],
-            'delivery_time_days' => $this->faker->numberBetween(1, 14),
-            'minimum_order_amount' => $this->faker->randomFloat(2, 5000, 50000),
-            'is_active' => $this->faker->boolean(90) ? 1 : 0, // 90% active
-            'notes' => $this->faker->boolean(70) ? $this->faker->paragraph(2) : null // 70% have notes
+            'delivery_time_days' => mt_rand(1, 14),
+            'minimum_order_amount' => round(mt_rand(5000, 50000) + (mt_rand(0, 99) / 100), 2),
+            'is_active' => mt_rand(1, 100) <= 90 ? 1 : 0, // 90% active
+            'notes' => mt_rand(1, 100) <= 70 ? $this->getRandomNote() : null // 70% have notes
         ];
+    }
+    
+    private function getRandomNote()
+    {
+        $notes = [
+            'Reliable supplier with good delivery times.',
+            'Competitive pricing for bulk orders.',
+            'Established relationship with quality products.',
+            'New supplier with promising service.',
+            'Specializes in medical equipment and supplies.',
+            'Local supplier with quick delivery options.',
+            'International supplier with premium products.',
+            'Cost-effective solutions for hospital needs.'
+        ];
+        
+        return $notes[array_rand($notes)];
     }
 }

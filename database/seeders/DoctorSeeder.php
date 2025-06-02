@@ -22,20 +22,22 @@ class DoctorSeeder extends Seeder
     
     public function run()
     {
+        global $wpdb;
+        
         // Get users with doctor role
         $doctor_users = get_users([
             'role' => 'doctor',
             'fields' => ['ID', 'display_name'],
         ]);
         
-        $doctors_table = $this->wpdb->prefix . 'hm_doctors';
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
         $created = 0;
         
         $this->log("Creating doctors");
         
         foreach ($doctor_users as $user) {
             // Check if doctor already exists
-            $exists = $this->wpdb->get_var($this->wpdb->prepare(
+            $exists = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$doctors_table} WHERE user_id = %d",
                 $user->ID
             ));
@@ -44,17 +46,21 @@ class DoctorSeeder extends Seeder
                 $first_name = get_user_meta($user->ID, 'first_name', true);
                 $last_name = get_user_meta($user->ID, 'last_name', true);
                 
-                if (empty($first_name)) $first_name = $this->faker->firstName();
-                if (empty($last_name)) $last_name = $this->faker->lastName();
+                $first_names = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Mary', 'Robert', 'Lisa'];
+                $last_names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
+                
+                if (empty($first_name)) $first_name = $first_names[array_rand($first_names)];
+                if (empty($last_name)) $last_name = $last_names[array_rand($last_names)];
                 
                 // Add specialty as user meta
-                $specialty = $this->faker->randomElement($this->specialties);
+                $specialty = $this->specialties[array_rand($this->specialties)];
                 update_user_meta($user->ID, 'specialty', $specialty);
                 
                 // Generate additional doctor information
-                $officeNumber = 'Room ' . $this->faker->numberBetween(100, 500);
-                $boardCertification = $this->faker->randomElement(['Board Certified', 'Board Eligible', 'Fellowship Trained']);
-                $education = $this->faker->randomElement([
+                $officeNumber = 'Room ' . mt_rand(100, 500);
+                $certifications = ['Board Certified', 'Board Eligible', 'Fellowship Trained'];
+                $boardCertification = $certifications[array_rand($certifications)];
+                $educations = [
                     'MD, Harvard Medical School',
                     'MD, Johns Hopkins University',
                     'MD, Stanford University',
@@ -62,21 +68,30 @@ class DoctorSeeder extends Seeder
                     'MD, University of California',
                     'MBBS, University of Ibadan',
                     'MD, Yale University School of Medicine'
-                ]);
-                $yearsExperience = $this->faker->numberBetween(1, 30);
-                $licenseNumber = 'MD' . $this->faker->randomNumber(6, true);
+                ];
+                $education = $educations[array_rand($educations)];
+                $yearsExperience = mt_rand(1, 30);
+                $licenseNumber = 'MD' . mt_rand(100000, 999999);
                 
                 // Generate working hours availability
                 $availability = $this->generateAvailability();
                 
+                // Generate phone number
+                $phone_numbers = ['+234-800-123-4567', '+234-801-234-5678', '+234-802-345-6789'];
+                $phone = $phone_numbers[array_rand($phone_numbers)];
+                
+                // Generate creation date
+                $days_ago = mt_rand(30, 365);
+                $created_at = date('Y-m-d H:i:s', strtotime("-{$days_ago} days"));
+                
                 // Insert doctor record
-                $result = $this->wpdb->insert(
+                $result = $wpdb->insert(
                     $doctors_table,
                     [
                         'user_id' => $user->ID,
                         'first_name' => $first_name,
                         'last_name' => $last_name,
-                        'phone' => $this->faker->phoneNumber(),
+                        'phone' => $phone,
                         'specialty' => $specialty,
                         'office' => $officeNumber,
                         'board_certification' => $boardCertification,
@@ -84,7 +99,7 @@ class DoctorSeeder extends Seeder
                         'years_experience' => $yearsExperience,
                         'license_number' => $licenseNumber,
                         'appointment_availability' => json_encode($availability),
-                        'created_at' => $this->faker->dateTimeBetween('-1 year', '-6 months')->format('Y-m-d H:i:s'),
+                        'created_at' => $created_at,
                         'updated_at' => current_time('mysql'),
                     ],
                     [

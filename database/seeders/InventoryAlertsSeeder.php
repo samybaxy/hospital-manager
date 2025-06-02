@@ -2,9 +2,6 @@
 
 namespace HospitalManager\Database\Seeders;
 
-use HospitalManager\Models\Inventory;
-use HospitalManager\Models\InventoryAlert;
-
 class InventoryAlertsSeeder extends Seeder
 {
     // Alert types with their associated titles and messages

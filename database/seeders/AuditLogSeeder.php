@@ -11,6 +11,8 @@ class AuditLogSeeder extends Seeder
     {
         $this->log('Seeding audit logs...');
         
+        global $wpdb;
+        
         // Get user IDs
         $users = $this->getUsers();
         
@@ -83,7 +85,7 @@ class AuditLogSeeder extends Seeder
                 'created_at' => $created_at
             ];
             
-            $this->wpdb->insert($this->wpdb->prefix . 'hm_audit_logs', $data);
+            $wpdb->insert($wpdb->prefix . 'hm_audit_logs', $data);
             $count++;
         }
         
@@ -121,7 +123,8 @@ class AuditLogSeeder extends Seeder
      */
     protected function getEntityIds($table)
     {
-        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table} LIMIT 30");
+        global $wpdb;
+        return $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}{$table} LIMIT 30");
     }
     
     /**
@@ -198,22 +201,26 @@ class AuditLogSeeder extends Seeder
         
         switch ($entity_type) {
             case 'patient':
+                $first_names = ['John', 'Jane', 'Mary', 'Michael', 'Sarah', 'David', 'Linda', 'Robert'];
+                $last_names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
+                $phones = ['+1234567890', '+2345678901', '+3456789012', '+4567890123'];
+                
                 if (rand(0, 1)) {
                     $changes['first_name'] = [
-                        'old' => $this->faker->firstName(),
-                        'new' => $this->faker->firstName()
+                        'old' => $first_names[array_rand($first_names)],
+                        'new' => $first_names[array_rand($first_names)]
                     ];
                 }
                 if (rand(0, 1)) {
                     $changes['last_name'] = [
-                        'old' => $this->faker->lastName(),
-                        'new' => $this->faker->lastName()
+                        'old' => $last_names[array_rand($last_names)],
+                        'new' => $last_names[array_rand($last_names)]
                     ];
                 }
                 if (rand(0, 1)) {
                     $changes['phone'] = [
-                        'old' => $this->faker->phoneNumber(),
-                        'new' => $this->faker->phoneNumber()
+                        'old' => $phones[array_rand($phones)],
+                        'new' => $phones[array_rand($phones)]
                     ];
                 }
                 break;
@@ -226,9 +233,11 @@ class AuditLogSeeder extends Seeder
                     ];
                 }
                 if (rand(0, 1)) {
+                    $old_statuses = ['pending', 'confirmed'];
+                    $new_statuses = ['completed', 'cancelled'];
                     $changes['status'] = [
-                        'old' => $this->faker->randomElement(['pending', 'confirmed']),
-                        'new' => $this->faker->randomElement(['completed', 'cancelled'])
+                        'old' => $old_statuses[array_rand($old_statuses)],
+                        'new' => $new_statuses[array_rand($new_statuses)]
                     ];
                 }
                 break;
@@ -263,9 +272,10 @@ class AuditLogSeeder extends Seeder
                 
             case 'user':
                 if ($action === 'profile_update') {
+                    $emails = ['test1@example.com', 'test2@example.com', 'test3@example.com', 'test4@example.com'];
                     $changes['email'] = [
-                        'old' => $this->faker->email(),
-                        'new' => $this->faker->email()
+                        'old' => $emails[array_rand($emails)],
+                        'new' => $emails[array_rand($emails)]
                     ];
                 }
                 break;
@@ -284,9 +294,20 @@ class AuditLogSeeder extends Seeder
      */
     protected function generateDetails($action, $entity_type, $role)
     {
+        // Generate random IP addresses
+        $ip_addresses = ['192.168.1.100', '10.0.0.25', '172.16.0.50', '192.168.0.75'];
+        
+        // Generate random user agents
+        $user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15'
+        ];
+        
         $details = [
-            'ip_address' => $this->faker->ipv4(),
-            'user_agent' => $this->faker->userAgent()
+            'ip_address' => $ip_addresses[array_rand($ip_addresses)],
+            'user_agent' => $user_agents[array_rand($user_agents)]
         ];
         
         if ($action === 'login' || $action === 'logout') {
@@ -295,22 +316,25 @@ class AuditLogSeeder extends Seeder
         }
         
         if ($action === 'view_patient') {
-            $details['accessed_sections'] = $this->faker->randomElements([
+            $all_sections = [
                 'personal_info',
                 'medical_history',
                 'appointments',
                 'lab_results',
                 'prescriptions'
-            ], rand(1, 3));
+            ];
+            $num_sections = rand(1, 3);
+            $details['accessed_sections'] = array_slice($all_sections, 0, $num_sections);
         }
         
         if (strpos($action, 'appointment') !== false) {
-            $details['appointment_type'] = $this->faker->randomElement([
+            $appointment_types = [
                 'regular_checkup',
                 'consultation',
                 'follow_up',
                 'emergency'
-            ]);
+            ];
+            $details['appointment_type'] = $appointment_types[array_rand($appointment_types)];
         }
         
         return $details;

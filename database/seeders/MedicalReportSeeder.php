@@ -9,151 +9,103 @@ class MedicalReportSeeder extends Seeder
      */
     public function run()
     {
-        $this->log('Seeding medical reports...');
+        $this->log('Creating medical reports...');
         
-        // Get existing visitations
-        $visitations = $this->wpdb->get_results(
-            "SELECT v.ID, v.patient_id, v.doctor_id, v.diagnosis, v.treatment 
-            FROM {$this->wpdb->prefix}hm_visitations v
-            ORDER BY v.date DESC
-            LIMIT 40"
-        );
+        global $wpdb;
         
-        if (empty($visitations)) {
-            $this->log('No visitations found. Cannot create medical reports.');
+        // Get patient and doctor IDs
+        $patients_table = $wpdb->prefix . 'hm_patients';
+        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table} LIMIT 20");
+        
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table} LIMIT 10");
+        
+        if (empty($patient_ids) || empty($doctor_ids)) {
+            $this->log('No patients or doctors found. Cannot create medical reports.');
             return;
         }
         
+        $table = $wpdb->prefix . 'hm_medical_reports';
         $count = 0;
+        $total = 30;
         
-        // Create medical reports for about 70% of visitations
-        foreach ($visitations as $visitation) {
-            // 70% chance of creating a report
-            if (rand(1, 10) > 3) {
-                $status = rand(1, 10) > 7 ? 'pending' : 'completed';
-                $created_at = $this->wpdb->get_var(
-                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation->ID}"
-                );
-                
-                if (!$created_at) {
-                    $created_at = date('Y-m-d H:i:s');
-                }
-                
-                $updated_at = $status === 'completed' 
-                    ? date('Y-m-d H:i:s', strtotime($created_at . ' +2 days')) 
-                    : $created_at;
-                
-                // Generate report content based on diagnosis and treatment
-                $report_content = $this->generateReportContent($visitation);
-                
-                $data = [
-                    'patient_id' => $visitation->patient_id,
-                    'doctor_id' => $visitation->doctor_id,
-                    'visitation_id' => $visitation->ID,
-                    'report_content' => $report_content,
-                    'status' => $status,
-                    'created_at' => $created_at,
-                    'updated_at' => $updated_at
-                ];
-                
-                $this->wpdb->insert($this->wpdb->prefix . 'hm_medical_reports', $data);
+        $report_types = [
+            'General Checkup',
+            'Follow-up Examination',
+            'Specialist Consultation',
+            'Diagnostic Report',
+            'Treatment Summary',
+            'Pre-operative Assessment',
+            'Post-operative Report',
+            'Emergency Consultation'
+        ];
+        
+        $diagnoses = [
+            'Normal health status',
+            'Hypertension - controlled',
+            'Diabetes Type 2 - managed',
+            'Upper respiratory infection',
+            'Gastroenteritis - acute',
+            'Allergic rhinitis',
+            'Lower back pain - chronic',
+            'Anxiety disorder - mild',
+            'Vitamin D deficiency',
+            'Iron deficiency anemia'
+        ];
+        
+        $treatments = [
+            'Lifestyle modification and regular monitoring',
+            'Medication prescribed as per protocol',
+            'Physical therapy recommended',
+            'Follow-up in 2 weeks',
+            'Dietary changes advised',
+            'Exercise routine prescribed',
+            'Symptomatic treatment provided',
+            'Specialist referral made',
+            'Lab tests ordered for monitoring',
+            'Patient education provided'
+        ];
+        
+        for ($i = 0; $i < $total; $i++) {
+            $patient_id = $patient_ids[array_rand($patient_ids)];
+            $doctor_id = $doctor_ids[array_rand($doctor_ids)];
+            $report_type = $report_types[array_rand($report_types)];
+            $diagnosis = $diagnoses[array_rand($diagnoses)];
+            $treatment = $treatments[array_rand($treatments)];
+            
+            $days_ago = mt_rand(1, 90);
+            $report_date = date('Y-m-d', strtotime("-{$days_ago} days"));
+            $created_at = date('Y-m-d H:i:s', strtotime("-{$days_ago} days"));
+            
+            // Generate additional findings and recommendations
+            $findings = "Patient presented with symptoms consistent with {$diagnosis}. ";
+            $findings .= "Physical examination and assessment completed. ";
+            $findings .= "Vital signs within normal limits. ";
+            
+            $recommendations = "{$treatment}. ";
+            $recommendations .= "Patient advised to maintain regular follow-up appointments. ";
+            $recommendations .= "Emergency contact information provided. ";
+            
+            $data = [
+                'patient_id' => $patient_id,
+                'doctor_id' => $doctor_id,
+                'report_type' => $report_type,
+                'report_date' => $report_date,
+                'diagnosis' => $diagnosis,
+                'findings' => $findings,
+                'treatment_plan' => $treatment,
+                'recommendations' => $recommendations,
+                'status' => mt_rand(0, 100) <= 85 ? 'completed' : 'pending', // 85% completed
+                'created_at' => $created_at,
+                'updated_at' => $created_at
+            ];
+            
+            $result = $wpdb->insert($table, $data);
+            if ($result) {
                 $count++;
             }
         }
         
         $this->log("Created {$count} medical reports");
-    }
-    
-    /**
-     * Generate medical report content based on visitation data
-     * 
-     * @param object $visitation Visitation data
-     * @return string Report content
-     */
-    protected function generateReportContent($visitation)
-    {
-        // Get patient details
-        $patient = $this->wpdb->get_row(
-            "SELECT first_name, last_name, gender, age FROM {$this->wpdb->prefix}hm_patients WHERE ID = {$visitation->patient_id}"
-        );
-        
-        // Get doctor details
-        $doctor = $this->wpdb->get_row(
-            "SELECT first_name, last_name FROM {$this->wpdb->prefix}hm_doctors WHERE ID = {$visitation->doctor_id}"
-        );
-        
-        if (!$patient || !$doctor) {
-            // Fallback to generic report if patient or doctor not found
-            return $this->generateGenericReport();
-        }
-        
-        $diagnosis = $visitation->diagnosis ?: 'No specific diagnosis noted';
-        $treatment = $visitation->treatment ?: 'No specific treatment noted';
-        
-        $gender = $patient->gender ?: 'Unknown';
-        $age = $patient->age ?: 'Unknown';
-        
-        // Build report sections
-        $patientDetails = "### Patient Information\n" .
-            "**Name:** {$patient->first_name} {$patient->last_name}\n" .
-            "**Gender:** {$gender}\n" .
-            "**Age:** {$age}\n\n";
-        
-        $clinicalFindings = "### Clinical Findings\n" .
-            $this->faker->paragraph(3) . "\n\n";
-        
-        $diagnosisSection = "### Diagnosis\n" .
-            $diagnosis . "\n\n";
-        
-        $treatmentSection = "### Treatment Plan\n" .
-            $treatment . "\n\n";
-        
-        $recommendations = "### Recommendations\n" .
-            $this->faker->paragraph(2) . "\n\n";
-        
-        $conclusion = "### Conclusion\n" .
-            $this->faker->paragraph(1) . "\n\n";
-        
-        $signature = "**Physician:** Dr. {$doctor->first_name} {$doctor->last_name}\n" .
-            "**Date:** " . date('F j, Y') . "\n";
-        
-        // Combine all sections
-        return $patientDetails . $clinicalFindings . $diagnosisSection . 
-               $treatmentSection . $recommendations . $conclusion . $signature;
-    }
-    
-    /**
-     * Generate a generic medical report
-     * 
-     * @return string Generic report content
-     */
-    protected function generateGenericReport()
-    {
-        $sections = [
-            "### Patient Information\n" .
-            "**Name:** [Patient Name]\n" .
-            "**Gender:** [Gender]\n" .
-            "**Age:** [Age]\n\n",
-            
-            "### Clinical Findings\n" .
-            $this->faker->paragraph(3) . "\n\n",
-            
-            "### Diagnosis\n" .
-            $this->faker->paragraph(1) . "\n\n",
-            
-            "### Treatment Plan\n" .
-            $this->faker->paragraph(2) . "\n\n",
-            
-            "### Recommendations\n" .
-            $this->faker->paragraph(2) . "\n\n",
-            
-            "### Conclusion\n" .
-            $this->faker->paragraph(1) . "\n\n",
-            
-            "**Physician:** [Doctor Name]\n" .
-            "**Date:** " . date('F j, Y') . "\n"
-        ];
-        
-        return implode('', $sections);
     }
 }

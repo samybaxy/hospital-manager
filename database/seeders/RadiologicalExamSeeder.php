@@ -69,6 +69,8 @@ class RadiologicalExamSeeder extends Seeder
     {
         $this->log('Seeding radiological exams...');
         
+        global $wpdb;
+        
         // Get existing visitations
         $visitation_ids = $this->getExistingIds('hm_visitations');
         
@@ -90,8 +92,8 @@ class RadiologicalExamSeeder extends Seeder
             // 60% chance of creating a radiological exam for this visitation
             if (rand(1, 10) > 4) {
                 // Get visitation date
-                $created_at = $this->wpdb->get_var(
-                    "SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}"
+                $created_at = $wpdb->get_var(
+                    "SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}"
                 );
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
                 
@@ -107,15 +109,35 @@ class RadiologicalExamSeeder extends Seeder
                     if (isset($this->results[$exam_type])) {
                         $result_text = $this->results[$exam_type][array_rand($this->results[$exam_type])];
                     } else {
-                        $result_text = "Examination completed. " . $this->faker->paragraph(2);
+                        $generic_results = [
+                            'Examination completed. No abnormalities detected.',
+                            'Examination completed. Mild changes noted.',
+                            'Examination completed. Requires follow-up.',
+                            'Examination completed. Normal findings.'
+                        ];
+                        $result_text = $generic_results[array_rand($generic_results)];
                     }
                     
                     // Generate detailed results with structured reporting format
+                    $impressions = [
+                        'Normal study with no acute findings.',
+                        'Mild degenerative changes noted.',
+                        'No significant abnormalities identified.',
+                        'Findings consistent with clinical presentation.'
+                    ];
+                    
+                    $recommendations = [
+                        'Continue current treatment plan.',
+                        'Follow-up as clinically indicated.',
+                        'Correlate with clinical findings.',
+                        'Recommend specialist consultation if symptoms persist.'
+                    ];
+                    
                     $results = [
                         'exam_type' => $exam_type,
                         'findings' => $result_text,
-                        'impression' => $this->faker->paragraph(1),
-                        'recommendations' => $this->faker->paragraph(1)
+                        'impression' => $impressions[array_rand($impressions)],
+                        'recommendations' => $recommendations[array_rand($recommendations)]
                     ];
                     
                     $results = json_encode($results);
@@ -131,7 +153,7 @@ class RadiologicalExamSeeder extends Seeder
                     'updated_at' => $created_at
                 ];
                 
-                $this->wpdb->insert($this->wpdb->prefix . 'hm_radiological_exams', $data);
+                $wpdb->insert($wpdb->prefix . 'hm_radiological_exams', $data);
                 $count++;
             }
         }
@@ -147,6 +169,7 @@ class RadiologicalExamSeeder extends Seeder
      */
     protected function getExistingIds($table)
     {
-        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table}");
+        global $wpdb;
+        return $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}{$table}");
     }
 }

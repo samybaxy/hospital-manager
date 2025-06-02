@@ -173,7 +173,17 @@ class InventorySeeder extends Seeder
         $this->log("Created {$created} inventory items successfully");
         
         // Update all statuses after creation
-        $updated = Inventory::updateAllStatuses();
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        $updated = $wpdb->query("
+            UPDATE {$table} SET status = 
+            CASE 
+                WHEN expiry_date IS NOT NULL AND expiry_date < CURDATE() THEN 'Expired'
+                WHEN quantity = 0 THEN 'Out of Stock'
+                WHEN quantity <= reorder_level THEN 'Low Stock'
+                ELSE 'In Stock'
+            END
+        ");
         $this->log("Updated statuses for {$updated} items");
     }
 
@@ -217,7 +227,7 @@ class InventorySeeder extends Seeder
         
         // Generate cost
         $cost_range = $this->costs[$category];
-        $cost = $this->faker->randomFloat(2, $cost_range['min'], $cost_range['max']);
+        $cost = round(mt_rand($cost_range['min'] * 100, $cost_range['max'] * 100) / 100, 2);
         
         // Generate expiry date (only for applicable categories)
         $expiry_date = null;
@@ -255,11 +265,11 @@ class InventorySeeder extends Seeder
         $range = $ranges[$category];
         
         // Create some items with zero or very low stock
-        if ($this->faker->boolean(15)) { // 15% chance of low/zero stock
-            return $this->faker->numberBetween(0, 3);
+        if (mt_rand(1, 100) <= 15) { // 15% chance of low/zero stock
+            return mt_rand(0, 3);
         }
         
-        return $this->faker->numberBetween($range['min'], $range['max']);
+        return mt_rand($range['min'], $range['max']);
     }
 
     private function generateExpiryDate($category)
@@ -274,8 +284,8 @@ class InventorySeeder extends Seeder
         $range = $date_ranges[$category];
         
         // Some items get expiry dates in different ranges for testing
-        if ($this->faker->boolean(20)) { // 20% chance of expiring soon/expired
-            if ($this->faker->boolean(30)) { // 30% of those are expired
+        if (mt_rand(1, 100) <= 20) { // 20% chance of expiring soon/expired
+            if (mt_rand(1, 100) <= 30) { // 30% of those are expired
                 $start_date = strtotime('-60 days');
                 $end_date = strtotime('-1 day');
             } else { // 70% are expiring soon (within 30 days)
@@ -287,7 +297,7 @@ class InventorySeeder extends Seeder
             $end_date = strtotime($range['max']);
         }
         
-        $random_timestamp = $this->faker->numberBetween($start_date, $end_date);
+        $random_timestamp = mt_rand($start_date, $end_date);
         return date('Y-m-d', $random_timestamp);
     }
 

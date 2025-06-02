@@ -8,19 +8,21 @@ class AppointmentSeeder extends Seeder
     {
         $this->log("Creating appointment records...");
         
-        // Get patient and doctor IDs
-        $patients_table = $this->wpdb->prefix . 'hm_patients';
-        $patient_ids = $this->wpdb->get_col("SELECT ID FROM {$patients_table}");
+        global $wpdb;
         
-        $doctors_table = $this->wpdb->prefix . 'hm_doctors';
-        $doctor_ids = $this->wpdb->get_col("SELECT ID FROM {$doctors_table}");
+        // Get patient and doctor IDs
+        $patients_table = $wpdb->prefix . 'hm_patients';
+        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table}");
+        
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table}");
         
         if (empty($patient_ids) || empty($doctor_ids)) {
             $this->log("No patients or doctors found. Cannot create appointments.");
             return;
         }
         
-        $appointments_table = $this->wpdb->prefix . 'hm_appointments';
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
         $count = 0;
         $target = 150; // Increased from 100 to create more appointments
         
@@ -44,13 +46,14 @@ class AppointmentSeeder extends Seeder
         ];
         
         for ($i = 0; $i < $target; $i++) {
-            $patient_id = $this->faker->randomElement($patient_ids);
-            $doctor_id = $this->faker->randomElement($doctor_ids);
+            $patient_id = $patient_ids[array_rand($patient_ids)];
+            $doctor_id = $doctor_ids[array_rand($doctor_ids)];
             
             // Create appointments across different time ranges
             if ($i < 60) {
                 // Past appointments (60 appointments) - higher chance of completion
-                $appointment_date = $this->faker->dateTimeBetween('-6 months', '-1 day');
+                $days_ago = mt_rand(1, 180); // 1-180 days ago
+                $appointment_date = date('Y-m-d', strtotime("-{$days_ago} days"));
                 $status_weights = [
                     'completed' => 60,  // 60% completed (these will likely have visitations)
                     'cancelled' => 20,  // 20% cancelled
@@ -59,7 +62,8 @@ class AppointmentSeeder extends Seeder
                 ];
             } elseif ($i < 90) {
                 // Recent appointments (30 appointments)
-                $appointment_date = $this->faker->dateTimeBetween('-7 days', 'now');
+                $days_ago = mt_rand(0, 7); // 0-7 days ago
+                $appointment_date = date('Y-m-d', strtotime("-{$days_ago} days"));
                 $status_weights = [
                     'completed' => 40,
                     'confirmed' => 35,
@@ -68,7 +72,8 @@ class AppointmentSeeder extends Seeder
                 ];
             } else {
                 // Future appointments (60 appointments)
-                $appointment_date = $this->faker->dateTimeBetween('tomorrow', '+3 months');
+                $days_ahead = mt_rand(1, 90); // 1-90 days ahead
+                $appointment_date = date('Y-m-d', strtotime("+{$days_ahead} days"));
                 $status_weights = [
                     'pending' => 50,
                     'confirmed' => 45,
@@ -80,14 +85,16 @@ class AppointmentSeeder extends Seeder
             // Select status based on weights
             $status = $this->weightedRandomSelection($status_weights);
             
-            $appointment_time = $this->faker->time('H:i:s', '17:00:00');
-            $reason = $this->faker->randomElement($reasons);
+            $hour = mt_rand(8, 16); // 8 AM to 4 PM
+            $minute = mt_rand(0, 3) * 15; // 0, 15, 30, 45 minutes
+            $appointment_time = sprintf('%02d:%02d:00', $hour, $minute);
+            $reason = $reasons[array_rand($reasons)];
             
             // Check for duplicates
-            $exists = $this->wpdb->get_var($this->wpdb->prepare(
+            $exists = $wpdb->get_var($wpdb->prepare(
                 "SELECT COUNT(*) FROM {$appointments_table} 
                  WHERE patient_id = %d AND doctor_id = %d AND appointment_date = %s AND appointment_time = %s",
-                $patient_id, $doctor_id, $appointment_date->format('Y-m-d'), $appointment_time
+                $patient_id, $doctor_id, $appointment_date, $appointment_time
             ));
             
             if ($exists) {
@@ -95,18 +102,18 @@ class AppointmentSeeder extends Seeder
             }
             
             // Insert appointment
-            $result = $this->wpdb->insert(
+            $result = $wpdb->insert(
                 $appointments_table,
                 [
                     'patient_id' => $patient_id,
                     'doctor_id' => $doctor_id,
-                    'appointment_date' => $appointment_date->format('Y-m-d'),
+                    'appointment_date' => $appointment_date,
                     'appointment_time' => $appointment_time,
                     'reason' => $reason,
                     'status' => $status,
                     'notes' => $status === 'cancelled' ? 'Patient cancelled due to emergency' : null,
-                    'created_at' => (clone $appointment_date)->modify('-' . rand(1, 30) . ' days')->format('Y-m-d H:i:s'),
-                    'updated_at' => $appointment_date->format('Y-m-d H:i:s'),
+                    'created_at' => date('Y-m-d H:i:s', strtotime($appointment_date . ' -' . mt_rand(1, 30) . ' days')),
+                    'updated_at' => date('Y-m-d H:i:s', strtotime($appointment_date)),
                 ],
                 [
                     '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
@@ -117,10 +124,10 @@ class AppointmentSeeder extends Seeder
                 $count++;
                 // Store appointment info for visitation seeder
                 $this->storeAppointmentForVisitation([
-                    'appointment_id' => $this->wpdb->insert_id,
+                    'appointment_id' => $wpdb->insert_id,
                     'patient_id' => $patient_id,
                     'doctor_id' => $doctor_id,
-                    'date' => $appointment_date->format('Y-m-d'),
+                    'date' => $appointment_date,
                     'time' => $appointment_time,
                     'status' => $status,
                     'reason' => $reason

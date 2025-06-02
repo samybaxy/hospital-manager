@@ -2,10 +2,6 @@
 
 namespace HospitalManager\Database\Seeders;
 
-use HospitalManager\Models\Inventory;
-use HospitalManager\Models\InventorySupplier;
-use HospitalManager\Models\InventoryTransaction;
-
 class InventoryTransactionsSeeder extends Seeder
 {
     // Transaction type distribution probabilities

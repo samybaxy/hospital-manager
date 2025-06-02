@@ -1,7 +1,16 @@
 <?php
 
-namespace HospitalManager\Database\Seeders;
-
+namespace HospitalManager\Database\    public function run()
+    {
+        $this->log("Creating visitation records...");
+        
+        global $wpdb;
+        
+        // Get patient and doctor IDs
+        $patients_table = $wpdb->prefix . 'hm_patients';
+        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table}");
+        
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
 class VisitationSeeder extends Seeder
 {
     protected $complaints = [
@@ -48,15 +57,15 @@ class VisitationSeeder extends Seeder
         $patients_table = $this->wpdb->prefix . 'hm_patients';
         $patient_ids = $this->wpdb->get_col("SELECT ID FROM {$patients_table}");
         
-        $doctors_table = $this->wpdb->prefix . 'hm_doctors';
-        $doctor_ids = $this->wpdb->get_col("SELECT ID FROM {$doctors_table}");
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table}");
         
         if (empty($patient_ids) || empty($doctor_ids)) {
             $this->log("No patients or doctors found. Cannot create visitations.");
             return;
         }
         
-        $visitations_table = $this->wpdb->prefix . 'hm_visitations';
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
         $count = 0;
         
         // Step 1: Create visitations from completed appointments (70% of completed appointments)

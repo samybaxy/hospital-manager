@@ -77,6 +77,8 @@ class LabInvestigationSeeder extends Seeder
     {
         $this->log('Seeding lab investigations...');
         
+        global $wpdb;
+        
         // Get existing patients, doctors, lab techs and visitations
         $patient_ids = $this->getExistingIds('hm_patients');
         $doctor_ids = $this->getExistingIds('hm_doctors');
@@ -96,7 +98,7 @@ class LabInvestigationSeeder extends Seeder
             if ($count >= $maxRecords) break;
             
             // Get patient and doctor IDs from visitation
-            $visitation = $this->wpdb->get_row("SELECT patient_id, doctor_id FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
+            $visitation = $wpdb->get_row("SELECT patient_id, doctor_id FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
             
             if (!$visitation) continue;
             
@@ -111,10 +113,17 @@ class LabInvestigationSeeder extends Seeder
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
                 
                 // Generate created_at date based on visitation date
-                $created_at = $this->wpdb->get_var("SELECT date FROM {$this->wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
+                $created_at = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
                 
-                $notes = $this->faker->paragraph(2);
+                $sample_notes = [
+                    'Routine lab investigation ordered.',
+                    'Follow-up test requested by doctor.',
+                    'Patient symptoms require lab confirmation.',
+                    'Pre-operative lab work ordered.',
+                    'Monitoring chronic condition.'
+                ];
+                $notes = $sample_notes[array_rand($sample_notes)];
                 
                 // For completed tests, add results
                 $results = null;
@@ -124,7 +133,13 @@ class LabInvestigationSeeder extends Seeder
                     if (isset($this->results[$test_type])) {
                         $result_text = $this->results[$test_type][array_rand($this->results[$test_type])];
                     } else {
-                        $result_text = "Test completed. " . $this->faker->sentence(10);
+                        $generic_results = [
+                            'Test completed. Results within normal limits.',
+                            'Test completed. Some abnormal values noted.',
+                            'Test completed. Requires follow-up consultation.',
+                            'Test completed. No significant findings.'
+                        ];
+                        $result_text = $generic_results[array_rand($generic_results)];
                     }
                     
                     $results = $result_text;
@@ -143,7 +158,7 @@ class LabInvestigationSeeder extends Seeder
                     'updated_at' => $created_at
                 ];
                 
-                $this->wpdb->insert($this->wpdb->prefix . 'hm_lab_investigations', $data);
+                $wpdb->insert($wpdb->prefix . 'hm_lab_investigations', $data);
                 $count++;
             }
         }
@@ -159,6 +174,7 @@ class LabInvestigationSeeder extends Seeder
      */
     protected function getExistingIds($table)
     {
-        return $this->wpdb->get_col("SELECT ID FROM {$this->wpdb->prefix}{$table}");
+        global $wpdb;
+        return $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}{$table}");
     }
 }

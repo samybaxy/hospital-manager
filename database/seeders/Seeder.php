@@ -2,26 +2,30 @@
 
 namespace HospitalManager\Database\Seeders;
 
-use Faker\Factory;
-
 abstract class Seeder
 {
     protected $faker;
-    protected $wpdb;
-    
+
     public function __construct()
     {
-        global $wpdb;
-        $this->wpdb = $wpdb;
-        $this->faker = Factory::create('en_NG'); // Using Nigerian locale for Faker
+        // Try to initialize faker if available, otherwise use fallback methods
+        if (class_exists('Faker\Factory')) {
+            try {
+                $this->faker = \Faker\Factory::create('en_NG');
+            } catch (\Exception $e) {
+                $this->faker = null;
+            }
+        } else {
+            $this->faker = null;
+        }
     }
-    
+
     /**
      * Run the seeder
      * @return bool True if seeding was successful, false otherwise
      */
     abstract public function run();
-    
+
     /**
      * Get WordPress user IDs to use for seeding
      * 
@@ -82,6 +86,6 @@ abstract class Seeder
      */
     protected function log($message)
     {
-        echo "\033[32m" . "[Seeder] " . $message . "\033[0m\n";
+        echo $message . PHP_EOL;
     }
 }

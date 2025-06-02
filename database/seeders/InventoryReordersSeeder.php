@@ -2,10 +2,6 @@
 
 namespace HospitalManager\Database\Seeders;
 
-use HospitalManager\Models\Inventory;
-use HospitalManager\Models\InventorySupplier;
-use HospitalManager\Models\InventoryReorder;
-
 class InventoryReordersSeeder extends Seeder
 {
     // Status distribution for reorders
