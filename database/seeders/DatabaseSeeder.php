@@ -21,6 +21,10 @@ class DatabaseSeeder
         ChatSeeder::class,
         MedicalReportSeeder::class,
         InventorySeeder::class,
+        InventorySuppliersSeeder::class,
+        InventoryTransactionsSeeder::class,
+        InventoryAlertsSeeder::class,
+        InventoryReordersSeeder::class,
         AuditLogSeeder::class,
     ];
     
