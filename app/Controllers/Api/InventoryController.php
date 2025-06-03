@@ -646,6 +646,7 @@ class InventoryController extends BaseController
                 'offset' => $offset
             ];
 
+            // DEBUG: Log the filters being applied
             // Remove null values except for limit and offset
             $filters = array_filter($filters, function($value, $key) {
                 if (in_array($key, ['limit', 'offset'])) {

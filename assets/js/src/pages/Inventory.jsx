@@ -164,13 +164,17 @@ const Inventory = () => {
     loadAlertCounts();
   }, []);
 
-  // Update totalPages when summary data loads
+  // Update totalPages when summary data loads (only if no filters are active)
   useEffect(() => {
-    if (summary?.total_items) {
+    // Only update totalPages from summary if no filters are active
+    // When filters are active, pagination comes from the filtered API response
+    const hasActiveFilters = filters.search || filters.category || filters.status || filters.low_stock || filters.expiring;
+    
+    if (summary?.total_items && !hasActiveFilters) {
       const calculatedPages = Math.max(1, Math.ceil(summary.total_items / itemsPerPage));
       setTotalPages(calculatedPages);
     }
-  }, [summary?.total_items, itemsPerPage]);
+  }, [summary?.total_items, itemsPerPage, filters]);
 
   // Initial load
   useEffect(() => {

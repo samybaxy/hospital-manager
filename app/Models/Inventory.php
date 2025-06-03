@@ -44,6 +44,14 @@ class Inventory extends BaseModel
      */
     public static function getFiltered($filters = [])
     {
+        // When a status filter is applied, remove conflicting boolean filters to prevent contradictions
+        if (!empty($filters['status'])) {
+            // Remove expiring and low_stock filters when status is explicitly set
+            // as status filters use computed logic that may conflict
+            $filters['expiring'] = '';
+            $filters['low_stock'] = '';
+        }
+        
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -56,8 +64,26 @@ class Inventory extends BaseModel
         }
 
         if (!empty($filters['status'])) {
-            $where[] = 'status = %s';
-            $values[] = $filters['status'];
+            // Handle computed status filtering based on business logic
+            switch ($filters['status']) {
+                case 'In Stock':
+                    $where[] = 'quantity > reorder_level AND (expiry_date IS NULL OR expiry_date > CURDATE())';
+                    break;
+                case 'Low Stock':
+                    $where[] = 'quantity <= reorder_level AND quantity > 0 AND (expiry_date IS NULL OR expiry_date > CURDATE())';
+                    break;
+                case 'Out of Stock':
+                    $where[] = 'quantity = 0';
+                    break;
+                case 'Expired':
+                    $where[] = 'expiry_date IS NOT NULL AND expiry_date <= CURDATE()';
+                    break;
+                default:
+                    // Fallback to database status field for any other values
+                    $where[] = 'status = %s';
+                    $values[] = $filters['status'];
+                    break;
+            }
         }
 
         if (!empty($filters['location'])) {
@@ -124,7 +150,7 @@ class Inventory extends BaseModel
         if (!empty($values)) {
             $query = $wpdb->prepare($query, $values);
         }
-
+        
         return $wpdb->get_results($query);
     }
 
@@ -136,6 +162,14 @@ class Inventory extends BaseModel
      */
     public static function getFilteredCount($filters = [])
     {
+        // When a status filter is applied, remove conflicting boolean filters to prevent contradictions
+        if (!empty($filters['status'])) {
+            // Remove expiring and low_stock filters when status is explicitly set
+            // as status filters use computed logic that may conflict
+            $filters['expiring'] = '';
+            $filters['low_stock'] = '';
+        }
+        
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -148,8 +182,26 @@ class Inventory extends BaseModel
         }
 
         if (!empty($filters['status'])) {
-            $where[] = 'status = %s';
-            $values[] = $filters['status'];
+            // Handle computed status filtering based on business logic
+            switch ($filters['status']) {
+                case 'In Stock':
+                    $where[] = 'quantity > reorder_level AND (expiry_date IS NULL OR expiry_date > CURDATE())';
+                    break;
+                case 'Low Stock':
+                    $where[] = 'quantity <= reorder_level AND quantity > 0 AND (expiry_date IS NULL OR expiry_date > CURDATE())';
+                    break;
+                case 'Out of Stock':
+                    $where[] = 'quantity = 0';
+                    break;
+                case 'Expired':
+                    $where[] = 'expiry_date IS NOT NULL AND expiry_date <= CURDATE()';
+                    break;
+                default:
+                    // Fallback to database status field for any other values
+                    $where[] = 'status = %s';
+                    $values[] = $filters['status'];
+                    break;
+            }
         }
 
         if (!empty($filters['location'])) {
@@ -199,7 +251,7 @@ class Inventory extends BaseModel
         if (!empty($values)) {
             $query = $wpdb->prepare($query, $values);
         }
-
+        
         return intval($wpdb->get_var($query));
     }
 
