@@ -105,7 +105,6 @@ class InventoryService {
    */
   async getSummary() {
     try {
-        console.log( 'Fetching inventory summary from:', `${this.baseURL}/summary`);
       const response = await apiClient.get(`${this.baseURL}/summary`);
       return response.data.data || {};
     } catch (error) {

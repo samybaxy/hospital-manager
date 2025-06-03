@@ -1,13 +1,342 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './Card';
 import Button from './Button';
-import Modal from './Modal';
+import LoadingState from './LoadingState';
+import Alert from './Alert';
+import Table from './Table';
+import Badge from './Badge';
 import inventoryService from '../services/inventoryService';
+import { usePermissions } from '../hooks/usePermissions.jsx';
 
-const InventoryReports = ({ isOpen, onClose }) => {
-  const [reportType, setReportType] = useState('summary');
+const InventoryReports = ({ onRefresh }) => {
+  const permissions = usePermissions();
+  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  
+  // Report data
   const [reportData, setReportData] = useState(null);
+  const [reportType, setReportType] = useState('summary');
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    date_from: '',
+    date_to: '',
+    category_id: '',
+    location: '',
+    supplier_id: ''
+  });
+
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    if (reportType) {
+      generateReport(reportType);
+    }
+  }, [reportType, filters]);
+
+  const loadInitialData = async () => {
+    try {
+      setLoading(true);
+      const [itemsResponse, categoriesResponse] = await Promise.all([
+        inventoryService.getItems(),
+        inventoryService.getCategories()
+      ]);
+
+      // Handle nested response structure for inventory items
+      if (itemsResponse.success) {
+        const items = itemsResponse.data?.items || itemsResponse.data?.data || itemsResponse.data || [];
+        setInventoryItems(Array.isArray(items) ? items : []);
+      } else {
+        // Handle direct response without success flag
+        const items = Array.isArray(itemsResponse) ? itemsResponse : 
+                     Array.isArray(itemsResponse.data) ? itemsResponse.data :
+                     Array.isArray(itemsResponse.data?.data) ? itemsResponse.data.data : [];
+        setInventoryItems(Array.isArray(items) ? items : []);
+      }
+      
+      if (categoriesResponse.success) {
+        setCategories(categoriesResponse.data || []);
+      } else {
+        // Handle direct response without success flag
+        const categories = Array.isArray(categoriesResponse) ? categoriesResponse : categoriesResponse.data || [];
+        setCategories(Array.isArray(categories) ? categories : []);
+      }
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+      setError('Failed to load initial data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateReport = async (type) => {
+    try {
+      setGenerating(true);
+      setError(null);
+      
+      let data = [];
+      
+      switch (type) {
+        case 'summary':
+          data = generateSummaryReport();
+          break;
+        case 'critical':
+          data = generateCriticalStockReport();
+          break;
+        case 'expiring':
+          data = generateExpiringItemsReport();
+          break;
+        case 'category':
+          data = generateCategoryReport();
+          break;
+        case 'valuation':
+          data = generateValuationReport();
+          break;
+        default:
+          data = [];
+      }
+      
+      setReportData(data);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setError('Failed to generate report');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const generateSummaryReport = () => {
+    if (!Array.isArray(inventoryItems)) {
+      return [];
+    }
+    
+    let items = [...inventoryItems];
+    
+    // Apply filters
+    if (filters.category_id) {
+      items = items.filter(item => item.category_id === parseInt(filters.category_id));
+    }
+    if (filters.location) {
+      items = items.filter(item => item.location?.toLowerCase().includes(filters.location.toLowerCase()));
+    }
+
+    return items.map(item => ({
+      id: item.ID, // Use uppercase ID field from WordPress database
+      name: item.item_name,
+      category: item.category || 'N/A',
+      current_stock: item.quantity || 0,
+      minimum_stock: item.reorder_level || 0,
+      maximum_stock: item.maximum_stock || 0,
+      unit: item.unit || 'pcs',
+      location: item.location || 'N/A',
+      status: getStockStatus(item),
+      value: (item.quantity || 0) * (item.cost || 0)
+    }));
+  };
+
+  const generateCriticalStockReport = () => {
+    if (!Array.isArray(inventoryItems)) {
+      return [];
+    }
+    
+    return inventoryItems
+      .filter(item => {
+        const currentStock = item.quantity || 0;
+        const minimumStock = item.reorder_level || 0;
+        return currentStock <= minimumStock;
+      })
+      .map(item => ({
+        id: item.ID, // Use uppercase ID field from WordPress database
+        name: item.item_name,
+        category: item.category || 'N/A',
+        current_stock: item.quantity || 0,
+        minimum_stock: item.reorder_level || 0,
+        shortage: (item.reorder_level || 0) - (item.quantity || 0),
+        unit: item.unit || 'pcs',
+        location: item.location || 'N/A',
+        priority: (item.quantity || 0) === 0 ? 'Critical' : 'Low'
+      }));
+  };
+
+  const generateExpiringItemsReport = () => {
+    if (!Array.isArray(inventoryItems)) {
+      return [];
+    }
+    
+    const today = new Date();
+    const thirtyDaysFromNow = new Date(today.getTime() + (30 * 24 * 60 * 60 * 1000));
+    
+    return inventoryItems
+      .filter(item => {
+        if (!item.expiry_date) return false;
+        const expiryDate = new Date(item.expiry_date);
+        return expiryDate <= thirtyDaysFromNow;
+      })
+      .map(item => {
+        const expiryDate = new Date(item.expiry_date);
+        const daysToExpiry = Math.ceil((expiryDate - today) / (24 * 60 * 60 * 1000));
+        
+        return {
+          id: item.ID, // Use uppercase ID field from WordPress database
+          name: item.item_name,
+          category: item.category || 'N/A',
+          current_stock: item.quantity || 0,
+          expiry_date: item.expiry_date,
+          days_to_expiry: daysToExpiry,
+          batch_number: item.batch_number || 'N/A',
+          status: daysToExpiry <= 0 ? 'Expired' : daysToExpiry <= 7 ? 'Critical' : 'Warning'
+        };
+      })
+      .sort((a, b) => a.days_to_expiry - b.days_to_expiry);
+  };
+
+  const generateCategoryReport = () => {
+    if (!Array.isArray(inventoryItems)) {
+      return [];
+    }
+    
+    const categoryStats = {};
+    
+    inventoryItems.forEach(item => {
+      const categoryName = item.category_name || 'Uncategorized';
+      if (!categoryStats[categoryName]) {
+        categoryStats[categoryName] = {
+          category: categoryName,
+          total_items: 0,
+          total_stock: 0,
+          total_value: 0,
+          low_stock_items: 0
+        };
+      }
+      
+      categoryStats[categoryName].total_items++;
+      categoryStats[categoryName].total_stock += item.current_stock || 0;
+      categoryStats[categoryName].total_value += (item.current_stock || 0) * (item.unit_cost || 0);
+      
+      if ((item.current_stock || 0) <= (item.minimum_stock || 0)) {
+        categoryStats[categoryName].low_stock_items++;
+      }
+    });
+    
+    return Object.values(categoryStats);
+  };
+
+  const generateValuationReport = () => {
+    if (!Array.isArray(inventoryItems)) {
+      return [];
+    }
+    
+    return inventoryItems.map(item => ({
+      id: item.ID, // Use uppercase ID field from WordPress database
+      name: item.item_name,
+      category: item.category || 'N/A',
+      current_stock: item.quantity || 0,
+      unit_cost: item.cost || 0,
+      total_value: (item.quantity || 0) * (item.cost || 0),
+      unit: item.unit || 'pcs',
+      location: item.location || 'N/A'
+    })).sort((a, b) => b.total_value - a.total_value);
+  };
+
+  const getStockStatus = (item) => {
+    const currentStock = item.current_stock || 0;
+    const minimumStock = item.minimum_stock || 0;
+    
+    if (currentStock === 0) return 'Out of Stock';
+    if (currentStock <= minimumStock) return 'Low Stock';
+    return 'In Stock';
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'Out of Stock':
+      case 'Critical':
+      case 'Expired':
+        return 'destructive';
+      case 'Low Stock':
+      case 'Warning':
+        return 'warning';
+      default:
+        return 'default';
+    }
+  };
+
+  const downloadCSV = () => {
+    if (!reportData || reportData.length === 0) {
+      setError('No data to download');
+      return;
+    }
+
+    const headers = Object.keys(reportData[0]).join(',');
+    const rows = reportData.map(row => 
+      Object.values(row).map(value => 
+        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+      ).join(',')
+    );
+    
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.href = url;
+    link.download = `inventory_${reportType}_report_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    setSuccess('Report downloaded successfully');
+  };
+
+  const handleFilterChange = (name, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const renderReportContent = () => {
+    if (!reportData || reportData.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          No data available for the selected report type and filters.
+        </div>
+      );
+    }
+
+    const columns = Object.keys(reportData[0]).map(key => ({
+      key,
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      render: (value, row) => {
+        if (key === 'status' || key === 'priority') {
+          return <Badge variant={getStatusBadgeVariant(value)}>{value}</Badge>;
+        }
+        if (key.includes('value') || key.includes('cost')) {
+          return typeof value === 'number' ? `₦${value.toLocaleString()}` : value;
+        }
+        if (key.includes('date')) {
+          return value ? new Date(value).toLocaleDateString() : 'N/A';
+        }
+        return value;
+      }
+    }));
+
+    return (
+      <Table
+        data={reportData}
+        columns={columns}
+        pagination={true}
+        searchable={true}
+      />
+    );
+  };
 
   const reportTypes = [
     { value: 'summary', label: 'Inventory Summary', description: 'Overview of all inventory categories' },
@@ -16,41 +345,6 @@ const InventoryReports = ({ isOpen, onClose }) => {
     { value: 'category', label: 'Category Analysis', description: 'Breakdown by item categories' },
     { value: 'valuation', label: 'Inventory Valuation', description: 'Total value of inventory items' }
   ];
-
-  const generateReport = async () => {
-    setGenerating(true);
-    try {
-      let data;
-      
-      switch (reportType) {
-        case 'summary':
-          data = await inventoryService.getSummary();
-          break;
-        case 'critical':
-          data = await inventoryService.getCriticalItems();
-          break;
-        case 'expiring':
-          data = await inventoryService.getExpiringItems(30);
-          break;
-        case 'category':
-          data = await inventoryService.getItems({ per_page: -1 });
-          data = processCategoryData(data.data || []);
-          break;
-        case 'valuation':
-          data = await inventoryService.getItems({ per_page: -1 });
-          data = processValuationData(data.data || []);
-          break;
-        default:
-          data = await inventoryService.getSummary();
-      }
-      
-      setReportData(data);
-    } catch (error) {
-      console.error('Error generating report:', error);
-    } finally {
-      setGenerating(false);
-    }
-  };
 
   const processCategoryData = (items) => {
     const categories = {};
@@ -149,20 +443,28 @@ const InventoryReports = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Generate Inventory Report"
-      size="lg"
-    >
-      <div className="space-y-6">
-        {/* Report Type Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Select Report Type
-          </label>
-          <div className="grid grid-cols-1 gap-3">
-            {reportTypes.map((type) => (
+    <div className="space-y-6">
+      {/* Error and Success Alerts */}
+      {error && (
+        <Alert type="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert type="success" className="mb-4">
+          {success}
+        </Alert>
+      )}
+
+      {/* Report Type Selection */}
+      <Card title="Generate Inventory Report">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Select Report Type
+            </label>
+            <div className="grid grid-cols-1 gap-3">{reportTypes.map((type) => (
               <label key={type.value} className="flex items-start">
                 <input
                   type="radio"
@@ -184,7 +486,7 @@ const InventoryReports = ({ isOpen, onClose }) => {
         <div className="flex justify-center">
           <Button
             variant="primary"
-            onClick={generateReport}
+            onClick={() => generateReport(reportType)}
             disabled={generating}
           >
             {generating ? 'Generating...' : 'Generate Report'}
@@ -292,15 +594,9 @@ const InventoryReports = ({ isOpen, onClose }) => {
             </div>
           </Card>
         )}
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-3 pt-6 border-t">
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
         </div>
-      </div>
-    </Modal>
+      </Card>
+    </div>
   );
 };
 

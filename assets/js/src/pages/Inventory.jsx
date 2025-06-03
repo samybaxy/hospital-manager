@@ -15,9 +15,6 @@ import InventoryReorders from '../components/InventoryReorders';
 import inventoryService from '../services/inventoryService';
 import { usePermissions, PermissionGate, useInventoryActions } from '../hooks/usePermissions.jsx';
 
-// Adding inventory debug tools
-import { exposeDebugger } from '../utils/inventoryDebug';
-
 const Inventory = () => {
   // Get permissions and actions
   const permissions = usePermissions();
@@ -180,9 +177,6 @@ const Inventory = () => {
     loadInventory();
     loadSummary();
     loadAlertCounts();
-    
-    // Expose the debugger tool to the window
-    exposeDebugger();
   }, []);
 
   // Reload inventory data when pagination or filters change
@@ -268,13 +262,15 @@ const Inventory = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await inventoryService.updateItem(selectedItem.id, itemData);
+      // Use uppercase ID field from WordPress database convention
+      await inventoryService.updateItem(selectedItem.ID, itemData);
       setShowEditModal(false);
       setSelectedItem(null);
       setSuccess('Item updated successfully!');
       loadInventory();
       loadSummary();
     } catch (err) {
+      console.error('Error updating inventory item:', err);
       setError('Failed to update item. Please try again.');
     } finally {
       setSubmitting(false);
@@ -286,7 +282,8 @@ const Inventory = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await inventoryService.deleteItem(selectedItem.id);
+      // Use uppercase ID field from WordPress database convention
+      await inventoryService.deleteItem(selectedItem.ID);
       setShowDeleteModal(false);
       setSelectedItem(null);
       setSuccess('Item deleted successfully!');
@@ -835,7 +832,7 @@ const Inventory = () => {
       <PermissionGate permission="reports">
         {activeTab === 'reports' && (
           <div className="space-y-6">
-            <InventoryReports />
+            <InventoryReports onRefresh={refreshAllData} />
           </div>
         )}
       </PermissionGate>

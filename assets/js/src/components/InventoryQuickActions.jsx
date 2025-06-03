@@ -159,7 +159,7 @@ const InventoryQuickActions = ({ onReload }) => {
             <div className="bg-red-50 p-3 rounded-md border border-red-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {critical.slice(0, 6).map((item, index) => (
-                  <div key={`critical-${item.id || index}`} className="bg-white p-2 rounded border border-red-100 flex justify-between items-center">
+                  <div key={`critical-${item.ID || index}`} className="bg-white p-2 rounded border border-red-100 flex justify-between items-center">
                     <div>
                       <div className="font-medium">{item.item_name}</div>
                       <div className="text-xs text-gray-500">
@@ -200,7 +200,7 @@ const InventoryQuickActions = ({ onReload }) => {
             <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {expiring.slice(0, 6).map((item, index) => (
-                  <div key={`expiring-${item.id || index}`} className="bg-white p-2 rounded border border-yellow-100 flex justify-between items-center">
+                  <div key={`expiring-${item.ID || index}`} className="bg-white p-2 rounded border border-yellow-100 flex justify-between items-center">
                     <div>
                       <div className="font-medium">{item.item_name}</div>
                       <div className="text-xs text-gray-500">
