@@ -175,7 +175,7 @@ const InventoryQuickActions = ({ onReload }) => {
                   <Button 
                     variant="link" 
                     size="sm" 
-                    onClick={() => onReload({ status: 'Low Stock', low_stock: false, expiring: false })}
+                    onClick={() => onReload({ low_stock: true, expiring: false })}
                     className="text-red-600 hover:text-red-800 font-medium"
                   >
                     View all {critical.length} critical items
