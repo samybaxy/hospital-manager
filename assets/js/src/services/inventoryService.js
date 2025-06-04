@@ -312,7 +312,8 @@ class InventoryService {
   async getReorders(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/reorders`, { params });
-      return response.data.data || [];
+      // Return the full response to preserve pagination metadata
+      return response.data;
     } catch (error) {
       console.error('Error fetching reorders:', error);
       throw error;
@@ -361,10 +362,11 @@ class InventoryService {
   /**
    * Get reorder suggestions
    */
-  async getReorderSuggestions() {
+  async getReorderSuggestions(params = {}) {
     try {
-      const response = await apiClient.get(`${this.baseURL}/reorders/suggestions`);
-      return response.data.data || [];
+      const response = await apiClient.get(`${this.baseURL}/reorders/suggestions`, { params });
+      // Return the full response to preserve pagination metadata
+      return response.data;
     } catch (error) {
       console.error('Error fetching reorder suggestions:', error);
       throw error;

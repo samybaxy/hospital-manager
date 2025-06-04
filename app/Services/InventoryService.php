@@ -299,6 +299,67 @@ class InventoryService
     }
     
     /**
+     * Generate reorder suggestions with pagination
+     *
+     * @param int $page Current page number
+     * @param int $per_page Items per page
+     * @return array
+     */
+    public static function generateReorderSuggestionsPaginated($page = 1, $per_page = 10)
+    {
+        global $wpdb;
+        
+        // Calculate offset
+        $offset = ($page - 1) * $per_page;
+        
+        // Get total count of items below reorder level
+        $total_items = $wpdb->get_var("
+            SELECT COUNT(*) FROM {$wpdb->prefix}hm_inventory 
+            WHERE quantity <= reorder_level
+        ");
+        
+        // Get paginated items below reorder level
+        $items = $wpdb->get_results($wpdb->prepare("
+            SELECT * FROM {$wpdb->prefix}hm_inventory 
+            WHERE quantity <= reorder_level 
+            ORDER BY quantity ASC
+            LIMIT %d OFFSET %d
+        ", $per_page, $offset));
+        
+        $suggestions = [];
+        foreach ($items as $item) {
+            $suggested_quantity = max($item->reorder_level * 2, 10); // Suggest double the reorder level or minimum 10
+            
+            $suggestions[] = [
+                'item_id' => $item->ID,
+                'item_name' => $item->item_name,
+                'category' => $item->category,
+                'quantity' => $item->quantity,
+                'current_quantity' => $item->quantity,
+                'reorder_level' => $item->reorder_level,
+                'max_stock_level' => $item->max_stock_level,
+                'suggested_quantity' => $suggested_quantity,
+                'priority' => $item->quantity <= 0 ? 'urgent' : ($item->quantity <= $item->reorder_level * 0.5 ? 'high' : 'medium')
+            ];
+        }
+        
+        // Calculate pagination info
+        $total_pages = ceil($total_items / $per_page);
+        
+        return [
+            'data' => $suggestions,
+            'pagination' => [
+                'current_page' => intval($page),
+                'per_page' => intval($per_page),
+                'total_items' => intval($total_items),
+                'total_pages' => intval($total_pages),
+                'has_next' => $page < $total_pages,
+                'has_prev' => $page > 1
+            ]
+        ];
+    }
+
+    /**
      * Get dashboard data
      *
      * @return array

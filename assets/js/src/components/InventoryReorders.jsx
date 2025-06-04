@@ -27,6 +27,18 @@ const InventoryReorders = ({ onRefresh }) => {
   const [selectedReorder, setSelectedReorder] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Pagination states for reorders
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
+  // Pagination states for suggestions
+  const [suggestionsCurrentPage, setSuggestionsCurrentPage] = useState(1);
+  const [suggestionsTotalPages, setSuggestionsTotalPages] = useState(1);
+  const [suggestionsItemsPerPage, setSuggestionsItemsPerPage] = useState(10);
+  const [suggestionsTotalItems, setSuggestionsTotalItems] = useState(0);
+
   // Filter states
   const [filters, setFilters] = useState({
     status: '',
@@ -64,7 +76,7 @@ const InventoryReorders = ({ onRefresh }) => {
     } else if (activeTab === 'suggestions') {
       loadSuggestions();
     }
-  }, [filters, activeTab]);
+  }, [filters, activeTab, currentPage, itemsPerPage, suggestionsCurrentPage, suggestionsItemsPerPage]);
 
   const loadInventoryItems = async () => {
     try {
@@ -101,12 +113,46 @@ const InventoryReorders = ({ onRefresh }) => {
   const loadReorders = async () => {
     setLoading(true);
     try {
-      const response = await inventoryService.getReorders(filters);
-      const data = Array.isArray(response) ? response : response.data || [];
-      setReorders(data);
+      const params = {
+        ...filters,
+        page: currentPage,
+        per_page: itemsPerPage
+      };
+      
+      const response = await inventoryService.getReorders(params);
+      
+      // Debug logging
+      console.log('Reorders API Response:', response);
+      
+      // Handle the API response structure: { success: true, data: { data: [...], pagination: {...} } }
+      if (response && response.success && response.data) {
+        const reordersData = Array.isArray(response.data.data) ? response.data.data : [];
+        const pagination = response.data.pagination || {};
+        
+        console.log('Parsed reorders data:', reordersData);
+        console.log('Parsed pagination:', pagination);
+        
+        setReorders(reordersData);
+        setTotalPages(pagination.total_pages || 1);
+        setTotalItems(pagination.total_items || 0);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        // Fallback for direct array response
+        console.log('Using fallback array response:', response.data);
+        setReorders(response.data);
+        setTotalPages(1);
+        setTotalItems(response.data.length);
+      } else {
+        // Final fallback
+        console.log('Using final fallback for response:', response);
+        const data = Array.isArray(response) ? response : [];
+        setReorders(data);
+        setTotalPages(1);
+        setTotalItems(data.length);
+      }
     } catch (err) {
       console.error('Error loading reorders:', err);
       setError('Failed to load reorders');
+      setReorders([]); // Ensure it's reset on error
     } finally {
       setLoading(false);
     }
@@ -115,12 +161,45 @@ const InventoryReorders = ({ onRefresh }) => {
   const loadSuggestions = async () => {
     setLoadingSuggestions(true);
     try {
-      const response = await inventoryService.getReorderSuggestions();
-      const data = Array.isArray(response) ? response : response.data || [];
-      setSuggestions(data);
+      const params = {
+        page: suggestionsCurrentPage,
+        per_page: suggestionsItemsPerPage
+      };
+      
+      const response = await inventoryService.getReorderSuggestions(params);
+      
+      // Debug logging
+      console.log('Suggestions API Response:', response);
+      
+      // Handle the API response structure: { success: true, data: { data: [...], pagination: {...} } }
+      if (response && response.success && response.data) {
+        const suggestionsData = Array.isArray(response.data.data) ? response.data.data : [];
+        const pagination = response.data.pagination || {};
+        
+        console.log('Parsed suggestions data:', suggestionsData);
+        console.log('Parsed pagination:', pagination);
+        
+        setSuggestions(suggestionsData);
+        setSuggestionsTotalPages(pagination.total_pages || 1);
+        setSuggestionsTotalItems(pagination.total_items || 0);
+      } else if (response && response.data && Array.isArray(response.data)) {
+        // Fallback for direct array response
+        console.log('Using fallback array response:', response.data);
+        setSuggestions(response.data);
+        setSuggestionsTotalPages(1);
+        setSuggestionsTotalItems(response.data.length);
+      } else {
+        // Final fallback
+        console.log('Using final fallback for response:', response);
+        const data = Array.isArray(response) ? response : [];
+        setSuggestions(data);
+        setSuggestionsTotalPages(1);
+        setSuggestionsTotalItems(data.length);
+      }
     } catch (err) {
       console.error('Error loading suggestions:', err);
       setError('Failed to load reorder suggestions');
+      setSuggestions([]); // Ensure it's reset on error
     } finally {
       setLoadingSuggestions(false);
     }
@@ -414,6 +493,36 @@ const InventoryReorders = ({ onRefresh }) => {
     }
   ];
 
+  // Pagination handlers
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  const handleSuggestionsPageChange = (newPage) => {
+    setSuggestionsCurrentPage(newPage);
+  };
+
+  const handleSuggestionsItemsPerPageChange = (newItemsPerPage) => {
+    setSuggestionsItemsPerPage(newItemsPerPage);
+    setSuggestionsCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setCurrentPage(1); // Reset pagination when switching tabs
+    setSuggestionsCurrentPage(1);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -448,7 +557,7 @@ const InventoryReorders = ({ onRefresh }) => {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('reorders')}
+            onClick={() => handleTabChange('reorders')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'reorders'
                 ? 'border-blue-500 text-blue-600'
@@ -458,7 +567,7 @@ const InventoryReorders = ({ onRefresh }) => {
             Reorders
           </button>
           <button
-            onClick={() => setActiveTab('suggestions')}
+            onClick={() => handleTabChange('suggestions')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'suggestions'
                 ? 'border-blue-500 text-blue-600'
@@ -480,7 +589,7 @@ const InventoryReorders = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Statuses</option>
@@ -498,7 +607,7 @@ const InventoryReorders = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.priority}
-                  onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+                  onChange={(e) => handleFilterChange({ ...filters, priority: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Priorities</option>
@@ -514,7 +623,7 @@ const InventoryReorders = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.item_id}
-                  onChange={(e) => setFilters(prev => ({ ...prev, item_id: e.target.value }))}
+                  onChange={(e) => handleFilterChange({ ...filters, item_id: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Items</option>
@@ -531,7 +640,7 @@ const InventoryReorders = ({ onRefresh }) => {
                 </label>
                 <select
                   value={filters.supplier_id}
-                  onChange={(e) => setFilters(prev => ({ ...prev, supplier_id: e.target.value }))}
+                  onChange={(e) => handleFilterChange({ ...filters, supplier_id: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="">All Suppliers</option>
@@ -547,7 +656,11 @@ const InventoryReorders = ({ onRefresh }) => {
       )}
 
       {/* Content */}
-      <Card title={activeTab === 'reorders' ? 'Reorder Requests' : 'Reorder Suggestions'}>
+      <Card title={
+        activeTab === 'reorders' 
+          ? `Reorder Requests (${totalItems} items)`
+          : `Reorder Suggestions (${suggestionsTotalItems} items)`
+      }>
         {activeTab === 'reorders' && (
           <>
             {loading ? (
@@ -560,6 +673,15 @@ const InventoryReorders = ({ onRefresh }) => {
               <Table
                 columns={reorderColumns}
                 data={reorders}
+                emptyMessage="No reorders found"
+                pagination={true}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                itemsPerPage={itemsPerPage}
+                totalItems={totalItems}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                showItemsPerPageSelector={false}
               />
             )}
           </>
@@ -578,6 +700,15 @@ const InventoryReorders = ({ onRefresh }) => {
               <Table
                 columns={suggestionColumns}
                 data={suggestions}
+                emptyMessage="No suggestions found"
+                pagination={true}
+                currentPage={suggestionsCurrentPage}
+                totalPages={suggestionsTotalPages}
+                itemsPerPage={suggestionsItemsPerPage}
+                totalItems={suggestionsTotalItems}
+                onPageChange={handleSuggestionsPageChange}
+                onItemsPerPageChange={handleSuggestionsItemsPerPageChange}
+                showItemsPerPageSelector={false}
               />
             )}
           </>

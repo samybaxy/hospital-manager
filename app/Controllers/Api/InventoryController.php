@@ -536,6 +536,28 @@ class InventoryController extends BaseController
                         'description' => 'Filter by priority level',
                         'type' => 'string',
                         'sanitize_callback' => 'sanitize_text_field'
+                    ],
+                    'item_id' => [
+                        'description' => 'Filter by item ID',
+                        'type' => 'integer',
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'supplier_id' => [
+                        'description' => 'Filter by supplier ID',
+                        'type' => 'integer',
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'page' => [
+                        'description' => 'Page number for pagination',
+                        'type' => 'integer',
+                        'default' => 1,
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'per_page' => [
+                        'description' => 'Number of items per page',
+                        'type' => 'integer',
+                        'default' => 10,
+                        'sanitize_callback' => 'absint'
                     ]
                 ]
             ],
@@ -634,7 +656,21 @@ class InventoryController extends BaseController
                 'callback' => [$this, 'get_reorder_suggestions'],
                 'permission_callback' => function($request) {
                     return RoleService::canViewInventory();
-                }
+                },
+                'args' => [
+                    'page' => [
+                        'description' => 'Page number for pagination',
+                        'type' => 'integer',
+                        'default' => 1,
+                        'sanitize_callback' => 'absint'
+                    ],
+                    'per_page' => [
+                        'description' => 'Number of items per page',
+                        'type' => 'integer',
+                        'default' => 10,
+                        'sanitize_callback' => 'absint'
+                    ]
+                ]
             ]
         ]);
     }
@@ -1665,9 +1701,19 @@ class InventoryController extends BaseController
     public function get_reorders($request)
     {
         try {
+            // Get pagination parameters
+            $page = $request->get_param('page') ?: 1;
+            $per_page = $request->get_param('per_page') ?: 10;
+            
+            // Validate pagination parameters
+            $page = max(1, intval($page));
+            $per_page = max(1, min(100, intval($per_page))); // Limit to max 100 items per page
+            
             $filters = [
                 'status' => $request->get_param('status'),
-                'priority' => $request->get_param('priority')
+                'priority' => $request->get_param('priority'),
+                'item_id' => $request->get_param('item_id'),
+                'supplier_id' => $request->get_param('supplier_id')
             ];
 
             // Remove null values
@@ -1675,14 +1721,19 @@ class InventoryController extends BaseController
                 return $value !== null && $value !== '';
             });
 
-            $reorders = InventoryReorder::getFiltered($filters);
+            $result = InventoryReorder::getFiltered($filters, $page, $per_page);
 
-            return new WP_REST_Response(
-                ApiService::formatResponse($reorders, 'Reorders retrieved successfully'),
-                200
-            );
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $result,
+                'message' => count($result['data']) . ' reorders retrieved (page ' . $page . ' of ' . $result['pagination']['total_pages'] . ')'
+            ], 200);
 
         } catch (Exception $e) {
+            // Log the error for debugging
+            error_log('Reorders API Error: ' . $e->getMessage());
+            error_log('Reorders API Trace: ' . $e->getTraceAsString());
+            
             return new WP_Error(
                 'reorders_fetch_error',
                 'Failed to fetch reorders: ' . $e->getMessage(),
@@ -1789,12 +1840,21 @@ class InventoryController extends BaseController
     public function get_reorder_suggestions($request)
     {
         try {
-            $suggestions = InventoryService::generateReorderSuggestions();
+            // Get pagination parameters
+            $page = $request->get_param('page') ?: 1;
+            $per_page = $request->get_param('per_page') ?: 10;
+
+            // Validate pagination parameters
+            $page = max(1, intval($page));
+            $per_page = max(1, min(100, intval($per_page))); // Limit to max 100 items per page
+
+            // Get paginated suggestions
+            $result = InventoryService::generateReorderSuggestionsPaginated($page, $per_page);
 
             return new WP_REST_Response([
                 'success' => true,
-                'data' => $suggestions,
-                'message' => count($suggestions) . ' reorder suggestions generated'
+                'data' => $result,
+                'message' => count($result['data']) . ' reorder suggestions generated (page ' . $page . ' of ' . $result['pagination']['total_pages'] . ')'
             ], 200);
 
         } catch (Exception $e) {
