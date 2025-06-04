@@ -29,6 +29,12 @@ const InventorySuppliers = ({ onRefresh }) => {
     is_active: 'all'
   });
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+
   // Form state
   const [supplierForm, setSupplierForm] = useState({
     name: '',
@@ -50,17 +56,41 @@ const InventorySuppliers = ({ onRefresh }) => {
 
   useEffect(() => {
     loadSuppliers();
-  }, [filters]);
+  }, [filters, currentPage, itemsPerPage]);
 
   const loadSuppliers = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await inventoryService.getSuppliers(filters);
-      const data = Array.isArray(response) ? response : response.data || [];
-      setSuppliers(data);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        ...filters
+      };
+      const response = await inventoryService.getSuppliers(params);
+      
+      // Handle API response structure: { success: true, data: { data: [...], pagination: {...} } }
+      if (response.success && response.data && Array.isArray(response.data.data)) {
+        // Response with pagination metadata
+        setSuppliers(response.data.data);
+        setTotalItems(response.data.pagination?.total || 0);
+        setTotalPages(response.data.pagination?.pages || 1);
+      } else if (Array.isArray(response)) {
+        // Direct array response (fallback)
+        setSuppliers(response);
+        setTotalItems(response.length);
+        setTotalPages(1);
+      } else {
+        setSuppliers([]);
+        setTotalItems(0);
+        setTotalPages(1);
+      }
     } catch (err) {
       console.error('Error loading suppliers:', err);
       setError('Failed to load suppliers');
+      setSuppliers([]);
+      setTotalItems(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -164,6 +194,23 @@ const InventorySuppliers = ({ onRefresh }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Handle filter changes with pagination reset
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const formatCurrency = (amount) => {
@@ -270,19 +317,6 @@ const InventorySuppliers = ({ onRefresh }) => {
     }
   ];
 
-  const filteredSuppliers = suppliers.filter(supplier => {
-    const matchesSearch = !filters.search || 
-      supplier.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      supplier.contact_person?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      supplier.email?.toLowerCase().includes(filters.search.toLowerCase());
-    
-    const matchesStatus = filters.is_active === 'all' || 
-      (filters.is_active === 'active' && (supplier.is_active === '1' || supplier.is_active === true)) ||
-      (filters.is_active === 'inactive' && (supplier.is_active === '0' || supplier.is_active === false));
-    
-    return matchesSearch && matchesStatus;
-  });
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -311,8 +345,12 @@ const InventorySuppliers = ({ onRefresh }) => {
       )}
 
       {/* Filters */}
-      <Card title="Filters">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card className="mb-6">
+        <div className="py-3 px-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold">Filters</h3>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search
@@ -320,7 +358,7 @@ const InventorySuppliers = ({ onRefresh }) => {
               <input
                 type="text"
                 value={filters.search}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
                 placeholder="Search by name, contact person, or email..."
               />
@@ -331,7 +369,7 @@ const InventorySuppliers = ({ onRefresh }) => {
               </label>
               <select
                 value={filters.is_active}
-                onChange={(e) => setFilters(prev => ({ ...prev, is_active: e.target.value }))}
+                onChange={(e) => handleFilterChange('is_active', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               >
                 <option value="all">All Suppliers</option>
@@ -339,23 +377,63 @@ const InventorySuppliers = ({ onRefresh }) => {
                 <option value="inactive">Inactive Only</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Items per page
+              </label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
+        </div>
       </Card>
 
       {/* Suppliers Table */}
-      <Card title="Suppliers">
-        {loading ? (
+      <Card>
+        <div className="py-3 px-4 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">
+              Suppliers ({totalItems})
+            </h3>
+            {totalItems > 0 && (
+              <div className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} suppliers
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-4">
+          {loading ? (
             <LoadingState message="Loading suppliers..." />
-          ) : filteredSuppliers.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No suppliers found</p>
+          ) : suppliers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No suppliers found matching the current filters.
             </div>
           ) : (
             <Table
               columns={supplierColumns}
-              data={filteredSuppliers}
+              data={suppliers}
+              emptyMessage="No suppliers found"
+              pagination={true}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+              showItemsPerPageSelector={false}
             />
           )}
+        </div>
       </Card>
 
       {/* Add Supplier Modal */}

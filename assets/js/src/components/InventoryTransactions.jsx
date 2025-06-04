@@ -33,7 +33,8 @@ const InventoryTransactions = ({ onRefresh }) => {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(20);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Form state for new transaction
   const [transactionForm, setTransactionForm] = useState({
@@ -54,7 +55,7 @@ const InventoryTransactions = ({ onRefresh }) => {
   useEffect(() => {
     loadTransactions();
     loadInventoryItems();
-  }, [filters, currentPage]);
+  }, [filters, currentPage, itemsPerPage]);
 
   const loadInventoryItems = async () => {
     try {
@@ -74,6 +75,7 @@ const InventoryTransactions = ({ onRefresh }) => {
 
   const loadTransactions = async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = {
         page: currentPage,
@@ -82,18 +84,28 @@ const InventoryTransactions = ({ onRefresh }) => {
       };
       const response = await inventoryService.getTransactions(params);
       
-      if (Array.isArray(response)) {
+      // Handle API response structure: { success: true, data: { data: [...], pagination: {...} } }
+      if (response.success && response.data && Array.isArray(response.data.data)) {
+        // Response with pagination metadata
+        setTransactions(response.data.data);
+        setTotalItems(response.data.pagination?.total || 0);
+        setTotalPages(response.data.pagination?.pages || 1);
+      } else if (Array.isArray(response)) {
+        // Direct array response (fallback)
         setTransactions(response);
-        setTotalPages(Math.ceil(response.length / itemsPerPage));
+        setTotalItems(response.length);
+        setTotalPages(1);
       } else {
-        const data = response.data || response;
-        const transactionList = Array.isArray(data) ? data : data.transactions || [];
-        setTransactions(transactionList);
-        setTotalPages(response.total_pages || Math.ceil(transactionList.length / itemsPerPage));
+        setTransactions([]);
+        setTotalItems(0);
+        setTotalPages(1);
       }
     } catch (err) {
       console.error('Error loading transactions:', err);
       setError('Failed to load transactions');
+      setTransactions([]);
+      setTotalItems(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -130,6 +142,23 @@ const InventoryTransactions = ({ onRefresh }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (newItemsPerPage) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Handle filter changes with pagination reset
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const getTransactionTypeBadge = (type) => {
@@ -277,15 +306,19 @@ const InventoryTransactions = ({ onRefresh }) => {
       )}
 
       {/* Filters */}
-      <Card title="Filters">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card className="mb-6">
+        <div className="py-3 px-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold">Filters</h3>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Item
               </label>
               <select
                 value={filters.item_id}
-                onChange={(e) => setFilters(prev => ({ ...prev, item_id: e.target.value }))}
+                onChange={(e) => handleFilterChange('item_id', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               >
                 <option value="">All Items</option>
@@ -302,7 +335,7 @@ const InventoryTransactions = ({ onRefresh }) => {
               </label>
               <select
                 value={filters.type}
-                onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               >
                 <option value="">All Types</option>
@@ -322,7 +355,7 @@ const InventoryTransactions = ({ onRefresh }) => {
               <input
                 type="date"
                 value={filters.date_from}
-                onChange={(e) => setFilters(prev => ({ ...prev, date_from: e.target.value }))}
+                onChange={(e) => handleFilterChange('date_from', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
@@ -333,32 +366,67 @@ const InventoryTransactions = ({ onRefresh }) => {
               <input
                 type="date"
                 value={filters.date_to}
-                onChange={(e) => setFilters(prev => ({ ...prev, date_to: e.target.value }))}
+                onChange={(e) => handleFilterChange('date_to', e.target.value)}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Items per page
+              </label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
           </div>
+        </div>
       </Card>
 
       {/* Transactions Table */}
-      <Card title="Transaction History">
-        {loading ? (
+      <Card>
+        <div className="py-3 px-4 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">
+              Transaction History ({totalItems})
+            </h3>
+            {totalItems > 0 && (
+              <div className="text-sm text-gray-500">
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} transactions
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-4">
+          {loading ? (
             <LoadingState message="Loading transactions..." />
           ) : transactions.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No transactions found</p>
+            <div className="text-center py-8 text-gray-500">
+              No transactions found matching the current filters.
             </div>
           ) : (
             <Table
               columns={transactionColumns}
               data={transactions}
-              pagination={{
-                currentPage,
-                totalPages,
-                onPageChange: setCurrentPage
-              }}
+              emptyMessage="No transactions found"
+              pagination={true}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={totalItems}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+              showItemsPerPageSelector={false}
             />
           )}
+        </div>
       </Card>
 
       {/* Add Transaction Modal */}

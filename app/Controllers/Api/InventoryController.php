@@ -324,6 +324,16 @@ class InventoryController extends BaseController
                         'description' => 'Number of transactions to skip',
                         'type' => 'integer',
                         'default' => 0
+                    ],
+                    'page' => [
+                        'description' => 'Page number for pagination',
+                        'type' => 'integer',
+                        'default' => 1
+                    ],
+                    'per_page' => [
+                        'description' => 'Number of items per page',
+                        'type' => 'integer',
+                        'default' => 10
                     ]
                 ]
             ],
@@ -423,7 +433,29 @@ class InventoryController extends BaseController
                 'callback' => [$this, 'get_suppliers'],
                 'permission_callback' => function($request) {
                     return RoleService::canViewInventory();
-                }
+                },
+                'args' => [
+                    'search' => [
+                        'description' => 'Search suppliers by name or contact person',
+                        'type' => 'string',
+                        'sanitize_callback' => 'sanitize_text_field'
+                    ],
+                    'status' => [
+                        'description' => 'Filter by supplier status',
+                        'type' => 'string',
+                        'sanitize_callback' => 'sanitize_text_field'
+                    ],
+                    'page' => [
+                        'description' => 'Page number for pagination',
+                        'type' => 'integer',
+                        'default' => 1
+                    ],
+                    'per_page' => [
+                        'description' => 'Number of items per page',
+                        'type' => 'integer',
+                        'default' => 10
+                    ]
+                ]
             ],
             [
                 'methods' => WP_REST_Server::CREATABLE,
@@ -1196,6 +1228,8 @@ class InventoryController extends BaseController
                 'type' => $request->get_param('type'),
                 'date_from' => $request->get_param('date_from'),
                 'date_to' => $request->get_param('date_to'),
+                'page' => $request->get_param('page'),
+                'per_page' => $request->get_param('per_page'),
                 'limit' => $request->get_param('limit'),
                 'offset' => $request->get_param('offset')
             ];
@@ -1205,10 +1239,34 @@ class InventoryController extends BaseController
                 return $value !== null && $value !== '';
             });
 
+            // Handle both page/per_page and limit/offset pagination
+            if (isset($filters['page']) && isset($filters['per_page'])) {
+                $page = intval($filters['page']);
+                $per_page = intval($filters['per_page']);
+                $filters['limit'] = $per_page;
+                $filters['offset'] = ($page - 1) * $per_page;
+            }
+
             $transactions = InventoryTransaction::getFiltered($filters);
+            $total_count = InventoryTransaction::getFilteredCount($filters);
+            
+            // Calculate pagination metadata
+            $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 50;
+            $current_page = isset($filters['page']) ? intval($filters['page']) : 1;
+            $total_pages = $per_page > 0 ? ceil($total_count / $per_page) : 1;
+
+            $response_data = [
+                'data' => $transactions,
+                'pagination' => [
+                    'current_page' => $current_page,
+                    'per_page' => $per_page,
+                    'total' => $total_count,
+                    'pages' => $total_pages
+                ]
+            ];
 
             return new WP_REST_Response(
-                ApiService::formatResponse($transactions, 'Transactions retrieved successfully'),
+                ApiService::formatResponse($response_data, 'Transactions retrieved successfully'),
                 200
             );
 
@@ -1414,10 +1472,42 @@ class InventoryController extends BaseController
     public function get_suppliers($request)
     {
         try {
-            $suppliers = InventorySupplier::getAll();
+            $filters = [
+                'search' => $request->get_param('search'),
+                'status' => $request->get_param('status'),
+                'page' => $request->get_param('page'),
+                'per_page' => $request->get_param('per_page')
+            ];
+
+            // Remove null values
+            $filters = array_filter($filters, function($value) {
+                return $value !== null && $value !== '';
+            });
+
+            // Handle pagination
+            $page = isset($filters['page']) ? intval($filters['page']) : 1;
+            $per_page = isset($filters['per_page']) ? intval($filters['per_page']) : 10;
+            $filters['limit'] = $per_page;
+            $filters['offset'] = ($page - 1) * $per_page;
+
+            $suppliers = InventorySupplier::getFiltered($filters);
+            $total_count = InventorySupplier::getFilteredCount($filters);
+            
+            // Calculate pagination metadata
+            $total_pages = $per_page > 0 ? ceil($total_count / $per_page) : 1;
+
+            $response_data = [
+                'data' => $suppliers,
+                'pagination' => [
+                    'current_page' => $page,
+                    'per_page' => $per_page,
+                    'total' => $total_count,
+                    'pages' => $total_pages
+                ]
+            ];
 
             return new WP_REST_Response(
-                ApiService::formatResponse($suppliers, 'Suppliers retrieved successfully'),
+                ApiService::formatResponse($response_data, 'Suppliers retrieved successfully'),
                 200
             );
 

@@ -115,6 +115,85 @@ class InventorySupplier extends BaseModel
     }
     
     /**
+     * Get filtered suppliers with pagination
+     *
+     * @param array $filters
+     * @return array
+     */
+    public static function getFiltered($filters = [])
+    {
+        global $wpdb;
+        
+        $where_conditions = ['is_active = 1'];
+        $params = [];
+        
+        if (!empty($filters['search'])) {
+            $where_conditions[] = '(name LIKE %s OR contact_person LIKE %s OR email LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+        
+        if (!empty($filters['status'])) {
+            $where_conditions[] = 'status = %s';
+            $params[] = sanitize_text_field($filters['status']);
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        $limit = isset($filters['limit']) ? intval($filters['limit']) : 10;
+        $offset = isset($filters['offset']) ? intval($filters['offset']) : 0;
+        
+        $query = "SELECT * FROM {$wpdb->prefix}hm_inventory_suppliers WHERE {$where_clause} ORDER BY name ASC LIMIT %d OFFSET %d";
+        $params[] = $limit;
+        $params[] = $offset;
+        
+        if (!empty($params)) {
+            $query = $wpdb->prepare($query, $params);
+        }
+        
+        return $wpdb->get_results($query) ?: [];
+    }
+
+    /**
+     * Get count of filtered suppliers for pagination
+     *
+     * @param array $filters
+     * @return int
+     */
+    public static function getFilteredCount($filters = [])
+    {
+        global $wpdb;
+        
+        $where_conditions = ['is_active = 1'];
+        $params = [];
+        
+        if (!empty($filters['search'])) {
+            $where_conditions[] = '(name LIKE %s OR contact_person LIKE %s OR email LIKE %s)';
+            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
+            $params[] = $search_term;
+            $params[] = $search_term;
+            $params[] = $search_term;
+        }
+        
+        if (!empty($filters['status'])) {
+            $where_conditions[] = 'status = %s';
+            $params[] = sanitize_text_field($filters['status']);
+        }
+        
+        $where_clause = implode(' AND ', $where_conditions);
+        
+        $query = "SELECT COUNT(*) FROM {$wpdb->prefix}hm_inventory_suppliers WHERE {$where_clause}";
+        
+        if (!empty($params)) {
+            $query = $wpdb->prepare($query, $params);
+        }
+        
+        return intval($wpdb->get_var($query));
+    }
+    
+    /**
      * Update supplier by ID
      *
      * @param int $id

@@ -163,7 +163,7 @@ class InventoryService {
   async getTransactions(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/transactions`, { params });
-      return response.data.data || [];
+      return response.data;
     } catch (error) {
       console.error('Error fetching transactions:', error);
       throw error;
@@ -245,7 +245,7 @@ class InventoryService {
   async getSuppliers(params = {}) {
     try {
       const response = await apiClient.get(`${this.baseURL}/suppliers`, { params });
-      return response.data.data || [];
+      return response.data;
     } catch (error) {
       console.error('Error fetching suppliers:', error);
       throw error;
