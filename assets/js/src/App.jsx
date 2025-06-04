@@ -144,6 +144,11 @@ const AppRoutes = () => {
             <Inventory />
           </ProtectedRoute>
         } />
+        <Route path="/inventory/new" element={
+          <ProtectedRoute routeName="inventory">
+            <Inventory />
+          </ProtectedRoute>
+        } />
         <Route path="/reports" element={
           <ProtectedRoute routeName="reports">
             <Reports />

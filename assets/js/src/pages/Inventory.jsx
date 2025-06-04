@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
@@ -19,6 +20,10 @@ const Inventory = () => {
   // Get permissions and actions
   const permissions = usePermissions();
   const inventoryActions = useInventoryActions();
+  
+  // Router hooks
+  const location = useLocation();
+  const navigate = useNavigate();
   
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -178,6 +183,26 @@ const Inventory = () => {
       setTotalPages(calculatedPages);
     }
   }, [summary?.total_items, itemsPerPage, filters]);
+
+  // Handle URL parameters for automatic modal opening
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const action = params.get('action');
+    
+    // Handle ?action=add parameter
+    if (action === 'add' && permissions.canCreate) {
+      setShowAddModal(true);
+      // Clean up the URL by removing the action parameter
+      navigate('/inventory', { replace: true });
+    }
+    
+    // Handle /inventory/new path
+    if (location.pathname === '/inventory/new' && permissions.canCreate) {
+      setShowAddModal(true);
+      // Redirect to main inventory page after opening modal
+      navigate('/inventory', { replace: true });
+    }
+  }, [location.search, location.pathname, permissions.canCreate, navigate]);
 
   // Initial load
   useEffect(() => {
