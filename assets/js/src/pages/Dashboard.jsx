@@ -22,7 +22,6 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [recentActivities, setRecentActivities] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   
   useEffect(() => {
@@ -46,11 +45,6 @@ const Dashboard = () => {
               total_value: 0
             }
           });
-          
-          // Set recent activities if available
-          if (response.data.recent_activities) {
-            setRecentActivities(response.data.recent_activities);
-          }
           
           // Set upcoming appointments if available
           if (response.data.upcoming_appointments) {
@@ -86,16 +80,6 @@ const Dashboard = () => {
             total_value: 45000
           }
         });
-        
-        setRecentActivities([
-          { ID: 1, message: 'Sample activity 1', created_at: 'May 14, 2025 10:45 am' },
-          { ID: 2, message: 'Sample activity 2', created_at: 'May 14, 2025 9:30 am' }
-        ]);
-        
-        setUpcomingAppointments([
-          { ID: 1, first_name: 'John', last_name: 'Doe', formatted_date: 'May 15, 2025', appointment_time: '09:00:00' },
-          { ID: 2, first_name: 'Jane', last_name: 'Smith', formatted_date: 'May 16, 2025', appointment_time: '14:30:00' }
-        ]);
       } finally {
         setLoading(false);
       }
@@ -303,61 +287,6 @@ const Dashboard = () => {
                   </Button>
                 </Link>
               </div>
-            </div>
-          </Card>
-        </div>
-        
-        {/* Recent Activities */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Recent Activities">
-            {loading ? (
-              <div className="flex justify-center p-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              </div>
-            ) : recentActivities.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {recentActivities.map((activity) => (
-                  <li key={activity.ID} className="py-3">
-                    <div className="flex space-x-3">
-                      <div className="flex-shrink-0">
-                        {activity.type === 'appointment' && (
-                          <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                            </svg>
-                          </span>
-                        )}
-                        {activity.type === 'patient' && (
-                          <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 text-green-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                            </svg>
-                          </span>
-                        )}
-                        {activity.type === 'doctor' && (
-                          <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-purple-100 text-purple-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                            </svg>
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-800">{activity.description}</p>
-                        <p className="text-xs text-gray-500">{activity.time}</p>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="py-8 text-center text-gray-500">No recent activities</div>
-            )}
-            
-            <div className="mt-4 text-right">
-              <Link to="/audit-logs" className="text-sm text-blue-600 hover:text-blue-800">
-                View all activity →
-              </Link>
             </div>
           </Card>
         </div>

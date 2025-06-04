@@ -2,6 +2,8 @@
 
 namespace HospitalManager\Database\Seeders;
 
+use Faker\Factory as Faker;
+
 class VisitationSeeder extends Seeder
 {
     protected $complaints = [
@@ -39,6 +41,9 @@ class VisitationSeeder extends Seeder
     public function run()
     {
         $this->log("Creating visitation records...");
+        
+        // Initialize Faker with English locale to avoid encoding issues
+        $this->faker = Faker::create('en_US');
         
         global $wpdb;
         
@@ -139,16 +144,16 @@ class VisitationSeeder extends Seeder
             }
             
             // Generate visitation data
-            $complaint = $this->getComplaintFromReason($appointment['reason']);
-            $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
-            $treatment = $this->generateTreatment();
-            $medication = $this->medications[array_rand($this->medications)];
+            $complaint = $this->sanitizeText($this->getComplaintFromReason($appointment['reason']));
+            $diagnosis = $this->sanitizeText($this->diagnoses[array_rand($this->diagnoses)]);
+            $treatment = $this->sanitizeText($this->generateTreatment());
+            $medication = $this->sanitizeText($this->medications[array_rand($this->medications)]);
             
             // Replace placeholders in treatment string
             $treatment = str_replace('{medication}', $medication, $treatment);
             
             // Generate medical history
-            $medical_history = $this->generateMedicalHistory();
+            $medical_history = $this->generateMedicalHistory($this->faker);
             
             $data = [
                 'appointment_id' => $appointment['appointment_id'],
@@ -159,7 +164,7 @@ class VisitationSeeder extends Seeder
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
-                'medical_history' => json_encode($medical_history),
+                'medical_history' => $medical_history,
                 'created_at' => date('Y-m-d H:i:s', strtotime("{$appointment['date']} {$appointment['time']}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -200,7 +205,7 @@ class VisitationSeeder extends Seeder
             $complaint = $this->complaints[array_rand($this->complaints)];
             $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
             $treatment = $this->generateTreatment();
-            $medical_history = $this->generateMedicalHistory();
+            $medical_history = $this->generateMedicalHistory($this->faker);
             
             $data = [
                 'appointment_id' => null, // walk-in, no appointment
@@ -211,7 +216,7 @@ class VisitationSeeder extends Seeder
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
-                'medical_history' => json_encode($medical_history),
+                'medical_history' => $medical_history,
                 'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -252,7 +257,7 @@ class VisitationSeeder extends Seeder
             $complaint = $this->complaints[array_rand($this->complaints)];
             $diagnosis = $this->diagnoses[array_rand($this->diagnoses)];
             $treatment = $this->generateTreatment();
-            $medical_history = $this->generateMedicalHistory();
+            $medical_history = $this->generateMedicalHistory($this->faker);
             
             $data = [
                 'appointment_id' => null, // no appointment
@@ -263,7 +268,7 @@ class VisitationSeeder extends Seeder
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
-                'medical_history' => json_encode($medical_history),
+                'medical_history' => $medical_history,
                 'created_at' => date('Y-m-d H:i:s', strtotime("{$date} {$time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
@@ -282,27 +287,113 @@ class VisitationSeeder extends Seeder
     /**
      * Generate medical history sample data
      */
-    private function generateMedicalHistory()
+    private function generateMedicalHistory($faker)
     {
-        $allergies = ['None', 'Penicillin', 'Aspirin', 'Sulfa drugs', 'Peanuts', 'Shellfish', 'Eggs', 'Dairy products'];
-        $past_surgeries = ['None', 'Appendectomy', 'Tonsillectomy', 'Hernia repair', 'Cholecystectomy'];
-        $chronic_conditions = ['None', 'Hypertension', 'Diabetes', 'Asthma', 'Arthritis', 'Migraine'];
-        $family_history = [
-            'None significant',
-            'Diabetes in father',
-            'Hypertension in mother',
-            'Heart disease in family',
-            'Cancer in siblings'
-        ];
+        $medical_history = [];
         
-        return [
-            'allergies' => $allergies[array_rand($allergies)],
-            'past_surgeries' => $past_surgeries[array_rand($past_surgeries)],
-            'chronic_conditions' => $chronic_conditions[array_rand($chronic_conditions)],
-            'family_history' => $family_history[array_rand($family_history)],
-            'smoker' => (bool)mt_rand(0, 1),
-            'alcohol' => ['None', 'Occasional', 'Moderate', 'Heavy'][array_rand(['None', 'Occasional', 'Moderate', 'Heavy'])],
-        ];
+        // Allergies
+        $allergies = $faker->randomElement([
+            'No known allergies',
+            'Allergic to penicillin',
+            'Allergic to sulfa drugs', 
+            'Allergic to aspirin',
+            'Food allergies: peanuts, shellfish',
+            'Environmental allergies: pollen, dust mites',
+            'Multiple drug allergies: penicillin, codeine'
+        ]);
+        $medical_history[] = "Allergies: " . $allergies;
+        
+        // Past surgeries
+        $surgeries = $faker->randomElement([
+            'No previous surgeries',
+            'Appendectomy (' . $faker->year($max = 'now') . ')',
+            'Tonsillectomy as child',
+            'Cesarean section (' . $faker->year($max = 'now') . ')',
+            'Hernia repair (' . $faker->year($max = 'now') . ')',
+            'Gallbladder removal (' . $faker->year($max = 'now') . ')',
+            'Knee surgery (' . $faker->year($max = 'now') . ')'
+        ]);
+        $medical_history[] = "Past surgeries: " . $surgeries;
+        
+        // Chronic conditions
+        if ($faker->boolean(30)) { // 30% chance of having chronic conditions
+            $conditions = $faker->randomElements([
+                'Hypertension (controlled with medication)',
+                'Type 2 diabetes (diet controlled)',
+                'Asthma (mild, occasional inhaler use)',
+                'Arthritis (osteoarthritis in knees)',
+                'Migraine headaches (monthly episodes)',
+                'Anxiety disorder (managed with therapy)',
+                'Depression (stable on medication)',
+                'High cholesterol (controlled with statins)'
+            ], $faker->numberBetween(1, 2));
+            $medical_history[] = "Chronic conditions: " . implode(', ', $conditions);
+        } else {
+            $medical_history[] = "Chronic conditions: None";
+        }
+        
+        // Family history
+        $family_history = $faker->randomElement([
+            'No significant family history',
+            'Family history of diabetes (maternal side)',
+            'Family history of heart disease (paternal grandfather)',
+            'Family history of hypertension (both parents)',
+            'Family history of cancer (maternal aunt - breast cancer)',
+            'Family history of stroke (paternal grandmother)',
+            'Family history of diabetes and hypertension'
+        ]);
+        $medical_history[] = "Family history: " . $family_history;
+        
+        // Social history
+        $smoking = $faker->randomElement([
+            'Non-smoker',
+            'Former smoker (quit ' . $faker->numberBetween(1, 20) . ' years ago)',
+            'Current smoker (' . $faker->numberBetween(5, 30) . ' cigarettes/day)',
+            'Social smoker (occasional)'
+        ]);
+        $medical_history[] = "Smoking: " . $smoking;
+        
+        $alcohol = $faker->randomElement([
+            'Does not drink alcohol',
+            'Occasional social drinking',
+            'Moderate alcohol consumption (2-3 drinks/week)',
+            'Regular alcohol consumption (daily wine with dinner)',
+            'Former drinker (stopped ' . $faker->numberBetween(1, 10) . ' years ago)'
+        ]);
+        $medical_history[] = "Alcohol: " . $alcohol;
+        
+        // Current medications
+        if ($faker->boolean(40)) { // 40% chance of being on medications
+            $medications = $faker->randomElements([
+                'Lisinopril 10mg daily for blood pressure',
+                'Metformin 500mg twice daily for diabetes',
+                'Atorvastatin 20mg daily for cholesterol',
+                'Levothyroxine 50mcg daily for thyroid',
+                'Omeprazole 20mg daily for acid reflux',
+                'Ibuprofen as needed for joint pain',
+                'Multivitamin daily',
+                'Calcium with Vitamin D daily'
+            ], $faker->numberBetween(1, 3));
+            $medical_history[] = "Current medications: " . implode(', ', $medications);
+        } else {
+            $medical_history[] = "Current medications: None";
+        }
+        
+        // Add vital signs from last visit if this is a follow-up
+        if ($faker->boolean(20)) { // 20% chance of including previous vitals
+            $medical_history[] = "Previous visit vitals: BP " . 
+                $faker->numberBetween(110, 140) . "/" . $faker->numberBetween(70, 90) . 
+                ", HR " . $faker->numberBetween(60, 100) . 
+                ", Temp " . $faker->randomFloat(1, 36.0, 37.5) . "C";
+        }
+        
+        // Clean and sanitize the medical history text
+        $medical_text = implode(". ", $medical_history) . ".";
+        
+        // Remove any problematic characters that might cause encoding issues
+        $medical_text = $this->sanitizeText($medical_text);
+        
+        return $medical_text;
     }
     
     /**
@@ -336,5 +427,25 @@ class VisitationSeeder extends Seeder
         }
         
         return $treatment;
+    }
+    
+    /**
+     * Sanitize text to remove problematic characters that cause encoding issues
+     */
+    private function sanitizeText($text)
+    {
+        // Remove or replace problematic characters
+        $text = str_replace('°', '', $text); // Remove degree symbol
+        
+        // Convert to UTF-8 and remove any invalid characters
+        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+        
+        // Remove any remaining non-printable characters except basic punctuation
+        $text = preg_replace('/[^\x20-\x7E]/', '', $text);
+        
+        // Clean up multiple spaces
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
     }
 }
