@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
@@ -52,6 +52,9 @@ const Inventory = () => {
   // Tab states
   const [activeTab, setActiveTab] = useState('inventory');
   const [showReports, setShowReports] = useState(false);
+
+  // Ref for scrolling to inventory table
+  const inventoryTableRef = useRef(null);
 
   // Load inventory data
   const loadInventory = useCallback(async () => {
@@ -226,11 +229,22 @@ const Inventory = () => {
 
   // Handle quick actions filter application
   const handleQuickFilter = (quickFilters) => {
+    // Apply the filters
     setFilters(prev => ({
       ...prev,
       ...quickFilters
     }));
     setCurrentPage(1);
+    
+    // Scroll to inventory table after a short delay to allow state update
+    setTimeout(() => {
+      if (inventoryTableRef.current) {
+        inventoryTableRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }, 100);
   };
 
   // Handle page change
@@ -803,7 +817,8 @@ const Inventory = () => {
           )}
 
       {/* Items Table */}
-      <Card title="📋 Inventory Items">
+      <div ref={inventoryTableRef}>
+        <Card title="📋 Inventory Items">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <LoadingState message="Loading inventory items..." />
@@ -828,6 +843,7 @@ const Inventory = () => {
           </>
         )}
       </Card>
+      </div>
         </div>
         )}
       </PermissionGate>

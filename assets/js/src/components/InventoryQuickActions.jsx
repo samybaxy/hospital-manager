@@ -62,7 +62,7 @@ const InventoryQuickActions = ({ onReload }) => {
       id: 'low-stock',
       label: 'Low Stock', 
       description: 'Items below reorder level',
-      filter: { low_stock: true },
+      filter: { status: 'Low Stock', low_stock: false, expiring: false },
       count: lowStockCount,
       variant: 'warning'
     },
@@ -70,7 +70,7 @@ const InventoryQuickActions = ({ onReload }) => {
       id: 'out-of-stock',
       label: 'Out of Stock', 
       description: 'Items with zero quantity',
-      filter: { status: 'Out of Stock' },
+      filter: { status: 'Out of Stock', low_stock: false, expiring: false },
       count: outOfStockCount,
       variant: 'danger'
     },
@@ -78,23 +78,15 @@ const InventoryQuickActions = ({ onReload }) => {
       id: 'expiring-soon',
       label: 'Expiring Soon', 
       description: 'Items expiring in 30 days',
-      filter: { expiring: true },
+      filter: { status: '', expiring: true, low_stock: false },
       count: expiring.length,
       variant: 'warning'
-    },
-    { 
-      id: 'active-items',
-      label: 'All Active Items', 
-      description: 'Items with quantity > 0',
-      filter: { status: 'In Stock' },
-      count: totalActiveItems,
-      variant: 'primary'
     },
     { 
       id: 'currently-in-stock',
       label: 'Currently in Stock', 
       description: 'Healthy stock levels',
-      filter: { status: 'In Stock', low_stock: false },
+      filter: { status: 'In Stock', low_stock: false, expiring: false },
       count: inStockCount,
       variant: 'success'
     }
@@ -183,7 +175,7 @@ const InventoryQuickActions = ({ onReload }) => {
                   <Button 
                     variant="link" 
                     size="sm" 
-                    onClick={() => onReload({ low_stock: true })}
+                    onClick={() => onReload({ status: 'Low Stock', low_stock: false, expiring: false })}
                     className="text-red-600 hover:text-red-800 font-medium"
                   >
                     View all {critical.length} critical items
@@ -224,7 +216,7 @@ const InventoryQuickActions = ({ onReload }) => {
                   <Button 
                     variant="link" 
                     size="sm" 
-                    onClick={() => onReload({ expiring: true })}
+                    onClick={() => onReload({ status: '', expiring: true, low_stock: false })}
                     className="text-yellow-600 hover:text-yellow-800 font-medium"
                   >
                     View all {expiring.length} expiring items
