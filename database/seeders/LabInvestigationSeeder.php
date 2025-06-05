@@ -3,7 +3,35 @@
 namespace HospitalManager\Database\Seeders;
 
 class LabInvestigationSeeder extends Seeder
-{    
+{
+    /**
+     * Mapping of test types to categories
+     * 
+     * @var array
+     */
+    protected $testTypeToCategory = [
+        'Complete Blood Count (CBC)' => 'Hematology',
+        'Blood Glucose Test' => 'Clinical Chemistry',
+        'Liver Function Test' => 'Clinical Chemistry',
+        'Lipid Profile' => 'Clinical Chemistry',
+        'Thyroid Function Test' => 'Endocrinology',
+        'Urinalysis' => 'Urinalysis',
+        'Kidney Function Test' => 'Clinical Chemistry',
+        'Electrolyte Panel' => 'Clinical Chemistry',
+        'HbA1c (Glycated Hemoglobin)' => 'Clinical Chemistry',
+        'Malaria Parasite Test' => 'Microbiology',
+        'Typhoid Test (Widal)' => 'Serology',
+        'HIV Test' => 'Serology',
+        'Hepatitis B Test' => 'Serology',
+        'Hepatitis C Test' => 'Serology',
+        'Tuberculosis Test' => 'Microbiology',
+        'Stool Analysis' => 'Microbiology',
+        'Blood Culture' => 'Microbiology',
+        'Urine Culture' => 'Microbiology',
+        'Pap Smear' => 'Molecular Diagnostics',
+        'PSA (Prostate-Specific Antigen)' => 'Immunology'
+    ];
+    
     /**
      * Lab test types
      * 
@@ -204,6 +232,13 @@ class LabInvestigationSeeder extends Seeder
             return;
         }
         
+        // Get category IDs
+        $categories = $wpdb->get_results("SELECT ID, name FROM {$wpdb->prefix}hm_lab_categories", OBJECT_K);
+        if (empty($categories)) {
+            $this->log('No laboratory categories found. Please run LabTestCategorySeeder first.', 'error');
+            return;
+        }
+        
         // Create some lab investigations for each visitation
         $count = 0;
         $maxRecords = 50;
@@ -225,6 +260,13 @@ class LabInvestigationSeeder extends Seeder
                 $test_type = $this->testTypes[array_rand($this->testTypes)];
                 $status = $this->statuses[array_rand($this->statuses)];
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
+                
+                // Get category ID for this test type
+                $category_name = isset($this->testTypeToCategory[$test_type]) ? 
+                    $this->testTypeToCategory[$test_type] : 'Clinical Chemistry';
+                
+                $category_id = isset($categories[$category_name]) ? 
+                    $categories[$category_name]->ID : array_values($categories)[0]->ID;
                 
                 // Generate created_at date based on visitation date
                 $created_at = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
@@ -354,6 +396,8 @@ class LabInvestigationSeeder extends Seeder
                     'doctor_id' => $visitation->doctor_id,
                     'lab_tech_id' => $lab_tech_id,
                     'patient_id' => $visitation->patient_id,
+                    'category_id' => $category_id,
+                    'test_type' => $test_type,
                     'sample_type' => $sample_type,
                     'request_notes' => $notes,
                     'lab_notes' => $lab_notes,

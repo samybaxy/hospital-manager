@@ -12,10 +12,10 @@ class LabTestDefinitionSeeder extends Seeder
         $this->log('Seeding lab test definitions...');
         
         global $wpdb;
-        $categories = $wpdb->get_results("SELECT ID, name FROM {$wpdb->prefix}hm_laboratory_categories");
+        $categories = $wpdb->get_results("SELECT ID, name FROM {$wpdb->prefix}hm_lab_categories");
         
         if (empty($categories)) {
-            $this->log('No laboratory categories found. Please run LaboratoryCategorySeeder first.', 'error');
+            $this->log('No laboratory categories found. Please run LabTestCategorySeeder first.', 'error');
             return;
         }
         
@@ -41,7 +41,8 @@ class LabTestDefinitionSeeder extends Seeder
                 'test_parameters' => json_encode([
                     'parameters' => [
                         [
-                            'name' => 'White Blood Cell (WBC) Count',
+                            'id' => 'WBC',
+                            'name' => 'White Blood Cell Count',
                             'unit' => 'x10^9/L',
                             'reference_range' => [
                                 'adult' => ['min' => 4.0, 'max' => 11.0],
@@ -50,7 +51,8 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 2.0, 'max' => 30.0]
                         ],
                         [
-                            'name' => 'Red Blood Cell (RBC) Count',
+                            'id' => 'RBC',
+                            'name' => 'Red Blood Cell Count',
                             'unit' => 'x10^12/L',
                             'reference_range' => [
                                 'male' => ['min' => 4.5, 'max' => 5.5],
@@ -59,7 +61,8 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 2.5, 'max' => 7.0]
                         ],
                         [
-                            'name' => 'Hemoglobin (Hgb)',
+                            'id' => 'HGB',
+                            'name' => 'Hemoglobin',
                             'unit' => 'g/dL',
                             'reference_range' => [
                                 'male' => ['min' => 13.5, 'max' => 17.5],
@@ -68,7 +71,8 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 7.0, 'max' => 20.0]
                         ],
                         [
-                            'name' => 'Hematocrit (Hct)',
+                            'id' => 'HCT',
+                            'name' => 'Hematocrit',
                             'unit' => '%',
                             'reference_range' => [
                                 'male' => ['min' => 41.0, 'max' => 50.0],
@@ -77,13 +81,15 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 20.0, 'max' => 60.0]
                         ],
                         [
+                            'id' => 'PLT',
                             'name' => 'Platelet Count',
                             'unit' => 'x10^9/L',
                             'reference_range' => ['min' => 150, 'max' => 450],
                             'critical_range' => ['min' => 50, 'max' => 1000]
                         ],
                         [
-                            'name' => 'Mean Corpuscular Volume (MCV)',
+                            'id' => 'MCV',
+                            'name' => 'Mean Corpuscular Volume',
                             'unit' => 'fL',
                             'reference_range' => ['min' => 80, 'max' => 100],
                             'critical_range' => ['min' => 60, 'max' => 120]
@@ -118,7 +124,8 @@ class LabTestDefinitionSeeder extends Seeder
                 'test_parameters' => json_encode([
                     'parameters' => [
                         [
-                            'name' => 'Alanine Transaminase (ALT)',
+                            'id' => 'ALT',
+                            'name' => 'Alanine Transaminase',
                             'unit' => 'U/L',
                             'reference_range' => [
                                 'male' => ['min' => 7, 'max' => 55],
@@ -127,7 +134,8 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 5, 'max' => 1000]
                         ],
                         [
-                            'name' => 'Aspartate Transaminase (AST)',
+                            'id' => 'AST',
+                            'name' => 'Aspartate Transaminase',
                             'unit' => 'U/L',
                             'reference_range' => [
                                 'male' => ['min' => 8, 'max' => 48],
@@ -136,37 +144,43 @@ class LabTestDefinitionSeeder extends Seeder
                             'critical_range' => ['min' => 5, 'max' => 1000]
                         ],
                         [
-                            'name' => 'Alkaline Phosphatase (ALP)',
+                            'id' => 'ALP',
+                            'name' => 'Alkaline Phosphatase',
                             'unit' => 'U/L',
                             'reference_range' => ['min' => 40, 'max' => 129],
                             'critical_range' => ['min' => 20, 'max' => 500]
                         ],
                         [
+                            'id' => 'TBIL',
                             'name' => 'Total Bilirubin',
                             'unit' => 'mg/dL',
                             'reference_range' => ['min' => 0.1, 'max' => 1.2],
                             'critical_range' => ['min' => 0.0, 'max' => 15.0]
                         ],
                         [
+                            'id' => 'DBIL',
                             'name' => 'Direct Bilirubin',
                             'unit' => 'mg/dL',
                             'reference_range' => ['min' => 0.0, 'max' => 0.3],
                             'critical_range' => ['min' => 0.0, 'max' => 8.0]
                         ],
                         [
+                            'id' => 'ALB',
                             'name' => 'Albumin',
                             'unit' => 'g/dL',
                             'reference_range' => ['min' => 3.5, 'max' => 5.0],
                             'critical_range' => ['min' => 1.5, 'max' => 6.0]
                         ],
                         [
+                            'id' => 'TP',
                             'name' => 'Total Protein',
                             'unit' => 'g/dL',
                             'reference_range' => ['min' => 6.0, 'max' => 8.3],
                             'critical_range' => ['min' => 4.0, 'max' => 10.0]
                         ],
                         [
-                            'name' => 'Gamma-glutamyl Transferase (GGT)',
+                            'id' => 'GGT',
+                            'name' => 'Gamma-glutamyl Transferase',
                             'unit' => 'U/L',
                             'reference_range' => [
                                 'male' => ['min' => 8, 'max' => 61],
@@ -202,19 +216,22 @@ class LabTestDefinitionSeeder extends Seeder
                 'test_parameters' => json_encode([
                     'parameters' => [
                         [
-                            'name' => 'Thyroid Stimulating Hormone (TSH)',
+                            'id' => 'TSH',
+                            'name' => 'Thyroid Stimulating Hormone',
                             'unit' => 'mIU/L',
                             'reference_range' => ['min' => 0.4, 'max' => 4.0],
                             'critical_range' => ['min' => 0.01, 'max' => 100]
                         ],
                         [
-                            'name' => 'Free Thyroxine (FT4)',
+                            'id' => 'FT4',
+                            'name' => 'Free Thyroxine',
                             'unit' => 'ng/dL',
                             'reference_range' => ['min' => 0.8, 'max' => 1.8],
                             'critical_range' => ['min' => 0.1, 'max' => 5.0]
                         ],
                         [
-                            'name' => 'Free Triiodothyronine (FT3)',
+                            'id' => 'FT3',
+                            'name' => 'Free Triiodothyronine',
                             'unit' => 'pg/mL',
                             'reference_range' => ['min' => 2.3, 'max' => 4.2],
                             'critical_range' => ['min' => 0.5, 'max' => 20.0]
