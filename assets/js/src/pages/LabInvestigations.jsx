@@ -569,11 +569,265 @@ const LabInvestigations = () => {
   );
 };
 
+// Lab Investigation View Component
+const LabInvestigationView = ({ investigation }) => {
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Patient and Doctor Information */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Patient & Doctor Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Patient Name</label>
+            <p className="mt-1 text-sm text-gray-900 font-semibold">{investigation.patient_name || 'Unknown Patient'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Requesting Doctor</label>
+            <p className="mt-1 text-sm text-gray-900 font-semibold">{investigation.doctor_name || 'Unknown Doctor'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Lab Technician</label>
+            <p className="mt-1 text-sm text-gray-900">{investigation.lab_tech_name || 'Not assigned'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Visitation ID</label>
+            <p className="mt-1 text-sm text-gray-900">#{investigation.visitation_id}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Test Information */}
+      <div className="bg-blue-50 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Test Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Test Type</label>
+            <p className="mt-1 text-sm text-gray-900 font-semibold">{investigation.test_type || 'N/A'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Sample Type</label>
+            <p className="mt-1 text-sm text-gray-900">{investigation.sample_type || 'N/A'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Status</label>
+            <span className={`mt-1 px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(investigation.status)}`}>
+              {investigation.status?.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Priority</label>
+            <div className="mt-1 flex space-x-1">
+              {parseInt(investigation.is_critical) === 1 && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                  Critical
+                </span>
+              )}
+              {parseInt(investigation.is_abnormal) === 1 && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                  Abnormal
+                </span>
+              )}
+              {parseInt(investigation.is_critical) === 0 && parseInt(investigation.is_abnormal) === 0 && (
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                  Normal
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Request Notes */}
+      {investigation.request_notes && (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Request Notes</h3>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{investigation.request_notes}</p>
+        </div>
+      )}
+
+      {/* Lab Notes */}
+      {investigation.lab_notes && (
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Lab Notes</h3>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{investigation.lab_notes}</p>
+        </div>
+      )}
+
+      {/* Timestamps */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Timeline</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Created</label>
+            <p className="mt-1 text-sm text-gray-900">{formatDate(investigation.created_at)}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Last Updated</label>
+            <p className="mt-1 text-sm text-gray-900">{formatDate(investigation.updated_at)}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Lab Results View Component
+const LabResultsView = ({ investigation }) => {
+  const renderTestResults = () => {
+    if (!investigation.test_results) {
+      return (
+        <div className="text-center py-8">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No Results Available</h3>
+          <p className="mt-1 text-sm text-gray-500">Test results have not been uploaded yet.</p>
+        </div>
+      );
+    }
+
+    let results;
+    try {
+      results = typeof investigation.test_results === 'string' 
+        ? JSON.parse(investigation.test_results) 
+        : investigation.test_results;
+    } catch (e) {
+      results = investigation.test_results;
+    }
+
+    if (results.parameters && Array.isArray(results.parameters)) {
+      // CBC-style results with parameters
+      return (
+        <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference Range</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {results.parameters.map((param, index) => (
+                  <tr key={index} className={param.is_abnormal ? 'bg-red-50' : param.is_critical ? 'bg-orange-50' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {param.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                      {param.value}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {param.unit}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {param.reference_range ? 
+                        `${param.reference_range.min} - ${param.reference_range.max}` : 
+                        'N/A'
+                      }
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {param.is_critical ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                          Critical
+                        </span>
+                      ) : param.is_abnormal ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                          Abnormal
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Normal
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    } else {
+      // Simple result display
+      return (
+        <div className="space-y-4">
+          {results.result && (
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700">Result</label>
+              <p className="mt-1 text-lg font-semibold text-gray-900">{results.result}</p>
+            </div>
+          )}
+          {results.interpretation && (
+            <div className="bg-green-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700">Interpretation</label>
+              <p className="mt-1 text-sm text-gray-900">{results.interpretation}</p>
+            </div>
+          )}
+          {typeof results === 'object' && !results.result && !results.interpretation && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700">Raw Results</label>
+              <pre className="mt-1 text-xs text-gray-600 whitespace-pre-wrap bg-white p-3 rounded border">
+                {JSON.stringify(results, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Test Information Header */}
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 rounded-lg">
+        <h3 className="text-lg font-semibold">{investigation.test_type}</h3>
+        <p className="text-blue-100">Patient: {investigation.patient_name}</p>
+        <p className="text-blue-100">Sample: {investigation.sample_type}</p>
+      </div>
+
+      {/* Results Display */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <h4 className="text-md font-semibold text-gray-900 mb-4">Test Results</h4>
+        {renderTestResults()}
+      </div>
+
+      {/* Lab Notes */}
+      {investigation.lab_notes && (
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h4 className="text-md font-semibold text-gray-900 mb-2">Lab Notes</h4>
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{investigation.lab_notes}</p>
+        </div>
+      )}
+
+      {/* Flags and Alerts */}
+      {investigation.flags && (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="text-md font-semibold text-gray-900 mb-2">Flags & Alerts</h4>
+          <p className="text-sm text-gray-700">{investigation.flags}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Modal component for investigation details, editing, and results
 const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUpdateResults, loading }) => {
   const [formData, setFormData] = useState({
     test_type: investigation?.test_type || '',
-    test_results: investigation?.test_results || [],
+    test_results: investigation?.test_results || '',
     lab_notes: investigation?.lab_notes || '',
     request_notes: investigation?.request_notes || '',
     status: investigation?.status || 'requested'
@@ -591,7 +845,7 @@ const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUp
   const getModalTitle = () => {
     switch (type) {
       case 'view': return 'Investigation Details';
-      case 'results': return 'Update Test Results';
+      case 'results': return 'Test Results';
       case 'edit': return 'Edit Investigation';
       case 'create': return 'New Investigation';
       default: return 'Investigation';
@@ -601,8 +855,30 @@ const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUp
   return (
     <Modal onClose={onClose} title={getModalTitle()}>
       <div className="space-y-4">
-        {investigation && (
+        {investigation && type === 'view' && (
           <>
+            <LabInvestigationView investigation={investigation} />
+            <div className="flex justify-end pt-4 border-t">
+              <Button variant="secondary" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </>
+        )}
+
+        {investigation && type === 'results' && (
+          <>
+            <LabResultsView investigation={investigation} />
+            <div className="flex justify-end pt-4 border-t">
+              <Button variant="secondary" onClick={onClose}>
+                Close
+              </Button>
+            </div>
+          </>
+        )}
+
+        {investigation && type === 'edit' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Patient</label>
@@ -612,144 +888,77 @@ const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUp
                 <label className="block text-sm font-medium text-gray-700">Doctor</label>
                 <p className="mt-1 text-sm text-gray-900">{investigation.doctor_name || 'Unknown'}</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Test Type</label>
-                <p className="mt-1 text-sm text-gray-900">{investigation.test_type || 'N/A'}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`mt-1 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(investigation.status)}`}>
-                  {investigation.status?.replace('_', ' ').toUpperCase()}
-                </span>
-              </div>
             </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Test Type</label>
+              <input
+                type="text"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                value={formData.test_type || ''}
+                onChange={(e) => setFormData({ ...formData, test_type: e.target.value })}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Status</label>
+              <select
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              >
+                <option value="requested">Requested</option>
+                <option value="sample_collected">Sample Collected</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="verified">Verified</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button variant="secondary" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Status'}
+              </Button>
+            </div>
+          </form>
+        )}
 
-            {investigation.request_notes && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Request Notes</label>
-                <p className="mt-1 text-sm text-gray-900">{investigation.request_notes}</p>
-              </div>
-            )}
-
-            {type === 'results' && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Lab Notes</label>
-                  <textarea
-                    rows={4}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.lab_notes}
-                    onChange={(e) => setFormData({ ...formData, lab_notes: e.target.value })}
-                    placeholder="Enter laboratory notes..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Test Results (JSON)</label>
-                  <textarea
-                    rows={6}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
-                    value={JSON.stringify(formData.test_results, null, 2)}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(e.target.value);
-                        setFormData({ ...formData, test_results: parsed });
-                      } catch (err) {
-                        // Handle invalid JSON gracefully
-                      }
-                    }}
-                    placeholder='{"parameter": "value", "normal_range": "range", "is_abnormal": false}'
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <Button variant="secondary" onClick={onClose} disabled={loading}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={loading}>
-                    {loading ? 'Updating...' : 'Update Results'}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {type === 'create' && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Test Type<span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.test_type || ''}
-                    onChange={(e) => setFormData({ ...formData, test_type: e.target.value })}
-                    placeholder="Enter test type..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Request Notes</label>
-                  <textarea
-                    rows={3}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.request_notes || ''}
-                    onChange={(e) => setFormData({ ...formData, request_notes: e.target.value })}
-                    placeholder="Enter request notes..."
-                  />
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <Button variant="secondary" onClick={onClose} disabled={loading}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={loading}>
-                    {loading ? 'Creating...' : 'Create Investigation'}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {type === 'edit' && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Test Type</label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.test_type || ''}
-                    onChange={(e) => setFormData({ ...formData, test_type: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <select
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  >
-                    <option value="requested">Requested</option>
-                    <option value="sample_collected">Sample Collected</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="verified">Verified</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <div className="flex justify-end space-x-3">
-                  <Button variant="secondary" onClick={onClose} disabled={loading}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" disabled={loading}>
-                    {loading ? 'Updating...' : 'Update Status'}
-                  </Button>
-                </div>
-              </form>
-            )}
-
-            {type === 'view' && (
-              <div className="flex justify-end">
-                <Button variant="secondary" onClick={onClose}>
-                  Close
-                </Button>
-              </div>
-            )}
-          </>
+        {type === 'create' && (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Test Type<span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                value={formData.test_type || ''}
+                onChange={(e) => setFormData({ ...formData, test_type: e.target.value })}
+                placeholder="Enter test type..."
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Request Notes</label>
+              <textarea
+                rows={3}
+                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                value={formData.request_notes || ''}
+                onChange={(e) => setFormData({ ...formData, request_notes: e.target.value })}
+                placeholder="Enter request notes..."
+              />
+            </div>
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button variant="secondary" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" disabled={loading}>
+                {loading ? 'Creating...' : 'Create Investigation'}
+              </Button>
+            </div>
+          </form>
         )}
       </div>
     </Modal>
