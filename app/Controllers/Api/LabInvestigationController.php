@@ -284,8 +284,6 @@ class LabInvestigationController extends BaseController
             }
             
             error_log("Investigations count: " . count($investigations));
-            error_log("Investigations sample: " . print_r(array_slice($investigations, 0, 2), true));
-            
             // Format the results
             $formatted_investigations = [];
             if ($investigations && is_array($investigations)) {

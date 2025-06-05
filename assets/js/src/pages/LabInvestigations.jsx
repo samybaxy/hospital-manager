@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+// Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
 
 // Helper function for status badge colors
@@ -19,7 +20,6 @@ const getStatusBadgeColor = (status) => {
 
 const LabInvestigations = () => {
   const [investigations, setInvestigations] = useState([]);
-  const [filteredInvestigations, setFilteredInvestigations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,15 +36,70 @@ const LabInvestigations = () => {
   const fetchInvestigations = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const response = await laboratoryService.getInvestigations({
+      const params = {
         page,
-        per_page: perPage,
-        search: searchTerm || undefined,
-        status: statusFilter !== 'all' ? statusFilter : undefined
+        per_page: perPage
+      };
+      
+      // Only add search if it has a value
+      if (searchTerm && searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+      
+      // Only add status if it's not 'all'
+      if (statusFilter && statusFilter !== 'all') {
+        params.status = statusFilter;
+      }
+      
+      // Use URLSearchParams to construct proper query string
+      const queryParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value);
+        }
       });
       
+      // Modify the service call to ensure search parameter is included
+      // We'll directly fetch using fetch API to diagnose the issue
+      const queryString = queryParams.toString();
+      const apiUrl = `/wp-json/hospital-manager/v1/lab-investigations?${queryString}`;
+      
+      try {
+        // Create a custom fetch implementation to log and ensure all params are sent
+        const directResponse = await fetch(apiUrl);
+        const directData = await directResponse.json();
+        
+        // Use the direct fetch result instead of the service call
+        const response = {
+          data: directData.data || [],
+          pagination: directData.pagination || {}
+        };
+        
+        setInvestigations(response.data || []);
+        
+        // Handle pagination data from API response
+        if (response.pagination) {
+          setTotalPages(response.pagination.total_pages || 1);
+          setTotalRecords(response.pagination.total || 0);
+          setCurrentPage(response.pagination.current_page || page);
+        } else {
+          // Fallback if pagination object is missing
+          setTotalPages(Math.ceil((response.total || 0) / perPage));
+          setTotalRecords(response.total || 0);
+          setCurrentPage(page);
+        }
+        
+        setError(null);
+        setLoading(false);
+        return; // Skip the original service call
+      } catch (fetchErr) {
+        console.error('Direct fetch error:', fetchErr);
+        // Continue with original service call as fallback
+      }
+      
+      const response = await laboratoryService.getInvestigations(params);
+      
       setInvestigations(response.data || []);
-      setFilteredInvestigations(response.data || []);
       
       // Handle pagination data from API response
       if (response.pagination) {
@@ -63,7 +118,6 @@ const LabInvestigations = () => {
       console.error('Error fetching lab investigations:', err);
       setError(err.message || 'Failed to fetch investigations');
       setInvestigations([]);
-      setFilteredInvestigations([]);
     } finally {
       setLoading(false);
     }
@@ -72,6 +126,15 @@ const LabInvestigations = () => {
   useEffect(() => {
     fetchInvestigations(1);
   }, [fetchInvestigations]);
+
+  // Trigger search when searchTerm or statusFilter changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchInvestigations(1);
+    }, 300); // Debounce search
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, statusFilter]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
@@ -308,7 +371,7 @@ const LabInvestigations = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16 min-w-16">
                   S/N
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -335,10 +398,10 @@ const LabInvestigations = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInvestigations.length > 0 ? (
-                filteredInvestigations.map((investigation, index) => (
+              {investigations.length > 0 ? (
+                investigations.map((investigation, index) => (
                   <tr key={investigation.ID} className="hover:bg-gray-50">
-                    <td className="py-4 text-center text-sm font-medium text-gray-900">
+                    <td className="py-4 text-center text-sm font-medium text-gray-900 whitespace-nowrap">
                       {(currentPage - 1) * perPage + index + 1}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -418,7 +481,7 @@ const LabInvestigations = () => {
         </div>
 
         {/* Pagination */}
-        {!loading && filteredInvestigations.length > 0 && totalPages > 1 && (
+        {!loading && investigations.length > 0 && totalPages > 1 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 bg-white border-t border-gray-200">
             <div className="mb-4 sm:mb-0 text-sm text-gray-700">
               <p>

@@ -43,7 +43,6 @@ const Visitations = () => {
   }
 
   const fetchVisitations = useCallback(async () => {
-    console.log('Fetching visitations with searchTerm:', searchTerm, 'length:', searchTerm ? searchTerm.length : 0);
     try {
         setLoading(true);
         setError(null);
@@ -59,11 +58,9 @@ const Visitations = () => {
         // Only add search parameter if it's not empty
         if (searchTerm && searchTerm.trim() !== '') {
             params.search = searchTerm.trim();
-            console.log('Searching for:', searchTerm.trim());
         } else {
             // Make sure to clear any search parameter when empty
             params.search = '';
-            console.log('Search term empty, showing all records');
         }
       
         // For patients, only show their own visits
@@ -152,14 +149,6 @@ const Visitations = () => {
       }
     }
   }, [fetchVisitations, manualFetchRequested, successMessage]);
-  
-  // Monitor search term changes that require a refetch
-  useEffect(() => {
-    // Skip the first render
-    if (!isFirstRender.current) {
-      console.log('Search term changed, will refetch if needed:', searchTerm);
-    }
-  }, [searchTerm]);
 
   // Handle column sorting
   const handleSort = (field) => {
