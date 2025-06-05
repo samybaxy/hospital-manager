@@ -45,7 +45,6 @@ const LabInvestigations = () => {
       
       setInvestigations(response.data || []);
       setFilteredInvestigations(response.data || []);
-      console.log('Fetched investigations:', response.data);
       
       // Handle pagination data from API response
       if (response.pagination) {
@@ -309,7 +308,7 @@ const LabInvestigations = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   S/N
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -339,7 +338,7 @@ const LabInvestigations = () => {
               {filteredInvestigations.length > 0 ? (
                 filteredInvestigations.map((investigation, index) => (
                   <tr key={investigation.ID} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="py-4 text-center text-sm font-medium text-gray-900">
                       {(currentPage - 1) * perPage + index + 1}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
