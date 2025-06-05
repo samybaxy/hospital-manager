@@ -261,13 +261,6 @@ class LabInvestigationSeeder extends Seeder
                 $status = $this->statuses[array_rand($this->statuses)];
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
                 
-                // Get category ID for this test type
-                $category_name = isset($this->testTypeToCategory[$test_type]) ? 
-                    $this->testTypeToCategory[$test_type] : 'Clinical Chemistry';
-                
-                $category_id = isset($categories[$category_name]) ? 
-                    $categories[$category_name]->ID : array_values($categories)[0]->ID;
-                
                 // Generate created_at date based on visitation date
                 $created_at = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
@@ -290,8 +283,6 @@ class LabInvestigationSeeder extends Seeder
                 $flags = null;
                 $is_abnormal = 0;
                 $is_critical = 0;
-                $verified_by = null;
-                $verified_at = null;
                 $lab_notes = null;
                 
                 if (in_array($status, ['completed', 'verified'])) {
@@ -383,12 +374,6 @@ class LabInvestigationSeeder extends Seeder
                         
                         $lab_notes = 'Standard testing protocol followed.';
                     }
-                    
-                    // For verified tests
-                    if ($status === 'verified') {
-                        $verified_by = $lab_tech_ids[array_rand($lab_tech_ids)];
-                        $verified_at = date('Y-m-d H:i:s', strtotime($created_at . ' +4 hours'));
-                    }
                 }
                 
                 $data = [
@@ -396,7 +381,6 @@ class LabInvestigationSeeder extends Seeder
                     'doctor_id' => $visitation->doctor_id,
                     'lab_tech_id' => $lab_tech_id,
                     'patient_id' => $visitation->patient_id,
-                    'category_id' => $category_id,
                     'test_type' => $test_type,
                     'sample_type' => $sample_type,
                     'request_notes' => $notes,
@@ -405,15 +389,19 @@ class LabInvestigationSeeder extends Seeder
                     'flags' => $flags,
                     'is_abnormal' => $is_abnormal,
                     'is_critical' => $is_critical,
-                    'verified_by' => $verified_by,
-                    'verified_at' => $verified_at,
                     'status' => $status,
                     'created_at' => $created_at,
                     'updated_at' => $created_at
                 ];
                 
-                $wpdb->insert($wpdb->prefix . 'hm_lab_investigations', $data);
-                $count++;
+                $result = $wpdb->insert($wpdb->prefix . 'hm_lab_investigations', $data);
+                
+                if ($result === false) {
+                    $this->log("Failed to insert lab investigation: " . $wpdb->last_error, 'error');
+                    $this->log("Data: " . json_encode($data), 'error');
+                } else {
+                    $count++;
+                }
             }
         }
         

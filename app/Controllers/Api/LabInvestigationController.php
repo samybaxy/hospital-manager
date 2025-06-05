@@ -186,9 +186,12 @@ class LabInvestigationController extends BaseController
             $test_type = $request->get_param('test_type');
             $status = $request->get_param('status');
             $search = $request->get_param('search');
-            $page = $request->get_param('page') ?: 1;
-            $per_page = min($request->get_param('per_page') ?: 20, 100);
+            $page = max(1, intval($request->get_param('page') ?: 1));
+            $per_page = min(100, max(1, intval($request->get_param('per_page') ?: 20)));
             $offset = ($page - 1) * $per_page;
+            
+            // Log pagination info for debugging
+            error_log("Pagination: page={$page}, per_page={$per_page}, offset={$offset}");
             
             $where_conditions = ['1=1'];
             $where_values = [];
@@ -214,8 +217,20 @@ class LabInvestigationController extends BaseController
             }
             
             if ($search) {
-                $where_conditions[] = '(p.first_name LIKE %s OR p.last_name LIKE %s OR l.test_type LIKE %s OR l.sample_type LIKE %s)';
+                // Make sure search value is properly sanitized
                 $search_term = '%' . $wpdb->esc_like($search) . '%';
+                
+                // Use OR conditions for search across multiple columns
+                $search_conditions = [];
+                $search_conditions[] = 'p.first_name LIKE %s';
+                $search_conditions[] = 'p.last_name LIKE %s';
+                $search_conditions[] = 'l.test_type LIKE %s';
+                $search_conditions[] = 'l.sample_type LIKE %s';
+                
+                // Create a grouped condition
+                $where_conditions[] = '(' . implode(' OR ', $search_conditions) . ')';
+                
+                // Add all search terms to values array
                 $where_values[] = $search_term;
                 $where_values[] = $search_term;
                 $where_values[] = $search_term;
@@ -224,10 +239,14 @@ class LabInvestigationController extends BaseController
             
             $where_clause = implode(' AND ', $where_conditions);
             
-            // Get total count
-            $count_query = "SELECT COUNT(*) FROM {$table} l WHERE {$where_clause}";
-            $total = $wpdb->get_var($wpdb->prepare($count_query, ...$where_values));
+            // Add proper JOIN to count query to match filters on patient data
+            $count_query = "SELECT COUNT(*) FROM {$table} l 
+                           LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
+                           WHERE {$where_clause}";
+            $count_result = $wpdb->prepare($count_query, ...$where_values);
+            $total = $wpdb->get_var($count_result);
             
+            error_log("Total count: {$total}");
             // Get investigations with patient and doctor info
             $query = "SELECT l.*, 
                         p.first_name as patient_first_name, p.last_name as patient_last_name,
@@ -241,37 +260,76 @@ class LabInvestigationController extends BaseController
                      ORDER BY l.created_at DESC
                      LIMIT %d OFFSET %d";
             
-            $where_values[] = $per_page;
-            $where_values[] = $offset;
+            // Add pagination parameters
+            $query_params = $where_values;
+            $query_params[] = $per_page;
+            $query_params[] = $offset;
             
-            $investigations = $wpdb->get_results($wpdb->prepare($query, ...$where_values), ARRAY_A);
+            // Prepare and execute the query
+            $prepared_query = $wpdb->prepare($query, ...$query_params);
+            
+            // Execute the query with error handling
+            $investigations = $wpdb->get_results($prepared_query, ARRAY_A);
+            
+            // Check for SQL errors
+            if ($wpdb->last_error) {
+                error_log("SQL Error in get_investigations: " . $wpdb->last_error);
+                throw new \Exception("Database query error: " . $wpdb->last_error);
+            }
+            
+            // Initialize to empty array if null was returned
+            if ($investigations === null) {
+                error_log("Investigations query returned null. Using empty array instead.");
+                $investigations = [];
+            }
+            
+            error_log("Investigations count: " . count($investigations));
+            error_log("Investigations sample: " . print_r(array_slice($investigations, 0, 2), true));
             
             // Format the results
-            $formatted_investigations = array_map(function($investigation) {
-                // Decode JSON fields
-                if ($investigation['test_results']) {
-                    $investigation['test_results'] = json_decode($investigation['test_results'], true);
-                }
-                if ($investigation['flags']) {
-                    $investigation['flags'] = json_decode($investigation['flags'], true);
-                }
-                
-                // Add formatted names
-                $investigation['patient_name'] = trim($investigation['patient_first_name'] . ' ' . $investigation['patient_last_name']);
-                $investigation['doctor_name'] = trim($investigation['doctor_first_name'] . ' ' . $investigation['doctor_last_name']);
-                
-                // Remove individual name fields
-                unset($investigation['patient_first_name'], $investigation['patient_last_name']);
-                unset($investigation['doctor_first_name'], $investigation['doctor_last_name']);
-                
-                return $investigation;
-            }, $investigations);
+            $formatted_investigations = [];
+            if ($investigations && is_array($investigations)) {
+                $formatted_investigations = array_map(function($investigation) {
+                    // Decode JSON fields
+                    if (!empty($investigation['test_results'])) {
+                        $investigation['test_results'] = json_decode($investigation['test_results'], true);
+                    }
+                    if (!empty($investigation['flags'])) {
+                        $investigation['flags'] = json_decode($investigation['flags'], true);
+                    }
+                    
+                    // Add formatted names
+                    $first_name = isset($investigation['patient_first_name']) ? $investigation['patient_first_name'] : '';
+                    $last_name = isset($investigation['patient_last_name']) ? $investigation['patient_last_name'] : '';
+                    $investigation['patient_name'] = trim($first_name . ' ' . $last_name);
+                    
+                    $doc_first_name = isset($investigation['doctor_first_name']) ? $investigation['doctor_first_name'] : '';
+                    $doc_last_name = isset($investigation['doctor_last_name']) ? $investigation['doctor_last_name'] : '';
+                    $investigation['doctor_name'] = trim($doc_first_name . ' ' . $doc_last_name);
+                    
+                    // Remove individual name fields
+                    unset($investigation['patient_first_name'], $investigation['patient_last_name']);
+                    unset($investigation['doctor_first_name'], $investigation['doctor_last_name']);
+                    
+                    return $investigation;
+                }, $investigations);
+            }
             
+            // Check if we have any database table errors
+            if ($wpdb->last_error) {
+                error_log("Database error in get_investigations: " . $wpdb->last_error);
+                return new WP_REST_Response([
+                    'error' => 'Database error occurred',
+                    'message' => $wpdb->last_error
+                ], 500);
+            }
+            
+            // Return the data with pagination
             $response = new WP_REST_Response([
                 'data' => $formatted_investigations,
                 'pagination' => [
-                    'total' => (int) $total,
-                    'total_pages' => ceil($total / $per_page),
+                    'total' => (int) ($total ? $total : 0),
+                    'total_pages' => ceil(($total ? $total : 0) / $per_page),
                     'current_page' => $page,
                     'per_page' => $per_page
                 ]

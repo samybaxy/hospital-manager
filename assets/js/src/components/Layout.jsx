@@ -29,7 +29,8 @@ const Layout = ({ children }) => {
         location.pathname === '/doctors' || 
         location.pathname === '/appointments' ||
         location.pathname === '/visitations' || 
-        location.pathname === '/inventory' 
+        location.pathname === '/inventory' || 
+        location.pathname === '/lab-investigations'
     ) {
       setSidebarCollapsed(true);
     } else {
