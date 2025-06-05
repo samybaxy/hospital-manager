@@ -84,18 +84,69 @@ class CreateHospitalTables
         $sql_lab_investigations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_investigations (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
+            patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             lab_tech_id bigint(20) NOT NULL,
-            patient_id bigint(20) NOT NULL,
-            test_type text,
-            notes text,
-            results text,
-            status varchar(20) NOT NULL DEFAULT 'pending',
+            sample_type varchar(100) NULL,
+            request_notes text NULL,
+            lab_notes text NULL,
+            test_results JSON NULL,
+            flags JSON NULL,
+            is_abnormal tinyint(1) DEFAULT 0,
+            is_critical tinyint(1) DEFAULT 0,
+            status ENUM('requested', 'sample_collected', 'in_progress', 'completed', 'verified', 'cancelled') NOT NULL DEFAULT 'requested',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (ID),
             KEY visitation_id (visitation_id),
-            KEY lab_tech_id (lab_tech_id)
+            KEY patient_id (patient_id),
+            KEY doctor_id (doctor_id),
+            KEY lab_tech_id (lab_tech_id),
+            KEY status (status),
+            KEY is_critical (is_critical),
+            KEY is_abnormal (is_abnormal),
+        ) $charset_collate;";
+
+        // Laboratory Categories table
+        $sql_lab_categories = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_categories (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            name varchar(100) NOT NULL,
+            description text,
+            display_order int(11) DEFAULT 0,
+            status ENUM('active', 'inactive') DEFAULT 'active',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            UNIQUE KEY name (name)
+        ) $charset_collate;";
+
+        // Test Definitions table
+        $sql_lab_test_definitions = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_test_definitions (
+            ID bigint(20) NOT NULL AUTO_INCREMENT,
+            category_id bigint(20) NOT NULL,
+            code varchar(50) NOT NULL,
+            name varchar(100) NOT NULL,
+            description text,
+            sample_type varchar(100),
+            container varchar(100),
+            sample_volume varchar(50),
+            turnaround_time varchar(100),
+            test_parameters JSON NOT NULL,
+            specimen_requirements text,
+            preparation_instructions text,
+            methodology varchar(255),
+            cost decimal(10,2),
+            is_panel tinyint(1) DEFAULT 0,
+            status ENUM('active', 'inactive') DEFAULT 'active',
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (ID),
+            UNIQUE KEY code (code),
+            KEY category_id (category_id),
+            KEY name (name),
+            KEY is_panel (is_panel),
+            KEY status (status),
+            CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES {$wpdb->prefix}hm_laboratory_categories(ID) ON DELETE CASCADE
         ) $charset_collate;";
 
         // Radiological Exams table
@@ -354,6 +405,8 @@ class CreateHospitalTables
         dbDelta($sql_doctors);
         dbDelta($sql_hmos);
         dbDelta($sql_visitations);
+        dbDelta($sql_lab_categories);
+        dbDelta($sql_lab_test_definitions);
         dbDelta($sql_lab_investigations);
         dbDelta($sql_radiological_exams);
         dbDelta($sql_audit_logs);
@@ -381,6 +434,8 @@ class CreateHospitalTables
             'hm_inventory',
             'hm_radiological_exams',
             'hm_lab_investigations',
+            'hm_lab_categories',
+            'hm_lab_test_definitions',
             'hm_visitations',
             'hm_hmos',
             'hm_doctors',

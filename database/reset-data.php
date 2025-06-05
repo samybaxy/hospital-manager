@@ -49,6 +49,8 @@ $tables = [
     $wpdb->prefix . 'hm_doctors',
     $wpdb->prefix . 'hm_appointments',
     $wpdb->prefix . 'hm_visitations',
+    $wpdb->prefix . 'hm_lab_categories',
+    $wpdb->prefix . 'hm_lab_test_definitions',
     $wpdb->prefix . 'hm_lab_investigations',
     $wpdb->prefix . 'hm_radiological_exams',
     $wpdb->prefix . 'hm_medical_reports',

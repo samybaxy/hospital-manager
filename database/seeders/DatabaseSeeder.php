@@ -15,6 +15,8 @@ class DatabaseSeeder
         DoctorSeeder::class,
         AppointmentSeeder::class, 
         VisitationSeeder::class,
+        LabTestCategorySeeder::class,
+        LabTestDefinitionSeeder::class,
         LabInvestigationSeeder::class,
         RadiologicalExamSeeder::class,
         NotificationSeeder::class,

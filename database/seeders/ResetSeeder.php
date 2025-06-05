@@ -36,12 +36,19 @@ class ResetSeeder extends Seeder
                 $wpdb->prefix . 'hm_doctors',
                 $wpdb->prefix . 'hm_appointments',
                 $wpdb->prefix . 'hm_visitations',
+                $wpdb->prefix . 'hm_lab_categories',
+                $wpdb->prefix . 'hm_lab_test_definitions',
                 $wpdb->prefix . 'hm_lab_investigations',
                 $wpdb->prefix . 'hm_medical_reports',
                 $wpdb->prefix . 'hm_notifications',
                 $wpdb->prefix . 'hm_chats',
                 $wpdb->prefix . 'hm_audit_logs',
                 $wpdb->prefix . 'hm_hmos',
+                $wpdb->prefix . 'hm_inventory',
+                $wpdb->prefix . 'hm_inventory_suppliers',
+                $wpdb->prefix . 'hm_inventory_transactions',
+                $wpdb->prefix . 'hm_inventory_alerts',
+                $wpdb->prefix . 'hm_inventory_reorders',
             ];
             
             foreach ($tables as $table) {

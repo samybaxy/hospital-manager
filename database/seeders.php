@@ -33,6 +33,8 @@ require_once dirname(__FILE__) . '/seeders/PatientSeeder.php';
 require_once dirname(__FILE__) . '/seeders/DoctorSeeder.php';
 require_once dirname(__FILE__) . '/seeders/AppointmentSeeder.php';
 require_once dirname(__FILE__) . '/seeders/VisitationSeeder.php';
+require_once dirname(__FILE__) . '/seeders/LabTestCategorySeeder.php';
+require_once dirname(__FILE__) . '/seeders/LabTestDefinitionSeeder.php';
 require_once dirname(__FILE__) . '/seeders/LabInvestigationSeeder.php';
 require_once dirname(__FILE__) . '/seeders/RadiologicalExamSeeder.php';
 require_once dirname(__FILE__) . '/seeders/MedicalReportSeeder.php';
@@ -54,6 +56,8 @@ use HospitalManager\Database\Seeders\PatientSeeder;
 use HospitalManager\Database\Seeders\DoctorSeeder;
 use HospitalManager\Database\Seeders\AppointmentSeeder;
 use HospitalManager\Database\Seeders\VisitationSeeder;
+use HospitalManager\Database\Seeders\LabTestCategorySeeder;
+use HospitalManager\Database\Seeders\LabTestDefinitionSeeder;
 use HospitalManager\Database\Seeders\LabInvestigationSeeder;
 use HospitalManager\Database\Seeders\RadiologicalExamSeeder;
 use HospitalManager\Database\Seeders\MedicalReportSeeder;
@@ -77,6 +81,8 @@ $seeder_map = [
     'doctors' => DoctorSeeder::class,
     'appointments' => AppointmentSeeder::class,
     'visitations' => VisitationSeeder::class,
+    'lab-categories' => LabTestCategorySeeder::class,
+    'lab-test-definitions' => LabTestDefinitionSeeder::class,
     'lab-investigations' => LabInvestigationSeeder::class,
     'radiological-exams' => RadiologicalExamSeeder::class,
     'medical-reports' => MedicalReportSeeder::class,

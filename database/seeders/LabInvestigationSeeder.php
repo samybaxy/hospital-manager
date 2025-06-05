@@ -3,7 +3,7 @@
 namespace HospitalManager\Database\Seeders;
 
 class LabInvestigationSeeder extends Seeder
-{
+{    
     /**
      * Lab test types
      * 
@@ -33,29 +33,141 @@ class LabInvestigationSeeder extends Seeder
     ];
     
     /**
-     * Random lab results
+     * Sample types for tests
      * 
      * @var array
      */
-    protected $results = [
+    protected $sampleTypes = [
+        'Complete Blood Count (CBC)' => 'Whole Blood',
+        'Blood Glucose Test' => 'Plasma',
+        'Liver Function Test' => 'Serum',
+        'Lipid Profile' => 'Serum',
+        'Thyroid Function Test' => 'Serum',
+        'Urinalysis' => 'Urine',
+        'Kidney Function Test' => 'Serum',
+        'Electrolyte Panel' => 'Serum',
+        'HbA1c (Glycated Hemoglobin)' => 'Whole Blood',
+        'Malaria Parasite Test' => 'Whole Blood',
+        'Typhoid Test (Widal)' => 'Serum',
+        'HIV Test' => 'Serum',
+        'Hepatitis B Test' => 'Serum',
+        'Hepatitis C Test' => 'Serum',
+        'Tuberculosis Test' => 'Sputum',
+        'Stool Analysis' => 'Stool',
+        'Blood Culture' => 'Blood',
+        'Urine Culture' => 'Urine',
+        'Pap Smear' => 'Cervical Cells',
+        'PSA (Prostate-Specific Antigen)' => 'Serum'
+    ];
+    
+    /**
+     * Test results data structure
+     * 
+     * @var array
+     */
+    protected $testResults = [
         'Complete Blood Count (CBC)' => [
-            'WBC: 5.8 x 10^9/L (Normal: 4.0-11.0)',
-            'RBC: 4.8 x 10^12/L (Normal: 4.5-5.5)',
-            'Hemoglobin: 14.2 g/dL (Normal: 13.5-17.5)',
-            'Hematocrit: 42% (Normal: 41-50%)',
-            'Platelets: 250 x 10^9/L (Normal: 150-400)'
-        ],
-        'Blood Glucose Test' => [
-            'Fasting Blood Glucose: 98 mg/dL (Normal: 70-100)',
-            'Random Blood Glucose: 120 mg/dL (Normal: <200)',
-            '2-Hour Postprandial: 135 mg/dL (Normal: <140)'
+            'parameters' => [
+                [
+                    'id' => 'WBC',
+                    'name' => 'White Blood Cell Count',
+                    'value' => ['min' => 4.5, 'max' => 10.5],
+                    'unit' => 'x10^9/L',
+                    'reference_range' => ['min' => 4.0, 'max' => 11.0]
+                ],
+                [
+                    'id' => 'RBC',
+                    'name' => 'Red Blood Cell Count',
+                    'value' => ['min' => 4.1, 'max' => 5.3],
+                    'unit' => 'x10^12/L',
+                    'reference_range' => ['min' => 4.5, 'max' => 5.5, 'gender' => 'male']
+                ],
+                [
+                    'id' => 'HGB',
+                    'name' => 'Hemoglobin',
+                    'value' => ['min' => 13.0, 'max' => 16.5],
+                    'unit' => 'g/dL',
+                    'reference_range' => ['min' => 13.5, 'max' => 17.5, 'gender' => 'male']
+                ],
+                [
+                    'id' => 'HCT',
+                    'name' => 'Hematocrit',
+                    'value' => ['min' => 39.0, 'max' => 47.0],
+                    'unit' => '%',
+                    'reference_range' => ['min' => 41.0, 'max' => 50.0, 'gender' => 'male']
+                ],
+                [
+                    'id' => 'PLT',
+                    'name' => 'Platelet Count',
+                    'value' => ['min' => 160, 'max' => 370],
+                    'unit' => 'x10^9/L',
+                    'reference_range' => ['min' => 150, 'max' => 400]
+                ]
+            ]
         ],
         'Liver Function Test' => [
-            'ALT: 30 U/L (Normal: 7-55)',
-            'AST: 25 U/L (Normal: 8-48)',
-            'ALP: 70 U/L (Normal: 40-129)',
-            'Total Bilirubin: 0.8 mg/dL (Normal: 0.1-1.2)',
-            'Albumin: 4.0 g/dL (Normal: 3.5-5.0)'
+            'parameters' => [
+                [
+                    'id' => 'ALT',
+                    'name' => 'Alanine Transaminase',
+                    'value' => ['min' => 10, 'max' => 50],
+                    'unit' => 'U/L',
+                    'reference_range' => ['min' => 7, 'max' => 55, 'gender' => 'male']
+                ],
+                [
+                    'id' => 'AST',
+                    'name' => 'Aspartate Transaminase',
+                    'value' => ['min' => 10, 'max' => 40],
+                    'unit' => 'U/L',
+                    'reference_range' => ['min' => 8, 'max' => 48, 'gender' => 'male']
+                ],
+                [
+                    'id' => 'ALP',
+                    'name' => 'Alkaline Phosphatase',
+                    'value' => ['min' => 45, 'max' => 115],
+                    'unit' => 'U/L',
+                    'reference_range' => ['min' => 40, 'max' => 129]
+                ],
+                [
+                    'id' => 'TBIL',
+                    'name' => 'Total Bilirubin',
+                    'value' => ['min' => 0.2, 'max' => 1.0],
+                    'unit' => 'mg/dL',
+                    'reference_range' => ['min' => 0.1, 'max' => 1.2]
+                ],
+                [
+                    'id' => 'ALB',
+                    'name' => 'Albumin',
+                    'value' => ['min' => 3.6, 'max' => 4.8],
+                    'unit' => 'g/dL',
+                    'reference_range' => ['min' => 3.5, 'max' => 5.0]
+                ]
+            ]
+        ],
+        'Thyroid Function Test' => [
+            'parameters' => [
+                [
+                    'id' => 'TSH',
+                    'name' => 'Thyroid Stimulating Hormone',
+                    'value' => ['min' => 0.5, 'max' => 3.7],
+                    'unit' => 'mIU/L',
+                    'reference_range' => ['min' => 0.4, 'max' => 4.0]
+                ],
+                [
+                    'id' => 'FT4',
+                    'name' => 'Free Thyroxine',
+                    'value' => ['min' => 0.9, 'max' => 1.7],
+                    'unit' => 'ng/dL',
+                    'reference_range' => ['min' => 0.8, 'max' => 1.8]
+                ],
+                [
+                    'id' => 'FT3',
+                    'name' => 'Free Triiodothyronine',
+                    'value' => ['min' => 2.5, 'max' => 4.0],
+                    'unit' => 'pg/mL',
+                    'reference_range' => ['min' => 2.3, 'max' => 4.2]
+                ]
+            ]
         ]
     ];
     
@@ -65,9 +177,11 @@ class LabInvestigationSeeder extends Seeder
      * @var array
      */
     protected $statuses = [
-        'pending', 
+        'requested',
+        'sample_collected',
         'in_progress', 
-        'completed'
+        'completed',
+        'verified'
     ];
     
     /**
@@ -116,33 +230,123 @@ class LabInvestigationSeeder extends Seeder
                 $created_at = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
                 if (!$created_at) $created_at = date('Y-m-d H:i:s');
                 
-                $sample_notes = [
+                $request_notes = [
                     'Routine lab investigation ordered.',
                     'Follow-up test requested by doctor.',
                     'Patient symptoms require lab confirmation.',
                     'Pre-operative lab work ordered.',
                     'Monitoring chronic condition.'
                 ];
-                $notes = $sample_notes[array_rand($sample_notes)];
+                $notes = $request_notes[array_rand($request_notes)];
+                
+                // Sample data
+                $sample_type = isset($this->sampleTypes[$test_type]) ? 
+                    $this->sampleTypes[$test_type] : 'Blood';
                 
                 // For completed tests, add results
-                $results = null;
+                $test_results = null;
+                $flags = null;
+                $is_abnormal = 0;
+                $is_critical = 0;
+                $verified_by = null;
+                $verified_at = null;
+                $lab_notes = null;
                 
-                if ($status === 'completed') {
-                    // Get specific results for known test types, or generate generic results
-                    if (isset($this->results[$test_type])) {
-                        $result_text = $this->results[$test_type][array_rand($this->results[$test_type])];
+                if (in_array($status, ['completed', 'verified'])) {
+                    if (isset($this->testResults[$test_type])) {
+                        $result_data = $this->testResults[$test_type];
+                        
+                        // Process each parameter and randomly make some abnormal
+                        $abnormal_parameters = [];
+                        $critical_parameters = [];
+                        
+                        foreach ($result_data['parameters'] as &$param) {
+                            // Generate a random value within or slightly outside the range
+                            $min_val = $param['value']['min'];
+                            $max_val = $param['value']['max'];
+                            
+                            // 20% chance of abnormal value
+                            if (rand(1, 100) <= 20) {
+                                // Generate slightly abnormal value
+                                $is_low = (rand(0, 1) === 0);
+                                if ($is_low) {
+                                    $value = $min_val * (rand(70, 95) / 100); // 5-30% below min
+                                } else {
+                                    $value = $max_val * (rand(105, 130) / 100); // 5-30% above max
+                                }
+                                
+                                $abnormal_parameters[] = $param['id'];
+                                $is_abnormal = 1;
+                                $param['is_abnormal'] = true;
+                                $param['flag'] = $is_low ? 'L' : 'H';
+                                
+                                // 5% chance of critical value
+                                if (rand(1, 100) <= 25) {
+                                    if ($is_low) {
+                                        $value = $min_val * (rand(40, 69) / 100); // 31-60% below min
+                                    } else {
+                                        $value = $max_val * (rand(131, 160) / 100); // 31-60% above max
+                                    }
+                                    $critical_parameters[] = $param['id'];
+                                    $is_critical = 1;
+                                    $param['is_critical'] = true;
+                                    $param['flag'] = $is_low ? 'LL' : 'HH';
+                                }
+                            } else {
+                                // Normal value
+                                $value = $min_val + (($max_val - $min_val) * (rand(10, 90) / 100));
+                                $param['is_abnormal'] = false;
+                                $param['is_critical'] = false;
+                                $param['flag'] = null;
+                            }
+                            
+                            // Round to appropriate decimal places based on the typical precision for this type of test
+                            if (strpos($param['unit'], 'g/dL') !== false) {
+                                $value = round($value, 1); // Hemoglobin, proteins
+                            } elseif (strpos($param['unit'], 'x10^') !== false) {
+                                $value = round($value, 1); // Cell counts
+                            } elseif (strpos($param['unit'], 'mg/dL') !== false || 
+                                      strpos($param['unit'], 'mIU/L') !== false) {
+                                $value = round($value, 2); // Chemistry tests
+                            } else {
+                                $value = round($value, is_int($value) ? 0 : 2);
+                            }
+                            
+                            $param['value'] = $value;
+                        }
+                        
+                        $test_results = json_encode($result_data);
+                        
+                        if (!empty($abnormal_parameters)) {
+                            $flags = json_encode([
+                                'abnormal' => $abnormal_parameters,
+                                'critical' => $critical_parameters
+                            ]);
+                            
+                            $lab_notes = 'Abnormal values detected for: ' . implode(', ', $abnormal_parameters);
+                            if (!empty($critical_parameters)) {
+                                $lab_notes .= '. CRITICAL values for: ' . implode(', ', $critical_parameters) . '. Physician notified.';
+                            }
+                        } else {
+                            $lab_notes = 'All values within normal ranges.';
+                        }
                     } else {
-                        $generic_results = [
-                            'Test completed. Results within normal limits.',
-                            'Test completed. Some abnormal values noted.',
-                            'Test completed. Requires follow-up consultation.',
-                            'Test completed. No significant findings.'
-                        ];
-                        $result_text = $generic_results[array_rand($generic_results)];
+                        // Generic test results for tests without specific parameters
+                        $test_results = json_encode([
+                            'result' => 'Test completed',
+                            'interpretation' => [
+                                'Negative', 'Positive', 'Within normal limits', 'Abnormal'
+                            ][rand(0, 3)]
+                        ]);
+                        
+                        $lab_notes = 'Standard testing protocol followed.';
                     }
                     
-                    $results = $result_text;
+                    // For verified tests
+                    if ($status === 'verified') {
+                        $verified_by = $lab_tech_ids[array_rand($lab_tech_ids)];
+                        $verified_at = date('Y-m-d H:i:s', strtotime($created_at . ' +4 hours'));
+                    }
                 }
                 
                 $data = [
@@ -150,9 +354,15 @@ class LabInvestigationSeeder extends Seeder
                     'doctor_id' => $visitation->doctor_id,
                     'lab_tech_id' => $lab_tech_id,
                     'patient_id' => $visitation->patient_id,
-                    'test_type' => $test_type,
-                    'notes' => $notes,
-                    'results' => $results,
+                    'sample_type' => $sample_type,
+                    'request_notes' => $notes,
+                    'lab_notes' => $lab_notes,
+                    'test_results' => $test_results,
+                    'flags' => $flags,
+                    'is_abnormal' => $is_abnormal,
+                    'is_critical' => $is_critical,
+                    'verified_by' => $verified_by,
+                    'verified_at' => $verified_at,
                     'status' => $status,
                     'created_at' => $created_at,
                     'updated_at' => $created_at
@@ -176,5 +386,34 @@ class LabInvestigationSeeder extends Seeder
     {
         global $wpdb;
         return $wpdb->get_col("SELECT ID FROM {$wpdb->prefix}{$table}");
+    }
+    
+    /**
+     * Get user IDs by role
+     * 
+     * @param int $limit Maximum number of IDs to return
+     * @param string $role User role to filter by
+     * @return array Array of user IDs
+     */
+    protected function getUserIds($limit = 5, $role = 'lab_tech')
+    {
+        global $wpdb;
+        $user_ids = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT user_id FROM {$wpdb->prefix}usermeta 
+                WHERE meta_key = '{$wpdb->prefix}capabilities' 
+                AND meta_value LIKE %s
+                LIMIT %d",
+                '%' . $wpdb->esc_like('"' . $role . '"') . '%',
+                $limit
+            )
+        );
+        
+        // If no users with specific role found, return any user IDs
+        if (empty($user_ids)) {
+            $user_ids = $wpdb->get_col("SELECT ID FROM {$wpdb->users} LIMIT {$limit}");
+        }
+        
+        return $user_ids;
     }
 }

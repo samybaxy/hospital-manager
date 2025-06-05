@@ -36,6 +36,8 @@ $ordered_seeders = [
     'InventoryReordersSeeder', // Creates reorders
     'AppointmentSeeder',   // Creates appointments
     'VisitationSeeder',    // Creates visitations
+    'LabTestCategorySeeder', // Creates lab test categories
+    'LabTestDefinitionSeeder', // Creates lab test definitions
     'LabInvestigationSeeder', // Creates lab tests
     'RadiologicalExamSeeder', // Creates radiology exams
     'NotificationSeeder',  // Creates notifications
