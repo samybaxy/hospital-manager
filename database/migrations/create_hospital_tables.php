@@ -87,6 +87,7 @@ class CreateHospitalTables
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
             lab_tech_id bigint(20) NOT NULL,
+            test_type varchar(100) NOT NULL,
             sample_type varchar(100) NULL,
             request_notes text NULL,
             lab_notes text NULL,

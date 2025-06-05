@@ -16,13 +16,18 @@ class LabInvestigation extends BaseModel
     
     protected $fillable = [
         'visitation_id',
+        'patient_id',
         'doctor_id',
         'lab_tech_id',
-        'patient_id',
         'test_type',
+        'sample_type',
+        'request_notes',
+        'lab_notes',
+        'test_results',
+        'flags',
+        'is_abnormal',
+        'is_critical',
         'status',
-        'notes',
-        'results',
         'created_at',
         'updated_at'
     ];
@@ -124,6 +129,18 @@ class LabInvestigation extends BaseModel
 
         // Set default values
         $attributes['created_at'] = $attributes['created_at'] ?? current_time('mysql');
+        $attributes['status'] = $attributes['status'] ?? 'requested';
+        $attributes['is_abnormal'] = $attributes['is_abnormal'] ?? 0;
+        $attributes['is_critical'] = $attributes['is_critical'] ?? 0;
+        
+        // Ensure JSON fields are properly encoded
+        if (isset($attributes['test_results']) && is_array($attributes['test_results'])) {
+            $attributes['test_results'] = json_encode($attributes['test_results']);
+        }
+        
+        if (isset($attributes['flags']) && is_array($attributes['flags'])) {
+            $attributes['flags'] = json_encode($attributes['flags']);
+        }
         
         $result = $wpdb->insert(
             $table,
@@ -285,9 +302,8 @@ class LabInvestigation extends BaseModel
         $query = $wpdb->prepare(
             "SELECT * FROM {$table} 
             WHERE patient_id = %d 
-            AND status = %s",
-            $patientId,
-            'pending'
+            AND status IN ('requested', 'sample_collected', 'in_progress')",
+            $patientId
         );
 
         $results = $wpdb->get_results($query, ARRAY_A);
@@ -317,31 +333,45 @@ class LabInvestigation extends BaseModel
     /**
      * Get pending lab tests for a technician
      */
-    public static function getPendingForTech($techId, $limit = 10)
+    public static function getPendingForTech($techId = null, $limit = 10)
     {
         global $wpdb;
         $table = (new static)->table;
         
-        $query = $wpdb->prepare(
-            "SELECT t.*, p.display_name as patient_name 
-            FROM {$table} t
-            LEFT JOIN {$wpdb->users} p ON t.patient_id = p.ID
-            WHERE t.lab_tech_id = %d 
-            AND t.status = %s
-            ORDER BY t.created_at DESC
-            LIMIT %d",
-            $techId,
-            'pending',
-            $limit
-        );
+        if ($techId) {
+            $query = $wpdb->prepare(
+                "SELECT l.*, p.first_name, p.last_name, d.first_name as doctor_first_name, d.last_name as doctor_last_name
+                FROM {$table} l
+                LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
+                LEFT JOIN {$wpdb->prefix}hm_doctors d ON l.doctor_id = d.ID
+                WHERE l.lab_tech_id = %d 
+                AND l.status IN ('requested', 'sample_collected', 'in_progress')
+                ORDER BY l.created_at ASC
+                LIMIT %d",
+                $techId,
+                $limit
+            );
+        } else {
+            $query = $wpdb->prepare(
+                "SELECT l.*, p.first_name, p.last_name, d.first_name as doctor_first_name, d.last_name as doctor_last_name
+                FROM {$table} l
+                LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
+                LEFT JOIN {$wpdb->prefix}hm_doctors d ON l.doctor_id = d.ID
+                WHERE l.status IN ('requested', 'sample_collected', 'in_progress')
+                ORDER BY l.created_at ASC
+                LIMIT %d",
+                $limit
+            );
+        }
 
         $results = $wpdb->get_results($query, ARRAY_A);
         return array_map(function($item) {
-            // Use consistent ID format
-            
             $model = new static($item);
-            if (isset($item['patient_name'])) {
-                $model->patient_name = $item['patient_name'];
+            if (isset($item['first_name'])) {
+                $model->patient_name = $item['first_name'] . ' ' . $item['last_name'];
+            }
+            if (isset($item['doctor_first_name'])) {
+                $model->doctor_name = $item['doctor_first_name'] . ' ' . $item['doctor_last_name'];
             }
             return $model;
         }, $results ?: []);
@@ -461,5 +491,144 @@ class LabInvestigation extends BaseModel
         
         error_log("Status updated successfully to: {$status}");
         return true;
+    }
+
+    /**
+     * Update test results and flags
+     */
+    public function updateResults($results, $flags = null, $lab_notes = null)
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['ID']) || intval($this->attributes['ID']) <= 0) {
+            return false;
+        }
+        
+        $update_data = [
+            'test_results' => is_array($results) ? json_encode($results) : $results,
+            'status' => 'completed',
+            'updated_at' => current_time('mysql')
+        ];
+        
+        if ($flags !== null) {
+            $update_data['flags'] = is_array($flags) ? json_encode($flags) : $flags;
+        }
+        
+        if ($lab_notes !== null) {
+            $update_data['lab_notes'] = $lab_notes;
+        }
+        
+        // Check for abnormal or critical values
+        if (is_array($results)) {
+            $update_data['is_abnormal'] = $this->checkAbnormalResults($results);
+            $update_data['is_critical'] = $this->checkCriticalResults($results);
+        }
+        
+        $result = $wpdb->update(
+            $this->table,
+            $update_data,
+            ['ID' => $this->attributes['ID']],
+            array_fill(0, count($update_data), '%s'),
+            ['%d']
+        );
+        
+        if ($result !== false) {
+            // Update instance attributes
+            foreach ($update_data as $key => $value) {
+                $this->attributes[$key] = $value;
+            }
+        }
+        
+        return $result !== false;
+    }
+
+    /**
+     * Check if results contain abnormal values
+     */
+    protected function checkAbnormalResults($results)
+    {
+        if (!is_array($results)) {
+            return 0;
+        }
+        
+        foreach ($results as $parameter) {
+            if (isset($parameter['is_abnormal']) && $parameter['is_abnormal']) {
+                return 1;
+            }
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Check if results contain critical values
+     */
+    protected function checkCriticalResults($results)
+    {
+        if (!is_array($results)) {
+            return 0;
+        }
+        
+        foreach ($results as $parameter) {
+            if (isset($parameter['is_critical']) && $parameter['is_critical']) {
+                return 1;
+            }
+        }
+        
+        return 0;
+    }
+
+    /**
+     * Get formatted test results
+     */
+    public function getFormattedResults()
+    {
+        if (!isset($this->attributes['test_results'])) {
+            return null;
+        }
+        
+        $results = is_string($this->attributes['test_results']) 
+            ? json_decode($this->attributes['test_results'], true) 
+            : $this->attributes['test_results'];
+            
+        return $results;
+    }
+
+    /**
+     * Get formatted flags
+     */
+    public function getFormattedFlags()
+    {
+        if (!isset($this->attributes['flags'])) {
+            return null;
+        }
+        
+        $flags = is_string($this->attributes['flags']) 
+            ? json_decode($this->attributes['flags'], true) 
+            : $this->attributes['flags'];
+            
+        return $flags;
+    }
+
+    /**
+     * Get all investigations for a patient
+     */
+    public static function getForPatient($patientId, $limit = null)
+    {
+        global $wpdb;
+        $table = (new static)->table;
+        
+        $query = "SELECT * FROM {$table} WHERE patient_id = %d ORDER BY created_at DESC";
+        
+        if ($limit) {
+            $query .= " LIMIT %d";
+            $results = $wpdb->get_results($wpdb->prepare($query, $patientId, $limit), ARRAY_A);
+        } else {
+            $results = $wpdb->get_results($wpdb->prepare($query, $patientId), ARRAY_A);
+        }
+        
+        return array_map(function($data) {
+            return new static($data);
+        }, $results);
     }
 }
