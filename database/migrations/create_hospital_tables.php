@@ -104,7 +104,7 @@ class CreateHospitalTables
             KEY lab_tech_id (lab_tech_id),
             KEY status (status),
             KEY is_critical (is_critical),
-            KEY is_abnormal (is_abnormal),
+            KEY is_abnormal (is_abnormal)
         ) $charset_collate;";
 
         // Laboratory Categories table
@@ -120,7 +120,7 @@ class CreateHospitalTables
             UNIQUE KEY name (name)
         ) $charset_collate;";
 
-        // Test Definitions table
+        // Test Definitions table - FIXED foreign key reference
         $sql_lab_test_definitions = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_test_definitions (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             category_id bigint(20) NOT NULL,
@@ -146,7 +146,7 @@ class CreateHospitalTables
             KEY name (name),
             KEY is_panel (is_panel),
             KEY status (status),
-            CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES {$wpdb->prefix}hm_laboratory_categories(ID) ON DELETE CASCADE
+            CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES {$wpdb->prefix}hm_lab_categories(ID) ON DELETE CASCADE
         ) $charset_collate;";
 
         // Radiological Exams table
