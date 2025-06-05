@@ -220,9 +220,11 @@ const LabInvestigations = () => {
   };
 
   const openModal = (investigation, type = 'view') => {
+    console.log('openModal called with:', { investigation, type });
     setSelectedInvestigation(investigation);
     setModalType(type);
     setShowModal(true);
+    console.log('Modal state after setting:', { showModal: true, modalType: type });
   };
 
   const closeModal = () => {
@@ -445,15 +447,18 @@ const LabInvestigations = () => {
                         <Button 
                           variant="secondary" 
                           size="sm" 
-                          onClick={() => openModal(investigation, 'view')}
+                          onClick={() => { openModal(investigation, 'view'); }}
                         >
                           View
                         </Button>
-                        {investigation.status !== 'completed' && investigation.status !== 'verified' && (
+                        {(investigation.status === 'completed' || investigation.status === 'verified') && (
                           <Button 
                             variant="primary" 
                             size="sm"
-                            onClick={() => openModal(investigation, 'results')}
+                            onClick={() => {
+                              console.log('Results button clicked for:', investigation);
+                              openModal(investigation, 'results');
+                            }}
                           >
                             Results
                           </Button>
@@ -461,7 +466,10 @@ const LabInvestigations = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => openModal(investigation, 'edit')}
+                          onClick={() => {
+                            console.log('Edit button clicked for:', investigation);
+                            openModal(investigation, 'edit');
+                          }}
                         >
                           Edit
                         </Button>
@@ -555,16 +563,15 @@ const LabInvestigations = () => {
       </Card>
 
       {/* Modal for viewing/editing investigations and results */}
-      {showModal && (
-        <InvestigationModal
-          investigation={selectedInvestigation}
-          type={modalType}
-          onClose={closeModal}
-          onUpdateStatus={handleUpdateStatus}
-          onUpdateResults={handleUpdateResults}
-          loading={updateLoading}
-        />
-      )}
+      <InvestigationModal
+        investigation={selectedInvestigation}
+        type={modalType}
+        isOpen={showModal}
+        onClose={closeModal}
+        onUpdateStatus={handleUpdateStatus}
+        onUpdateResults={handleUpdateResults}
+        loading={updateLoading}
+      />
     </div>
   );
 };
@@ -824,7 +831,7 @@ const LabResultsView = ({ investigation }) => {
 };
 
 // Modal component for investigation details, editing, and results
-const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUpdateResults, loading }) => {
+const InvestigationModal = ({ investigation, type, isOpen, onClose, onUpdateStatus, onUpdateResults, loading }) => {
   const [formData, setFormData] = useState({
     test_type: investigation?.test_type || '',
     test_results: investigation?.test_results || '',
@@ -853,7 +860,7 @@ const InvestigationModal = ({ investigation, type, onClose, onUpdateStatus, onUp
   };
 
   return (
-    <Modal onClose={onClose} title={getModalTitle()}>
+    <Modal isOpen={isOpen} onClose={onClose} title={getModalTitle()}>
       <div className="space-y-4">
         {investigation && type === 'view' && (
           <>
