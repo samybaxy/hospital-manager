@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
+
 import { useUserAccess } from '../../hooks/useUserAccess';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/apiService';
@@ -347,6 +348,27 @@ const Visitations = () => {
   const canDeleteVisit = () => {
     return hasAccess('visitations') && role === 'administrator';
   };
+
+  // Check if user can add lab investigations
+  const canAddLabInvestigation = () => {
+    return role === 'lab_tech' || role === 'administrator';
+  };
+
+  // Handle redirecting to lab investigations page with visit data
+  const handleAddLabInvestigation = (visitation) => {
+    // Navigate to LabInvestigations page with query parameters
+    const params = new URLSearchParams({
+      action: 'add',
+      visitation_id: visitation.ID,
+      patient_id: visitation.patient_id,
+      doctor_id: visitation.doctor_id,
+      lab_tech_id: user?.ID || '',
+      patient_name: visitation.patient_name || '',
+      doctor_name: visitation.doctor_name || ''
+    });
+    
+    navigate(`/lab-investigations?${params.toString()}`);
+  };
   
   // Function to check if data is valid for rendering
   const hasValidVisitationData = () => {
@@ -653,6 +675,19 @@ const Visitations = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Edit
+                          </Button>
+                        )}
+                        {canAddLabInvestigation() && (
+                          <Button 
+                            variant="success" 
+                            size="sm" 
+                            onClick={() => handleAddLabInvestigation(visitation)}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Lab Test
                           </Button>
                         )}
                         {canDeleteVisit() && (

@@ -5,7 +5,7 @@ namespace HospitalManager\Services;
 class RoleService
 {
     // Hospital roles
-    const ROLE_ADMIN = 'hospital_admin';
+    const ROLE_ADMIN = 'administrator';
     const ROLE_DOCTOR = 'doctor';
     const ROLE_NURSE = 'hospital_nurse';
     const ROLE_STAFF = 'hospital_staff';

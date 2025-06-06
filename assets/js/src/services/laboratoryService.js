@@ -266,6 +266,59 @@ export const laboratoryService = {
       request_notes: 'Routine lab work as requested by physician.',
       status: 'requested'
     };
+  },
+
+  /**
+   * Get lab categories
+   */
+  async getLabCategories() {
+    try {
+      const response = await apiClient.get('/lab-categories');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching lab categories:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get test definitions
+   */
+  async getTestDefinitions(categoryId = null) {
+    try {
+      const params = categoryId ? `?category_id=${categoryId}` : '';
+      const response = await apiClient.get(`/lab-test-definitions${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching test definitions:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get test definitions by category
+   */
+  async getTestDefinitionsByCategory(categoryId) {
+    try {
+      const response = await apiClient.get(`/lab-test-definitions?category_id=${categoryId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching test definitions by category:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single test definition
+   */
+  async getTestDefinition(id) {
+    try {
+      const response = await apiClient.get(`/lab-test-definitions/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching test definition:', error);
+      throw error;
+    }
   }
 };
 

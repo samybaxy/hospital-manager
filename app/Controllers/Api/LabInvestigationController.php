@@ -160,17 +160,45 @@ class LabInvestigationController extends BaseController
                 'permission_callback' => function($request) {
                     return $this->check_permission($request, 'view_patient_records');
                 },
+            ]
+        ]);
+
+        // Lab Categories routes
+        register_rest_route($this->namespace, '/lab-categories', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'get_lab_categories'],
+                'permission_callback' => function($request) {
+                    return $this->check_permission($request, 'view_patient_records');
+                },
+            ]
+        ]);
+
+        // Test Definitions routes
+        register_rest_route($this->namespace, '/lab-test-definitions', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'get_test_definitions'],
+                'permission_callback' => function($request) {
+                    return $this->check_permission($request, 'view_patient_records');
+                },
                 'args' => [
-                    'lab_tech_id' => [
+                    'category_id' => [
+                        'description' => 'Filter by category ID',
                         'type' => 'integer',
-                        'sanitize_callback' => 'absint',
-                    ],
-                    'limit' => [
-                        'type' => 'integer',
-                        'default' => 20,
                         'sanitize_callback' => 'absint',
                     ]
                 ]
+            ]
+        ]);
+
+        register_rest_route($this->namespace, '/lab-test-definitions/(?P<ID>\d+)', [
+            [
+                'methods' => 'GET',
+                'callback' => [$this, 'get_test_definition'],
+                'permission_callback' => function($request) {
+                    return $this->check_permission($request, 'view_patient_records');
+                },
             ]
         ]);
     }
@@ -542,7 +570,153 @@ class LabInvestigationController extends BaseController
             
         } catch (\Exception $e) {
             return new WP_REST_Response([
-                'error' => 'Failed to fetch pending investigations',
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get lab categories
+     */
+    public function get_lab_categories(WP_REST_Request $request)
+    {
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_lab_categories';
+            
+            $categories = $wpdb->get_results(
+                "SELECT ID, name, description, display_order, status 
+                 FROM {$table} 
+                 WHERE status = 'active' 
+                 ORDER BY display_order ASC, name ASC",
+                ARRAY_A
+            );
+            
+            if ($wpdb->last_error) {
+                throw new \Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $categories ?: []
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return new WP_REST_Response([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get test definitions
+     */
+    public function get_test_definitions(WP_REST_Request $request)
+    {
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_lab_test_definitions';
+            $category_id = $request->get_param('category_id');
+            
+            $where_clause = "WHERE td.status = 'active'";
+            $where_params = [];
+            
+            if ($category_id) {
+                $where_clause .= " AND td.category_id = %d";
+                $where_params[] = $category_id;
+            }
+            
+            $query = "SELECT td.ID, td.category_id, td.code, td.name, td.description, 
+                             td.sample_type, td.container, td.sample_volume, 
+                             td.turnaround_time, td.test_parameters, td.specimen_requirements,
+                             td.preparation_instructions, td.methodology, td.cost, td.is_panel,
+                             c.name as category_name
+                      FROM {$table} td
+                      LEFT JOIN {$wpdb->prefix}hm_lab_categories c ON td.category_id = c.ID
+                      {$where_clause}
+                      ORDER BY td.name ASC";
+            
+            if (!empty($where_params)) {
+                $prepared_query = $wpdb->prepare($query, ...$where_params);
+            } else {
+                $prepared_query = $query;
+            }
+            
+            $test_definitions = $wpdb->get_results($prepared_query, ARRAY_A);
+            
+            if ($wpdb->last_error) {
+                throw new \Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            // Decode JSON test_parameters for each test
+            if ($test_definitions) {
+                foreach ($test_definitions as &$test) {
+                    if ($test['test_parameters']) {
+                        $test['test_parameters'] = json_decode($test['test_parameters'], true);
+                    }
+                }
+            }
+            
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $test_definitions ?: []
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return new WP_REST_Response([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get a single test definition
+     */
+    public function get_test_definition(WP_REST_Request $request)
+    {
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'hm_lab_test_definitions';
+            $test_id = intval($request['ID']);
+            
+            $test_definition = $wpdb->get_row(
+                $wpdb->prepare(
+                    "SELECT td.*, c.name as category_name
+                     FROM {$table} td
+                     LEFT JOIN {$wpdb->prefix}hm_lab_categories c ON td.category_id = c.ID
+                     WHERE td.ID = %d AND td.status = 'active'",
+                    $test_id
+                ),
+                ARRAY_A
+            );
+            
+            if ($wpdb->last_error) {
+                throw new \Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            if (!$test_definition) {
+                return new WP_REST_Response([
+                    'success' => false,
+                    'message' => 'Test definition not found'
+                ], 404);
+            }
+            
+            // Decode JSON test_parameters
+            if ($test_definition['test_parameters']) {
+                $test_definition['test_parameters'] = json_decode($test_definition['test_parameters'], true);
+            }
+            
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => $test_definition
+            ], 200);
+            
+        } catch (\Exception $e) {
+            return new WP_REST_Response([
+                'success' => false,
                 'message' => $e->getMessage()
             ], 500);
         }

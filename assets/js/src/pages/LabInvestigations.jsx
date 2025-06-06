@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 // Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
-
-// Custom styles for enhanced reference range display
+// Import new components
+import AddLabInvestigation from '../components/AddLabInvestigation';
+import EditLabInvestigation from '../components/EditLabInvestigation';
 const referenceRangeStyles = `
   .bg-blue-25 {
     background-color: #f0f9ff;
@@ -39,6 +41,9 @@ const getStatusBadgeColor = (status) => {
 };
 
 const LabInvestigations = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [investigations, setInvestigations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,6 +57,18 @@ const LabInvestigations = () => {
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('view'); // 'view', 'edit', 'results'
   const [updateLoading, setUpdateLoading] = useState(false);
+  
+  // New modal states for the form components
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  // State for query parameters from Visitations redirect
+  const [visitationData, setVisitationData] = useState({
+    patientId: null,
+    visitationId: null,
+    doctorId: null,
+    labTechId: null
+  });
 
   const fetchInvestigations = useCallback(async (page = 1) => {
     try {
@@ -156,6 +173,28 @@ const LabInvestigations = () => {
     return () => clearTimeout(timeoutId);
   }, [searchTerm, statusFilter]);
 
+  // Handle query parameters from Visitations page redirect
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const action = urlParams.get('action');
+    
+    if (action === 'add') {
+      // Extract and store visitation data
+      setVisitationData({
+        patientId: urlParams.get('patient_id') || null,
+        visitationId: urlParams.get('visitation_id') || null,
+        doctorId: urlParams.get('doctor_id') || null,
+        labTechId: urlParams.get('lab_tech_id') || null
+      });
+      
+      // Open the AddLabInvestigation modal with pre-filled data
+      setShowAddModal(true);
+      
+      // Clear the query parameters from the URL after handling them
+      navigate('/lab-investigations', { replace: true });
+    }
+  }, [location.search, navigate]);
+
   const handleSearch = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
@@ -251,6 +290,41 @@ const LabInvestigations = () => {
     setModalType('view');
   };
 
+  // New handlers for form modals
+  const handleCloseAddModal = () => {
+    setShowAddModal(false);
+    // Clear visitation data when modal is closed
+    setVisitationData({
+      patientId: null,
+      visitationId: null,
+      doctorId: null,
+      labTechId: null
+    });
+  };
+
+  const handleOpenEditModal = (investigation) => {
+    setSelectedInvestigation(investigation);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedInvestigation(null);
+  };
+
+  const handleAddSuccess = (newInvestigation) => {
+    // Refresh the investigations list
+    fetchInvestigations(currentPage);
+    setShowAddModal(false);
+  };
+
+  const handleEditSuccess = (updatedInvestigation) => {
+    // Refresh the investigations list
+    fetchInvestigations(currentPage);
+    setShowEditModal(false);
+    setSelectedInvestigation(null);
+  };
+
   const handleUpdateStatus = async (investigationId, newStatus) => {
     try {
       setUpdateLoading(true);
@@ -326,16 +400,6 @@ const LabInvestigations = () => {
               Manage laboratory tests, results, and medical investigations
             </p>
           </div>
-          <Button 
-            variant="secondary" 
-            className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700"
-            onClick={() => openModal(null, 'create')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            New Investigation
-          </Button>
         </div>
       </div>
       
@@ -484,10 +548,7 @@ const LabInvestigations = () => {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => {
-                            console.log('Edit button clicked for:', investigation);
-                            openModal(investigation, 'edit');
-                          }}
+                          onClick={() => handleOpenEditModal(investigation)}
                         >
                           Edit
                         </Button>
@@ -589,6 +650,25 @@ const LabInvestigations = () => {
         onUpdateStatus={handleUpdateStatus}
         onUpdateResults={handleUpdateResults}
         loading={updateLoading}
+      />
+
+      {/* Add Investigation Modal */}
+      <AddLabInvestigation 
+        isOpen={showAddModal}
+        onSuccess={handleAddSuccess}
+        onClose={handleCloseAddModal}
+        patientId={visitationData.patientId}
+        visitationId={visitationData.visitationId}
+        doctorId={visitationData.doctorId}
+        labTechId={visitationData.labTechId}
+      />
+
+      {/* Edit Investigation Modal */}
+      <EditLabInvestigation 
+        isOpen={showEditModal}
+        investigation={selectedInvestigation}
+        onSuccess={handleEditSuccess}
+        onClose={handleCloseEditModal}
       />
     </div>
   );

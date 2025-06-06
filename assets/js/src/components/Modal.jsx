@@ -9,6 +9,7 @@ const Modal = ({
   size = 'md',
   showCloseButton = true 
 }) => {
+  console.log('Modal rendered:', { isOpen, title, size });
   if (!isOpen) return null;
 
   const sizeClasses = {
