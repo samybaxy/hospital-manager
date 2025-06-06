@@ -249,7 +249,7 @@ class LabInvestigationController extends BaseController
             error_log("Total count: {$total}");
             // Get investigations with patient and doctor info
             $query = "SELECT l.*, 
-                        p.first_name as patient_first_name, p.last_name as patient_last_name,
+                        p.first_name as patient_first_name, p.last_name as patient_last_name, p.gender as patient_gender,
                         d.first_name as doctor_first_name, d.last_name as doctor_last_name,
                         lt.display_name as lab_tech_name
                      FROM {$table} l
@@ -270,6 +270,7 @@ class LabInvestigationController extends BaseController
             
             // Execute the query with error handling
             $investigations = $wpdb->get_results($prepared_query, ARRAY_A);
+            error_log('$investigations results: ' . print_r($investigations, true));
             
             // Check for SQL errors
             if ($wpdb->last_error) {
@@ -368,6 +369,7 @@ class LabInvestigationController extends BaseController
             
             // Add related data
             $formatted_investigation['patient_name'] = $patient ? trim($patient->first_name . ' ' . $patient->last_name) : '';
+            $formatted_investigation['patient_gender'] = $patient ? $patient->gender : '';
             $formatted_investigation['doctor_name'] = $doctor ? trim($doctor->first_name . ' ' . $doctor->last_name) : '';
             $formatted_investigation['lab_tech_name'] = $lab_tech ? $lab_tech->display_name : '';
             

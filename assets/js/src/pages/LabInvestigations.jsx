@@ -5,6 +5,26 @@ import Modal from '../components/Modal';
 // Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
 
+// Custom styles for enhanced reference range display
+const referenceRangeStyles = `
+  .bg-blue-25 {
+    background-color: #f0f9ff;
+  }
+  .bg-orange-25 {
+    background-color: #fffbeb;
+  }
+  .bg-red-25 {
+    background-color: #fef2f2;
+  }
+`;
+
+// Inject custom styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = referenceRangeStyles;
+  document.head.appendChild(style);
+}
+
 // Helper function for status badge colors
 const getStatusBadgeColor = (status) => {
   const colors = {
@@ -220,11 +240,9 @@ const LabInvestigations = () => {
   };
 
   const openModal = (investigation, type = 'view') => {
-    console.log('openModal called with:', { investigation, type });
     setSelectedInvestigation(investigation);
     setModalType(type);
     setShowModal(true);
-    console.log('Modal state after setting:', { showModal: true, modalType: type });
   };
 
   const closeModal = () => {
@@ -713,9 +731,33 @@ const LabResultsView = ({ investigation }) => {
     }
 
     if (results.parameters && Array.isArray(results.parameters)) {
+      // Check if any parameters have gender-specific ranges
+      const hasGenderSpecificRanges = results.parameters.some(param => 
+        param.reference_range && param.reference_range.male && param.reference_range.female
+      );
+
       // CBC-style results with parameters
       return (
         <div className="space-y-4">
+          {/* Gender-specific range indicator */}
+          {hasGenderSpecificRanges && investigation.patient_gender && (
+            <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r-lg">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-blue-800">
+                    Gender-Specific Reference Ranges Applied
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Displaying {investigation.patient_gender.charAt(0).toUpperCase() + investigation.patient_gender.slice(1)} reference ranges where applicable
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -723,7 +765,14 @@ const LabResultsView = ({ investigation }) => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference Range</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-blue-700 uppercase tracking-wider bg-blue-50 border-l-4 border-blue-400">
+                    <div className="flex items-center space-x-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      <span>Reference Range</span>
+                    </div>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
@@ -739,11 +788,69 @@ const LabResultsView = ({ investigation }) => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {param.unit}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {param.reference_range ? 
-                        `${param.reference_range.min} - ${param.reference_range.max}` : 
-                        'N/A'
-                      }
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm border-l-4 ${
+                      param.is_critical 
+                        ? 'bg-red-25 border-red-500' 
+                        : param.is_abnormal 
+                          ? 'bg-orange-25 border-orange-400' 
+                          : 'bg-blue-25 border-blue-400'
+                    }`}>
+                      <div className={`font-semibold ${
+                        param.is_critical 
+                          ? 'text-red-900' 
+                          : param.is_abnormal 
+                            ? 'text-orange-900' 
+                            : 'text-blue-800'
+                      }`}>
+                        {(() => {
+                          if (!param.reference_range) return (
+                            <span className="text-gray-400 italic font-normal">N/A</span>
+                          );
+                          
+                          let range = param.reference_range;
+                          
+                          // Handle gender-specific ranges
+                          if (range.male && range.female) {
+                            const patientGender = investigation.patient_gender || 'male';
+                            range = range[patientGender.toLowerCase()] || range.male;
+                          }
+                          // Handle age-specific ranges (adult/child)
+                          else if (range.adult) {
+                            range = range.adult;
+                          }
+                          
+                          // Check if we have min/max values
+                          if (range.min !== undefined && range.max !== undefined) {
+                            return (
+                              <div className="flex flex-col">
+                                <span className="font-bold">{range.min} - {range.max}</span>
+                                {investigation.patient_gender && param.reference_range.male && param.reference_range.female && (
+                                  <span className={`text-xs mt-1 ${
+                                    param.is_critical 
+                                      ? 'text-red-700' 
+                                      : param.is_abnormal 
+                                        ? 'text-orange-700' 
+                                        : 'text-blue-600'
+                                  }`}>
+                                    ({investigation.patient_gender.charAt(0).toUpperCase() + investigation.patient_gender.slice(1)} range)
+                                  </span>
+                                )}
+                                {(param.is_abnormal || param.is_critical) && (
+                                  <span className={`text-xs font-semibold mt-1 ${
+                                    param.is_critical 
+                                      ? 'text-red-700' 
+                                      : 'text-orange-700'
+                                  }`}>
+                                    ⚠ Value outside range
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          }
+                          
+                          return <span className="text-gray-400 italic font-normal">N/A</span>;
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {param.is_critical ? (

@@ -4,200 +4,69 @@ namespace HospitalManager\Database\Seeders;
 
 class LabInvestigationSeeder extends Seeder
 {
-    /**
-     * Mapping of test types to categories
-     * 
-     * @var array
-     */
-    protected $testTypeToCategory = [
-        'Complete Blood Count (CBC)' => 'Hematology',
-        'Blood Glucose Test' => 'Clinical Chemistry',
-        'Liver Function Test' => 'Clinical Chemistry',
-        'Lipid Profile' => 'Clinical Chemistry',
-        'Thyroid Function Test' => 'Endocrinology',
-        'Urinalysis' => 'Urinalysis',
-        'Kidney Function Test' => 'Clinical Chemistry',
-        'Electrolyte Panel' => 'Clinical Chemistry',
-        'HbA1c (Glycated Hemoglobin)' => 'Clinical Chemistry',
-        'Malaria Parasite Test' => 'Microbiology',
-        'Typhoid Test (Widal)' => 'Serology',
-        'HIV Test' => 'Serology',
-        'Hepatitis B Test' => 'Serology',
-        'Hepatitis C Test' => 'Serology',
-        'Tuberculosis Test' => 'Microbiology',
-        'Stool Analysis' => 'Microbiology',
-        'Blood Culture' => 'Microbiology',
-        'Urine Culture' => 'Microbiology',
-        'Pap Smear' => 'Molecular Diagnostics',
-        'PSA (Prostate-Specific Antigen)' => 'Immunology'
-    ];
     
     /**
-     * Lab test types
+     * Lab test types - updated to match database test definition names
      * 
      * @var array
      */
     protected $testTypes = [
-        'Complete Blood Count (CBC)',
-        'Blood Glucose Test',
+        'Complete Blood Count',
         'Liver Function Test',
-        'Lipid Profile',
+        'Lipid Profile', 
         'Thyroid Function Test',
-        'Urinalysis',
+        'Urine Dipstick', // Changed from 'Urinalysis'
         'Kidney Function Test',
-        'Electrolyte Panel',
-        'HbA1c (Glycated Hemoglobin)',
-        'Malaria Parasite Test',
-        'Typhoid Test (Widal)',
-        'HIV Test',
-        'Hepatitis B Test',
-        'Hepatitis C Test',
-        'Tuberculosis Test',
-        'Stool Analysis',
         'Blood Culture',
         'Urine Culture',
-        'Pap Smear',
-        'PSA (Prostate-Specific Antigen)'
+        'HIV Antibody Test', // Changed from 'HIV Test'
+        'Hepatitis B Surface Antigen', // Changed from 'Hepatitis B Test'
+        'Ferritin',
+        'Erythrocyte Sedimentation Rate',
+        'Prothrombin Time and INR',
+        'Activated Partial Thromboplastin Time',
+        'Cortisol',
+        'Vitamin B12',
+        '24-Hour Urine Protein',
+        'COVID-19 PCR',
+        'Influenza PCR',
+        'Rheumatoid Factor'
     ];
     
     /**
-     * Sample types for tests
+     * Sample types for tests - updated to match new test names
      * 
      * @var array
      */
     protected $sampleTypes = [
-        'Complete Blood Count (CBC)' => 'Whole Blood',
-        'Blood Glucose Test' => 'Plasma',
+        'Complete Blood Count' => 'Whole Blood',
         'Liver Function Test' => 'Serum',
         'Lipid Profile' => 'Serum',
         'Thyroid Function Test' => 'Serum',
-        'Urinalysis' => 'Urine',
+        'Urine Dipstick' => 'Urine',
         'Kidney Function Test' => 'Serum',
-        'Electrolyte Panel' => 'Serum',
-        'HbA1c (Glycated Hemoglobin)' => 'Whole Blood',
-        'Malaria Parasite Test' => 'Whole Blood',
-        'Typhoid Test (Widal)' => 'Serum',
-        'HIV Test' => 'Serum',
-        'Hepatitis B Test' => 'Serum',
-        'Hepatitis C Test' => 'Serum',
-        'Tuberculosis Test' => 'Sputum',
-        'Stool Analysis' => 'Stool',
         'Blood Culture' => 'Blood',
         'Urine Culture' => 'Urine',
-        'Pap Smear' => 'Cervical Cells',
-        'PSA (Prostate-Specific Antigen)' => 'Serum'
+        'HIV Antibody Test' => 'Serum',
+        'Hepatitis B Surface Antigen' => 'Serum',
+        'Ferritin' => 'Serum',
+        'Erythrocyte Sedimentation Rate' => 'Whole Blood',
+        'Prothrombin Time and INR' => 'Plasma',
+        'Activated Partial Thromboplastin Time' => 'Plasma',
+        'Cortisol' => 'Serum',
+        'Vitamin B12' => 'Serum',
+        '24-Hour Urine Protein' => 'Urine',
+        'COVID-19 PCR' => 'Nasopharyngeal Swab',
+        'Influenza PCR' => 'Nasopharyngeal Swab',
+        'Rheumatoid Factor' => 'Serum'
     ];
     
     /**
-     * Test results data structure
+     * Cache for test parameters fetched from database
      * 
      * @var array
      */
-    protected $testResults = [
-        'Complete Blood Count (CBC)' => [
-            'parameters' => [
-                [
-                    'id' => 'WBC',
-                    'name' => 'White Blood Cell Count',
-                    'value' => ['min' => 4.5, 'max' => 10.5],
-                    'unit' => 'x10^9/L',
-                    'reference_range' => ['min' => 4.0, 'max' => 11.0]
-                ],
-                [
-                    'id' => 'RBC',
-                    'name' => 'Red Blood Cell Count',
-                    'value' => ['min' => 4.1, 'max' => 5.3],
-                    'unit' => 'x10^12/L',
-                    'reference_range' => ['min' => 4.5, 'max' => 5.5, 'gender' => 'male']
-                ],
-                [
-                    'id' => 'HGB',
-                    'name' => 'Hemoglobin',
-                    'value' => ['min' => 13.0, 'max' => 16.5],
-                    'unit' => 'g/dL',
-                    'reference_range' => ['min' => 13.5, 'max' => 17.5, 'gender' => 'male']
-                ],
-                [
-                    'id' => 'HCT',
-                    'name' => 'Hematocrit',
-                    'value' => ['min' => 39.0, 'max' => 47.0],
-                    'unit' => '%',
-                    'reference_range' => ['min' => 41.0, 'max' => 50.0, 'gender' => 'male']
-                ],
-                [
-                    'id' => 'PLT',
-                    'name' => 'Platelet Count',
-                    'value' => ['min' => 160, 'max' => 370],
-                    'unit' => 'x10^9/L',
-                    'reference_range' => ['min' => 150, 'max' => 400]
-                ]
-            ]
-        ],
-        'Liver Function Test' => [
-            'parameters' => [
-                [
-                    'id' => 'ALT',
-                    'name' => 'Alanine Transaminase',
-                    'value' => ['min' => 10, 'max' => 50],
-                    'unit' => 'U/L',
-                    'reference_range' => ['min' => 7, 'max' => 55, 'gender' => 'male']
-                ],
-                [
-                    'id' => 'AST',
-                    'name' => 'Aspartate Transaminase',
-                    'value' => ['min' => 10, 'max' => 40],
-                    'unit' => 'U/L',
-                    'reference_range' => ['min' => 8, 'max' => 48, 'gender' => 'male']
-                ],
-                [
-                    'id' => 'ALP',
-                    'name' => 'Alkaline Phosphatase',
-                    'value' => ['min' => 45, 'max' => 115],
-                    'unit' => 'U/L',
-                    'reference_range' => ['min' => 40, 'max' => 129]
-                ],
-                [
-                    'id' => 'TBIL',
-                    'name' => 'Total Bilirubin',
-                    'value' => ['min' => 0.2, 'max' => 1.0],
-                    'unit' => 'mg/dL',
-                    'reference_range' => ['min' => 0.1, 'max' => 1.2]
-                ],
-                [
-                    'id' => 'ALB',
-                    'name' => 'Albumin',
-                    'value' => ['min' => 3.6, 'max' => 4.8],
-                    'unit' => 'g/dL',
-                    'reference_range' => ['min' => 3.5, 'max' => 5.0]
-                ]
-            ]
-        ],
-        'Thyroid Function Test' => [
-            'parameters' => [
-                [
-                    'id' => 'TSH',
-                    'name' => 'Thyroid Stimulating Hormone',
-                    'value' => ['min' => 0.5, 'max' => 3.7],
-                    'unit' => 'mIU/L',
-                    'reference_range' => ['min' => 0.4, 'max' => 4.0]
-                ],
-                [
-                    'id' => 'FT4',
-                    'name' => 'Free Thyroxine',
-                    'value' => ['min' => 0.9, 'max' => 1.7],
-                    'unit' => 'ng/dL',
-                    'reference_range' => ['min' => 0.8, 'max' => 1.8]
-                ],
-                [
-                    'id' => 'FT3',
-                    'name' => 'Free Triiodothyronine',
-                    'value' => ['min' => 2.5, 'max' => 4.0],
-                    'unit' => 'pg/mL',
-                    'reference_range' => ['min' => 2.3, 'max' => 4.2]
-                ]
-            ]
-        ]
-    ];
+    protected $testParametersCache = [];
     
     /**
      * Lab result statuses
@@ -286,85 +155,40 @@ class LabInvestigationSeeder extends Seeder
                 $lab_notes = null;
                 
                 if (in_array($status, ['completed', 'verified'])) {
-                    if (isset($this->testResults[$test_type])) {
-                        $result_data = $this->testResults[$test_type];
+                    // Get test parameters from database
+                    $test_parameters = $this->getTestParameters($test_type);
+                    
+                    if ($test_parameters && !empty($test_parameters)) {
+                        // Get patient gender for gender-specific ranges
+                        $patient_gender = $wpdb->get_var(
+                            $wpdb->prepare(
+                                "SELECT gender FROM {$wpdb->prefix}hm_patients WHERE ID = %d",
+                                $visitation->patient_id
+                            )
+                        ) ?: 'male';
                         
-                        // Process each parameter and randomly make some abnormal
-                        $abnormal_parameters = [];
-                        $critical_parameters = [];
+                        // Generate test results using database parameters
+                        $results_data = $this->generateTestResults($test_parameters, $patient_gender);
                         
-                        foreach ($result_data['parameters'] as &$param) {
-                            // Generate a random value within or slightly outside the range
-                            $min_val = $param['value']['min'];
-                            $max_val = $param['value']['max'];
-                            
-                            // 20% chance of abnormal value
-                            if (rand(1, 100) <= 20) {
-                                // Generate slightly abnormal value
-                                $is_low = (rand(0, 1) === 0);
-                                if ($is_low) {
-                                    $value = $min_val * (rand(70, 95) / 100); // 5-30% below min
-                                } else {
-                                    $value = $max_val * (rand(105, 130) / 100); // 5-30% above max
-                                }
-                                
-                                $abnormal_parameters[] = $param['id'];
-                                $is_abnormal = 1;
-                                $param['is_abnormal'] = true;
-                                $param['flag'] = $is_low ? 'L' : 'H';
-                                
-                                // 5% chance of critical value
-                                if (rand(1, 100) <= 25) {
-                                    if ($is_low) {
-                                        $value = $min_val * (rand(40, 69) / 100); // 31-60% below min
-                                    } else {
-                                        $value = $max_val * (rand(131, 160) / 100); // 31-60% above max
-                                    }
-                                    $critical_parameters[] = $param['id'];
-                                    $is_critical = 1;
-                                    $param['is_critical'] = true;
-                                    $param['flag'] = $is_low ? 'LL' : 'HH';
-                                }
-                            } else {
-                                // Normal value
-                                $value = $min_val + (($max_val - $min_val) * (rand(10, 90) / 100));
-                                $param['is_abnormal'] = false;
-                                $param['is_critical'] = false;
-                                $param['flag'] = null;
-                            }
-                            
-                            // Round to appropriate decimal places based on the typical precision for this type of test
-                            if (strpos($param['unit'], 'g/dL') !== false) {
-                                $value = round($value, 1); // Hemoglobin, proteins
-                            } elseif (strpos($param['unit'], 'x10^') !== false) {
-                                $value = round($value, 1); // Cell counts
-                            } elseif (strpos($param['unit'], 'mg/dL') !== false || 
-                                      strpos($param['unit'], 'mIU/L') !== false) {
-                                $value = round($value, 2); // Chemistry tests
-                            } else {
-                                $value = round($value, is_int($value) ? 0 : 2);
-                            }
-                            
-                            $param['value'] = $value;
-                        }
+                        $test_results = json_encode(['parameters' => $results_data['parameters']]);
+                        $is_abnormal = $results_data['is_abnormal'];
+                        $is_critical = $results_data['is_critical'];
                         
-                        $test_results = json_encode($result_data);
-                        
-                        if (!empty($abnormal_parameters)) {
+                        if (!empty($results_data['abnormal_parameters'])) {
                             $flags = json_encode([
-                                'abnormal' => $abnormal_parameters,
-                                'critical' => $critical_parameters
+                                'abnormal' => $results_data['abnormal_parameters'],
+                                'critical' => $results_data['critical_parameters']
                             ]);
                             
-                            $lab_notes = 'Abnormal values detected for: ' . implode(', ', $abnormal_parameters);
-                            if (!empty($critical_parameters)) {
-                                $lab_notes .= '. CRITICAL values for: ' . implode(', ', $critical_parameters) . '. Physician notified.';
+                            $lab_notes = 'Abnormal values detected for: ' . implode(', ', $results_data['abnormal_parameters']);
+                            if (!empty($results_data['critical_parameters'])) {
+                                $lab_notes .= '. CRITICAL values for: ' . implode(', ', $results_data['critical_parameters']) . '. Physician notified.';
                             }
                         } else {
                             $lab_notes = 'All values within normal ranges.';
                         }
                     } else {
-                        // Generic test results for tests without specific parameters
+                        // Fallback for tests without specific parameters in database
                         $test_results = json_encode([
                             'result' => 'Test completed',
                             'interpretation' => [
@@ -447,5 +271,216 @@ class LabInvestigationSeeder extends Seeder
         }
         
         return $user_ids;
+    }
+    
+    /**
+     * Get test parameters from database for a specific test type
+     * 
+     * @param string $testType The test type name
+     * @return array|null Test parameters or null if not found
+     */
+    protected function getTestParameters($testType)
+    {
+        // Check cache first
+        if (isset($this->testParametersCache[$testType])) {
+            return $this->testParametersCache[$testType];
+        }
+        
+        global $wpdb;
+        
+        // Fetch test parameters from database
+        $result = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT test_parameters FROM {$wpdb->prefix}hm_lab_test_definitions WHERE name = %s",
+                $testType
+            )
+        );
+        
+        if ($result && !empty($result->test_parameters)) {
+            $parameters = json_decode($result->test_parameters, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                // Extract the parameters array from the nested structure
+                $parametersList = isset($parameters['parameters']) ? $parameters['parameters'] : $parameters;
+                
+                // Cache the result
+                $this->testParametersCache[$testType] = $parametersList;
+                return $parametersList;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Generate test results based on test parameters
+     * 
+     * @param array $parameters Test parameters from database
+     * @param string $patientGender Patient gender for gender-specific ranges
+     * @return array Generated test results with flags
+     */
+    protected function generateTestResults($parameters, $patientGender = 'male')
+    {
+        $results = [];
+        $abnormal_parameters = [];
+        $critical_parameters = [];
+        $is_abnormal = 0;
+        $is_critical = 0;
+        
+        // Validate that parameters is an array
+        if (!is_array($parameters)) {
+            return [
+                'parameters' => [],
+                'abnormal_parameters' => [],
+                'critical_parameters' => [],
+                'is_abnormal' => 0,
+                'is_critical' => 0
+            ];
+        }
+        
+        foreach ($parameters as $param) {
+            // Validate parameter structure
+            if (!is_array($param)) {
+                continue;
+            }
+            
+            // Ensure required keys exist with default values
+            $param_id = $param['ID'] ?? $param['id'] ?? 'param_' . uniqid();
+            $param_name = $param['name'] ?? 'Unknown Parameter';
+            $param_unit = $param['unit'] ?? '';
+            $param_ref_range = $param['reference_range'] ?? null;
+            
+            // Skip parameter if no reference range is available
+            if (empty($param_ref_range) || !is_array($param_ref_range)) {
+                continue;
+            }
+            
+            $result_param = [
+                'id' => $param_id,
+                'name' => $param_name,
+                'unit' => $param_unit,
+                'reference_range' => $param_ref_range,
+                'is_abnormal' => false,
+                'is_critical' => false,
+                'flag' => null
+            ];
+            
+            // Determine reference range based on gender and age
+            $ref_range = $param_ref_range;
+            
+            // Handle nested reference ranges (male/female, adult/child)
+            if (isset($ref_range['male']) && isset($ref_range['female'])) {
+                $gender_key = strtolower($patientGender);
+                $ref_range = $ref_range[$gender_key] ?? $ref_range['male'];
+            } elseif (isset($ref_range['adult'])) {
+                // Default to adult ranges
+                $ref_range = $ref_range['adult'];
+            }
+            
+            // Validate min/max values exist
+            if (!isset($ref_range['min']) || !isset($ref_range['max']) || 
+                !is_numeric($ref_range['min']) || !is_numeric($ref_range['max'])) {
+                continue;
+            }
+            
+            $min_normal = (float) $ref_range['min'];
+            $max_normal = (float) $ref_range['max'];
+            
+            // Skip if invalid range
+            if ($min_normal >= $max_normal) {
+                continue;
+            }
+            
+            // Get critical range if available
+            $critical_range = $param['critical_range'] ?? null;
+            
+            // 20% chance of abnormal value
+            if (rand(1, 100) <= 20) {
+                $is_low = (rand(0, 1) === 0);
+                
+                if ($is_low) {
+                    // Generate low abnormal value (5-30% below normal min)
+                    $value = $min_normal * (rand(70, 95) / 100);
+                } else {
+                    // Generate high abnormal value (5-30% above normal max)
+                    $value = $max_normal * (rand(105, 130) / 100);
+                }
+                
+                $abnormal_parameters[] = $param_id;
+                $is_abnormal = 1;
+                $result_param['is_abnormal'] = true;
+                $result_param['flag'] = $is_low ? 'L' : 'H';
+                
+                // Check if value falls into critical range (25% chance if abnormal)
+                if (is_array($critical_range) && 
+                    isset($critical_range['min']) && isset($critical_range['max']) &&
+                    is_numeric($critical_range['min']) && is_numeric($critical_range['max']) &&
+                    rand(1, 100) <= 25) {
+                    
+                    $crit_min = (float) $critical_range['min'];
+                    $crit_max = (float) $critical_range['max'];
+                    
+                    if ($is_low && $value < $crit_min) {
+                        $critical_parameters[] = $param_id;
+                        $is_critical = 1;
+                        $result_param['is_critical'] = true;
+                        $result_param['flag'] = 'LL';
+                    } elseif (!$is_low && $value > $crit_max) {
+                        $critical_parameters[] = $param_id;
+                        $is_critical = 1;
+                        $result_param['is_critical'] = true;
+                        $result_param['flag'] = 'HH';
+                    }
+                }
+            } else {
+                // Normal value (10-90% of normal range)
+                $value = $min_normal + (($max_normal - $min_normal) * (rand(10, 90) / 100));
+            }
+            
+            // Round to appropriate decimal places
+            $value = $this->roundToAppropriateDecimals($value, $param_unit);
+            $result_param['value'] = $value;
+            
+            $results[] = $result_param;
+        }
+        
+        return [
+            'parameters' => $results,
+            'abnormal_parameters' => $abnormal_parameters,
+            'critical_parameters' => $critical_parameters,
+            'is_abnormal' => $is_abnormal,
+            'is_critical' => $is_critical
+        ];
+    }
+    
+    /**
+     * Round value to appropriate decimal places based on unit
+     * 
+     * @param float $value The value to round
+     * @param string $unit The unit of measurement
+     * @return float Rounded value
+     */
+    protected function roundToAppropriateDecimals($value, $unit)
+    {
+        // Handle null or empty units
+        if (empty($unit) || !is_string($unit)) {
+            return round($value, 2);
+        }
+        
+        // Different units need different precision
+        if (strpos($unit, 'g/dL') !== false || strpos($unit, 'g/L') !== false) {
+            return round($value, 1); // Hemoglobin, proteins
+        } elseif (strpos($unit, 'x10^') !== false) {
+            return round($value, 1); // Cell counts
+        } elseif (strpos($unit, 'mg/dL') !== false || 
+                  strpos($unit, 'mmol/L') !== false ||
+                  strpos($unit, 'mIU/L') !== false ||
+                  strpos($unit, 'ng/dL') !== false ||
+                  strpos($unit, 'pg/mL') !== false) {
+            return round($value, 2); // Chemistry tests
+        } elseif (strpos($unit, 'U/L') !== false || strpos($unit, '%') !== false) {
+            return round($value, 0); // Enzyme activities, percentages
+        }
+        
+        return round($value, 2); // Default
     }
 }
