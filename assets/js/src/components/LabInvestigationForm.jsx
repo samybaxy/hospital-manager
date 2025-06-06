@@ -489,9 +489,6 @@ const LabInvestigationForm = ({
               <option value="requested">Requested</option>
               <option value="sample_collected">Sample Collected</option>
               <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="verified">Verified</option>
-              <option value="cancelled">Cancelled</option>
             </select>
           </div>
         </div>
