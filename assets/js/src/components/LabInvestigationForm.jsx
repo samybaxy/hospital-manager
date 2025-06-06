@@ -401,12 +401,14 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+              className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.visitation_id ? 'border-red-300' : 'border-gray-300'
               }`}
               value={formData.visitation_id}
               onChange={(e) => handleInputChange('visitation_id', e.target.value)}
               placeholder="Enter visitation ID"
+              disabled
+              title="This field is automatically filled and cannot be edited"
             />
             {errors.visitation_id && <p className="mt-1 text-sm text-red-600">{errors.visitation_id}</p>}
           </div>
@@ -417,12 +419,14 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+              className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.patient_id ? 'border-red-300' : 'border-gray-300'
               }`}
               value={formData.patient_id}
               onChange={(e) => handleInputChange('patient_id', e.target.value)}
               placeholder="Enter patient ID"
+              disabled
+              title="This field is automatically filled and cannot be edited"
             />
             {errors.patient_id && <p className="mt-1 text-sm text-red-600">{errors.patient_id}</p>}
           </div>
@@ -433,12 +437,14 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
-              className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+              className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.doctor_id ? 'border-red-300' : 'border-gray-300'
               }`}
               value={formData.doctor_id}
               onChange={(e) => handleInputChange('doctor_id', e.target.value)}
               placeholder="Enter doctor ID"
+              disabled
+              title="This field is automatically filled and cannot be edited"
             />
             {errors.doctor_id && <p className="mt-1 text-sm text-red-600">{errors.doctor_id}</p>}
           </div>
@@ -447,10 +453,12 @@ const LabInvestigationForm = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">Lab Technician ID</label>
             <input
               type="number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
               value={formData.lab_tech_id}
               onChange={(e) => handleInputChange('lab_tech_id', e.target.value)}
               placeholder="Enter lab tech ID"
+              disabled
+              title="This field is automatically filled and cannot be edited"
             />
           </div>
 
