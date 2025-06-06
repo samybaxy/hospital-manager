@@ -708,6 +708,31 @@ const LabInvestigationView = ({ investigation }) => {
 
 // Lab Results View Component
 const LabResultsView = ({ investigation }) => {
+  // Helper function to safely render any value as React content
+  const safeRender = (value) => {
+    if (value === null || value === undefined) {
+      return 'N/A';
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value, null, 2);
+    }
+    return String(value);
+  };
+
+  // Helper function to safely check if abnormal/critical data exists
+  const hasAbnormalOrCritical = (results) => {
+    if (!results || typeof results !== 'object') return false;
+    
+    const hasAbnormal = results.abnormal && (
+      Array.isArray(results.abnormal) ? results.abnormal.length > 0 : true
+    );
+    const hasCritical = results.critical && (
+      Array.isArray(results.critical) ? results.critical.length > 0 : true
+    );
+    
+    return hasAbnormal || hasCritical;
+  };
+
   const renderTestResults = () => {
     if (!investigation.test_results) {
       return (
@@ -728,6 +753,46 @@ const LabResultsView = ({ investigation }) => {
         : investigation.test_results;
     } catch (e) {
       results = investigation.test_results;
+    }
+
+    // Also consider flags field which might contain abnormal/critical data
+    let flags = null;
+    if (investigation.flags) {
+      try {
+        flags = typeof investigation.flags === 'string' 
+          ? JSON.parse(investigation.flags) 
+          : investigation.flags;
+      } catch (e) {
+        flags = investigation.flags;
+      }
+    }
+
+    // If results don't have abnormal/critical but flags do, merge them
+    if (flags && (flags.abnormal || flags.critical) && results && !results.abnormal && !results.critical) {
+      results = {
+        ...results,
+        abnormal: flags.abnormal,
+        critical: flags.critical
+      };
+    }
+
+    // Ensure results is a valid object and not something that could be rendered directly
+    if (!results || typeof results !== 'object' || results === null) {
+      return (
+        <div className="text-center py-8">
+          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Invalid Results Data</h3>
+          <p className="mt-1 text-sm text-gray-500">Test results data format is invalid or corrupted.</p>
+        </div>
+      );
+    }
+
+    // Additional safety check to prevent React child errors
+    if (Array.isArray(results)) {
+      console.warn('Results is an array, converting to object');
+      results = { data: results };
     }
 
     if (results.parameters && Array.isArray(results.parameters)) {
@@ -780,13 +845,13 @@ const LabResultsView = ({ investigation }) => {
                 {results.parameters.map((param, index) => (
                   <tr key={index} className={param.is_abnormal ? 'bg-red-50' : param.is_critical ? 'bg-orange-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {param.name}
+                      {safeRender(param.name)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                      {param.value}
+                      {safeRender(param.value)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {param.unit}
+                      {safeRender(param.unit)}
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm border-l-4 ${
                       param.is_critical 
@@ -875,26 +940,89 @@ const LabResultsView = ({ investigation }) => {
         </div>
       );
     } else {
-      // Simple result display
+      // Simple result display - handle various result formats
       return (
         <div className="space-y-4">
           {results.result && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <label className="block text-sm font-medium text-gray-700">Result</label>
-              <p className="mt-1 text-lg font-semibold text-gray-900">{results.result}</p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                {safeRender(results.result)}
+              </p>
             </div>
           )}
           {results.interpretation && (
             <div className="bg-green-50 p-4 rounded-lg">
               <label className="block text-sm font-medium text-gray-700">Interpretation</label>
-              <p className="mt-1 text-sm text-gray-900">{results.interpretation}</p>
+              <p className="mt-1 text-sm text-gray-900">
+                {safeRender(results.interpretation)}
+              </p>
             </div>
           )}
-          {typeof results === 'object' && !results.result && !results.interpretation && (
+          
+          {/* Handle abnormal and critical flags if they exist */}
+          {hasAbnormalOrCritical(results) && (
+            <div className="bg-yellow-50 p-4 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700">Abnormal Results</label>
+              <div className="mt-2 space-y-2">
+                {results.abnormal && (
+                  <div>
+                    <p className="text-sm font-medium text-orange-800">Abnormal Parameters:</p>
+                    {Array.isArray(results.abnormal) ? (
+                      <ul className="list-disc list-inside text-sm text-orange-700">
+                        {results.abnormal.map((item, index) => (
+                          <li key={index}>
+                            {typeof item === 'string' ? item : JSON.stringify(item)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : typeof results.abnormal === 'object' ? (
+                      <div className="text-sm text-orange-700">
+                        <pre className="whitespace-pre-wrap bg-white p-2 rounded border text-xs">
+                          {JSON.stringify(results.abnormal, null, 2)}
+                        </pre>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-orange-700">
+                        {String(results.abnormal)}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {results.critical && (
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Critical Parameters:</p>
+                    {Array.isArray(results.critical) ? (
+                      <ul className="list-disc list-inside text-sm text-red-700">
+                        {results.critical.map((item, index) => (
+                          <li key={index}>
+                            {typeof item === 'string' ? item : JSON.stringify(item)}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : typeof results.critical === 'object' ? (
+                      <div className="text-sm text-red-700">
+                        <pre className="whitespace-pre-wrap bg-white p-2 rounded border text-xs">
+                          {JSON.stringify(results.critical, null, 2)}
+                        </pre>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-red-700">
+                        {String(results.critical)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Fallback for complex objects */}
+          {typeof results === 'object' && !results.result && !results.interpretation && !results.abnormal && !results.critical && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <label className="block text-sm font-medium text-gray-700">Raw Results</label>
               <pre className="mt-1 text-xs text-gray-600 whitespace-pre-wrap bg-white p-3 rounded border">
-                {JSON.stringify(results, null, 2)}
+                {safeRender(results)}
               </pre>
             </div>
           )}
@@ -930,7 +1058,84 @@ const LabResultsView = ({ investigation }) => {
       {investigation.flags && (
         <div className="bg-yellow-50 p-4 rounded-lg">
           <h4 className="text-md font-semibold text-gray-900 mb-2">Flags & Alerts</h4>
-          <p className="text-sm text-gray-700">{investigation.flags}</p>
+          {(() => {
+            let flagsData;
+            try {
+              flagsData = typeof investigation.flags === 'string' 
+                ? JSON.parse(investigation.flags) 
+                : investigation.flags;
+            } catch (e) {
+              flagsData = investigation.flags;
+            }
+
+            if (typeof flagsData === 'object' && flagsData !== null) {
+              return (
+                <div className="space-y-3">
+                  {flagsData.abnormal && Array.isArray(flagsData.abnormal) && flagsData.abnormal.length > 0 && (
+                    <div className="bg-orange-100 border-l-4 border-orange-500 p-3 rounded-r">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-orange-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-semibold text-orange-800">Abnormal Parameters</p>
+                          <div className="mt-1">
+                            {flagsData.abnormal.map((param, index) => (
+                              <span 
+                                key={index} 
+                                className="inline-block bg-orange-200 text-orange-800 text-xs font-medium px-2 py-1 rounded mr-1 mb-1"
+                              >
+                                {param}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {flagsData.critical && Array.isArray(flagsData.critical) && flagsData.critical.length > 0 && (
+                    <div className="bg-red-100 border-l-4 border-red-500 p-3 rounded-r">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        <div>
+                          <p className="text-sm font-semibold text-red-800">Critical Parameters</p>
+                          <div className="mt-1">
+                            {flagsData.critical.map((param, index) => (
+                              <span 
+                                key={index} 
+                                className="inline-block bg-red-200 text-red-800 text-xs font-medium px-2 py-1 rounded mr-1 mb-1"
+                              >
+                                {param}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(!flagsData.abnormal || flagsData.abnormal.length === 0) && 
+                   (!flagsData.critical || flagsData.critical.length === 0) && (
+                    <div className="bg-green-100 border-l-4 border-green-500 p-3 rounded-r">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <p className="text-sm font-semibold text-green-800">All Parameters Normal</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            } else {
+              return (
+                <p className="text-sm text-gray-700">{safeRender(investigation.flags)}</p>
+              );
+            }
+          })()}
         </div>
       )}
     </div>
