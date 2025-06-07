@@ -43,7 +43,7 @@ class VisitationSeeder extends Seeder
         $this->log("Creating visitation records...");
         
         // Initialize Faker with English locale to avoid encoding issues
-        $this->faker = Faker::create('en_US');
+        $this->faker = Faker::create('en_NG');
         
         global $wpdb;
         
@@ -182,17 +182,27 @@ class VisitationSeeder extends Seeder
             // Generate medical history
             $medical_history = $this->generateMedicalHistory($this->faker);
             
+            // Ensure appointment date is not in the future
+            $visit_date = $appointment['date'];
+            $visit_time = $appointment['time'];
+            
+            // If appointment date is somehow in the future, adjust it to the past
+            if (strtotime($visit_date) > time()) {
+                $days_ago = mt_rand(1, 14); // Adjust to within last 2 weeks for realism
+                $visit_date = date('Y-m-d', strtotime("-{$days_ago} days"));
+            }
+            
             $data = [
                 'appointment_id' => $appointment['appointment_id'],
                 'patient_id' => $appointment['patient_id'],
                 'doctor_id' => $appointment['doctor_id'],
-                'date' => $appointment['date'],
-                'time' => $appointment['time'],
+                'date' => $visit_date,
+                'time' => $visit_time,
                 'complaint' => $complaint,
                 'diagnosis' => $diagnosis,
                 'treatment' => $treatment,
                 'medical_history' => $medical_history,
-                'created_at' => date('Y-m-d H:i:s', strtotime("{$appointment['date']} {$appointment['time']}")),
+                'created_at' => date('Y-m-d H:i:s', strtotime("{$visit_date} {$visit_time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             
@@ -225,9 +235,14 @@ class VisitationSeeder extends Seeder
                 continue;
             }
             
-            // Random date within last 3 months
-            $days_ago = mt_rand(1, 90); // 1-90 days ago
+            // Random date within last 6 weeks (ensure it's recent and realistic)
+            $days_ago = mt_rand(1, 42); // 1-42 days ago (6 weeks)
             $date = date('Y-m-d', strtotime("-{$days_ago} days"));
+            
+            // Ensure date is not in the future
+            if (strtotime($date) > time()) {
+                $date = date('Y-m-d', strtotime('-1 day')); // Default to yesterday if somehow in future
+            }
             
             // Random time during office hours
             $hour = mt_rand(8, 16); // 8 AM to 4 PM
@@ -283,9 +298,14 @@ class VisitationSeeder extends Seeder
                 continue;
             }
             
-            // Random date within last 30 days
-            $days_ago = mt_rand(1, 30); // 1-30 days ago
+            // Random date within last 2 weeks (ensure it's recent for follow-ups)
+            $days_ago = mt_rand(1, 14); // 1-14 days ago (2 weeks)
             $date = date('Y-m-d', strtotime("-{$days_ago} days"));
+            
+            // Ensure date is not in the future
+            if (strtotime($date) > time()) {
+                $date = date('Y-m-d', strtotime('-1 day')); // Default to yesterday if somehow in future
+            }
             
             // Random time during office hours
             $hour = mt_rand(9, 17); // 9 AM to 5 PM
