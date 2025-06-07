@@ -617,14 +617,5 @@ class RoleService
         foreach ($hospital_roles as $role) {
             remove_role($role);
         }
-
-        // Remove inventory capabilities from administrator
-        $admin_role = get_role('administrator');
-        if ($admin_role) {
-            $all_permissions = array_merge(...array_values(self::$rolePermissions));
-            foreach (array_unique($all_permissions) as $capability) {
-                $admin_role->remove_cap($capability);
-            }
-        }
     }
 }
