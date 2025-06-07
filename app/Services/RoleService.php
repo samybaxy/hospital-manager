@@ -604,7 +604,6 @@ class RoleService
     public static function cleanupRoles()
     {
         $hospital_roles = [
-            self::ROLE_ADMIN,
             self::ROLE_INVENTORY_MANAGER,
             self::ROLE_PHARMACY,
             self::ROLE_DOCTOR,

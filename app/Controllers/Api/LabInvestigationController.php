@@ -439,10 +439,7 @@ class LabInvestigationController extends BaseController
                 return new WP_REST_Response(['error' => 'Lab technician not found'], 400);
             }
             
-            $investigation = LabInvestigation::create($params);
-            
-            error_log("LabInvestigationController::create_investigation - Investigation returned: " . gettype($investigation));
-            error_log("LabInvestigationController::create_investigation - Investigation is_object: " . (is_object($investigation) ? 'YES' : 'NO'));
+            $investigation = ( LabInvestigation::create($params) )->to_array();
             
             if (!$investigation) {
                 error_log("LabInvestigationController::create_investigation - Investigation creation failed");
@@ -453,18 +450,7 @@ class LabInvestigationController extends BaseController
             $investigation_data = null;
             $investigation_id = null;
             
-            if (is_object($investigation)) {
-                if (isset($investigation->attributes)) {
-                    $investigation_data = $investigation->attributes;
-                    $investigation_id = $investigation->attributes['ID'] ?? null;
-                    error_log("LabInvestigationController::create_investigation - Using attributes, ID: " . $investigation_id);
-                } else if (property_exists($investigation, 'ID')) {
-                    // Convert object to array if it has properties but no attributes
-                    $investigation_data = (array) $investigation;
-                    $investigation_id = $investigation->ID;
-                    error_log("LabInvestigationController::create_investigation - Using object properties, ID: " . $investigation_id);
-                }
-            } else if (is_array($investigation) && isset($investigation['ID'])) {
+            if (is_array($investigation) && isset($investigation['ID'])) {
                 $investigation_data = $investigation;
                 $investigation_id = $investigation['ID'];
                 error_log("LabInvestigationController::create_investigation - Using array, ID: " . $investigation_id);
@@ -474,8 +460,6 @@ class LabInvestigationController extends BaseController
                 error_log("LabInvestigationController::create_investigation - Could not extract investigation data or ID");
                 return new WP_REST_Response(['error' => 'Failed to create investigation - invalid response'], 500);
             }
-            
-            error_log("LabInvestigationController::create_investigation - Investigation created with ID: " . $investigation_id);
             
             // Trigger notification
             try {

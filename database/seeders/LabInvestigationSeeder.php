@@ -130,9 +130,9 @@ class LabInvestigationSeeder extends Seeder
                 $status = $this->statuses[array_rand($this->statuses)];
                 $lab_tech_id = $lab_tech_ids[array_rand($lab_tech_ids)];
                 
-                // Generate created_at date based on visitation date
-                $created_at = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
-                if (!$created_at) $created_at = date('Y-m-d H:i:s');
+                // Generate realistic created_at date
+                $visitation_date = $wpdb->get_var("SELECT date FROM {$wpdb->prefix}hm_visitations WHERE ID = {$visitation_id}");
+                $created_at = $this->generateRealisticDate($visitation_date);
                 
                 $request_notes = [
                     'Routine lab investigation ordered.',
@@ -200,6 +200,9 @@ class LabInvestigationSeeder extends Seeder
                     }
                 }
                 
+                // Generate realistic updated_at date based on status
+                $updated_at = $this->generateUpdatedDate($created_at, $status);
+                
                 $data = [
                     'visitation_id' => $visitation_id,
                     'doctor_id' => $visitation->doctor_id,
@@ -215,7 +218,7 @@ class LabInvestigationSeeder extends Seeder
                     'is_critical' => $is_critical,
                     'status' => $status,
                     'created_at' => $created_at,
-                    'updated_at' => $created_at
+                    'updated_at' => $updated_at
                 ];
                 
                 $result = $wpdb->insert($wpdb->prefix . 'hm_lab_investigations', $data);
@@ -482,5 +485,127 @@ class LabInvestigationSeeder extends Seeder
         }
         
         return round($value, 2); // Default
+    }
+    
+    /**
+     * Generate a realistic date for lab investigation creation
+     * 
+     * @param string|null $visitationDate The visitation date as reference
+     * @return string Formatted date string
+     */
+    protected function generateRealisticDate($visitationDate = null)
+    {
+        $today = new \DateTime();
+        $todayTimestamp = $today->getTimestamp();
+        
+        if ($visitationDate) {
+            try {
+                $visitationDateTime = new \DateTime($visitationDate);
+                $visitationTimestamp = $visitationDateTime->getTimestamp();
+                
+                // Lab investigation should be created on or after visitation date
+                // but not beyond today's date
+                $minTimestamp = $visitationTimestamp;
+                $maxTimestamp = min($todayTimestamp, $visitationTimestamp + (30 * 24 * 60 * 60)); // Max 30 days after visitation or today, whichever is earlier
+                
+                // Ensure min doesn't exceed max
+                if ($minTimestamp > $maxTimestamp) {
+                    $maxTimestamp = $minTimestamp;
+                }
+                
+                // Generate random timestamp between min and max
+                $randomTimestamp = rand($minTimestamp, $maxTimestamp);
+                
+                // Add random hours and minutes for realistic time
+                $randomHours = rand(8, 17); // Business hours 8 AM to 5 PM
+                $randomMinutes = rand(0, 59);
+                
+                $date = new \DateTime();
+                $date->setTimestamp($randomTimestamp);
+                $date->setTime($randomHours, $randomMinutes, 0);
+                
+                // Final check to ensure we don't exceed today
+                if ($date->getTimestamp() > $todayTimestamp) {
+                    $date = $today;
+                }
+                
+                return $date->format('Y-m-d H:i:s');
+                
+            } catch (\Exception $e) {
+                // Fall back to generating date within last 90 days if visitation date is invalid
+                $this->log("Invalid visitation date: {$visitationDate}, using fallback", 'warning');
+            }
+        }
+        
+        // Fallback: Generate date within last 90 days, not exceeding today
+        $daysBack = rand(1, 90);
+        $randomTimestamp = $todayTimestamp - ($daysBack * 24 * 60 * 60);
+        
+        // Add random hours and minutes
+        $randomHours = rand(8, 17);
+        $randomMinutes = rand(0, 59);
+        
+        $date = new \DateTime();
+        $date->setTimestamp($randomTimestamp);
+        $date->setTime($randomHours, $randomMinutes, 0);
+        
+        return $date->format('Y-m-d H:i:s');
+    }
+    
+    /**
+     * Generate a realistic updated_at date based on investigation status
+     * 
+     * @param string $createdAt The creation date
+     * @param string $status The investigation status
+     * @return string Formatted date string
+     */
+    protected function generateUpdatedDate($createdAt, $status)
+    {
+        try {
+            $createdDateTime = new \DateTime($createdAt);
+            $today = new \DateTime();
+            
+            // For 'requested' status, updated_at should be same as created_at
+            if ($status === 'requested') {
+                return $createdAt;
+            }
+            
+            // Calculate realistic time progression based on status
+            $hoursToAdd = 0;
+            switch ($status) {
+                case 'sample_collected':
+                    $hoursToAdd = rand(1, 24); // 1-24 hours after creation
+                    break;
+                case 'in_progress':
+                    $hoursToAdd = rand(2, 48); // 2-48 hours after creation
+                    break;
+                case 'completed':
+                    $hoursToAdd = rand(24, 72); // 1-3 days after creation
+                    break;
+                case 'verified':
+                    $hoursToAdd = rand(48, 120); // 2-5 days after creation
+                    break;
+                default:
+                    $hoursToAdd = rand(1, 12); // Default 1-12 hours
+            }
+            
+            $updatedDateTime = clone $createdDateTime;
+            $updatedDateTime->add(new \DateInterval("PT{$hoursToAdd}H"));
+            
+            // Add random minutes for more realistic timing
+            $minutesToAdd = rand(0, 59);
+            $updatedDateTime->add(new \DateInterval("PT{$minutesToAdd}M"));
+            
+            // Ensure updated date doesn't exceed today
+            if ($updatedDateTime->getTimestamp() > $today->getTimestamp()) {
+                return $today->format('Y-m-d H:i:s');
+            }
+            
+            return $updatedDateTime->format('Y-m-d H:i:s');
+            
+        } catch (\Exception $e) {
+            // Fallback to created_at if there's any issue
+            return $createdAt;
+        }
     }
 }
