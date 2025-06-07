@@ -45,6 +45,7 @@ const LabInvestigationForm = ({
   const [selectedCategory, setSelectedCategory] = useState('');
   const [availableTests, setAvailableTests] = useState([]);
   const [activeTestForms, setActiveTestForms] = useState({}); // Track which tests have active forms
+  const [dirtyTestFields, setDirtyTestFields] = useState({}); // Track which test result fields have been modified
   const [errors, setErrors] = useState({});
   const [loadingData, setLoadingData] = useState(false);
 
@@ -395,6 +396,8 @@ const LabInvestigationForm = ({
   };
 
   const updateTestResult = (testCode, paramName, field, value) => {
+    // Track that this field has been modified
+    const fieldKey = `${testCode}.${paramName}.${field}`;
     
     setFormData(prev => {
       const currentResults = prev.test_results || {};
@@ -413,9 +416,15 @@ const LabInvestigationForm = ({
           parameters: updatedParameters
         };
         
+        // In edit mode, if any test result field is dirty, auto-set status to "completed"
+        const newStatus = investigation && 
+          (prev.status === 'requested' || prev.status === 'sample_collected' || prev.status === 'in_progress') 
+          ? 'completed' : prev.status;
+        
         return {
           ...prev,
-          test_results: updatedResults
+          test_results: updatedResults,
+          status: newStatus
         };
       }
       
@@ -431,11 +440,23 @@ const LabInvestigationForm = ({
         }
       };
       
+      // In edit mode, if any test result field is dirty, auto-set status to "completed"
+      const newStatus = investigation && 
+        (prev.status === 'requested' || prev.status === 'sample_collected' || prev.status === 'in_progress') 
+        ? 'completed' : prev.status;
+      
       return {
         ...prev,
-        test_results: updatedResults
+        test_results: updatedResults,
+        status: newStatus
       };
     });
+    
+    // Track that this field has been modified (after state update)
+    setDirtyTestFields(prev => ({
+      ...prev,
+      [fieldKey]: true
+    }));
   };
 
   const validateForm = () => {

@@ -41,6 +41,11 @@ class LabInvestigation extends BaseModel
         // Set attributes directly for custom database tables
         if (!empty($attributes)) {
             $this->attributes = $attributes;
+            
+            // Also set primary key property for easy access
+            if (isset($attributes[$this->primaryKey])) {
+                $this->ID = $attributes[$this->primaryKey];
+            }
         }
         
         // Don't call parent constructor for custom database models
@@ -312,9 +317,21 @@ class LabInvestigation extends BaseModel
         
         global $wpdb;
         
+        // Ensure table name is set
+        if (empty($this->table)) {
+            $this->table = $wpdb->prefix . $this->tableName;
+            error_log('Table name was empty, setting to: ' . $this->table);
+        }
+        
+        // Ensure ID is available - check both $this->ID and $this->attributes['ID']
+        $recordId = $this->ID ?? $this->attributes['ID'] ?? null;
+        if (!$recordId) {
+            error_log('ERROR: No ID found for update operation');
+            throw new \Exception('No ID found for update operation');
+        }
+        
         // Debug: Check current instance state
-        error_log('Current instance ID: ' . (isset($this->ID) ? $this->ID : 'NOT_SET'));
-        error_log('Current instance attributes ID: ' . (isset($this->attributes['ID']) ? $this->attributes['ID'] : 'NOT_SET'));
+        error_log('Record ID for update: ' . $recordId);
         error_log('Table name: ' . $this->table);
         
         // Filter out null values and prepare format array
@@ -344,14 +361,14 @@ class LabInvestigation extends BaseModel
         error_log('wpdb->update parameters:');
         error_log('  - table: ' . $this->table);
         error_log('  - data: ' . print_r($clean_attributes, true));
-        error_log('  - where: ' . print_r(['ID' => $this->ID], true));
+        error_log('  - where: ' . print_r(['ID' => $recordId], true));
         error_log('  - format: ' . print_r($formats, true));
         error_log('  - where_format: %d');
         
         $result = $wpdb->update(
             $this->table,
             $clean_attributes,
-            ['ID' => $this->ID],
+            ['ID' => $recordId],
             $formats,
             ['%d']
         );
@@ -717,5 +734,45 @@ class LabInvestigation extends BaseModel
         return array_map(function($data) {
             return new static($data);
         }, $results);
+    }
+    
+    /**
+     * Magic getter to access attributes dynamically
+     */
+    public function &__get($property)
+    {
+        // Check if we have this attribute
+        if (isset($this->attributes[$property])) {
+            return $this->attributes[$property];
+        }
+        
+        // Return null reference for non-existent properties
+        $null = null;
+        return $null;
+    }
+    
+    /**
+     * Magic setter to set attributes dynamically
+     */
+    public function __set($property, $value)
+    {
+        $this->attributes[$property] = $value;
+    }
+    
+    /**
+     * Magic isset to check if attribute exists
+     */
+    public function __isset($property)
+    {
+        return isset($this->attributes[$property]);
+    }
+
+    /**
+     * Get the table name
+     */
+    public function getTable()
+    {
+        global $wpdb;
+        return $wpdb->prefix . $this->tableName;
     }
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
+import StatusMessage from '../components/StatusMessage';
 // Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
 // Import new components
@@ -61,6 +62,13 @@ const LabInvestigations = () => {
   // New modal states for the form components
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Status message state
+  const [statusMessage, setStatusMessage] = useState({
+    message: '',
+    type: '',
+    show: false
+  });
   
   // State for query parameters from Visitations redirect
   const [visitationData, setVisitationData] = useState({
@@ -312,10 +320,30 @@ const LabInvestigations = () => {
     setSelectedInvestigation(null);
   };
 
+  // Function to show status messages
+  const showStatusMessage = (message, type) => {
+    setStatusMessage({
+      message,
+      type,
+      show: true
+    });
+  };
+
+  const handleStatusMessageDismiss = () => {
+    setStatusMessage({
+      message: '',
+      type: '',
+      show: false
+    });
+  };
+
   const handleAddSuccess = (newInvestigation) => {
     // Refresh the investigations list
     fetchInvestigations(currentPage);
     setShowAddModal(false);
+    
+    // Show success message
+    showStatusMessage('Lab investigation created successfully!', 'success');
   };
 
   const handleEditSuccess = (updatedInvestigation) => {
@@ -323,6 +351,9 @@ const LabInvestigations = () => {
     fetchInvestigations(currentPage);
     setShowEditModal(false);
     setSelectedInvestigation(null);
+    
+    // Show success message
+    showStatusMessage('Lab investigation updated successfully!', 'success');
   };
 
   const handleUpdateStatus = async (investigationId, newStatus) => {
@@ -392,6 +423,15 @@ const LabInvestigations = () => {
 
   return (
     <div className="space-y-6">
+      {/* Status Message */}
+      {statusMessage.show && (
+        <StatusMessage
+          message={statusMessage.message}
+          type={statusMessage.type}
+          onDismiss={handleStatusMessageDismiss}
+        />
+      )}
+      
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
@@ -754,6 +794,472 @@ const LabInvestigationView = ({ investigation }) => {
         <div className="bg-yellow-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">Request Notes</h3>
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{investigation.request_notes}</p>
+        </div>
+      )}
+
+      {/* Test Results Section */}
+      {investigation.test_results && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Test Results</h3>
+          {(() => {
+            // Helper function to safely render any value as React content
+            const safeRender = (value) => {
+              if (value === null || value === undefined) {
+                return 'N/A';
+              }
+              if (typeof value === 'object') {
+                return JSON.stringify(value, null, 2);
+              }
+              return String(value);
+            };
+
+            // Helper function to safely check if abnormal/critical data exists
+            const hasAbnormalOrCritical = (results) => {
+              if (!results || typeof results !== 'object') return false;
+              
+              const hasAbnormal = results.abnormal && (
+                Array.isArray(results.abnormal) ? results.abnormal.length > 0 : true
+              );
+              const hasCritical = results.critical && (
+                Array.isArray(results.critical) ? results.critical.length > 0 : true
+              );
+              
+              return hasAbnormal || hasCritical;
+            };
+
+            let results;
+            try {
+              results = typeof investigation.test_results === 'string' 
+                ? JSON.parse(investigation.test_results) 
+                : investigation.test_results;
+            } catch (e) {
+              results = investigation.test_results;
+            }
+
+            // Also consider flags field which might contain abnormal/critical data
+            let flags = null;
+            if (investigation.flags) {
+              try {
+                flags = typeof investigation.flags === 'string' 
+                  ? JSON.parse(investigation.flags) 
+                  : investigation.flags;
+              } catch (e) {
+                flags = investigation.flags;
+              }
+            }
+
+            // If results don't have abnormal/critical but flags do, merge them
+            if (flags && (flags.abnormal || flags.critical) && results && !results.abnormal && !results.critical) {
+              results = {
+                ...results,
+                abnormal: flags.abnormal,
+                critical: flags.critical
+              };
+            }
+
+            // Check for array-based parameters format
+            if (results && results.parameters && Array.isArray(results.parameters) && results.parameters.length > 0) {
+              return (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Parameter
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Value
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Unit
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Reference Range
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {results.parameters.map((param, index) => (
+                        <tr key={index} className={`hover:bg-gray-50 ${
+                          param.is_critical 
+                            ? 'bg-red-25' 
+                            : param.is_abnormal 
+                              ? 'bg-orange-25' 
+                              : ''
+                        }`}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {safeRender(param.name)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                            param.is_critical 
+                              ? 'text-red-900' 
+                              : param.is_abnormal 
+                                ? 'text-orange-900' 
+                                : 'text-gray-900'
+                          }`}>
+                            {safeRender(param.value)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {safeRender(param.unit)}
+                          </td>
+                          <td className={`px-6 py-4 whitespace-nowrap text-sm border-l-4 ${
+                            param.is_critical 
+                              ? 'bg-red-25 border-red-500' 
+                              : param.is_abnormal 
+                                ? 'bg-orange-25 border-orange-400' 
+                                : 'bg-blue-25 border-blue-400'
+                          }`}>
+                            <div className={`font-semibold ${
+                              param.is_critical 
+                                ? 'text-red-900' 
+                                : param.is_abnormal 
+                                  ? 'text-orange-900' 
+                                  : 'text-blue-800'
+                            }`}>
+                              {(() => {
+                                if (!param.reference_range) return (
+                                  <span className="text-gray-400 italic font-normal">N/A</span>
+                                );
+                                
+                                let range = param.reference_range;
+                                
+                                // Handle gender-specific ranges
+                                if (range.male && range.female) {
+                                  const patientGender = investigation.patient_gender || 'male';
+                                  range = range[patientGender.toLowerCase()] || range.male;
+                                }
+                                // Handle age-specific ranges (adult/child)
+                                else if (range.adult) {
+                                  range = range.adult;
+                                }
+                                
+                                // Check if we have min/max values
+                                if (range.min !== undefined && range.max !== undefined) {
+                                  return (
+                                    <div className="flex flex-col">
+                                      <span className="font-bold">{range.min} - {range.max}</span>
+                                      {investigation.patient_gender && param.reference_range.male && param.reference_range.female && (
+                                        <span className={`text-xs mt-1 ${
+                                          param.is_critical 
+                                            ? 'text-red-700' 
+                                            : param.is_abnormal 
+                                              ? 'text-orange-700' 
+                                              : 'text-blue-600'
+                                        }`}>
+                                          ({investigation.patient_gender.charAt(0).toUpperCase() + investigation.patient_gender.slice(1)} range)
+                                        </span>
+                                      )}
+                                      {(param.is_abnormal || param.is_critical) && (
+                                        <span className={`text-xs font-semibold mt-1 ${
+                                          param.is_critical 
+                                            ? 'text-red-700' 
+                                            : 'text-orange-700'
+                                        }`}>
+                                          ⚠ Value outside range
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                
+                                return <span className="text-gray-400 italic font-normal">N/A</span>;
+                              })()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {param.is_critical ? (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                Critical
+                              </span>
+                            ) : param.is_abnormal ? (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                Abnormal
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                Normal
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            }
+            
+            // Check for object-based test results (like CBC format)
+            else if (results && typeof results === 'object' && !Array.isArray(results)) {
+              // Helper function to check if a value is out of range
+              const checkRange = (value, referenceRange, patientGender = 'male') => {
+                if (!referenceRange || !value) return { status: 'normal', range: null };
+                
+                const numValue = parseFloat(value);
+                if (isNaN(numValue)) return { status: 'normal', range: null };
+                
+                let range = referenceRange;
+                
+                // Handle gender-specific ranges
+                if (range.male && range.female) {
+                  range = range[patientGender.toLowerCase()] || range.male;
+                }
+                // Handle age-specific ranges (adult/child) - default to adult
+                else if (range.adult) {
+                  range = range.adult;
+                }
+                
+                if (range.min !== undefined && range.max !== undefined) {
+                  const isCritical = numValue < range.min * 0.5 || numValue > range.max * 2; // Very far out of range
+                  const isAbnormal = numValue < range.min || numValue > range.max;
+                  
+                  return {
+                    status: isCritical ? 'critical' : isAbnormal ? 'abnormal' : 'normal',
+                    range: range
+                  };
+                }
+                
+                return { status: 'normal', range: range };
+              };
+              
+              // Extract all test parameters from the nested structure
+              const allParameters = [];
+              Object.keys(results).forEach(testCategory => {
+                if (typeof results[testCategory] === 'object' && results[testCategory] !== null) {
+                  Object.keys(results[testCategory]).forEach(paramName => {
+                    const param = results[testCategory][paramName];
+                    if (param && typeof param === 'object' && param.value !== undefined) {
+                      const rangeCheck = checkRange(param.value, param.reference_range, investigation.patient_gender);
+                      allParameters.push({
+                        category: testCategory,
+                        name: paramName,
+                        value: param.value,
+                        unit: param.unit || '',
+                        reference_range: param.reference_range,
+                        flag: param.flag || '',
+                        notes: param.notes || '',
+                        status: rangeCheck.status,
+                        range: rangeCheck.range
+                      });
+                    }
+                  });
+                }
+              });
+              
+              if (allParameters.length > 0) {
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Parameter
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Value
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Unit
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Reference Range
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {allParameters.map((param, index) => (
+                          <tr key={index} className={`hover:bg-gray-50 ${
+                            param.status === 'critical' 
+                              ? 'bg-red-25' 
+                              : param.status === 'abnormal' 
+                                ? 'bg-orange-25' 
+                                : ''
+                          }`}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <div>
+                                <div className="font-medium text-gray-900">{param.name}</div>
+                                {param.category && (
+                                  <div className="text-xs text-gray-500">({param.category})</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                              param.status === 'critical' 
+                                ? 'text-red-900' 
+                                : param.status === 'abnormal' 
+                                  ? 'text-orange-900' 
+                                  : 'text-gray-900'
+                            }`}>
+                              {param.value}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {param.unit}
+                            </td>
+                            <td className={`px-6 py-4 whitespace-nowrap text-sm border-l-4 ${
+                              param.status === 'critical' 
+                                ? 'bg-red-25 border-red-500' 
+                                : param.status === 'abnormal' 
+                                  ? 'bg-orange-25 border-orange-400' 
+                                  : 'bg-blue-25 border-blue-400'
+                            }`}>
+                              <div className={`font-semibold ${
+                                param.status === 'critical' 
+                                  ? 'text-red-900' 
+                                  : param.status === 'abnormal' 
+                                    ? 'text-orange-900' 
+                                    : 'text-blue-800'
+                              }`}>
+                                {param.range && param.range.min !== undefined && param.range.max !== undefined ? (
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">{param.range.min} - {param.range.max}</span>
+                                    {investigation.patient_gender && param.reference_range && param.reference_range.male && param.reference_range.female && (
+                                      <span className={`text-xs mt-1 ${
+                                        param.status === 'critical' 
+                                          ? 'text-red-700' 
+                                          : param.status === 'abnormal' 
+                                            ? 'text-orange-700' 
+                                            : 'text-blue-600'
+                                      }`}>
+                                        ({investigation.patient_gender.charAt(0).toUpperCase() + investigation.patient_gender.slice(1)} range)
+                                      </span>
+                                    )}
+                                    {param.status !== 'normal' && (
+                                      <span className={`text-xs font-semibold mt-1 ${
+                                        param.status === 'critical' 
+                                          ? 'text-red-700' 
+                                          : 'text-orange-700'
+                                      }`}>
+                                        ⚠ Value outside range
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic font-normal">N/A</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {param.status === 'critical' ? (
+                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                  Critical
+                                </span>
+                              ) : param.status === 'abnormal' ? (
+                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
+                                  Abnormal
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                  Normal
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+            }
+            
+            // Fallback for simple result formats
+            else {
+              // Simple result display - handle various result formats
+              return (
+                <div className="space-y-4">
+                  {results.result && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700">Result</label>
+                      <p className="mt-1 text-lg font-semibold text-gray-900">
+                        {safeRender(results.result)}
+                      </p>
+                    </div>
+                  )}
+                  {results.interpretation && (
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700">Interpretation</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {safeRender(results.interpretation)}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Handle abnormal and critical flags if they exist */}
+                  {hasAbnormalOrCritical(results) && (
+                    <div className="bg-yellow-50 p-4 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700">Abnormal Results</label>
+                      <div className="mt-2 space-y-2">
+                        {results.abnormal && (
+                          <div>
+                            <p className="text-sm font-medium text-orange-800">Abnormal Parameters:</p>
+                            {Array.isArray(results.abnormal) ? (
+                              <ul className="list-disc list-inside text-sm text-orange-700">
+                                {results.abnormal.map((item, index) => (
+                                  <li key={index}>
+                                    {typeof item === 'string' ? item : JSON.stringify(item)}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : typeof results.abnormal === 'object' ? (
+                              <div className="text-sm text-orange-700">
+                                <pre className="whitespace-pre-wrap bg-white p-2 rounded border text-xs">
+                                  {JSON.stringify(results.abnormal, null, 2)}
+                                </pre>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-orange-700">
+                                {String(results.abnormal)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {results.critical && (
+                          <div>
+                            <p className="text-sm font-medium text-red-800">Critical Parameters:</p>
+                            {Array.isArray(results.critical) ? (
+                              <ul className="list-disc list-inside text-sm text-red-700">
+                                {results.critical.map((item, index) => (
+                                  <li key={index}>
+                                    {typeof item === 'string' ? item : JSON.stringify(item)}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : typeof results.critical === 'object' ? (
+                              <div className="text-sm text-red-700">
+                                <pre className="whitespace-pre-wrap bg-white p-2 rounded border text-xs">
+                                  {JSON.stringify(results.critical, null, 2)}
+                                </pre>
+                              </div>
+                            ) : (
+                              <p className="text-sm text-red-700">
+                                {String(results.critical)}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Fallback for complex objects */}
+                  {typeof results === 'object' && !results.result && !results.interpretation && !results.abnormal && !results.critical && (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <label className="block text-sm font-medium text-gray-700">Raw Results</label>
+                      <pre className="mt-1 text-xs text-gray-600 whitespace-pre-wrap bg-white p-3 rounded border">
+                        {safeRender(results)}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+          })()}
         </div>
       )}
 

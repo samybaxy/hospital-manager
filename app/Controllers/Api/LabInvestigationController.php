@@ -488,7 +488,10 @@ class LabInvestigationController extends BaseController
         try {
             $investigation = LabInvestigation::find($request['ID']);
             if (!$investigation) {
-                return new WP_REST_Response(['error' => 'Investigation not found'], 404);
+                return new WP_REST_Response([
+                    'success' => false,
+                    'message' => 'Investigation not found'
+                ], 404);
             }
 
             $params = $request->get_params();
@@ -518,15 +521,23 @@ class LabInvestigationController extends BaseController
             $success = $investigation->update($cleanParams);
             
             if (!$success) {
-                return new WP_REST_Response(['error' => 'Failed to update investigation'], 500);
+                return new WP_REST_Response([
+                    'success' => false,
+                    'message' => 'Failed to update investigation'
+                ], 500);
             }
             
-            return new WP_REST_Response($investigation->attributes, 200);
+            // Return proper success response format
+            return new WP_REST_Response([
+                'success' => true,
+                'message' => 'Investigation updated successfully',
+                'data' => $investigation->attributes
+            ], 200);
             
         } catch (\Exception $e) {
             return new WP_REST_Response([
-                'error' => 'Failed to update investigation',
-                'message' => $e->getMessage()
+                'success' => false,
+                'message' => 'Failed to update investigation: ' . $e->getMessage()
             ], 500);
         }
     }

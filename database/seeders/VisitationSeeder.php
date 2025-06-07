@@ -205,7 +205,7 @@ class VisitationSeeder extends Seeder
                 'created_at' => date('Y-m-d H:i:s', strtotime("{$visit_date} {$visit_time}")),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
-            
+
             $result = $wpdb->insert($visitations_table, $data);
             if ($result === false) {
                 $this->log("Error inserting visitation for appointment {$appointment['appointment_id']}: " . $wpdb->last_error, 'error');
