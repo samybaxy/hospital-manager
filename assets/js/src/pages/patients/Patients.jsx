@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
@@ -19,6 +19,7 @@ const Patients = () => {
   const [hmoOptions, setHmoOptions] = useState([]);
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
+  const isInitializedRef = useRef(false);
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -39,7 +40,7 @@ const Patients = () => {
         params.hmo_id = Number(hmoFilter);
       }
       
-      const response = await api.get('/patients', { params }); // Corrected params format
+      const response = await api.get('/patients', { params });
       if (response.data) {
         // Check if data is inside the "data" property (common REST API pattern)
         const responseData = response.data.data || response.data;
@@ -52,17 +53,22 @@ const Patients = () => {
           setPatients(patientItems);
           setTotalPages(responseData.patients.lastPage || 1);
           setTotalPatients(responseData.patients.total || 0);
-          console.log(`Loaded ${patientItems.length} patients (page ${currentPage}/${responseData.patients.lastPage}, total: ${responseData.patients.total})`);
+          console.log('Fetched patients:', responseData.patients.total);
         } else if (Array.isArray(responseData.patients)) {
           // Handle alternative API response format
           setPatients(responseData.patients);
           setTotalPages(responseData.total_pages || 1);
           setTotalPatients(responseData.total || 0);
-          console.log(`Loaded ${responseData.patients.length} patients (page ${currentPage}/${responseData.total_pages}, total: ${responseData.total})`);
         } else {
           console.error('Unexpected patient data format:', responseData);
           setError('Data format error. Please contact support.');
         }
+      }
+      
+      // Show success message only on initial load
+      if (!isInitializedRef.current) {
+        setSuccessMessage('Patients data loaded successfully');
+        isInitializedRef.current = true;
       }
     } catch (err) {
       console.error('Error fetching patients:', err);
@@ -72,31 +78,10 @@ const Patients = () => {
     }
   }, [currentPage, searchTerm, perPage, sortField, sortOrder, hmoFilter]);
 
-  // Keep track of manual fetch requests to prevent duplicate calls
-  const [manualFetchRequested, setManualFetchRequested] = useState(false);
-
+  // Data fetch when component mounts or when filters/pagination change
   useEffect(() => {
-    // Only fetch automatically if a manual fetch wasn't requested
-    if (!manualFetchRequested) {
-      const loadPatients = async () => {
-        try {
-          await fetchPatients();
-          
-          // Only show success message when we have patients
-          if (patients.length > 0) {
-            setSuccessMessage('Patients data loaded successfully');
-          }
-        } catch (error) {
-          console.error('Error in patient data loading effect:', error);
-        }
-      };
-      
-      loadPatients();
-    }
-    
-    // Reset the flag after the effect runs
-    setManualFetchRequested(false);
-  }, [fetchPatients, manualFetchRequested, patients.length]);
+    fetchPatients();
+  }, [fetchPatients]);
   
   // Fetch HMO options from the API
   useEffect(() => {
@@ -115,63 +100,34 @@ const Patients = () => {
         }
       } catch (error) {
         console.error('Error fetching HMO options:', error);
-        // Try to get more detailed error information
-        if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
-        } else if (error.request) {
-          // The request was made but no response was received
-          console.error('Error request:', error.request);
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          console.error('Error message:', error.message);
-        }
       }
     };
     
     fetchHMOs();
   }, []);
 
-  const handleSort = (field) => {
+  const handleSort = useCallback((field) => {
     setSortOrder(sortField === field && sortOrder === 'asc' ? 'desc' : 'asc');
     setSortField(field);
-  };
+  }, [sortField, sortOrder]);
 
-  const handleSearch = (e) => {
+  const handleSearch = useCallback((e) => {
     e.preventDefault();
     setCurrentPage(1); // Reset to first page on new search
-    setManualFetchRequested(true); // Prevent duplicate fetch
-    fetchPatients(); // Immediately fetch with new search term
-  };
+  }, []);
 
-  const handleHmoFilter = (e) => {
+  const handleHmoFilter = useCallback((e) => {
     const value = e.target.value;
     
     // Convert to number if it's not 'all', otherwise keep as string 'all'
     const hmoValue = value === 'all' ? 'all' : Number(value);
     
-    // Debug logging to verify the HMO ID type
-    console.log('Setting HMO filter to:', hmoValue, 
-      'Type:', typeof hmoValue, 
-      'Original value:', value, 
-      'Original type:', typeof value
-    );
-    
     setHmoFilter(hmoValue);
     setCurrentPage(1); // Reset to first page when filtering
-    setLoading(true); // Show loading indicator when changing HMO filter
-    
-    // Set the flag to indicate we're manually fetching
-    setManualFetchRequested(true);
-    
-    // Immediately fetch patients with the new filter
-    fetchPatients();
-  };
+  }, []);
   
   // Function to check if data is valid for rendering
-  const hasValidPatientData = () => {
+  const hasValidPatientData = useMemo(() => {
     // Check if we have a non-empty array
     if (!Array.isArray(patients) || patients.length === 0) {
       return false;
@@ -180,22 +136,27 @@ const Patients = () => {
     // Even if we have empty objects, we should try to display them
     // The rendering code has fallbacks for missing properties
     return true;
-  };
+  }, [patients]);
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = useCallback(() => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
+  }, []);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
+  }, [totalPages]);
   
-  const handlePageChange = (page) => {
+  const handlePageChange = useCallback((page) => {
     setCurrentPage(page);
-  };
+  }, []);
+
+  const handlePerPageChange = useCallback((e) => {
+    setPerPage(Number(e.target.value));
+    setCurrentPage(1);
+  }, []);
 
   // Sorting indicator component
-  const SortIndicator = ({ field }) => {
+  const SortIndicator = React.memo(({ field }) => {
     if (sortField !== field) return null;
     return (
       <span className="ml-1 inline-block">
@@ -209,9 +170,9 @@ const Patients = () => {
         }
       </span>
     );
-  };
+  });
 
-  const renderPagination = () => {
+  const renderPagination = useMemo(() => {
     const pagesToShow = 5;
     const pages = [];
     let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
@@ -266,7 +227,7 @@ const Patients = () => {
         )}
       </div>
     );
-  };
+  }, [currentPage, totalPages, handlePageChange]);
 
   return (
     <div className="space-y-6">
@@ -365,10 +326,7 @@ const Patients = () => {
                 <select
                   id="perPage"
                   value={perPage}
-                  onChange={(e) => {
-                    setPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
+                  onChange={handlePerPageChange}
                   className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 >
                   <option value={5}>5</option>
@@ -393,7 +351,7 @@ const Patients = () => {
           <div className="flex justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
           </div>
-        ) : hasValidPatientData() ? (
+        ) : hasValidPatientData ? (
           <div className="overflow-x-auto rounded-md border border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -561,7 +519,7 @@ const Patients = () => {
         )}
 
         {/* Pagination */}
-        {!loading && hasValidPatientData() && (
+        {!loading && hasValidPatientData && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
             <div className="mb-4 sm:mb-0 text-sm text-gray-700">
               <p>
@@ -610,7 +568,7 @@ const Patients = () => {
                     </button>
                     
                     {/* Page numbers */}
-                    {renderPagination()}
+                    {renderPagination}
                     
                     <button
                       onClick={handleNextPage}
@@ -634,7 +592,7 @@ const Patients = () => {
         )}
         
         {/* Download and export options */}
-        {!loading && hasValidPatientData() && (
+        {!loading && hasValidPatientData && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
             <div className="flex space-x-3">
               <Button 
