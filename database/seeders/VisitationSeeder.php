@@ -47,22 +47,29 @@ class VisitationSeeder extends Seeder
         
         global $wpdb;
         
-        // Get patient and doctor IDs
+        // Get VALID patient and doctor IDs
         $patients_table = $wpdb->prefix . 'hm_patients';
-        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table}");
+        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table} ORDER BY ID");
         
         $doctors_table = $wpdb->prefix . 'hm_doctors';
-        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table}");
+        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table} ORDER BY ID");
         
         if (empty($patient_ids) || empty($doctor_ids)) {
             $this->log("No patients or doctors found. Cannot create visitations.");
             return;
         }
         
+        $this->log("Found " . count($patient_ids) . " patients and " . count($doctor_ids) . " doctors");
+        $this->log("Patient ID range: " . min($patient_ids) . " to " . max($patient_ids));
+        $this->log("Doctor ID range: " . min($doctor_ids) . " to " . max($doctor_ids));
+        
         $visitations_table = $wpdb->prefix . 'hm_visitations';
         
         // Get appointments for creating visitations
         $appointments = $this->getAppointmentsForVisitations();
+        
+        // Validate appointment patient and doctor IDs before creating visitations
+        $appointments = $this->validateAppointmentIds($appointments, $patient_ids, $doctor_ids);
         
         // Create visitations from appointments
         $count = $this->createVisitationsFromAppointments($visitations_table, $appointments, $wpdb);
@@ -121,6 +128,26 @@ class VisitationSeeder extends Seeder
         return $formatted;
     }
     
+    /**
+     * Validate appointment patient and doctor IDs against existing records
+     */
+    private function validateAppointmentIds($appointments, $valid_patient_ids, $valid_doctor_ids)
+    {
+        $validated = [];
+        
+        foreach ($appointments as $appointment) {
+            // Check if patient and doctor IDs are valid
+            if (in_array($appointment['patient_id'], $valid_patient_ids) && 
+                in_array($appointment['doctor_id'], $valid_doctor_ids)) {
+                $validated[] = $appointment;
+            } else {
+                $this->log("Skipping appointment {$appointment['appointment_id']} - invalid patient_id ({$appointment['patient_id']}) or doctor_id ({$appointment['doctor_id']})");
+            }
+        }
+        
+        return $validated;
+    }
+
     /**
      * Create visitations from appointments
      */
@@ -188,9 +215,15 @@ class VisitationSeeder extends Seeder
         $count = 0;
         
         for ($i = 0; $i < $target; $i++) {
-            // Random patient and doctor
+            // Random patient and doctor - use array_rand to get valid array indices
             $patient_id = $patient_ids[array_rand($patient_ids)];
             $doctor_id = $doctor_ids[array_rand($doctor_ids)];
+            
+            // Validate that the IDs are actually valid (double check)
+            if (!in_array($patient_id, $patient_ids) || !in_array($doctor_id, $doctor_ids)) {
+                $this->log("Skipping walk-in visitation - invalid patient_id ({$patient_id}) or doctor_id ({$doctor_id})");
+                continue;
+            }
             
             // Random date within last 3 months
             $days_ago = mt_rand(1, 90); // 1-90 days ago
@@ -240,9 +273,15 @@ class VisitationSeeder extends Seeder
         $count = 0;
         
         for ($i = 0; $i < $target; $i++) {
-            // Random patient and doctor
+            // Random patient and doctor - use array_rand to get valid array indices
             $patient_id = $patient_ids[array_rand($patient_ids)];
             $doctor_id = $doctor_ids[array_rand($doctor_ids)];
+            
+            // Validate that the IDs are actually valid (double check)
+            if (!in_array($patient_id, $patient_ids) || !in_array($doctor_id, $doctor_ids)) {
+                $this->log("Skipping follow-up visitation - invalid patient_id ({$patient_id}) or doctor_id ({$doctor_id})");
+                continue;
+            }
             
             // Random date within last 30 days
             $days_ago = mt_rand(1, 30); // 1-30 days ago

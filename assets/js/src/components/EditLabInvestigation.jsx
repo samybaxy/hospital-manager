@@ -22,7 +22,28 @@ const EditLabInvestigation = ({
     setError(null);
 
     try {
-      const response = await laboratoryService.updateInvestigation(investigation.ID, formData);
+      // For editing, we only allow one test, so take the first selected test
+      const selectedTests = formData.selected_tests || [];
+      
+      if (selectedTests.length === 0) {
+        setError('At least one test must be selected');
+        setLoading(false);
+        return;
+      }
+      
+      // Convert selected_tests back to test_type for backend
+      const test = selectedTests[0]; // Only take the first test for editing
+      const updateData = {
+        ...formData,
+        test_type: test.name,
+        sample_type: test.sample_type || formData.sample_type,
+        // Remove selected_tests from the payload
+        selected_tests: undefined
+      };
+      
+      console.log('Updating investigation with data:', updateData);
+      
+      const response = await laboratoryService.updateInvestigation(investigation.ID, updateData);
       
       if (response.success) {
         onSuccess?.(response.data);

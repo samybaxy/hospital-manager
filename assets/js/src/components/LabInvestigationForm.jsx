@@ -28,6 +28,19 @@ const LabInvestigationForm = ({
     lab_notes: ''
   });
 
+  // Update form data when props change (important for when component is reused)
+  useEffect(() => {
+    if (!investigation) {
+      setFormData(prev => ({
+        ...prev,
+        visitation_id: visitationId || prev.visitation_id,
+        patient_id: patientId || prev.patient_id,
+        doctor_id: doctorId || prev.doctor_id,
+        lab_tech_id: labTechId || prev.lab_tech_id,
+      }));
+    }
+  }, [patientId, visitationId, doctorId, labTechId, investigation]);
+
   const [categories, setCategories] = useState([]);
   const [testDefinitions, setTestDefinitions] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -39,6 +52,19 @@ const LabInvestigationForm = ({
   // Initialize form data when investigation prop changes
   useEffect(() => {
     if (investigation) {
+      // Convert test_type back to selected_tests format for editing
+      let selectedTests = [];
+      if (investigation.test_type) {
+        // Try to find the test definition that matches the test_type
+        // For now, create a mock test object since we don't have the full test definition
+        selectedTests = [{
+          ID: `existing_${Date.now()}`,
+          name: investigation.test_type,
+          sample_type: investigation.sample_type,
+          // We'll need to load the actual test definition later
+        }];
+      }
+      
       setFormData({
         visitation_id: investigation.visitation_id || '',
         patient_id: investigation.patient_id || '',
@@ -47,7 +73,7 @@ const LabInvestigationForm = ({
         sample_type: investigation.sample_type || '',
         request_notes: investigation.request_notes || '',
         status: investigation.status || 'requested',
-        selected_tests: investigation.selected_tests || [],
+        selected_tests: selectedTests,
         test_results: investigation.test_results ? 
           (typeof investigation.test_results === 'string' ? 
             JSON.parse(investigation.test_results) : investigation.test_results) : {},
@@ -84,14 +110,14 @@ const LabInvestigationForm = ({
     } catch (error) {
       console.error('Error loading lab data:', error);
       // For now, use sample data
-      setCategories([
+      const sampleCategories = [
         { ID: 1, name: 'Hematology', description: 'Blood-related tests' },
         { ID: 2, name: 'Chemistry', description: 'Blood chemistry tests' },
         { ID: 3, name: 'Microbiology', description: 'Infection and culture tests' },
         { ID: 4, name: 'Immunology', description: 'Immune system tests' }
-      ]);
+      ];
       
-      setTestDefinitions([
+      const sampleTestDefinitions = [
         {
           ID: 1,
           category_id: 1,
@@ -189,14 +215,35 @@ const LabInvestigationForm = ({
             ]
           }
         }
-      ]);
+      ];
+      
+      console.log('Setting sample categories:', sampleCategories);
+      console.log('Setting sample test definitions:', sampleTestDefinitions);
+      
+      setCategories(sampleCategories);
+      setTestDefinitions(sampleTestDefinitions);
     } finally {
       setLoadingData(false);
     }
   };
 
   const loadTestsForCategory = (categoryId) => {
-    const tests = testDefinitions.filter(test => test.category_id === parseInt(categoryId));
+    console.log('Loading tests for category:', categoryId);
+    console.log('Available test definitions:', testDefinitions);
+    
+    // Debug: Let's see the structure of the first few test definitions
+    if (testDefinitions.length > 0) {
+      console.log('Sample test definition structure:', testDefinitions[0]);
+      console.log('All category_ids in test definitions:', testDefinitions.map(test => test.category_id));
+    }
+    
+    const tests = testDefinitions.filter(test => {
+      const testCategoryId = parseInt(test.category_id);
+      const selectedCategoryId = parseInt(categoryId);
+      console.log(`Comparing test.category_id (${test.category_id} -> ${testCategoryId}) with selected categoryId (${categoryId} -> ${selectedCategoryId})`);
+      return testCategoryId === selectedCategoryId;
+    });
+    console.log('Filtered tests for category:', tests);
     setAvailableTests(tests);
   };
 
@@ -222,7 +269,11 @@ const LabInvestigationForm = ({
       return;
     }
 
-    const updatedTests = [...formData.selected_tests, test];
+    // For editing mode, only allow one test (replace existing)
+    // For add mode, allow multiple tests
+    const isEditMode = !!investigation;
+    const updatedTests = isEditMode ? [test] : [test, ...formData.selected_tests];
+    
     setFormData(prev => ({
       ...prev,
       selected_tests: updatedTests
@@ -379,7 +430,123 @@ const LabInvestigationForm = ({
         <div className="text-center">
           <button 
             type="button"
-            onClick={() => setLoadingData(false)}
+            onClick={() => {
+              console.log('Bypassing loading - setting sample data manually');
+              setLoadingData(false);
+              // Ensure sample data is set when bypassing
+              const sampleCategories = [
+                { ID: 1, name: 'Hematology', description: 'Blood-related tests' },
+                { ID: 2, name: 'Chemistry', description: 'Blood chemistry tests' },
+                { ID: 3, name: 'Microbiology', description: 'Infection and culture tests' },
+                { ID: 4, name: 'Immunology', description: 'Immune system tests' }
+              ];
+              
+              const sampleTestDefinitions = [
+                {
+                  ID: 1,
+                  category_id: 1,
+                  code: 'ESR',
+                  name: 'Erythrocyte Sedimentation Rate',
+                  sample_type: 'Blood',
+                  test_parameters: {
+                    parameters: [
+                      {
+                        name: 'ESR',
+                        unit: 'mm/hr',
+                        reference_range: { min: 0, max: 15 },
+                        type: 'numeric'
+                      }
+                    ]
+                  }
+                },
+                {
+                  ID: 2,
+                  category_id: 1,
+                  code: 'CBC',
+                  name: 'Complete Blood Count',
+                  sample_type: 'Blood',
+                  test_parameters: {
+                    parameters: [
+                      {
+                        name: 'Hemoglobin',
+                        unit: 'g/dL',
+                        reference_range: { min: 12.0, max: 16.0 },
+                        type: 'numeric'
+                      },
+                      {
+                        name: 'White Blood Cells',
+                        unit: '×10³/μL',
+                        reference_range: { min: 4.0, max: 11.0 },
+                        type: 'numeric'
+                      },
+                      {
+                        name: 'Platelets',
+                        unit: '×10³/μL',
+                        reference_range: { min: 150, max: 450 },
+                        type: 'numeric'
+                      }
+                    ]
+                  }
+                },
+                {
+                  ID: 3,
+                  category_id: 1,
+                  code: 'FERRITIN',
+                  name: 'Ferritin',
+                  sample_type: 'Blood',
+                  test_parameters: {
+                    parameters: [
+                      {
+                        name: 'Ferritin',
+                        unit: 'ng/mL',
+                        reference_range: { min: 15, max: 150 },
+                        type: 'numeric'
+                      }
+                    ]
+                  }
+                },
+                {
+                  ID: 4,
+                  category_id: 1,
+                  code: 'B12',
+                  name: 'Vitamin B12',
+                  sample_type: 'Blood',
+                  test_parameters: {
+                    parameters: [
+                      {
+                        name: 'Vitamin B12',
+                        unit: 'pg/mL',
+                        reference_range: { min: 200, max: 900 },
+                        type: 'numeric'
+                      }
+                    ]
+                  }
+                },
+                {
+                  ID: 5,
+                  category_id: 2,
+                  code: 'GLUCOSE',
+                  name: 'Blood Glucose',
+                  sample_type: 'Blood',
+                  test_parameters: {
+                    parameters: [
+                      {
+                        name: 'Glucose',
+                        unit: 'mg/dL',
+                        reference_range: { min: 70, max: 100 },
+                        type: 'numeric'
+                      }
+                    ]
+                  }
+                }
+              ];
+              
+              console.log('Setting bypass categories:', sampleCategories);
+              console.log('Setting bypass test definitions:', sampleTestDefinitions);
+              
+              setCategories(sampleCategories);
+              setTestDefinitions(sampleTestDefinitions);
+            }}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
           >
             Skip Loading (Debug)
@@ -507,7 +674,14 @@ const LabInvestigationForm = ({
 
       {/* Test Selection */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Tests</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Select Tests
+          {investigation && (
+            <span className="text-sm font-normal text-gray-600 ml-2">
+              (Edit mode: You can change the test for this investigation)
+            </span>
+          )}
+        </h3>
         
         {/* Category Selection */}
         <div className="mb-4">

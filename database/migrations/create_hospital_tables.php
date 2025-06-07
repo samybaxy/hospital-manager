@@ -427,30 +427,41 @@ class CreateHospitalTables
     {
         global $wpdb;
         
+        // Drop tables in correct order to handle foreign key constraints
+        // Child tables first, then parent tables
         $tables = [
             'hm_inventory_reorders',
-            'hm_inventory_suppliers',
             'hm_inventory_alerts',
             'hm_inventory_transactions',
+            'hm_inventory_suppliers',
             'hm_inventory',
+            'hm_chat_messages',
+            'hm_chats',
+            'hm_medical_reports',
             'hm_radiological_exams',
             'hm_lab_investigations',
-            'hm_lab_categories',
-            'hm_lab_test_definitions',
+            'hm_lab_test_definitions',  // Drop this before hm_lab_categories due to foreign key
+            'hm_lab_categories',        // Drop this after hm_lab_test_definitions
             'hm_visitations',
-            'hm_hmos',
-            'hm_doctors',
-            'hm_patients',
-            'hm_audit_logs',
-            'hm_notifications',
             'hm_appointments',
-            'hm_chats',
-            'hm_chat_messages',
-            'hm_medical_reports'
+            'hm_notifications',
+            'hm_audit_logs',
+            'hm_patients',
+            'hm_doctors',
+            'hm_hmos'
         ];
 
+        // Disable foreign key checks to avoid constraint issues
+        $wpdb->query("SET FOREIGN_KEY_CHECKS = 0");
+        
         foreach ($tables as $table) {
-            $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}$table");
+            $result = $wpdb->query("DROP TABLE IF EXISTS {$wpdb->prefix}$table");
+            if ($result === false) {
+                error_log("Hospital Manager: Failed to drop table {$wpdb->prefix}$table: " . $wpdb->last_error);
+            }
         }
+        
+        // Re-enable foreign key checks
+        $wpdb->query("SET FOREIGN_KEY_CHECKS = 1");
     }
 }

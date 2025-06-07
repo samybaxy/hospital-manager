@@ -42,4 +42,24 @@ abstract class BaseModel extends PostModel
         // This method should be implemented by child classes
         // to create their respective database tables
     }
+    
+    /**
+     * Override PostModel's load_attributes to prevent issues with load_meta for custom tables
+     */
+    public function load_attributes( $attributes )
+    {
+        if ( !empty( $attributes ) ) {
+            $this->attributes = $attributes;
+            // Don't call load_meta() for custom database tables
+        }
+    }
+    
+    /**
+     * Override PostModel's load_meta to prevent issues with custom tables
+     */
+    public function load_meta()
+    {
+        // Do nothing for custom database tables
+        // Meta loading is handled differently for custom tables
+    }
 }

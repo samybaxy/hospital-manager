@@ -21,14 +21,42 @@ const AddLabInvestigation = ({
     setError(null);
 
     try {
-      const response = await laboratoryService.createInvestigation(formData);
+      // If multiple tests are selected, create one investigation per test
+      const selectedTests = formData.selected_tests || [];
       
-      if (response.success) {
-        onSuccess?.(response.data);
-        onClose();
-      } else {
-        setError(response.message || 'Failed to create investigation');
+      if (selectedTests.length === 0) {
+        setError('At least one test must be selected');
+        setLoading(false);
+        return;
       }
+
+      const createdInvestigations = [];
+      
+      // Create investigations for each selected test
+      for (const test of selectedTests) {
+        const investigationData = {
+          ...formData,
+          test_type: test.name, // Use test name as test_type
+          sample_type: test.sample_type || formData.sample_type,
+          // Remove selected_tests from the payload
+          selected_tests: undefined
+        };
+        
+        console.log('Creating investigation for test:', test.name, investigationData);
+        
+        const response = await laboratoryService.createInvestigation(investigationData);
+        
+        if (response.success) {
+          createdInvestigations.push(response.data);
+        } else {
+          throw new Error(response.message || `Failed to create investigation for ${test.name}`);
+        }
+      }
+      
+      // Success - notify parent with all created investigations
+      onSuccess?.(createdInvestigations);
+      onClose();
+      
     } catch (err) {
       console.error('Error creating investigation:', err);
       setError(err.response?.data?.message || err.message || 'Failed to create investigation');

@@ -1,4 +1,5 @@
 <?php
+
 namespace HospitalManager\Models;
 
 use WPMVC\MVC\Traits\FindTrait;
@@ -37,7 +38,13 @@ class LabInvestigation extends BaseModel
         global $wpdb;
         $this->table = $wpdb->prefix . $this->tableName;
         
-        parent::__construct($attributes);
+        // Set attributes directly for custom database tables
+        if (!empty($attributes)) {
+            $this->attributes = $attributes;
+        }
+        
+        // Don't call parent constructor for custom database models
+        // parent::__construct($attributes);
     }
 
     /**
@@ -125,37 +132,58 @@ class LabInvestigation extends BaseModel
     public static function create(array $attributes)
     {
         global $wpdb;
-        $table = (new static)->table;
-
-        // Set default values
-        $attributes['created_at'] = $attributes['created_at'] ?? current_time('mysql');
-        $attributes['status'] = $attributes['status'] ?? 'requested';
-        $attributes['is_abnormal'] = $attributes['is_abnormal'] ?? 0;
-        $attributes['is_critical'] = $attributes['is_critical'] ?? 0;
         
-        // Ensure JSON fields are properly encoded
-        if (isset($attributes['test_results']) && is_array($attributes['test_results'])) {
-            $attributes['test_results'] = json_encode($attributes['test_results']);
-        }
-        
-        if (isset($attributes['flags']) && is_array($attributes['flags'])) {
-            $attributes['flags'] = json_encode($attributes['flags']);
-        }
-        
-        $result = $wpdb->insert(
-            $table,
-            $attributes,
-            array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
-            }, $attributes)
-        );
+        try {
+            $instance = new static();
+            $table = $instance->getTable();
+            
+            error_log("LabInvestigation::create() - Table: " . $table);
 
-        if ($result === false) {
-            throw new \Exception($wpdb->last_error);
-        }
+            // Set default values
+            $attributes['created_at'] = $attributes['created_at'] ?? current_time('mysql');
+            $attributes['status'] = $attributes['status'] ?? 'requested';
+            $attributes['is_abnormal'] = $attributes['is_abnormal'] ?? 0;
+            $attributes['is_critical'] = $attributes['is_critical'] ?? 0;
+            
+            // Ensure JSON fields are properly encoded
+            if (isset($attributes['test_results']) && is_array($attributes['test_results'])) {
+                $attributes['test_results'] = json_encode($attributes['test_results']);
+            }
+            
+            if (isset($attributes['flags']) && is_array($attributes['flags'])) {
+                $attributes['flags'] = json_encode($attributes['flags']);
+            }
+            
+            $result = $wpdb->insert(
+                $table,
+                $attributes,
+                array_map(function($value) {
+                    if (is_int($value) || (is_string($value) && is_numeric($value) && (int)$value == $value)) {
+                        return '%d';
+                    }
+                    return '%s';
+                }, $attributes)
+            );
+            
+            if ($result === false) {
+                error_log("LabInvestigation::create() - Database error: " . $wpdb->last_error);
+                throw new \Exception($wpdb->last_error);
+            }
 
-        $attributes['ID'] = $wpdb->insert_id;
-        return new static($attributes);
+            $attributes['ID'] = $wpdb->insert_id;
+            error_log("LabInvestigation::create() - Insert ID: " . $wpdb->insert_id);
+            
+            $new_instance = new static($attributes);
+            error_log("LabInvestigation::create() - Instance created successfully with attributes: " . (isset($new_instance->attributes) ? 'YES' : 'NO'));
+            error_log("LabInvestigation::create() - Attributes ID: " . (isset($new_instance->attributes['ID']) ? $new_instance->attributes['ID'] : 'NOT_SET'));
+            error_log("LabInvestigation::create() - Attributes count: " . (isset($new_instance->attributes) ? count($new_instance->attributes) : '0'));
+            
+            return $new_instance;
+            
+        } catch (\Exception $e) {
+            error_log("LabInvestigation::create() - Exception: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**

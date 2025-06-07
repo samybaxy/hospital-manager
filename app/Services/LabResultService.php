@@ -185,33 +185,45 @@ class LabResultService
      */
     public static function notifyLabRequest($labId)
     {
-        $lab = LabInvestigation::find($labId);
-        if (!$lab) {
+        try {
+            $lab = LabInvestigation::find($labId);
+            if (!$lab) {
+                error_log("LabResultService::notifyLabRequest - Lab investigation not found with ID: " . $labId);
+                return false;
+            }
+            
+            if (!isset($lab->attributes) || !is_array($lab->attributes)) {
+                error_log("LabResultService::notifyLabRequest - Lab investigation attributes not set or not array");
+                error_log("LabResultService::notifyLabRequest - Lab object: " . print_r($lab, true));
+                return false;
+            }
+
+            // Notify the lab tech
+            if (isset($lab->attributes['lab_tech_id']) && $lab->attributes['lab_tech_id']) {
+                NotificationService::create(
+                    $lab->attributes['lab_tech_id'],
+                    'lab_request',
+                    'New Lab Test Assignment',
+                    "You have been assigned a new lab test",
+                    [
+                        'lab_id' => $lab->attributes['ID'],
+                        'patient_id' => $lab->attributes['patient_id'],
+                        'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test'
+                    ]
+                );
+
+                WebSocketService::sendMessage('lab_assignment', [
+                    'lab_id' => $lab->attributes['ID'],
+                    'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
+                    'patient_id' => $lab->attributes['patient_id']
+                ], $lab->attributes['lab_tech_id']);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            error_log("LabResultService::notifyLabRequest - Exception: " . $e->getMessage());
             return false;
         }
-
-        // Notify the lab tech
-        if ($lab->attributes['lab_tech_id']) {
-            NotificationService::create(
-                $lab->attributes['lab_tech_id'],
-                'lab_request',
-                'New Lab Test Assignment',
-                "You have been assigned a new lab test",
-                [
-                    'lab_id' => $lab->attributes['ID'],
-                    'patient_id' => $lab->attributes['patient_id'],
-                    'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test'
-                ]
-            );
-
-            WebSocketService::sendMessage('lab_assignment', [
-                'lab_id' => $lab->attributes['ID'],
-                'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                'patient_id' => $lab->attributes['patient_id']
-            ], $lab->attributes['lab_tech_id']);
-        }
-
-        return true;
     }
 
     /**
