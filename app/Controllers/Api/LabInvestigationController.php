@@ -491,7 +491,36 @@ class LabInvestigationController extends BaseController
                 return new WP_REST_Response(['error' => 'Investigation not found'], 404);
             }
 
-            $investigation->update($request->get_params());
+            $params = $request->get_params();
+            
+            // Remove ID from params to avoid updating it
+            unset($params['ID']);
+            
+            // Clean up any null or undefined values that might cause issues
+            $cleanParams = [];
+            foreach ($params as $key => $value) {
+                if ($value !== null && $value !== 'undefined') {
+                    $cleanParams[$key] = $value;
+                }
+            }
+            
+            // Handle test_results specifically if it's a JSON string
+            if (isset($cleanParams['test_results']) && is_string($cleanParams['test_results'])) {
+                // Validate JSON before storing
+                $decodedResults = json_decode($cleanParams['test_results'], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $cleanParams['test_results'] = $cleanParams['test_results']; // Keep as string for storage
+                } else {
+                    unset($cleanParams['test_results']); // Remove invalid JSON
+                }
+            }
+            
+            $success = $investigation->update($cleanParams);
+            
+            if (!$success) {
+                return new WP_REST_Response(['error' => 'Failed to update investigation'], 500);
+            }
+            
             return new WP_REST_Response($investigation->attributes, 200);
             
         } catch (\Exception $e) {

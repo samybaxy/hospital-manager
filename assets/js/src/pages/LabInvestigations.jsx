@@ -537,10 +537,7 @@ const LabInvestigations = () => {
                           <Button 
                             variant="primary" 
                             size="sm"
-                            onClick={() => {
-                              console.log('Results button clicked for:', investigation);
-                              openModal(investigation, 'results');
-                            }}
+                            onClick={() => { openModal(investigation, 'results'); }}
                           >
                             Results
                           </Button>

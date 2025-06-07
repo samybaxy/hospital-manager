@@ -225,7 +225,18 @@ class LabInvestigation extends BaseModel
      */
     public function orderBy($column, $direction = 'ASC')
     {
-        static::$orderBy[] = [$column, strtoupper($direction)];
+        error_log('orderBy called with column: ' . var_export($column, true) . ', direction: ' . var_export($direction, true));
+        
+        // Ensure direction is not null before calling strtoupper
+        if ($direction === null) {
+            error_log('WARNING: orderBy direction is null, defaulting to ASC');
+            $direction = 'ASC';
+        }
+        
+        $upper_direction = strtoupper($direction);
+        error_log('orderBy upper direction: ' . $upper_direction);
+        
+        static::$orderBy[] = [$column, $upper_direction];
         return static::$queryType === 'instance' ? $this : new static();
     }
 
@@ -296,26 +307,74 @@ class LabInvestigation extends BaseModel
      */
     public function update(array $attributes)
     {
+        error_log('=== LabInvestigation::update() START ===');
+        error_log('Raw attributes received: ' . print_r($attributes, true));
+        
         global $wpdb;
+        
+        // Debug: Check current instance state
+        error_log('Current instance ID: ' . (isset($this->ID) ? $this->ID : 'NOT_SET'));
+        error_log('Current instance attributes ID: ' . (isset($this->attributes['ID']) ? $this->attributes['ID'] : 'NOT_SET'));
+        error_log('Table name: ' . $this->table);
+        
+        // Filter out null values and prepare format array
+        $clean_attributes = array_filter($attributes, function($value) {
+            $is_valid = $value !== null && $value !== '';
+            error_log("Filtering value: " . var_export($value, true) . " -> " . ($is_valid ? 'KEEP' : 'REMOVE'));
+            return $is_valid;
+        });
+        
+        error_log('Clean attributes after filtering: ' . print_r($clean_attributes, true));
+        
+        // Build format array based on field types
+        $formats = [];
+        foreach ($clean_attributes as $key => $value) {
+            if (in_array($key, ['visitation_id', 'patient_id', 'doctor_id', 'lab_tech_id', 'is_abnormal', 'is_critical'])) {
+                $formats[] = '%d';
+                error_log("Field '{$key}' -> format: %d, value: " . var_export($value, true));
+            } else {
+                $formats[] = '%s';
+                error_log("Field '{$key}' -> format: %s, value: " . var_export($value, true));
+            }
+        }
+        
+        error_log('Final formats array: ' . print_r($formats, true));
+        
+        // Debug: Show the exact update parameters
+        error_log('wpdb->update parameters:');
+        error_log('  - table: ' . $this->table);
+        error_log('  - data: ' . print_r($clean_attributes, true));
+        error_log('  - where: ' . print_r(['ID' => $this->ID], true));
+        error_log('  - format: ' . print_r($formats, true));
+        error_log('  - where_format: %d');
         
         $result = $wpdb->update(
             $this->table,
-            $attributes,
+            $clean_attributes,
             ['ID' => $this->ID],
-            array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
-            }, $attributes),
+            $formats,
             ['%d']
         );
+        
+        error_log('wpdb->update result: ' . var_export($result, true));
+        error_log('wpdb->last_error: ' . $wpdb->last_error);
+        error_log('wpdb->last_query: ' . $wpdb->last_query);
 
         if ($result === false) {
+            error_log('Update failed with error: ' . $wpdb->last_error);
             throw new \Exception($wpdb->last_error);
         }
 
-        foreach ($attributes as $key => $value) {
+        error_log('Update successful, updating instance attributes...');
+        foreach ($clean_attributes as $key => $value) {
             $this->$key = $value;
+            if (isset($this->attributes)) {
+                $this->attributes[$key] = $value;
+            }
+            error_log("Updated attribute '{$key}' to: " . var_export($value, true));
         }
 
+        error_log('=== LabInvestigation::update() END ===');
         return $this;
     }
 

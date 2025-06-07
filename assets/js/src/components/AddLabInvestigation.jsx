@@ -12,7 +12,6 @@ const AddLabInvestigation = ({
   doctorId = null,
   labTechId = null
 }) => {
-  console.log('AddLabInvestigation rendered:', { isOpen, patientId, visitationId, doctorId, labTechId });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 

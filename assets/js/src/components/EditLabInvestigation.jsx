@@ -34,12 +34,24 @@ const EditLabInvestigation = ({
       // Convert selected_tests back to test_type for backend
       const test = selectedTests[0]; // Only take the first test for editing
       const updateData = {
-        ...formData,
-        test_type: test.name,
+        visitation_id: formData.visitation_id,
+        patient_id: formData.patient_id,
+        doctor_id: formData.doctor_id,
+        lab_tech_id: formData.lab_tech_id,
+        test_type: test.name || test.code, // Use name or code
         sample_type: test.sample_type || formData.sample_type,
-        // Remove selected_tests from the payload
-        selected_tests: undefined
+        request_notes: formData.request_notes || '',
+        lab_notes: formData.lab_notes || '',
+        status: formData.status || 'requested',
+        test_results: formData.test_results || ''
       };
+      
+      // Remove any undefined/null values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === undefined || updateData[key] === null) {
+          delete updateData[key];
+        }
+      });
       
       console.log('Updating investigation with data:', updateData);
       

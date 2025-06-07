@@ -13,7 +13,6 @@ const LabInvestigationForm = ({
   onCancel, 
   loading = false 
 }) => {
-  console.log('LabInvestigationForm rendered:', { investigation, patientId, visitationId, doctorId, labTechId, loading });
   const [formData, setFormData] = useState({
     visitation_id: visitationId || '',
     patient_id: patientId || '',
@@ -52,17 +51,30 @@ const LabInvestigationForm = ({
   // Initialize form data when investigation prop changes
   useEffect(() => {
     if (investigation) {
+      console.log('Investigation data received:', investigation);
+      
       // Convert test_type back to selected_tests format for editing
       let selectedTests = [];
       if (investigation.test_type) {
-        // Try to find the test definition that matches the test_type
-        // For now, create a mock test object since we don't have the full test definition
         selectedTests = [{
           ID: `existing_${Date.now()}`,
           name: investigation.test_type,
+          code: investigation.test_type,
           sample_type: investigation.sample_type,
-          // We'll need to load the actual test definition later
         }];
+      }
+      
+      // Parse test results if it's a string
+      let parsedResults = {};
+      if (investigation.test_results) {
+        try {
+          parsedResults = typeof investigation.test_results === 'string' 
+            ? JSON.parse(investigation.test_results) 
+            : investigation.test_results;
+        } catch (e) {
+          console.error('Error parsing test results:', e);
+          parsedResults = {};
+        }
       }
       
       setFormData({
@@ -74,11 +86,18 @@ const LabInvestigationForm = ({
         request_notes: investigation.request_notes || '',
         status: investigation.status || 'requested',
         selected_tests: selectedTests,
-        test_results: investigation.test_results ? 
-          (typeof investigation.test_results === 'string' ? 
-            JSON.parse(investigation.test_results) : investigation.test_results) : {},
+        test_results: parsedResults,
         lab_notes: investigation.lab_notes || ''
       });
+
+      // Activate test forms for existing tests in edit mode
+      if (selectedTests.length > 0) {
+        const activeForms = {};
+        selectedTests.forEach(test => {
+          activeForms[test.ID] = true;
+        });
+        setActiveTestForms(activeForms);
+      }
     }
   }, [investigation]);
 
@@ -102,11 +121,35 @@ const LabInvestigationForm = ({
         laboratoryService.getTestDefinitions()
       ]);
       
-      console.log('Categories response:', categoriesResponse);
-      console.log('Tests response:', testsResponse);
+      const categoriesData = categoriesResponse.data || [];
+      const testsData = testsResponse.data || [];
       
-      setCategories(categoriesResponse.data || []);
-      setTestDefinitions(testsResponse.data || []);
+      setCategories(categoriesData);
+      setTestDefinitions(testsData);
+      
+      // If we're in edit mode and have an investigation, try to find the category
+      if (investigation && investigation.test_type && testsData.length > 0) {
+        const matchingTest = testsData.find(test => 
+          test.name === investigation.test_type || 
+          test.code === investigation.test_type
+        );
+        
+        if (matchingTest && matchingTest.category_id) {
+          setSelectedCategory(matchingTest.category_id.toString());
+          
+          // Also update the selected test with the full test definition
+          setFormData(prev => ({
+            ...prev,
+            selected_tests: [{
+              ...matchingTest,
+              ID: `existing_${Date.now()}` // Keep unique ID for form tracking
+            }]
+          }));
+          
+          // Activate the test form
+          setActiveTestForms({ [`existing_${Date.now()}`]: true });
+        }
+      }
     } catch (error) {
       console.error('Error loading lab data:', error);
       // For now, use sample data
@@ -217,19 +260,39 @@ const LabInvestigationForm = ({
         }
       ];
       
-      console.log('Setting sample categories:', sampleCategories);
-      console.log('Setting sample test definitions:', sampleTestDefinitions);
-      
       setCategories(sampleCategories);
       setTestDefinitions(sampleTestDefinitions);
+      
+      // If we're in edit mode and have an investigation, try to find the category from sample data
+      if (investigation && investigation.test_type) {
+        const matchingTest = sampleTestDefinitions.find(test => 
+          test.name === investigation.test_type || 
+          test.code === investigation.test_type
+        );
+        
+        if (matchingTest && matchingTest.category_id) {
+          setSelectedCategory(matchingTest.category_id.toString());
+          
+          // Also update the selected test with the full test definition
+          const testId = `existing_${Date.now()}`;
+          setFormData(prev => ({
+            ...prev,
+            selected_tests: [{
+              ...matchingTest,
+              ID: testId
+            }]
+          }));
+          
+          // Activate the test form
+          setActiveTestForms({ [testId]: true });
+        }
+      }
     } finally {
       setLoadingData(false);
     }
   };
 
   const loadTestsForCategory = (categoryId) => {
-    console.log('Loading tests for category:', categoryId);
-    console.log('Available test definitions:', testDefinitions);
     
     // Debug: Let's see the structure of the first few test definitions
     if (testDefinitions.length > 0) {
@@ -240,10 +303,8 @@ const LabInvestigationForm = ({
     const tests = testDefinitions.filter(test => {
       const testCategoryId = parseInt(test.category_id);
       const selectedCategoryId = parseInt(categoryId);
-      console.log(`Comparing test.category_id (${test.category_id} -> ${testCategoryId}) with selected categoryId (${categoryId} -> ${selectedCategoryId})`);
       return testCategoryId === selectedCategoryId;
     });
-    console.log('Filtered tests for category:', tests);
     setAvailableTests(tests);
   };
 
@@ -334,19 +395,47 @@ const LabInvestigationForm = ({
   };
 
   const updateTestResult = (testCode, paramName, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      test_results: {
-        ...prev.test_results,
+    
+    setFormData(prev => {
+      const currentResults = prev.test_results || {};
+      
+      // Check if we have array-based format: { parameters: [{ name: "...", value: "..." }] }
+      if (currentResults.parameters && Array.isArray(currentResults.parameters)) {
+        const updatedParameters = currentResults.parameters.map(param => {
+          if (param.name === paramName) {
+            return { ...param, [field]: value };
+          }
+          return param;
+        });
+        
+        const updatedResults = {
+          ...currentResults,
+          parameters: updatedParameters
+        };
+        
+        return {
+          ...prev,
+          test_results: updatedResults
+        };
+      }
+      
+      // Use object-based format: { [testCode]: { [paramName]: { value: "..." } } }
+      const updatedResults = {
+        ...currentResults,
         [testCode]: {
-          ...prev.test_results[testCode],
+          ...currentResults[testCode],
           [paramName]: {
-            ...prev.test_results[testCode][paramName],
+            ...currentResults[testCode]?.[paramName],
             [field]: value
           }
         }
-      }
-    }));
+      };
+      
+      return {
+        ...prev,
+        test_results: updatedResults
+      };
+    });
   };
 
   const validateForm = () => {
@@ -378,43 +467,244 @@ const LabInvestigationForm = ({
   };
 
   const renderTestParameterForm = (test) => {
-    if (!test.test_parameters || !test.test_parameters.parameters) {
-      return null;
-    }
-
-    return (
-      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-        <h4 className="font-medium text-gray-900 mb-3">Test Parameters for {test.name}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {test.test_parameters.parameters.map((param, index) => (
-            <div key={index} className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                {param.name}
-                {param.unit && <span className="text-gray-500"> ({param.unit})</span>}
-              </label>
-              <input
-                type={param.type === 'numeric' ? 'number' : 'text'}
-                step={param.type === 'numeric' ? '0.01' : undefined}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                value={formData.test_results[test.code]?.[param.name]?.value || ''}
-                onChange={(e) => updateTestResult(test.code, param.name, 'value', e.target.value)}
-                placeholder={`Enter ${param.name.toLowerCase()}`}
-              />
-              {param.reference_range && (
-                <p className="text-xs text-gray-500">
-                  Reference: {param.reference_range.min} - {param.reference_range.max} {param.unit}
-                </p>
-              )}
-              <textarea
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                value={formData.test_results[test.code]?.[param.name]?.notes || ''}
-                onChange={(e) => updateTestResult(test.code, param.name, 'notes', e.target.value)}
-                placeholder="Notes (optional)"
-              />
-            </div>
-          ))}
+    console.log('=== renderTestParameterForm ===');
+    console.log('Test:', test);
+    console.log('Test parameters:', test.test_parameters);
+    console.log('Current test results:', formData.test_results);
+    console.log('Is investigation (edit mode):', !!investigation);
+    
+    const testCode = test.code || test.name;
+    
+    // Helper function to get parameter value from existing results
+    const getExistingParameterValue = (paramName, field = 'value') => {
+      const existingResults = formData.test_results;
+      
+      // Check array-based format first: { parameters: [{ name: "...", value: "..." }] }
+      if (existingResults && existingResults.parameters && Array.isArray(existingResults.parameters)) {
+        const paramData = existingResults.parameters.find(p => p.name === paramName);
+        return paramData?.[field] || '';
+      }
+      
+      // Check nested test results: { [testCode]: { [paramName]: { value: "..." } } }
+      if (existingResults && existingResults[testCode] && existingResults[testCode][paramName]) {
+        return existingResults[testCode][paramName][field] || '';
+      }
+      
+      // Check direct parameter mapping: { [paramName]: { value: "..." } }
+      if (existingResults && existingResults[paramName] && typeof existingResults[paramName] === 'object') {
+        return existingResults[paramName][field] || '';
+      }
+      
+      return '';
+    };
+    
+    // Check if we have test parameters defined
+    if (test.test_parameters && test.test_parameters.parameters) {
+      // Normal case with defined test parameters
+      return (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium text-gray-900 mb-3">Test Parameters for {test.name}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {test.test_parameters.parameters.map((param, index) => {
+              const currentValue = getExistingParameterValue(param.name, 'value');
+              const currentFlag = getExistingParameterValue(param.name, 'flag');
+              const currentNotes = getExistingParameterValue(param.name, 'notes');
+              
+            //   console.log(`Parameter ${param.name}: value="${currentValue}", flag="${currentFlag}", notes="${currentNotes}"`);
+              
+              return (
+                <div key={index} className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    {param.name}
+                    {param.unit && <span className="text-gray-500"> ({param.unit})</span>}
+                  </label>
+                  <input
+                    type={param.type === 'numeric' ? 'number' : 'text'}
+                    step={param.type === 'numeric' ? '0.01' : undefined}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    value={currentValue}
+                    onChange={(e) => updateTestResult(testCode, param.name, 'value', e.target.value)}
+                    placeholder={`Enter ${param.name.toLowerCase()}`}
+                  />
+                  {param.reference_range && (
+                    <p className="text-xs text-gray-500">
+                      Reference: {param.reference_range.min} - {param.reference_range.max} {param.unit}
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      value={currentFlag}
+                      onChange={(e) => updateTestResult(testCode, param.name, 'flag', e.target.value)}
+                      placeholder="Flag (H/L/N)"
+                    />
+                    <input
+                      type="text"
+                      className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      value={currentNotes}
+                      onChange={(e) => updateTestResult(testCode, param.name, 'notes', e.target.value)}
+                      placeholder="Notes"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
+      );
+    }
+    
+    // Handle case where we're editing an existing investigation without defined test parameters
+    if (investigation) {
+      const existingResults = formData.test_results;
+      console.log('Editing mode - existing results:', existingResults);
+      
+      // Handle array-based format: { parameters: [{ name: "...", value: "..." }] }
+      if (existingResults && existingResults.parameters && Array.isArray(existingResults.parameters)) {
+        console.log('Found array-based parameters:', existingResults.parameters);
+        return (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-gray-900 mb-3">Test Results for {test.name}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {existingResults.parameters.map((paramData, index) => {
+                const paramName = paramData.name;
+                return (
+                  <div key={index} className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      {paramName}
+                      {paramData.unit && <span className="text-gray-500"> ({paramData.unit})</span>}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      value={paramData.value || ''}
+                      onChange={(e) => updateTestResult(testCode, paramName, 'value', e.target.value)}
+                      placeholder={`Enter ${paramName.toLowerCase()}`}
+                    />
+                    {paramData.reference_range && (
+                      <p className="text-xs text-gray-500">
+                        Reference: {paramData.reference_range.min} - {paramData.reference_range.max} {paramData.unit}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        value={paramData.flag || ''}
+                        onChange={(e) => updateTestResult(testCode, paramName, 'flag', e.target.value)}
+                        placeholder="Flag (H/L/N)"
+                      />
+                      <input
+                        type="text"
+                        className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        value={paramData.notes || ''}
+                        onChange={(e) => updateTestResult(testCode, paramName, 'notes', e.target.value)}
+                        placeholder="Notes"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+      
+      // Try to find parameters from existing results (object-based format)
+      if (existingResults && typeof existingResults === 'object') {
+        // Check for nested test results structure
+        const nestedResults = existingResults[testCode] || existingResults;
+        
+        if (nestedResults && typeof nestedResults === 'object') {
+          // Find parameter keys (exclude metadata fields)
+          const parameterKeys = Object.keys(nestedResults).filter(key => 
+            key !== 'parameters' && 
+            typeof nestedResults[key] === 'object' &&
+            nestedResults[key] !== null
+          );
+          
+          if (parameterKeys.length > 0) {
+            return (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-3">Test Results for {test.name}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {parameterKeys.map((paramName) => {
+                    const paramData = nestedResults[paramName];
+                    return (
+                      <div key={paramName} className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          {paramName}
+                          {paramData.unit && <span className="text-gray-500"> ({paramData.unit})</span>}
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                          value={paramData.value || ''}
+                          onChange={(e) => updateTestResult(testCode, paramName, 'value', e.target.value)}
+                          placeholder={`Enter ${paramName.toLowerCase()}`}
+                        />
+                        {paramData.reference_range && (
+                          <p className="text-xs text-gray-500">
+                            Reference: {paramData.reference_range.min} - {paramData.reference_range.max} {paramData.unit}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                            value={paramData.flag || ''}
+                            onChange={(e) => updateTestResult(testCode, paramName, 'flag', e.target.value)}
+                            placeholder="Flag (H/L/N)"
+                          />
+                          <input
+                            type="text"
+                            className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                            value={paramData.notes || ''}
+                            onChange={(e) => updateTestResult(testCode, paramName, 'notes', e.target.value)}
+                            placeholder="Notes"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      
+      // Fallback for editing mode - JSON editor
+      return (
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-medium text-gray-900 mb-3">Test Results for {test.name}</h4>
+          <p className="text-sm text-gray-600 mb-3">Raw test results data (JSON format):</p>
+          <textarea
+            rows={6}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+            value={typeof formData.test_results === 'string' ? formData.test_results : JSON.stringify(formData.test_results, null, 2)}
+            onChange={(e) => {
+              try {
+                const parsed = JSON.parse(e.target.value);
+                setFormData(prev => ({ ...prev, test_results: parsed }));
+              } catch (err) {
+                // If it's not valid JSON, store as string for now
+                setFormData(prev => ({ ...prev, test_results: e.target.value }));
+              }
+            }}
+            placeholder="Enter test results as JSON"
+          />
+        </div>
+      );
+    }
+    
+    // No test parameters and not in edit mode
+    return (
+      <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
+        <p className="text-sm text-yellow-800">
+          No test parameters defined for this test. Parameters will be available when you add results.
+        </p>
       </div>
     );
   };
@@ -656,6 +946,14 @@ const LabInvestigationForm = ({
               <option value="requested">Requested</option>
               <option value="sample_collected">Sample Collected</option>
               <option value="in_progress">In Progress</option>
+              {/* Additional status options only available in edit mode */}
+              {investigation && (
+                <>
+                  <option value="completed">Completed</option>
+                  <option value="verified">Verified</option>
+                  <option value="cancelled">Cancelled</option>
+                </>
+              )}
             </select>
           </div>
         </div>
@@ -763,8 +1061,8 @@ const LabInvestigationForm = ({
                   </div>
                   <p className="text-sm text-gray-600 mb-2">Sample: {test.sample_type}</p>
                   
-                  {/* Test Parameter Forms */}
-                  {activeTestForms[test.ID] && renderTestParameterForm(test)}
+                  {/* Test Parameter Forms - Always show in edit mode, conditional in add mode */}
+                  {(investigation || activeTestForms[test.ID]) && renderTestParameterForm(test)}
                 </div>
               ))}
             </div>
