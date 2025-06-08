@@ -387,20 +387,36 @@ class Appointment extends BaseModel
     {
         global $wpdb;
         $table = (new static)->table;
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
         
         $query = $wpdb->prepare(
-            "SELECT * FROM {$table} 
-            WHERE patient_id = %d 
-            AND status = %s 
-            AND appointment_date >= %s",
+            "SELECT a.*, 
+                    CONCAT(d.first_name, ' ', d.last_name) as doctor_name,
+                    d.specialty as doctor_specialty
+            FROM {$table} a 
+            LEFT JOIN {$doctors_table} d ON a.doctor_id = d.ID
+            WHERE a.patient_id = %d 
+            AND (a.status = 'pending' OR a.status = 'confirmed') 
+            AND a.appointment_date >= %s
+            ORDER BY a.appointment_date ASC, a.appointment_time ASC",
             $patientId,
-            'scheduled',
             current_time('Y-m-d')
         );
 
         $results = $wpdb->get_results($query, ARRAY_A);
         $appointments = array_map(function($item) {
-            return new static($item);
+            $appointment = new static($item);
+            // Add doctor name and formatted date to the appointment object
+            if (isset($item['doctor_name'])) {
+                $appointment->doctor_name = $item['doctor_name'];
+            }
+            if (isset($item['doctor_specialty'])) {
+                $appointment->doctor_specialty = $item['doctor_specialty'];
+            }
+            if (isset($item['appointment_date'])) {
+                $appointment->formatted_date = mysql2date('F j, Y', $item['appointment_date']);
+            }
+            return $appointment;
         }, $results ?: []);
         
         return $appointments;
@@ -413,11 +429,14 @@ class Appointment extends BaseModel
     {
         global $wpdb;
         $table = (new static)->table;
+        $patients_table = $wpdb->prefix . 'hm_patients';
         
         $query = $wpdb->prepare(
-            "SELECT a.*, u.display_name as patient_name 
+            "SELECT a.*, 
+                    CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+                    p.phone as patient_phone
             FROM {$table} a 
-            LEFT JOIN {$wpdb->users} u ON a.patient_id = u.ID 
+            LEFT JOIN {$patients_table} p ON a.patient_id = p.ID 
             WHERE a.doctor_id = %d 
             AND DATE(a.appointment_date) = %s 
             ORDER BY a.appointment_date ASC",
@@ -430,6 +449,9 @@ class Appointment extends BaseModel
             $model = new static($item);
             if (isset($item['patient_name'])) {
                 $model->patient_name = $item['patient_name'];
+            }
+            if (isset($item['patient_phone'])) {
+                $model->patient_phone = $item['patient_phone'];
             }
             return $model;
         }, $results ?: []);

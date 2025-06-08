@@ -185,9 +185,13 @@ class DashboardController extends WP_REST_Controller
             
             // Get upcoming appointments (next 5)
             $upcoming_appointments = $wpdb->get_results(
-                "SELECT a.*, p.first_name, p.last_name 
+                "SELECT a.*, 
+                        p.first_name, p.last_name,
+                        d.first_name as doctor_first_name, d.last_name as doctor_last_name,
+                        CONCAT(d.first_name, ' ', d.last_name) as doctor_name
                 FROM {$wpdb->prefix}hm_appointments a
                 LEFT JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.ID
+                LEFT JOIN {$wpdb->prefix}hm_doctors d ON a.doctor_id = d.ID
                 WHERE a.appointment_date >= CURDATE()
                 ORDER BY a.appointment_date ASC, a.appointment_time ASC
                 LIMIT 5"

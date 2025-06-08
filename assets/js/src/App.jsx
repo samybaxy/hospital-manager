@@ -35,6 +35,74 @@ import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
 
+// Add global styles for the hospital manager app positioning
+const appStyles = `
+  /* Target the hospital manager root with higher specificity */
+  body #hospital-manager-root,
+  #hospital-manager-root {
+    margin-top: -100px !important;
+    position: relative !important;
+    z-index: 999 !important;
+    transform: translateY(-20px) !important;
+  }
+  
+  /* Remove any default WordPress spacing */
+  #hospital-manager-root .hospital-manager-app {
+    margin-top: 0 !important;
+    padding-top: 10px !important;
+    min-height: calc(100vh - 80px);
+  }
+  
+  /* Override any theme-specific margins */
+  .wp-site-blocks #hospital-manager-root,
+  .site-content #hospital-manager-root,
+  main #hospital-manager-root {
+    margin-top: -120px !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Adjust for WordPress admin bar if present */
+  body.admin-bar #hospital-manager-root {
+    margin-top: -60px !important;
+  }
+  
+  /* Force positioning for any container elements */
+  #hospital-manager-root * {
+    box-sizing: border-box;
+  }
+`;
+
+// More aggressive CSS injection
+const injectStyles = () => {
+  if (typeof document !== 'undefined') {
+    // Remove any existing styles first
+    const existingStyle = document.getElementById('hospital-manager-positioning');
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    const styleElement = document.createElement('style');
+    styleElement.id = 'hospital-manager-positioning';
+    styleElement.textContent = appStyles;
+    document.head.appendChild(styleElement);
+    
+    // Also apply direct styles to the root element if it exists
+    const rootElement = document.getElementById('hospital-manager-root');
+    if (rootElement) {
+      rootElement.style.marginTop = '-60px';
+      rootElement.style.position = 'relative';
+      rootElement.style.zIndex = '999';
+      rootElement.style.transform = 'translateY(-20px)';
+    }
+  }
+};
+
+// Inject styles immediately and on DOM ready
+injectStyles();
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', injectStyles);
+}
+
 // Main content component with routes
 const AppRoutes = () => {
   const [loading, setLoading] = useState(true);
@@ -218,26 +286,52 @@ const AppRoutes = () => {
 
 // Main App component with router
 const App = () => {
+  // Apply positioning fix when component mounts
+  useEffect(() => {
+    injectStyles();
+    
+    // Continuously check and apply styles in case they get overridden
+    const intervalId = setInterval(() => {
+      const rootElement = document.getElementById('hospital-manager-root');
+      if (rootElement && rootElement.style.marginTop !== '-60px') {
+        injectStyles();
+      }
+    }, 1000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AuthProvider>
-        {/* Wrap the entire application with AccessProvider for permissions check */}
-        <Routes>
-          {/* Login route outside of Layout */}
-          <Route path="/login" element={<Login />} />
-          
-          {/* Add an unauthorized page route */}
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          
-          {/* All other routes inside Layout */}
-          <Route path="*" element={
-            <Layout>
-              <AppRoutes />
-            </Layout>
-          } />
-        </Routes>
-      </AuthProvider>
-    </Router>
+    <div 
+      className="hospital-manager-app" 
+      style={{ 
+        marginTop: '0', 
+        paddingTop: '10px',
+        minHeight: 'calc(100vh - 80px)',
+        position: 'relative',
+        zIndex: 999
+      }}
+    >
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          {/* Wrap the entire application with AccessProvider for permissions check */}
+          <Routes>
+            {/* Login route outside of Layout */}
+            <Route path="/login" element={<Login />} />
+            
+            {/* Add an unauthorized page route */}
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* All other routes inside Layout */}
+            <Route path="*" element={
+              <Layout>
+                <AppRoutes />
+              </Layout>
+            } />
+          </Routes>
+        </AuthProvider>
+      </Router>
+    </div>
   );
 };
 

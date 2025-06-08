@@ -4,8 +4,10 @@ import Button from '../components/Button';
 import { Link } from 'react-router-dom';
 import { api } from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
+import { useUserAccess } from '../hooks/useUserAccess';
 
 const Dashboard = () => {
+  const { isPatient } = useUserAccess();
   const [stats, setStats] = useState({
     patients: 0,
     doctors: 0,
@@ -129,12 +131,17 @@ const Dashboard = () => {
           )}
           
           <div className="mt-6 flex flex-wrap gap-4">
-            <Link to="/patients/new">
-              <Button variant="primary">Add New Patient</Button>
-            </Link>
-            <Link to="/patients">
-              <Button variant="secondary">View All Patients</Button>
-            </Link>
+            {/* Only show patient management buttons for non-patient users */}
+            {!isPatient() && (
+              <>
+                <Link to="/patients/new">
+                  <Button variant="primary">Add New Patient</Button>
+                </Link>
+                <Link to="/patients">
+                  <Button variant="secondary">View All Patients</Button>
+                </Link>
+              </>
+            )}
             <Link to="/doctors?from=dashboard" state={{ from: 'dashboard' }}>
               <Button variant="secondary">Book Appointment</Button>
             </Link>
@@ -153,7 +160,13 @@ const Dashboard = () => {
                   <div key={appointment.ID} className="py-3 flex justify-between items-center">
                     <div>
                       <p className="font-medium">
-                        {appointment.first_name} {appointment.last_name}
+                        {isPatient() ? (
+                          // For patients: Show doctor name instead of patient name for privacy
+                          appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : 'Doctor'
+                        ) : (
+                          // For non-patients: Show patient name as before
+                          `${appointment.first_name} ${appointment.last_name}`
+                        )}
                       </p>
                       <div className="flex items-center mt-1">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -168,18 +181,26 @@ const Dashboard = () => {
                             hour12: true 
                           })}
                         </span>
+                        {isPatient() && appointment.doctor_name && (
+                          <>
+                            <span className="text-sm text-gray-600 mx-1">•</span>
+                            <span className="text-sm text-blue-600">Available</span>
+                          </>
+                        )}
                       </div>
                     </div>
-                    <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
-                      <Button variant="secondary" className="text-xs px-3 py-1">
-                        Details
-                      </Button>
-                    </Link>
+                    {!isPatient() && (
+                      <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
+                        <Button variant="secondary" className="text-xs px-3 py-1">
+                          Details
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 ))}
                 <div className="pt-3 text-right">
                   <Link to="/appointments" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View all appointments →
+                    {isPatient() ? 'View my appointments' : 'View all appointments'} →
                   </Link>
                 </div>
               </div>
