@@ -37,7 +37,7 @@ class UserSeeder extends Seeder
         foreach ($demo_roles as $role) {
             $username = 'demo_' . $role;
             $email = $role . '@example.com';
-            $password = 'demo123';
+            $password = 'demo1234'; // 8 characters, meets our requirement
             
             // Check if user exists
             if (!username_exists($username) && !email_exists($email)) {
@@ -124,8 +124,9 @@ class UserSeeder extends Seeder
             $email = $username . '@example.com';
         } while (username_exists($username) || email_exists($email));
         
-        // Create the user
-        $user_id = wp_create_user($username, 'password123', $email);
+        // Create the user with a strong 8+ character password
+        $password = 'hospital123'; // 11 characters, meets our requirement
+        $user_id = wp_create_user($username, $password, $email);
         
         if (is_wp_error($user_id)) {
             $this->log("Error creating user: " . $user_id->get_error_message(), 'error');

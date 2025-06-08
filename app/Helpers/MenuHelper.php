@@ -20,7 +20,7 @@ class MenuHelper
     {
         // Check if the page already exists
         $page_title = 'Hospital Manager';
-        $page = get_page_by_title($page_title);
+        $page = self::getPageByTitle($page_title);
         
         // If the page doesn't exist, create it
         if (!$page) {
@@ -72,5 +72,32 @@ class MenuHelper
         }
         
         return $page_id;
+    }
+
+    /**
+     * Get a page by title using WP_Query (replacement for deprecated get_page_by_title)
+     * 
+     * @param string $page_title The title of the page to find
+     * @param string $post_type The post type to search (default: 'page')
+     * @return WP_Post|null The page object if found, null otherwise
+     */
+    private static function getPageByTitle($page_title, $post_type = 'page')
+    {
+        $query = new \WP_Query(array(
+            'post_type'              => $post_type,
+            'title'                  => $page_title,
+            'post_status'            => 'all',
+            'posts_per_page'         => 1,
+            'no_found_rows'          => true,
+            'ignore_sticky_posts'    => true,
+            'update_post_term_cache' => false,
+            'update_post_meta_cache' => false,
+        ));
+
+        if (!empty($query->posts)) {
+            return $query->posts[0];
+        }
+
+        return null;
     }
 }
