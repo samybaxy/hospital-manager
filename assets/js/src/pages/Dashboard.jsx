@@ -184,7 +184,7 @@ const Dashboard = () => {
                         {isPatient() && appointment.doctor_name && (
                           <>
                             <span className="text-sm text-gray-600 mx-1">•</span>
-                            <span className="text-sm text-blue-600">Available</span>
+                            <span className="text-sm text-green-600">Available</span>
                           </>
                         )}
                       </div>

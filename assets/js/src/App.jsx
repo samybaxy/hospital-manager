@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -102,6 +102,67 @@ injectStyles();
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', injectStyles);
 }
+
+// ScrollToTop component for smooth scrolling on route changes
+const ScrollToTop = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Function to smoothly scroll to the top of the app
+    const scrollToAppTop = () => {
+      const appElement = document.getElementById('hospital-manager-root');
+      if (appElement) {
+        // Get the position of the app element
+        const appRect = appElement.getBoundingClientRect();
+        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetPosition = currentScrollTop + appRect.top - 20; // 20px padding from top
+        
+        // Smooth scroll animation
+        const startPosition = currentScrollTop;
+        const distance = targetPosition - startPosition;
+        const duration = 800; // 800ms for smooth animation
+        let startTime = null;
+
+        const animateScroll = (currentTime) => {
+          if (startTime === null) startTime = currentTime;
+          const timeElapsed = currentTime - startTime;
+          const progress = Math.min(timeElapsed / duration, 1);
+          
+          // Easing function for smooth animation (ease-in-out)
+          const easeInOutCubic = (t) => {
+            return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+          };
+          
+          const easedProgress = easeInOutCubic(progress);
+          const currentPosition = startPosition + (distance * easedProgress);
+          
+          window.scrollTo(0, currentPosition);
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          }
+        };
+
+        requestAnimationFrame(animateScroll);
+      } else {
+        // Fallback: scroll to top of page if app element not found
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+    };
+
+    // Small delay to ensure the new route content has rendered
+    const scrollTimer = setTimeout(() => {
+      scrollToAppTop();
+    }, 100);
+
+    return () => clearTimeout(scrollTimer);
+  }, [location.pathname]);
+
+  return null;
+};
 
 // Main content component with routes
 const AppRoutes = () => {
@@ -314,6 +375,7 @@ const App = () => {
     >
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
+          <ScrollToTop />
           {/* Wrap the entire application with AccessProvider for permissions check */}
           <Routes>
             {/* Login route outside of Layout */}
