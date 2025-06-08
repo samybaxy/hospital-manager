@@ -275,18 +275,18 @@ class AppointmentController extends BaseController
             );
         }
 
-        $appointment->status = $status;
+        $appointment->setAttribute('status', $status);
         if ($notes) {
-            $appointment->notes = $notes;
+            $appointment->setAttribute('notes', $notes);
         }
         $appointment->save();
 
         // Notify patient about appointment status change
         NotificationService::create(
-            $appointment->patient_id,
+            $appointment->getAttribute('patient_id'),
             'appointment_update',
             'Appointment Update',
-            "Your appointment for {$appointment->appointment_date} has been {$status}",
+            "Your appointment for {$appointment->getAttribute('appointment_date')} has been {$status}",
             ['appointment_id' => $appointment_id]
         );
 

@@ -284,6 +284,68 @@ class Appointment extends BaseModel
         return new static($data);
     }
 
+    /**
+     * Save the current model instance to the database
+     * 
+     * @return bool True if saved successfully, false otherwise
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        // Ensure we have an ID for updating
+        $id = $this->getAttribute('ID');
+        if (empty($id)) {
+            throw new \Exception('Cannot save appointment without ID. Use create() for new appointments.');
+        }
+        
+        // Get current attributes
+        $data = $this->attributes;
+        
+        // Set updated_at timestamp
+        $data['updated_at'] = current_time('mysql');
+        
+        // Filter data to only include fillable fields (excluding ID)
+        $fillable_data = array_intersect_key($data, array_flip($this->fillable));
+        
+        // Remove ID from the data to update (we don't want to update the primary key)
+        unset($fillable_data['ID']);
+        
+        if (empty($fillable_data)) {
+            return true; // Nothing to update
+        }
+        
+        // Prepare format array for wpdb
+        $format = array_map(function($field) {
+            // Determine format based on field name or value
+            if (in_array($field, ['patient_id', 'doctor_id'])) {
+                return '%d';
+            }
+            return '%s';
+        }, array_keys($fillable_data));
+        
+        // Update the record
+        $result = $wpdb->update(
+            $this->getTable(),
+            $fillable_data,
+            ['ID' => $id],
+            $format,
+            ['%d'] // ID format
+        );
+        
+        if ($result === false) {
+            error_log('Appointment save error: ' . $wpdb->last_error);
+            throw new \Exception('Failed to save appointment: ' . $wpdb->last_error);
+        }
+        
+        // Update the model's attributes with the new data
+        $this->attributes = array_merge($this->attributes, $fillable_data);
+        
+        error_log("Appointment {$id} saved successfully with data: " . print_r($fillable_data, true));
+        
+        return true;
+    }
+
     public function doctor()
     {
         return get_user_by('ID', $this->doctor_id);
@@ -559,5 +621,32 @@ class Appointment extends BaseModel
             error_log("Error creating appointment notification: " . $e->getMessage());
             return false;
         }
+    }
+    
+    /**
+     * Set an attribute value
+     * 
+     * @param string $name Attribute name
+     * @param mixed $value Attribute value
+     */
+    public function setAttribute($name, $value)
+    {
+        // Only allow setting fillable fields
+        if (in_array($name, $this->fillable) || $name === 'ID') {
+            $this->attributes[$name] = $value;
+        } else {
+            error_log("Attempted to set non-fillable field: $name");
+        }
+    }
+    
+    /**
+     * Get an attribute value
+     * 
+     * @param string $name Attribute name
+     * @return mixed Attribute value
+     */
+    public function getAttribute($name)
+    {
+        return $this->attributes[$name] ?? null;
     }
 }
