@@ -231,4 +231,356 @@ class AppointmentService
             ]
         ];
     }
+    
+    /**
+     * Get booking data for appointment booking form
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Doctor information and available dates
+     * @throws Exception If doctor not found
+     */
+    public static function getBookingData($doctor_id)
+    {
+        global $wpdb;
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
+        
+        $doctor = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$doctors_table} WHERE ID = %d",
+                $doctor_id
+            ),
+            ARRAY_A
+        );
+        
+        if (!$doctor) {
+            throw new Exception('Doctor not found');
+        }
+        
+        // Get available dates
+        $available_dates = self::getAvailableDates($doctor_id);
+        
+        return [
+            'doctor' => $doctor,
+            'available_dates' => $available_dates['dates'] ?? [],
+            'doctor_id' => $doctor_id
+        ];
+    }
+    
+    /**
+     * Get available time slots for a doctor on a specific date
+     * 
+     * @param int $doctor_id Doctor ID
+     * @param string $date Date in Y-m-d format
+     * @return array Available time slots
+     */
+    public static function getAvailability($doctor_id, $date = null)
+    {
+        if (!$date) {
+            return self::getAvailableDates($doctor_id);
+        }
+        
+        global $wpdb;
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        
+        // Get the day of the week from the date
+        $day_of_week = strtolower(date('l', strtotime($date)));
+        
+        // Get doctor's availability from the database
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
+                $doctor_id
+            )
+        );
+        
+        // Default working hours if no custom availability set
+        $working_hours = [
+            'start' => '09:00:00',
+            'end' => '17:00:00',
+            'slot_duration' => 30 // minutes
+        ];
+        
+        $available_slots = [];
+        
+        // If doctor has custom availability
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+            
+            // Check if doctor works on this day
+            if (isset($availability[$day_of_week]) && !empty($availability[$day_of_week])) {
+                foreach ($availability[$day_of_week] as $time_slot) {
+                    // Generate 30-minute slots between start and end times
+                    $start_time = self::ensureTimeFormat($time_slot['start']);
+                    $end_time = self::ensureTimeFormat($time_slot['end']);
+                    
+                    for ($time = strtotime($start_time); $time < strtotime($end_time); $time += 30 * 60) {
+                        $available_slots[] = date('H:i:s', $time);
+                    }
+                }
+            } else {
+                // Doctor doesn't work on this day
+                return [
+                    'date' => $date,
+                    'available_slots' => [],
+                    'message' => 'The doctor is not available on this day.'
+                ];
+            }
+        } else {
+            // Use default working hours
+            $start_time = strtotime($working_hours['start']);
+            $end_time = strtotime($working_hours['end']);
+            
+            for ($time = $start_time; $time < $end_time; $time += $working_hours['slot_duration'] * 60) {
+                $available_slots[] = date('H:i:s', $time);
+            }
+        }
+        
+        // Get existing appointments for this doctor on this date
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $booked_times = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT appointment_time FROM {$appointments_table} 
+                WHERE doctor_id = %d AND appointment_date = %s AND status != 'cancelled'",
+                $doctor_id, $date
+            )
+        );
+        
+        // Remove already booked slots
+        $available_slots = array_filter($available_slots, function($slot) use ($booked_times) {
+            return !in_array($slot, $booked_times);
+        });
+        
+        return [
+            'date' => $date,
+            'available_slots' => array_values($available_slots) // Reset array indexes
+        ];
+    }
+    
+    /**
+     * Check if a time slot is available for booking
+     * 
+     * @param int $doctor_id Doctor ID
+     * @param string $date Date in Y-m-d format
+     * @param string $time Time in H:i:s format
+     * @return bool True if slot is available, false otherwise
+     */
+    public static function isSlotAvailable($doctor_id, $date, $time)
+    {
+        global $wpdb;
+        
+        // Check if requested time is within doctor's availability hours
+        $day_of_week = strtolower(date('l', strtotime($date)));
+        
+        // Get doctor's availability
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
+                $doctor_id
+            )
+        );
+        
+        // First check if the doctor works on this day/time
+        $is_available = false;
+        
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+            
+            if (isset($availability[$day_of_week]) && !empty($availability[$day_of_week])) {
+                $request_time = strtotime($time);
+                
+                // Check each time slot for this day
+                foreach ($availability[$day_of_week] as $time_slot) {
+                    $start_time = strtotime(self::ensureTimeFormat($time_slot['start']));
+                    $end_time = strtotime(self::ensureTimeFormat($time_slot['end']));
+                    
+                    if ($request_time >= $start_time && $request_time < $end_time) {
+                        $is_available = true;
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Default working hours if no custom availability (9 AM to 5 PM)
+            $request_hour = (int)date('H', strtotime($time));
+            if ($request_hour >= 9 && $request_hour < 17) {
+                $is_available = true;
+            }
+        }
+        
+        // If not available based on schedule, return false immediately
+        if (!$is_available) {
+            return false;
+        }
+        
+        // Check if the slot is already booked
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $existing_appointment = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM {$appointments_table} 
+                WHERE doctor_id = %d 
+                AND appointment_date = %s 
+                AND appointment_time = %s 
+                AND status != 'cancelled'",
+                $doctor_id, $date, $time
+            )
+        );
+        
+        return $existing_appointment == 0;
+    }
+    
+    /**
+     * Get appointment statistics for a doctor
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Appointment statistics
+     * @throws Exception If doctor not found or database error
+     */
+    public static function getAppointmentStats($doctor_id)
+    {
+        global $wpdb;
+        
+        // Verify doctor exists first
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        $doctor_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$doctor_table} WHERE ID = %d",
+            $doctor_id
+        ));
+        
+        if (!$doctor_exists) {
+            throw new Exception('Doctor not found');
+        }
+        
+        $table_name = $wpdb->prefix . 'hm_appointments';
+        
+        // Check if table exists
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'");
+        if (!$table_exists) {
+            throw new Exception('Appointments table not found');
+        }
+        
+        // Get all appointments count for this doctor (excluding cancelled)
+        $total_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND (status != 'cancelled' OR status IS NULL OR status = '')",
+            $doctor_id
+        ));
+        
+        // Get appointments by status
+        $pending_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'pending'",
+            $doctor_id
+        ));
+        
+        $confirmed_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'confirmed'",
+            $doctor_id
+        ));
+        
+        $completed_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'completed'",
+            $doctor_id
+        ));
+        
+        $cancelled_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} WHERE doctor_id = %d AND status = 'cancelled'",
+            $doctor_id
+        ));
+        
+        // Get upcoming appointments (confirmed + pending for future dates)
+        $today = date('Y-m-d');
+        $upcoming_appointments = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table_name} 
+             WHERE doctor_id = %d 
+             AND (status = 'pending' OR status = 'confirmed') 
+             AND appointment_date >= %s",
+            $doctor_id, $today
+        ));
+        
+        return [
+            'totalAppointments' => (int) ($total_appointments ?? 0),
+            'pendingAppointments' => (int) ($pending_appointments ?? 0),
+            'confirmedAppointments' => (int) ($confirmed_appointments ?? 0),
+            'completedAppointments' => (int) ($completed_appointments ?? 0),
+            'cancelledAppointments' => (int) ($cancelled_appointments ?? 0),
+            'upcomingAppointments' => (int) ($upcoming_appointments ?? 0)
+        ];
+    }
+    
+    /**
+     * Get available dates for a doctor (next 30 days)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Available dates
+     */
+    public static function getAvailableDates($doctor_id)
+    {
+        global $wpdb;
+        $doctor_table = $wpdb->prefix . 'hm_doctors';
+        
+        // Get doctor's availability settings
+        $doctor_data = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT appointment_availability FROM {$doctor_table} WHERE ID = %d",
+                $doctor_id
+            )
+        );
+        
+        $availability = [];
+        if ($doctor_data && !empty($doctor_data->appointment_availability)) {
+            $availability = json_decode($doctor_data->appointment_availability, true);
+        }
+        
+        // Default working days if no custom availability
+        $default_working_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        
+        $available_dates = [];
+        $start_date = strtotime('today');
+        $end_date = strtotime('+30 days');
+        
+        for ($date = $start_date; $date <= $end_date; $date += 86400) { // 86400 seconds = 1 day
+            $day_of_week = strtolower(date('l', $date));
+            $date_string = date('Y-m-d', $date);
+            
+            // Skip past dates
+            if ($date < strtotime('today')) {
+                continue;
+            }
+            
+            $is_available = false;
+            
+            // Check if doctor works on this day
+            if (!empty($availability)) {
+                $is_available = isset($availability[$day_of_week]) && !empty($availability[$day_of_week]);
+            } else {
+                // Use default working days
+                $is_available = in_array($day_of_week, $default_working_days);
+            }
+            
+            $available_dates[] = [
+                'date' => $date_string,
+                'day' => ucfirst($day_of_week),
+                'available' => $is_available
+            ];
+        }
+        
+        return [
+            'dates' => $available_dates,
+            'doctor_id' => $doctor_id
+        ];
+    }
+    
+    /**
+     * Ensure time is in HH:MM:SS format
+     * 
+     * @param string $time Time string
+     * @return string Formatted time
+     */
+    private static function ensureTimeFormat($time) 
+    {
+        // If time is in HH:MM format, convert to HH:MM:SS
+        if (preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+            return $time . ':00';
+        }
+        return $time;
+    }
 }
