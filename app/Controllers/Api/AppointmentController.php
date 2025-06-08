@@ -7,7 +7,6 @@ use WP_REST_Response;
 use WP_Error;
 use WP_REST_Server;
 use HospitalManager\Models\Appointment;
-use HospitalManager\Models\Doctor;
 use HospitalManager\Models\Patient;
 use HospitalManager\Services\NotificationService;
 use HospitalManager\Services\AppointmentService;

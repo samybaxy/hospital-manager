@@ -5,6 +5,7 @@ namespace HospitalManager\Controllers\Api;
 use WP_REST_Controller;
 use WP_REST_Server;
 use WP_REST_Response;
+use HospitalManager\Services\DashboardService;
 
 class DashboardController extends WP_REST_Controller 
 {
@@ -124,122 +125,19 @@ class DashboardController extends WP_REST_Controller
      * @return WP_REST_Response Response containing dashboard stats
      */
     public function get_dashboard_stats($request) {
-        global $wpdb;
-        
         try {
-            // Get count of patients from the database
-            $patients_count = $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_patients"
-            ) ?: 0;
-            
-            // Get count of doctors (users with doctor role)
-            $doctors_count = count(get_users(['role' => 'doctor'])) ?: 0;
-            
-            // Get count of appointments
-            $appointments_count = $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_appointments"
-            ) ?: 0;
-            
-            // Get count of departments
-            $departments_count = $wpdb->get_var(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}hm_departments"
-            ) ?: 0;
-            
-            // Get inventory summary
-            $inventory_summary = null;
-            if ($wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}hm_inventory'")) {
-                $inventory_summary = $wpdb->get_row("
-                    SELECT 
-                        COUNT(*) as total_items,
-                        COUNT(CASE WHEN quantity <= reorder_level THEN 1 END) as critical_items,
-                        COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND expiry_date >= CURDATE() THEN 1 END) as expiring_soon,
-                        COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date < CURDATE() THEN 1 END) as expired_items,
-                        COUNT(CASE WHEN status = 'Out of Stock' THEN 1 END) as out_of_stock,
-                        SUM(quantity * COALESCE(cost, 0)) as total_value
-                    FROM {$wpdb->prefix}hm_inventory
-                ", ARRAY_A) ?: [
-                    'total_items' => 0,
-                    'critical_items' => 0,
-                    'expiring_soon' => 0,
-                    'expired_items' => 0,
-                    'out_of_stock' => 0,
-                    'total_value' => 0
-                ];
-            } else {
-                $inventory_summary = [
-                    'total_items' => 0,
-                    'critical_items' => 0,
-                    'expiring_soon' => 0,
-                    'expired_items' => 0,
-                    'out_of_stock' => 0,
-                    'total_value' => 0
-                ];
-            }
-            
-            // Get recent activities (last 5)
-            $recent_activities = $wpdb->get_results(
-                "SELECT * FROM {$wpdb->prefix}hm_audit_logs 
-                ORDER BY created_at DESC 
-                LIMIT 5"
-            ) ?: [];
-            
-            // Get upcoming appointments (next 5)
-            $upcoming_appointments = $wpdb->get_results(
-                "SELECT a.*, 
-                        p.first_name, p.last_name,
-                        d.first_name as doctor_first_name, d.last_name as doctor_last_name,
-                        CONCAT(d.first_name, ' ', d.last_name) as doctor_name
-                FROM {$wpdb->prefix}hm_appointments a
-                LEFT JOIN {$wpdb->prefix}hm_patients p ON a.patient_id = p.ID
-                LEFT JOIN {$wpdb->prefix}hm_doctors d ON a.doctor_id = d.ID
-                WHERE a.appointment_date >= CURDATE()
-                ORDER BY a.appointment_date ASC, a.appointment_time ASC
-                LIMIT 5"
-            ) ?: [];
-            
-            // Format the activities and appointments if needed
-            foreach ($recent_activities as &$activity) {
-                $activity->created_at = mysql2date('F j, Y g:i a', $activity->created_at);
-            }
-            
-            foreach ($upcoming_appointments as &$appointment) {
-                if (isset($appointment->appointment_date)) {
-                    $appointment->formatted_date = mysql2date('F j, Y', $appointment->appointment_date);
-                }
-            }
-            
-            return new WP_REST_Response([
-                'patients_count' => (int)$patients_count,
-                'doctors_count' => (int)$doctors_count,
-                'appointments_count' => (int)$appointments_count,
-                'departments_count' => (int)$departments_count,
-                'inventory_summary' => $inventory_summary,
-                'recent_activities' => $recent_activities,
-                'upcoming_appointments' => $upcoming_appointments,
-            ], 200);
+            $stats = DashboardService::getDashboardStats();
+            return new WP_REST_Response($stats, 200);
             
         } catch (\Exception $e) {
             // Log the error
             error_log('Dashboard stats error: ' . $e->getMessage());
             
-            // Return a generic error response
-            return new WP_REST_Response([
-                'patients_count' => 0,
-                'doctors_count' => 0,
-                'appointments_count' => 0,
-                'departments_count' => 0,
-                'inventory_summary' => [
-                    'total_items' => 0,
-                    'critical_items' => 0,
-                    'expiring_soon' => 0,
-                    'expired_items' => 0,
-                    'out_of_stock' => 0,
-                    'total_value' => 0
-                ],
-                'recent_activities' => [],
-                'upcoming_appointments' => [],
-                'error' => 'Failed to fetch dashboard statistics'
-            ], 500);
+            // Return default stats with error message
+            $default_stats = DashboardService::getDefaultStats();
+            $default_stats['error'] = 'Failed to fetch dashboard statistics';
+            
+            return new WP_REST_Response($default_stats, 500);
         }
     }
 }
