@@ -7,7 +7,10 @@ use WP_REST_Request;
 use HospitalManager\Models\LabInvestigation;
 use HospitalManager\Models\Patient;
 use HospitalManager\Models\Doctor;
+use HospitalManager\Models\LabCategory;
+use HospitalManager\Models\LabTestDefinition;
 use HospitalManager\Services\LabResultService;
+use HospitalManager\Services\LabInvestigationService;
 
 class LabInvestigationController extends BaseController 
 {
@@ -220,28 +223,19 @@ class LabInvestigationController extends BaseController
      */
     private function get_current_user_patient_id()
     {
-        global $wpdb;
         $current_user_id = get_current_user_id();
         
         if (!$current_user_id) {
             return null;
         }
         
-        $patient_table = $wpdb->prefix . 'hm_patients';
-        $patient_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT ID FROM {$patient_table} WHERE user_id = %d",
-            $current_user_id
-        ));
-        
-        return $patient_id ? (int) $patient_id : null;
+        $patient = Patient::findByUserId($current_user_id);
+        return $patient ? $patient->ID : null;
     }
 
     public function get_investigations(WP_REST_Request $request) 
     {
         try {
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_lab_investigations';
-            
             $patient_id = $request->get_param('patient_id');
             $lab_tech_id = $request->get_param('lab_tech_id');
             $test_type = $request->get_param('test_type');
@@ -249,7 +243,6 @@ class LabInvestigationController extends BaseController
             $search = $request->get_param('search');
             $page = max(1, intval($request->get_param('page') ?: 1));
             $per_page = min(100, max(1, intval($request->get_param('per_page') ?: 20)));
-            $offset = ($page - 1) * $per_page;
             
             // Security: If the current user is a patient, restrict to their own records only
             if ($this->current_user_is_patient()) {
@@ -271,150 +264,24 @@ class LabInvestigationController extends BaseController
                 }
             }
             
-            // Log pagination info for debugging
-            error_log("Pagination: page={$page}, per_page={$per_page}, offset={$offset}");
+            // Prepare filters for the service
+            $filters = [
+                'patient_id' => $patient_id,
+                'lab_tech_id' => $lab_tech_id,
+                'test_type' => $test_type,
+                'status' => $status,
+                'search' => $search
+            ];
             
-            $where_conditions = ['1=1'];
-            $where_values = [];
+            // Remove empty filters
+            $filters = array_filter($filters, function($value) {
+                return !empty($value);
+            });
             
-            if ($patient_id) {
-                $where_conditions[] = 'l.patient_id = %d';
-                $where_values[] = $patient_id;
-            }
+            // Use the service to get investigations with pagination
+            $result = LabInvestigationService::getInvestigationsWithPagination($filters, $page, $per_page);
             
-            if ($lab_tech_id) {
-                $where_conditions[] = 'l.lab_tech_id = %d';
-                $where_values[] = $lab_tech_id;
-            }
-            
-            if ($status) {
-                $where_conditions[] = 'l.status = %s';
-                $where_values[] = $status;
-            }
-            
-            if ($test_type) {
-                $where_conditions[] = 'l.test_type = %s';
-                $where_values[] = $test_type;
-            }
-            
-            if ($search) {
-                // Make sure search value is properly sanitized
-                $search_term = '%' . $wpdb->esc_like($search) . '%';
-                
-                // Use OR conditions for search across multiple columns
-                $search_conditions = [];
-                $search_conditions[] = 'p.first_name LIKE %s';
-                $search_conditions[] = 'p.last_name LIKE %s';
-                $search_conditions[] = 'l.test_type LIKE %s';
-                $search_conditions[] = 'l.sample_type LIKE %s';
-                
-                // Create a grouped condition
-                $where_conditions[] = '(' . implode(' OR ', $search_conditions) . ')';
-                
-                // Add all search terms to values array
-                $where_values[] = $search_term;
-                $where_values[] = $search_term;
-                $where_values[] = $search_term;
-                $where_values[] = $search_term;
-            }
-            
-            $where_clause = implode(' AND ', $where_conditions);
-            
-            // Add proper JOIN to count query to match filters on patient data
-            $count_query = "SELECT COUNT(*) FROM {$table} l 
-                           LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
-                           WHERE {$where_clause}";
-            $count_result = $wpdb->prepare($count_query, ...$where_values);
-            $total = $wpdb->get_var($count_result);
-            
-            error_log("Total count: {$total}");
-            // Get investigations with patient and doctor info
-            $query = "SELECT l.*, 
-                        p.first_name as patient_first_name, p.last_name as patient_last_name, p.gender as patient_gender,
-                        d.first_name as doctor_first_name, d.last_name as doctor_last_name,
-                        lt.display_name as lab_tech_name
-                     FROM {$table} l
-                     LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
-                     LEFT JOIN {$wpdb->prefix}hm_doctors d ON l.doctor_id = d.ID
-                     LEFT JOIN {$wpdb->users} lt ON l.lab_tech_id = lt.ID
-                     WHERE {$where_clause}
-                     ORDER BY l.created_at DESC
-                     LIMIT %d OFFSET %d";
-            
-            // Add pagination parameters
-            $query_params = $where_values;
-            $query_params[] = $per_page;
-            $query_params[] = $offset;
-            
-            // Prepare and execute the query
-            $prepared_query = $wpdb->prepare($query, ...$query_params);
-            
-            // Execute the query with error handling
-            $investigations = $wpdb->get_results($prepared_query, ARRAY_A);
-            
-            // Check for SQL errors
-            if ($wpdb->last_error) {
-                error_log("SQL Error in get_investigations: " . $wpdb->last_error);
-                throw new \Exception("Database query error: " . $wpdb->last_error);
-            }
-            
-            // Initialize to empty array if null was returned
-            if ($investigations === null) {
-                error_log("Investigations query returned null. Using empty array instead.");
-                $investigations = [];
-            }
-            
-            error_log("Investigations count: " . count($investigations));
-            // Format the results
-            $formatted_investigations = [];
-            if ($investigations && is_array($investigations)) {
-                $formatted_investigations = array_map(function($investigation) {
-                    // Decode JSON fields
-                    if (!empty($investigation['test_results'])) {
-                        $investigation['test_results'] = json_decode($investigation['test_results'], true);
-                    }
-                    if (!empty($investigation['flags'])) {
-                        $investigation['flags'] = json_decode($investigation['flags'], true);
-                    }
-                    
-                    // Add formatted names
-                    $first_name = isset($investigation['patient_first_name']) ? $investigation['patient_first_name'] : '';
-                    $last_name = isset($investigation['patient_last_name']) ? $investigation['patient_last_name'] : '';
-                    $investigation['patient_name'] = trim($first_name . ' ' . $last_name);
-                    
-                    $doc_first_name = isset($investigation['doctor_first_name']) ? $investigation['doctor_first_name'] : '';
-                    $doc_last_name = isset($investigation['doctor_last_name']) ? $investigation['doctor_last_name'] : '';
-                    $investigation['doctor_name'] = trim($doc_first_name . ' ' . $doc_last_name);
-                    
-                    // Remove individual name fields
-                    unset($investigation['patient_first_name'], $investigation['patient_last_name']);
-                    unset($investigation['doctor_first_name'], $investigation['doctor_last_name']);
-                    
-                    return $investigation;
-                }, $investigations);
-            }
-            
-            // Check if we have any database table errors
-            if ($wpdb->last_error) {
-                error_log("Database error in get_investigations: " . $wpdb->last_error);
-                return new WP_REST_Response([
-                    'error' => 'Database error occurred',
-                    'message' => $wpdb->last_error
-                ], 500);
-            }
-            
-            // Return the data with pagination
-            $response = new WP_REST_Response([
-                'data' => $formatted_investigations,
-                'pagination' => [
-                    'total' => (int) ($total ? $total : 0),
-                    'total_pages' => ceil(($total ? $total : 0) / $per_page),
-                    'current_page' => $page,
-                    'per_page' => $per_page
-                ]
-            ], 200);
-            
-            return $response;
+            return new WP_REST_Response($result, 200);
             
         } catch (\Exception $e) {
             return new WP_REST_Response([
@@ -440,26 +307,8 @@ class LabInvestigationController extends BaseController
                 }
             }
 
-            // Get related data
-            $patient = $investigation->patient();
-            $doctor = $investigation->requestedBy();
-            $lab_tech = $investigation->labTech();
-            
-            $formatted_investigation = $investigation->attributes;
-            
-            // Decode JSON fields
-            if ($formatted_investigation['test_results']) {
-                $formatted_investigation['test_results'] = json_decode($formatted_investigation['test_results'], true);
-            }
-            if ($formatted_investigation['flags']) {
-                $formatted_investigation['flags'] = json_decode($formatted_investigation['flags'], true);
-            }
-            
-            // Add related data
-            $formatted_investigation['patient_name'] = $patient ? trim($patient->first_name . ' ' . $patient->last_name) : '';
-            $formatted_investigation['patient_gender'] = $patient ? $patient->gender : '';
-            $formatted_investigation['doctor_name'] = $doctor ? trim($doctor->first_name . ' ' . $doctor->last_name) : '';
-            $formatted_investigation['lab_tech_name'] = $lab_tech ? $lab_tech->display_name : '';
+            // Use the service to format the investigation with relations
+            $formatted_investigation = LabInvestigationService::formatInvestigationWithRelations($investigation);
             
             return new WP_REST_Response($formatted_investigation, 200);
             
@@ -730,24 +579,11 @@ class LabInvestigationController extends BaseController
     public function get_lab_categories(WP_REST_Request $request)
     {
         try {
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_lab_categories';
-            
-            $categories = $wpdb->get_results(
-                "SELECT ID, name, description, display_order, status 
-                 FROM {$table} 
-                 WHERE status = 'active' 
-                 ORDER BY display_order ASC, name ASC",
-                ARRAY_A
-            );
-            
-            if ($wpdb->last_error) {
-                throw new \Exception('Database error: ' . $wpdb->last_error);
-            }
+            $categories = LabCategory::getAllActive();
             
             return new WP_REST_Response([
                 'success' => true,
-                'data' => $categories ?: []
+                'data' => $categories
             ], 200);
             
         } catch (\Exception $e) {
@@ -764,52 +600,13 @@ class LabInvestigationController extends BaseController
     public function get_test_definitions(WP_REST_Request $request)
     {
         try {
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_lab_test_definitions';
             $category_id = $request->get_param('category_id');
             
-            $where_clause = "WHERE td.status = 'active'";
-            $where_params = [];
-            
-            if ($category_id) {
-                $where_clause .= " AND td.category_id = %d";
-                $where_params[] = $category_id;
-            }
-            
-            $query = "SELECT td.ID, td.category_id, td.code, td.name, td.description, 
-                             td.sample_type, td.container, td.sample_volume, 
-                             td.turnaround_time, td.test_parameters, td.specimen_requirements,
-                             td.preparation_instructions, td.methodology, td.cost, td.is_panel,
-                             c.name as category_name
-                      FROM {$table} td
-                      LEFT JOIN {$wpdb->prefix}hm_lab_categories c ON td.category_id = c.ID
-                      {$where_clause}
-                      ORDER BY td.name ASC";
-            
-            if (!empty($where_params)) {
-                $prepared_query = $wpdb->prepare($query, ...$where_params);
-            } else {
-                $prepared_query = $query;
-            }
-            
-            $test_definitions = $wpdb->get_results($prepared_query, ARRAY_A);
-            
-            if ($wpdb->last_error) {
-                throw new \Exception('Database error: ' . $wpdb->last_error);
-            }
-            
-            // Decode JSON test_parameters for each test
-            if ($test_definitions) {
-                foreach ($test_definitions as &$test) {
-                    if ($test['test_parameters']) {
-                        $test['test_parameters'] = json_decode($test['test_parameters'], true);
-                    }
-                }
-            }
+            $test_definitions = LabTestDefinition::getActive($category_id);
             
             return new WP_REST_Response([
                 'success' => true,
-                'data' => $test_definitions ?: []
+                'data' => $test_definitions
             ], 200);
             
         } catch (\Exception $e) {
@@ -826,35 +623,15 @@ class LabInvestigationController extends BaseController
     public function get_test_definition(WP_REST_Request $request)
     {
         try {
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_lab_test_definitions';
             $test_id = intval($request['ID']);
             
-            $test_definition = $wpdb->get_row(
-                $wpdb->prepare(
-                    "SELECT td.*, c.name as category_name
-                     FROM {$table} td
-                     LEFT JOIN {$wpdb->prefix}hm_lab_categories c ON td.category_id = c.ID
-                     WHERE td.ID = %d AND td.status = 'active'",
-                    $test_id
-                ),
-                ARRAY_A
-            );
-            
-            if ($wpdb->last_error) {
-                throw new \Exception('Database error: ' . $wpdb->last_error);
-            }
+            $test_definition = LabTestDefinition::getActiveWithCategory($test_id);
             
             if (!$test_definition) {
                 return new WP_REST_Response([
                     'success' => false,
                     'message' => 'Test definition not found'
                 ], 404);
-            }
-            
-            // Decode JSON test_parameters
-            if ($test_definition['test_parameters']) {
-                $test_definition['test_parameters'] = json_decode($test_definition['test_parameters'], true);
             }
             
             return new WP_REST_Response([
