@@ -67,18 +67,39 @@ const Login = () => {
     } catch (err) {
       console.error('Login error:', err);
       
-      if (err.response) {
+      // Check if we received a response with data (can contain error message)
+      if (err.response && err.response.data) {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
         if (err.response.status === 401) {
-          setLoginError('Invalid email or password. Please try again.');
+          // Extract and sanitize the message from the server
+          let errorMessage = err.response.data.message || 'Invalid email or password. Please try again.';
+          
+          // Strip any HTML tags that might be in the error message
+          if (typeof errorMessage === 'string' && errorMessage.includes('<')) {
+            // Create a temporary div to strip HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = errorMessage;
+            errorMessage = tempDiv.textContent || tempDiv.innerText || 'Invalid email or password. Please try again.';
+          }
+          
+          setLoginError(errorMessage);
+          
+          // Refresh CSRF token if provided
+          if (err.response.data.fresh_nonce) {
+            authService.setCsrfToken(err.response.data.fresh_nonce);
+          }
         } else if (err.response.status === 403) {
           setLoginError('Your account does not have permission to access this system.');
         } else if (err.response.status === 429) {
           setLoginError('Too many login attempts. Please try again later.');
         } else {
-          setLoginError(err.response?.data?.message || 'Login failed. Please try again.');
+          setLoginError(err.response.data.message || 'Login failed. Please try again.');
         }
+      } else if (err.message && err.message.includes('redirect')) {
+        // Handle redirect error specifically
+        setLoginError('Invalid email or password. Please try again.');
+        console.error('Redirect was prevented. Authentication failed.');
       } else if (err.request) {
         // The request was made but no response was received
         setLoginError('Network error. Please check your connection and try again.');

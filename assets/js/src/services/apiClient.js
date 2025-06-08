@@ -14,7 +14,59 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Only prevent problematic redirects but allow normal status codes to work
+  validateStatus: function (status) {
+    return status >= 200 && status < 300 || status === 401;
+  }
 });
+
+// Add response interceptor to handle redirects
+apiClient.interceptors.response.use(
+  (response) => {
+    // For auth endpoints, check if browser is trying to redirect to wp-login
+    if (response.request && response.request.responseURL && 
+        response.request.responseURL.includes('wp-login.php') &&
+        response.config && response.config.url && 
+        response.config.url.includes('/auth/')) {
+      console.warn('WordPress login redirect detected for auth endpoint');
+      
+      // Only transform redirects for auth-related endpoints
+      return {
+        ...response,
+        status: 401,
+        data: {
+          authenticated: false,
+          message: 'Authentication failed. Please check your credentials.'
+        }
+      };
+    }
+    return response;
+  },
+  (error) => {
+    // If there's an auth-related redirect
+    if (error.response && 
+        error.response.status >= 300 && 
+        error.response.status < 400 && 
+        error.config && 
+        error.config.url && 
+        error.config.url.includes('/auth/')) {
+      
+      console.warn('Auth redirect prevented', error.response.headers.location);
+      
+      // Only transform redirects for auth-related endpoints
+      return {
+        status: 401,
+        data: {
+          authenticated: false,
+          message: 'Authentication failed. Please check your credentials.'
+        }
+      };
+    }
+    
+    // For other errors, just pass them through
+    return Promise.reject(error);
+  }
+);
 
 // Create a wrapper for API calls
 const api = {

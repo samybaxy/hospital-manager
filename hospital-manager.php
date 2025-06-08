@@ -29,6 +29,37 @@ if (defined('RUNNING_PHPUNIT_TESTS') && RUNNING_PHPUNIT_TESTS) {
 // Composer autoload
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Focused intervention to prevent only wp-login.php redirects after failed auth
+add_action('init', function() {
+    // Check if this is a REST API request to our namespace
+    if (defined('REST_REQUEST') && REST_REQUEST) {
+        $request_uri = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($request_uri, '/wp-json/hospital-manager/v1/auth/login') !== false) {
+            // Special handling for login endpoint only
+            define('DOING_AJAX', true); // This will prevent WordPress from redirecting
+
+            // Only block redirects to wp-login.php, allow other redirects
+            add_filter('wp_redirect', function($location, $status) {
+                // Only block wp-login.php redirects
+                if (strpos($location, 'wp-login.php') !== false) {
+                    error_log('Hospital Manager: Prevented redirect to wp-login.php (status ' . $status . ')');
+                    return false; // Return false to prevent redirect
+                }
+                
+                // Allow all other redirects
+                return $location;
+            }, 999, 2);
+            
+            // Focused handling of login failures
+            add_action('wp_login_failed', function($username) {
+                // Log the failure without redirecting
+                error_log('Hospital Manager: Authentication failed (prevented redirect) for user ' . $username);
+                // No redirect
+            }, 0);
+        }
+    }
+}, 5); // Very early priority
+
 use WPMVC\Bridge;
 use WPMVC\Config;
 use HospitalManager\Controllers\FrontendController;

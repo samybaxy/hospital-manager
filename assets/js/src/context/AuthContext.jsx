@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/apiService';
 import authService from '../services/authService';
 import userAccessService from '../services/UserAccessService';
@@ -11,6 +12,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   // Check if the user is authenticated on initial load
   useEffect(() => {
@@ -78,7 +80,42 @@ export function AuthProvider({ children }) {
     }
 
     checkAuthStatus();
-  }, []);
+    
+    // More focused handler for responses that might be redirects
+    const originalOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function() {
+      this.addEventListener('readystatechange', function() {
+        if (this.readyState === 4) {
+          // If response URL is wp-login.php, it means WordPress is trying to redirect
+          const responseURL = this.responseURL;
+          if (responseURL && responseURL.includes('wp-login.php')) {
+            console.warn('Detected redirect to wp-login.php');
+            
+            // Only intervene if this is a hospital-manager API call
+            const apiPath = '/wp-json/hospital-manager/';
+            const requestURL = this.responseURL || '';
+            const isOurApiCall = requestURL.includes(apiPath);
+            
+            if (isOurApiCall) {
+              console.log('Intercepted wp-login redirect for our API endpoint');
+              
+              // Don't abort the request - just notify about it
+              if (window.location.pathname !== '/login') {
+                // Only redirect to login if not already there
+                navigate('/login', { replace: true });
+              }
+            }
+          }
+        }
+      });
+      originalOpen.apply(this, arguments);
+    };
+    
+    // Clean up the override when component unmounts
+    return () => {
+      XMLHttpRequest.prototype.open = originalOpen;
+    };
+  }, [navigate]);
 
   // Login function
   const login = async (username, password, rememberMe = false) => {

@@ -202,6 +202,14 @@ const authService = {
   },
   
   /**
+   * Set the CSRF token (alias for updateCsrfToken)
+   * @param {string} newNonce - New CSRF nonce from server
+   */
+  setCsrfToken: (newNonce) => {
+    authService.updateCsrfToken(newNonce);
+  },
+  
+  /**
    * Request a password reset for an email address
    * @param {string} email - The user's email address
    * @returns {Promise} API response

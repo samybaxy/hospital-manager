@@ -22,6 +22,9 @@ class AuthService {
         // Add admin-ajax endpoint for getting nonces
         add_action('wp_ajax_rest-nonce', [$this, 'get_rest_nonce']);
         add_action('wp_ajax_nopriv_rest-nonce', [$this, 'get_rest_nonce']);
+        
+        // Prevent redirects to wp-login.php for our REST API authentication
+        add_action('init', [$this, 'prevent_wp_login_redirect']);
     }
     
     /**
@@ -153,5 +156,40 @@ class AuthService {
             'nonce' => wp_create_nonce('wp_rest'),
             'success' => true
         ]);
+    }
+    
+    /**
+     * Prevent redirects to wp-login.php for REST API authentication
+     * This ensures our custom login flow isn't interrupted
+     */
+    public function prevent_wp_login_redirect() {
+        // Check if this is a REST API request
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            // Handle wp_login_failed action to avoid redirects only for login failures
+            add_action('wp_login_failed', function($username) {
+                // Just log the failure but don't redirect
+                error_log('Hospital Manager: Authentication failed for user ' . $username);
+                // Prevent the default redirect by not calling through
+                return;
+            }, 0);
+            
+            // Add a custom filter to detect and prevent wp-login.php redirects specifically
+            add_filter('wp_redirect', function($location, $status) {
+                // Only block redirects to wp-login.php, allow other redirects
+                if (strpos($location, 'wp-login.php') !== false) {
+                    error_log('Hospital Manager: Prevented redirect to wp-login.php');
+                    return '';  // Return empty string to prevent redirect
+                }
+                return $location;  // Allow other redirects
+            }, 999, 2);
+            
+            // Add no-cache headers to prevent caching of authentication responses
+            add_filter('rest_pre_serve_request', function($served, $result) {
+                header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+                header('Pragma: no-cache');
+                header('Expires: 0');
+                return $served;
+            }, 10, 2);
+        }
     }
 }
