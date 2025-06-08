@@ -1,16 +1,73 @@
-import { apiClient } from './apiClient';
+import { apiClient, csrfTokenManager } from './apiClient';
 
 /**
  * Authentication service for centralized token management
  */
+
+// Simple encryption/decryption for token storage
+const TokenCrypto = {
+  /**
+   * Simple XOR encryption for tokens (basic obfuscation)
+   * @param {string} text - Text to encrypt
+   * @param {string} key - Encryption key
+   * @returns {string} Encrypted text
+   */
+  encrypt: (text, key) => {
+    if (!text || !key) return text;
+    let result = '';
+    for (let i = 0; i < text.length; i++) {
+      result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+    }
+    return btoa(result);
+  },
+
+  /**
+   * Simple XOR decryption for tokens
+   * @param {string} encryptedText - Encrypted text
+   * @param {string} key - Decryption key
+   * @returns {string} Decrypted text
+   */
+  decrypt: (encryptedText, key) => {
+    if (!encryptedText || !key) return encryptedText;
+    try {
+      const text = atob(encryptedText);
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+      }
+      return result;
+    } catch (e) {
+      console.warn('Failed to decrypt token:', e);
+      return null;
+    }
+  },
+
+  /**
+   * Generate a simple key based on browser fingerprint
+   * @returns {string} Simple encryption key
+   */
+  getKey: () => {
+    const userAgent = navigator.userAgent || '';
+    const screen = `${window.screen.width}x${window.screen.height}`;
+    const lang = navigator.language || 'en';
+    return btoa(userAgent.slice(0, 20) + screen + lang).slice(0, 16);
+  }
+};
+
 const authService = {
   /**
-   * Store authentication token based on "remember me" preference
+   * Store authentication token based on "remember me" preference with encryption
    * @param {string} token - JWT token to store
    * @param {boolean} rememberMe - Whether to store token persistently
    */
   setToken: (token, rememberMe = false) => {
     if (!token) return;
+    
+    // Validate token format (should be JWT)
+    if (token.split('.').length !== 3) {
+      console.warn('Invalid token format provided to setToken');
+      return;
+    }
     
     // Extract token expiry if it's a JWT
     let tokenExpiry = null;
@@ -18,7 +75,7 @@ const authService = {
       const payload = token.split('.')[1];
       if (payload) {
         const decoded = JSON.parse(atob(payload));
-        tokenExpiry = decoded.exp || null;
+        tokenExpiry = decoded.exp;
       }
     } catch (e) {
       console.warn('Error extracting token expiration:', e);
@@ -27,13 +84,17 @@ const authService = {
     // Get storage based on remember me preference
     const storage = rememberMe ? localStorage : sessionStorage;
     
-    // Store token and expiry info
-    storage.setItem('hospital_manager_token', token);
+    // Encrypt token before storage
+    const encryptionKey = TokenCrypto.getKey();
+    const encryptedToken = TokenCrypto.encrypt(token, encryptionKey);
+    
+    // Store encrypted token and expiry info
+    storage.setItem('hospital_manager_token', encryptedToken);
     if (tokenExpiry) {
       storage.setItem('hospital_manager_token_expiry', tokenExpiry);
     }
     
-    // Update Authorization header for future requests
+    // Update Authorization header for future requests (use original unencrypted token)
     apiClient.defaults = {
       ...apiClient.defaults,
       headers: {
@@ -44,13 +105,27 @@ const authService = {
   },
   
   /**
-   * Get the stored authentication token
+   * Get the stored authentication token with decryption
    * @returns {string|null} The token or null if not found
    */
   getToken: () => {
-    return localStorage.getItem('hospital_manager_token') || 
-           sessionStorage.getItem('hospital_manager_token') || 
-           null;
+    const encryptedToken = localStorage.getItem('hospital_manager_token') || 
+                          sessionStorage.getItem('hospital_manager_token');
+    
+    if (!encryptedToken) return null;
+    
+    // Decrypt the token
+    const encryptionKey = TokenCrypto.getKey();
+    const decryptedToken = TokenCrypto.decrypt(encryptedToken, encryptionKey);
+    
+    // Validate decrypted token
+    if (!decryptedToken || decryptedToken.split('.').length !== 3) {
+      console.warn('Failed to decrypt or invalid token format');
+      authService.clearToken();
+      return null;
+    }
+    
+    return decryptedToken;
   },
   
   /**
@@ -285,5 +360,8 @@ const authService = {
     }
   }
 };
+
+// Register the CSRF token update function with apiClient to avoid circular dependencies
+csrfTokenManager.setUpdateFunction(authService.updateCsrfToken);
 
 export default authService;

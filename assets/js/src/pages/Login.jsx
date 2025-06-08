@@ -12,7 +12,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   
-  const { login } = useAuth();
+  const { login, error } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -21,6 +21,11 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) {
+      return;
+    }
     
     if (!email || !password) {
       setLoginError('Email and password are required');
@@ -38,75 +43,19 @@ const Login = () => {
     setLoginError('');
     
     try {
-      // Call the login endpoint directly using the exact path specified
-      // Add CSRF protection
-      const csrfNonce = authService.getCsrfToken();
+      // Use the centralized auth context login function
+      const success = await login(email, password, rememberMe);
       
-      const response = await api.post('/auth/login', {
-        username: email, // The backend expects 'username'
-        password: password,
-        remember: rememberMe, // Pass the remember me preference to the server
-        nonce: csrfNonce
-      });
-      
-      if (response.data && response.data.authenticated) {
-        // Store the token if provided by the API
-        if (response.data.token) {
-          // Use our centralized auth service to manage the token
-          authService.setToken(response.data.token, rememberMe);
-        }
-        
-        // Update the auth context with the rememberMe preference
-        await login(email, password, rememberMe);
-        
+      if (success) {
         // Redirect to the page they were trying to access or dashboard
         navigate(from, { replace: true });
       } else {
-        setLoginError(response.data?.message || 'Invalid login credentials');
+        // Error message will be set by AuthContext
+        setLoginError(error || 'Invalid login credentials');
       }
     } catch (err) {
       console.error('Login error:', err);
-      
-      // Check if we received a response with data (can contain error message)
-      if (err.response && err.response.data) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        if (err.response.status === 401) {
-          // Extract and sanitize the message from the server
-          let errorMessage = err.response.data.message || 'Invalid email or password. Please try again.';
-          
-          // Strip any HTML tags that might be in the error message
-          if (typeof errorMessage === 'string' && errorMessage.includes('<')) {
-            // Create a temporary div to strip HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = errorMessage;
-            errorMessage = tempDiv.textContent || tempDiv.innerText || 'Invalid email or password. Please try again.';
-          }
-          
-          setLoginError(errorMessage);
-          
-          // Refresh CSRF token if provided
-          if (err.response.data.fresh_nonce) {
-            authService.setCsrfToken(err.response.data.fresh_nonce);
-          }
-        } else if (err.response.status === 403) {
-          setLoginError('Your account does not have permission to access this system.');
-        } else if (err.response.status === 429) {
-          setLoginError('Too many login attempts. Please try again later.');
-        } else {
-          setLoginError(err.response.data.message || 'Login failed. Please try again.');
-        }
-      } else if (err.message && err.message.includes('redirect')) {
-        // Handle redirect error specifically
-        setLoginError('Invalid email or password. Please try again.');
-        console.error('Redirect was prevented. Authentication failed.');
-      } else if (err.request) {
-        // The request was made but no response was received
-        setLoginError('Network error. Please check your connection and try again.');
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        setLoginError('An error occurred. Please try again later.');
-      }
+      setLoginError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

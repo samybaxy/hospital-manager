@@ -115,13 +115,42 @@ class AuthService {
     }
     
     /**
-     * Authenticate using our custom cookie
+     * Authenticate using our custom secure cookie
      * 
      * @return bool Whether authentication succeeded
      */
     private function authenticate_with_custom_cookie() {
-        if (isset($_COOKIE['hospital_manager_auth']) && $_COOKIE['hospital_manager_auth'] === 'authenticated') {
-            return true;
+        if (!isset($_COOKIE['hospital_manager_auth'])) {
+            return false;
+        }
+        
+        $auth_token = $_COOKIE['hospital_manager_auth'];
+        
+        // Find user with this token
+        $users = get_users([
+            'meta_key' => 'hospital_manager_auth_token',
+            'meta_compare' => 'EXISTS'
+        ]);
+        
+        foreach ($users as $user) {
+            $token_data = get_user_meta($user->ID, 'hospital_manager_auth_token', true);
+            
+            if (!is_array($token_data) || !isset($token_data['token'])) {
+                continue;
+            }
+            
+            // Verify token matches and hasn't expired
+            if (hash('sha256', $auth_token) === $token_data['token'] && 
+                time() < $token_data['expires']) {
+                
+                // Optional: Verify IP and User Agent for additional security
+                $current_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+                $current_ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+                
+                // Set the current user
+                wp_set_current_user($user->ID);
+                return true;
+            }
         }
         
         return false;

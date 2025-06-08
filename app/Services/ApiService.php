@@ -9,6 +9,7 @@ use HospitalManager\Controllers\Api\ChatController;
 use HospitalManager\Controllers\Api\NotificationController;
 use HospitalManager\Controllers\Api\AppointmentController;
 use HospitalManager\Controllers\Api\AuthController;
+use HospitalManager\Controllers\Api\UserController;
 use HospitalManager\Controllers\Api\DoctorController;
 use HospitalManager\Controllers\Api\AuditController;
 use HospitalManager\Controllers\Api\DashboardController;
@@ -45,6 +46,7 @@ class ApiService
             new NotificationController(),
             new AppointmentController(),
             new AuthController(),
+            new UserController(), // Added for secure password change endpoint
             new DoctorController(),
             new AuditController(),
             new DashboardController(),
@@ -79,9 +81,36 @@ class ApiService
      */
     private static function registerHttpRoutes()
     {
-        // Register the AccessRoutes
-        $accessRoutes = new \HospitalManager\Http\Routes\AccessRoutes();
-        $accessRoutes->register();
+        // Check if AccessRoutes class exists before trying to instantiate
+        if (class_exists('\HospitalManager\Http\Routes\AccessRoutes')) {
+            $accessRoutes = new \HospitalManager\Http\Routes\AccessRoutes();
+            $accessRoutes->register();
+        }
+    }
+
+    /**
+     * Set up common hooks for all API endpoints
+     *
+     * @return void
+     */
+    public static function init()
+    {
+        // Set CORS headers
+        add_action('rest_api_init', function() {
+            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
+            add_filter('rest_pre_serve_request', function($value) {
+                header('Access-Control-Allow-Origin: ' . get_http_origin());
+                header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+                header('Access-Control-Allow-Credentials: true');
+                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
+                
+                if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
+                    exit(0);
+                }
+                
+                return $value;
+            });
+        }, 15);
     }
 
     /**
@@ -130,5 +159,25 @@ class ApiService
                 $controller->register_routes();
             }
         });
+    }
+
+    /**
+     * Get the API namespace
+     *
+     * @return string
+     */
+    public static function getNamespace()
+    {
+        return 'hospital-manager/' . self::$version;
+    }
+
+    /**
+     * Get the API version
+     *
+     * @return string
+     */
+    public static function getVersion()
+    {
+        return self::$version;
     }
 }

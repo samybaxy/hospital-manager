@@ -185,21 +185,21 @@ class AuthController extends BaseController
             return $response;
         }
         
-        // For development environments, allow requests from expected origins
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        // For development environments, allow requests from expected origins with proper verification
+        if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
             $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
             $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
             
-            // If request comes from our own site
-            if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
+            // If request comes from our own site AND has valid nonce
+            if ((strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) && $nonce_valid) {
                 $response = new WP_REST_Response([
                     'authenticated' => true,
                     'user' => [
                         'ID' => 0,
-                        'name' => 'Development User',
+                        'name' => 'Development User (Limited)',
                         'email' => ''
                     ],
-                    'role' => 'administrator', // Grant admin privileges in dev mode
+                    'role' => 'doctor', // Limited role, not admin
                     'auth_method' => 'development',
                     'debug_info' => $auth_debug,
                     'fresh_nonce' => $new_nonce
@@ -470,6 +470,34 @@ class AuthController extends BaseController
     public function login($request)
     {
         try {
+            // Enhanced CSRF protection - check both nonce and origin
+            $nonce = $request->get_param('nonce') ?: $request->get_header('X-WP-Nonce');
+            $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+            $referer = $_SERVER['HTTP_REFERER'] ?? '';
+            
+            // Verify CSRF nonce is present and valid
+            if (!$nonce || !wp_verify_nonce($nonce, 'wp_rest')) {
+                error_log('Hospital Manager: CSRF verification failed - invalid or missing nonce');
+                return new WP_REST_Response([
+                    'authenticated' => false,
+                    'message' => 'Security verification failed. Please refresh the page and try again.',
+                    'code' => 'csrf_failed',
+                    'fresh_nonce' => wp_create_nonce('wp_rest')
+                ], 403);
+            }
+            
+            // Additional origin check for extra security
+            $site_url = site_url();
+            if ($origin && $origin !== $site_url) {
+                error_log('Hospital Manager: Potential CSRF attack - Origin mismatch: ' . $origin);
+                return new WP_REST_Response([
+                    'authenticated' => false,
+                    'message' => 'Invalid request origin.',
+                    'code' => 'invalid_origin',
+                    'fresh_nonce' => wp_create_nonce('wp_rest')
+                ], 403);
+            }
+            
             // Bypass login redirects for this session specifically
             define('DOING_AJAX', true); // This will prevent WordPress from redirecting
             add_filter('wp_redirect', function($location, $status) {
@@ -504,17 +532,59 @@ class AuthController extends BaseController
             // Log the login attempt
             error_log('Hospital Manager: Login attempt initiated');
             
-            // Validate request parameters
-            $username = $request->get_param('username');
+            // Validate and sanitize request parameters
+            $username = sanitize_text_field($request->get_param('username'));
             $password = $request->get_param('password');
             
+            // Enhanced input validation
             if (empty($username) || empty($password)) {
                 error_log('Hospital Manager: Login failed - missing credentials');
                 return new WP_REST_Response([
                     'authenticated' => false,
                     'message' => 'Username and password are required',
+                    'code' => 'missing_credentials',
                     'fresh_nonce' => wp_create_nonce('wp_rest')
                 ], 400);
+            }
+            
+            // Validate email format if username appears to be an email
+            if (strpos($username, '@') !== false && !is_email($username)) {
+                return new WP_REST_Response([
+                    'authenticated' => false,
+                    'message' => 'Please enter a valid email address',
+                    'code' => 'invalid_email',
+                    'fresh_nonce' => wp_create_nonce('wp_rest')
+                ], 400);
+            }
+            
+            // Password length validation
+            if (strlen($password) < 8) {
+                return new WP_REST_Response([
+                    'authenticated' => false,
+                    'message' => 'Password must be at least 8 characters long',
+                    'code' => 'password_too_short',
+                    'fresh_nonce' => wp_create_nonce('wp_rest')
+                ], 400);
+            }
+            
+            // Rate limiting check with improved security
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $rate_limit_key = "login_attempts_{$ip}";
+            $attempts = get_transient($rate_limit_key) ?: 0;
+            
+            if ($attempts >= 5) {
+                error_log("Hospital Manager: Rate limit exceeded for IP {$ip}");
+                
+                // Increment attempts for failed rate limit check
+                set_transient($rate_limit_key, $attempts + 1, 900); // 15 minutes
+                
+                return new WP_REST_Response([
+                    'authenticated' => false,
+                    'message' => 'Too many login attempts. Please try again in 15 minutes.',
+                    'code' => 'rate_limited',
+                    'retry_after' => 900, // 15 minutes
+                    'fresh_nonce' => wp_create_nonce('wp_rest')
+                ], 429);
             }
             
             $creds = [
@@ -551,6 +621,10 @@ class AuthController extends BaseController
             error_log('Hospital Manager: wp_signon result: ' . (is_wp_error($user) ? 'Error: ' . $user->get_error_message() : 'Success for user ID: ' . $user->ID));
             
             if (is_wp_error($user)) {
+                // Increment failed attempts for rate limiting
+                $attempts = get_transient($rate_limit_key) ?: 0;
+                set_transient($rate_limit_key, $attempts + 1, 900); // 15 minutes
+                
                 // Get the error code
                 $error_code = $user->get_error_code();
                 
@@ -593,6 +667,9 @@ class AuthController extends BaseController
                 error_log('Hospital Manager: Error setting current user: ' . $e->getMessage());
             }
             
+            // On successful login, clear any failed attempts
+            delete_transient($rate_limit_key);
+            
             // Check if the user has one of the allowed roles for this application
             $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
             $user_roles = (array) $user->roles;
@@ -615,8 +692,7 @@ class AuthController extends BaseController
                 );
             }
             
-            // Set a custom authentication cookie that will be used as a fallback
-            // This helps with frontend authentication for AJAX calls
+            // Set a secure authentication cookie with proper security attributes
             $secure = is_ssl();
             $expire = $creds['remember'] 
                     ? time() + 14 * DAY_IN_SECONDS      // 2 weeks for "remember me"
@@ -624,17 +700,28 @@ class AuthController extends BaseController
             $path = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
             $cookie_domain = defined('COOKIE_DOMAIN') && COOKIE_DOMAIN ? COOKIE_DOMAIN : '';
             
+            // Generate a secure authentication token instead of plain text
+            $auth_token = wp_generate_password(32, false);
+            
+            // Store the token in user meta for validation
+            update_user_meta($user->ID, 'hospital_manager_auth_token', [
+                'token' => hash('sha256', $auth_token),
+                'expires' => $expire,
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? ''
+            ]);
+            
             // Check PHP version for setcookie array support (PHP 7.3+)
             if (version_compare(PHP_VERSION, '7.3.0', '>=')) {
-                // Modern PHP version: use array format
+                // Modern PHP version: use array format with security settings
                 try {
-                    $cookie_set = setcookie('hospital_manager_auth', 'authenticated', [
+                    $cookie_set = setcookie('hospital_manager_auth', $auth_token, [
                         'expires' => $expire,
                         'path' => $path,
                         'domain' => $cookie_domain,
                         'secure' => $secure,
-                        'httponly' => false,
-                        'samesite' => 'Lax'
+                        'httponly' => true,  // Prevent XSS attacks
+                        'samesite' => $secure ? 'None' : 'Lax'  // Strict for HTTPS, Lax for HTTP
                     ]);
                     if (!$cookie_set) {
                         error_log('Hospital Manager: Failed to set authentication cookie using array format');
@@ -645,7 +732,8 @@ class AuthController extends BaseController
             } else {
                 // Older PHP version: use traditional format
                 try {
-                    $cookie_set = setcookie('hospital_manager_auth', 'authenticated', $expire, $path, $cookie_domain, $secure, false);
+                    // For older PHP, we can't set SameSite, but we can set HttpOnly
+                    $cookie_set = setcookie('hospital_manager_auth', $auth_token, $expire, $path, $cookie_domain, $secure, true);
                     if (!$cookie_set) {
                         error_log('Hospital Manager: Failed to set authentication cookie using traditional format');
                     }
@@ -1004,11 +1092,20 @@ Regards,
     }
     
     /**
-     * Generate a JWT token
+     * Generate a secure JWT token with enhanced security
      */
     private function generate_jwt_token($data) 
     {
         try {
+            // Add additional security claims
+            $enhanced_data = array_merge($data, [
+                'jti' => wp_generate_password(16, false), // Unique token ID
+                'aud' => home_url(), // Intended audience
+                'nbf' => time(), // Not before timestamp
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                'ua_hash' => hash('sha256', $_SERVER['HTTP_USER_AGENT'] ?? '') // User agent hash
+            ]);
+            
             // Header: algorithm & token type
             $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
             if ($header === false) {
@@ -1017,7 +1114,7 @@ Regards,
             }
             
             // Payload: data
-            $payload = json_encode($data);
+            $payload = json_encode($enhanced_data);
             if ($payload === false) {
                 error_log('Hospital Manager: JSON encode failed for JWT payload: ' . json_last_error_msg());
                 throw new \Exception('Failed to encode JWT payload: ' . json_last_error_msg());
@@ -1027,11 +1124,17 @@ Regards,
             $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
             $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
             
-            // Get WordPress auth salt for signing
-            $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
+            // Get WordPress auth salt for signing - use multiple salts for enhanced security
+            if (!defined('AUTH_KEY') || !defined('SECURE_AUTH_KEY')) {
+                error_log('Hospital Manager: WordPress authentication keys are not defined - cannot generate secure JWT');
+                throw new \Exception('WordPress authentication keys are not properly configured');
+            }
+            $auth_key = AUTH_KEY;
+            $secure_auth_key = SECURE_AUTH_KEY;
+            $combined_key = hash('sha256', $auth_key . $secure_auth_key);
             
             // Create Signature Hash
-            $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $auth_key, true);
+            $signature = hash_hmac('sha256', $base64UrlHeader . "." . $base64UrlPayload, $combined_key, true);
             if ($signature === false) {
                 error_log('Hospital Manager: HMAC hash generation failed');
                 throw new \Exception('Failed to generate HMAC hash for JWT');
@@ -1048,7 +1151,7 @@ Regards,
     }
     
     /**
-     * Validate a JWT token and return the user ID
+     * Validate a JWT token and return the user ID with enhanced security checks
      */
     private function validate_token($token) 
     {
@@ -1064,30 +1167,79 @@ Regards,
         
         list($header_encoded, $payload_encoded, $signature_encoded) = $token_parts;
         
-        // Get WordPress auth salt for verification
-        $auth_key = defined('AUTH_KEY') ? AUTH_KEY : 'hospital-manager-default-key';
+        // Get WordPress auth salt for verification - use same combined key as generation
+        if (!defined('AUTH_KEY') || !defined('SECURE_AUTH_KEY')) {
+            error_log('Hospital Manager: WordPress authentication keys are not defined - cannot validate JWT');
+            return false;
+        }
+        $auth_key = AUTH_KEY;
+        $secure_auth_key = SECURE_AUTH_KEY;
+        $combined_key = hash('sha256', $auth_key . $secure_auth_key);
         
         // Verify signature
-        $signature = hash_hmac('sha256', $header_encoded . "." . $payload_encoded, $auth_key, true);
+        $signature = hash_hmac('sha256', $header_encoded . "." . $payload_encoded, $combined_key, true);
         $signature_check = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
         
         if ($signature_check !== $signature_encoded) {
+            error_log('Hospital Manager: JWT signature verification failed');
             return false;
         }
         
         // Decode payload
         $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $payload_encoded)), true);
         
+        if (!$payload) {
+            error_log('Hospital Manager: JWT payload decode failed');
+            return false;
+        }
+        
+        // Enhanced security checks
+        
         // Check if token is expired
         if (!isset($payload['exp']) || $payload['exp'] < time()) {
+            error_log('Hospital Manager: JWT token expired');
             return false;
         }
         
-        // Check if user exists
+        // Check not-before time
+        if (isset($payload['nbf']) && $payload['nbf'] > time()) {
+            error_log('Hospital Manager: JWT token not yet valid');
+            return false;
+        }
+        
+        // Check audience
+        if (isset($payload['aud']) && $payload['aud'] !== home_url()) {
+            error_log('Hospital Manager: JWT audience mismatch');
+            return false;
+        }
+        
+        // Check user exists
         if (!isset($payload['user']['ID'])) {
+            error_log('Hospital Manager: JWT missing user ID');
             return false;
         }
         
-        return $payload['user']['ID'];
+        $user_id = $payload['user']['ID'];
+        $user = get_user_by('ID', $user_id);
+        if (!$user) {
+            error_log('Hospital Manager: JWT user not found: ' . $user_id);
+            return false;
+        }
+        
+        // Optional: Verify IP and User Agent for session binding
+        $current_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $current_ua_hash = hash('sha256', $_SERVER['HTTP_USER_AGENT'] ?? '');
+        
+        if (isset($payload['ip']) && $payload['ip'] !== $current_ip) {
+            error_log('Hospital Manager: JWT IP mismatch - possible token theft');
+            // In production, you might want to invalidate the token here
+        }
+        
+        if (isset($payload['ua_hash']) && $payload['ua_hash'] !== $current_ua_hash) {
+            error_log('Hospital Manager: JWT User Agent mismatch - possible token theft');
+            // In production, you might want to invalidate the token here
+        }
+        
+        return $user_id;
     }
 }

@@ -226,6 +226,9 @@ class HospitalManager extends Bridge
         $authService = new AuthService();
         $authService->init();
         
+        // Initialize API Service (CORS, etc.)
+        ApiService::init();
+        
         // Register API middleware
         ApiLoggingMiddleware::register();
         ApiErrorMiddleware::register();

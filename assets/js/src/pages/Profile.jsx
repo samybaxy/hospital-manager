@@ -157,24 +157,62 @@ const Profile = () => {
       return;
     }
     
+    // Additional password strength checks
+    if (!/[A-Z]/.test(passwordData.new_password)) {
+      showStatusMessage('Password must contain at least one uppercase letter.', 'error');
+      return;
+    }
+    
+    if (!/[a-z]/.test(passwordData.new_password)) {
+      showStatusMessage('Password must contain at least one lowercase letter.', 'error');
+      return;
+    }
+    
+    if (!/[0-9]/.test(passwordData.new_password)) {
+      showStatusMessage('Password must contain at least one number.', 'error');
+      return;
+    }
+    
+    if (passwordData.new_password === passwordData.current_password) {
+      showStatusMessage('New password must be different from current password.', 'error');
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      // Here you would call your API to change password
-      // await changePassword(passwordData);
-      
-      // For now, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setShowPasswordModal(false);
-      setPasswordData({
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
+      // Call the password change API
+      const response = await api.post('/user/change-password', {
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password,
+        nonce: authService.getCsrfToken()
       });
-      showStatusMessage('Password changed successfully!', 'success');
+      
+      if (response.data.success) {
+        setShowPasswordModal(false);
+        setPasswordData({
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        });
+        showStatusMessage('Password changed successfully!', 'success');
+        
+        // Update CSRF token if provided
+        if (response.data.fresh_nonce) {
+          authService.updateCsrfToken(response.data.fresh_nonce);
+        }
+      } else {
+        showStatusMessage(response.data.message || 'Failed to change password. Please try again.', 'error');
+      }
     } catch (error) {
-      showStatusMessage('Failed to change password. Please try again.', 'error');
+      console.error('Password change error:', error);
+      
+      let errorMessage = 'Failed to change password. Please try again.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      showStatusMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -679,7 +717,7 @@ const Profile = () => {
               minLength={8}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Password must be at least 8 characters long
+              Password must be at least 8 characters with uppercase, lowercase, and number
             </p>
           </div>
 

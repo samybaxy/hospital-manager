@@ -20,9 +20,32 @@ const apiClient = axios.create({
   }
 });
 
-// Add response interceptor to handle redirects
+// Simple CSRF token manager to avoid circular dependencies
+const csrfTokenManager = {
+  updateToken: null, // Will be set by authService when it initializes
+  
+  setUpdateFunction: (updateFn) => {
+    csrfTokenManager.updateToken = updateFn;
+  },
+  
+  update: (token) => {
+    if (csrfTokenManager.updateToken && typeof csrfTokenManager.updateToken === 'function') {
+      csrfTokenManager.updateToken(token);
+    } else {
+      // Fallback: store in sessionStorage directly
+      sessionStorage.setItem('hospital_manager_csrf_nonce', token);
+    }
+  }
+};
+
+// Add response interceptor to handle redirects and CSRF token updates
 apiClient.interceptors.response.use(
   (response) => {
+    // Update CSRF token if provided in response
+    if (response.data && response.data.fresh_nonce) {
+      csrfTokenManager.update(response.data.fresh_nonce);
+    }
+    
     // For auth endpoints, check if browser is trying to redirect to wp-login
     if (response.request && response.request.responseURL && 
         response.request.responseURL.includes('wp-login.php') &&
@@ -43,6 +66,11 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Update CSRF token if provided in error response
+    if (error.response && error.response.data && error.response.data.fresh_nonce) {
+      csrfTokenManager.update(error.response.data.fresh_nonce);
+    }
+    
     // If there's an auth-related redirect
     if (error.response && 
         error.response.status >= 300 && 
@@ -95,5 +123,5 @@ const api = {
   }
 };
 
-export { apiClient, api };
+export { apiClient, api, csrfTokenManager };
 export default apiClient;

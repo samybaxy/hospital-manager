@@ -34,9 +34,15 @@ class BaseController extends WP_REST_Controller
             if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
                 // Nonce verification passed, but we still need to match the user
                 // This would require getting the user from the nonce or other authentication method
-                // For development purposes, we'll accept the nonce as sufficient
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    return true; // In debug mode, allow nonce-only auth
+                // For development purposes, we'll accept the nonce as sufficient only with strict conditions
+                if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
+                    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+                    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+                    
+                    // Only allow from same origin
+                    if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
+                        return true; // In debug mode, allow nonce-only auth from same origin
+                    }
                 }
             }
             
@@ -44,9 +50,15 @@ class BaseController extends WP_REST_Controller
             $auth_header = $request->get_header('Authorization');
             if ($auth_header && strpos($auth_header, 'Bearer') !== false) {
                 // Implement JWT token validation here if using JWT
-                // For development purposes, we'll accept the header as sufficient
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    return true; // In debug mode, allow header-only auth
+                // For development purposes, we'll accept the header as sufficient only with strict conditions
+                if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
+                    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+                    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+                    
+                    // Only allow from same origin
+                    if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
+                        return true; // In debug mode, allow header-only auth from same origin
+                    }
                 }
             }
             
@@ -127,11 +139,13 @@ class BaseController extends WP_REST_Controller
             return true;
         }
         
-        // In development environment, be more permissive
-        if (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'development') {
+        // In development environment, be more permissive but with strict checks
+        if (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local' && defined('WP_DEBUG') && WP_DEBUG) {
             // Check if the request comes from the same origin
             $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-            if (strpos($referer, site_url()) === 0) {
+            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+            
+            if (strpos($referer, site_url()) === 0 || strpos($origin, site_url()) === 0) {
                 return true;
             }
         }

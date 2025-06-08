@@ -129,6 +129,7 @@ export function AuthProvider({ children }) {
       const response = await api.post('/auth/login', { 
         username, 
         password,
+        remember: rememberMe, // Pass remember me preference
         nonce: csrfToken
       });
       
@@ -138,7 +139,12 @@ export function AuthProvider({ children }) {
           authService.setToken(response.data.token, rememberMe);
         }
         
-        // Update CSRF token if provided
+        // Update CSRF token if provided in response
+        if (response.data.fresh_nonce) {
+          authService.updateCsrfToken(response.data.fresh_nonce);
+        }
+        
+        // Update CSRF token if provided in headers
         if (response.headers['x-wp-nonce']) {
           authService.updateCsrfToken(response.headers['x-wp-nonce']);
         }
@@ -152,7 +158,26 @@ export function AuthProvider({ children }) {
         return false;
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
+      console.error('Login error:', err);
+      
+      // Update CSRF token if provided in error response
+      if (err.response && err.response.data && err.response.data.fresh_nonce) {
+        authService.updateCsrfToken(err.response.data.fresh_nonce);
+      }
+      
+      // Extract meaningful error message
+      let errorMessage = "Login failed";
+      if (err.response && err.response.data) {
+        if (err.response.status === 403) {
+          errorMessage = err.response.data.message || "Access denied. Please check your credentials.";
+        } else if (err.response.status === 429) {
+          errorMessage = "Too many login attempts. Please try again later.";
+        } else {
+          errorMessage = err.response.data.message || "Invalid credentials";
+        }
+      }
+      
+      setError(errorMessage);
       return false;
     } finally {
       setLoading(false);
