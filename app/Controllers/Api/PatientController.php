@@ -168,11 +168,13 @@ class PatientController extends BaseController
     {
         try {
             $patient_id = $request['ID'];
-            $patient = Patient::find($patient_id)->toArray();
+            $patient_model = Patient::find($patient_id);
 
-            if (!$patient) {
+            if (!$patient_model) {
                 return $this->error_response('Patient not found', 404);
             }
+            
+            $patient = $patient_model->toArray();
             
             // Additional authorization check
             $current_user_id = get_current_user_id();
@@ -180,7 +182,7 @@ class PatientController extends BaseController
             // 1. If user is a patient, they can only view their own record
             if (current_user_can('patient') && !current_user_can('administrator') && !current_user_can('doctor')) {
                 // Check if the patient record belongs to the current user
-                if ($patient->user_id != $current_user_id) {
+                if ($patient['user_id'] != $current_user_id) {
                     return $this->error_response('You do not have permission to view this patient record', 403);
                 }
             }
