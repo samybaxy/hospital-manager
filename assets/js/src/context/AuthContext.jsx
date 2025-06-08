@@ -117,8 +117,8 @@ export function AuthProvider({ children }) {
     };
   }, [navigate]);
 
-  // Login function
-  const login = async (username, password, rememberMe = false) => {
+  // Login function with automatic CSRF retry
+  const login = async (username, password, rememberMe = false, isRetry = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -163,13 +163,31 @@ export function AuthProvider({ children }) {
       // Update CSRF token if provided in error response
       if (err.response && err.response.data && err.response.data.fresh_nonce) {
         authService.updateCsrfToken(err.response.data.fresh_nonce);
+        
+        // Auto-retry once on CSRF failure if we haven't already retried
+        if (err.response.status === 403 && 
+            err.response.data.code === 'csrf_failed' && 
+            !isRetry) {
+          console.log('CSRF token updated, automatically retrying login...');
+          setError('Security token updated, retrying login...');
+          
+          // Brief delay to let user see the retry message
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Retry the login with the fresh CSRF token
+          return await login(username, password, rememberMe, true);
+        }
       }
       
       // Extract meaningful error message
       let errorMessage = "Login failed";
       if (err.response && err.response.data) {
         if (err.response.status === 403) {
-          errorMessage = err.response.data.message || "Access denied. Please check your credentials.";
+          if (err.response.data.code === 'csrf_failed') {
+            errorMessage = "Security verification failed. Please try again.";
+          } else {
+            errorMessage = err.response.data.message || "Access denied. Please check your credentials.";
+          }
         } else if (err.response.status === 429) {
           errorMessage = "Too many login attempts. Please try again later.";
         } else {

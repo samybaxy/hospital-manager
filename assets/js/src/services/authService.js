@@ -243,10 +243,16 @@ const authService = {
   },
   
   /**
-   * Handle CSRF token management
+   * Handle CSRF token management - gets the freshest available token
    * @returns {string|null} Current CSRF token or null
    */
   getCsrfToken: () => {
+    // Try from stored nonce (refreshed by API responses) - this is usually the freshest
+    const storedNonce = sessionStorage.getItem('hospital_manager_csrf_nonce');
+    if (storedNonce) {
+      return storedNonce;
+    }
+    
     // Try to get from global WordPress variable
     if (window.wpApiSettings && window.wpApiSettings.nonce) {
       return window.wpApiSettings.nonce;
@@ -255,12 +261,6 @@ const authService = {
     // Try to get from our custom global
     if (window.hospitalManagerData && window.hospitalManagerData.nonce) {
       return window.hospitalManagerData.nonce;
-    }
-    
-    // Try from stored nonce (refreshed by API responses)
-    const storedNonce = sessionStorage.getItem('hospital_manager_csrf_nonce');
-    if (storedNonce) {
-      return storedNonce;
     }
     
     return null;
@@ -272,7 +272,18 @@ const authService = {
    */
   updateCsrfToken: (newNonce) => {
     if (newNonce) {
+      // Store in sessionStorage for persistence
       sessionStorage.setItem('hospital_manager_csrf_nonce', newNonce);
+      
+      // Update global variables for immediate availability
+      if (window.hospitalManagerData) {
+        window.hospitalManagerData.nonce = newNonce;
+      }
+      if (window.wpApiSettings) {
+        window.wpApiSettings.nonce = newNonce;
+      }
+      
+      console.log('CSRF token updated:', newNonce.slice(0, 10) + '...');
     }
   },
   

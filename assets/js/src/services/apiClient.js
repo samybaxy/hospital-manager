@@ -38,12 +38,60 @@ const csrfTokenManager = {
   }
 };
 
+// Add request interceptor to ensure we always send the latest CSRF token
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get the latest CSRF token for requests that need it
+    if (config.method === 'post' || config.method === 'put' || config.method === 'patch' || config.method === 'delete') {
+      // Get the current CSRF token from storage or global
+      const csrfToken = sessionStorage.getItem('hospital_manager_csrf_nonce') ||
+                       (window.hospitalManagerData && window.hospitalManagerData.nonce) ||
+                       (window.wpApiSettings && window.wpApiSettings.nonce);
+      
+      if (csrfToken) {
+        config.headers['X-WP-Nonce'] = csrfToken;
+        
+        // Also add it to the data if it's not already there and this is a login request
+        if (config.url && config.url.includes('/auth/') && config.data && !config.data.nonce) {
+          config.data.nonce = csrfToken;
+        }
+      }
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Add response interceptor to handle redirects and CSRF token updates
 apiClient.interceptors.response.use(
   (response) => {
-    // Update CSRF token if provided in response
+    // Update CSRF token if provided in response data
     if (response.data && response.data.fresh_nonce) {
       csrfTokenManager.update(response.data.fresh_nonce);
+      
+      // Update global variables as well for immediate availability
+      if (window.hospitalManagerData) {
+        window.hospitalManagerData.nonce = response.data.fresh_nonce;
+      }
+      if (window.wpApiSettings) {
+        window.wpApiSettings.nonce = response.data.fresh_nonce;
+      }
+    }
+    
+    // Update CSRF token if provided in response headers
+    if (response.headers['x-wp-nonce']) {
+      csrfTokenManager.update(response.headers['x-wp-nonce']);
+      
+      // Update global variables as well
+      if (window.hospitalManagerData) {
+        window.hospitalManagerData.nonce = response.headers['x-wp-nonce'];
+      }
+      if (window.wpApiSettings) {
+        window.wpApiSettings.nonce = response.headers['x-wp-nonce'];
+      }
     }
     
     // For auth endpoints, check if browser is trying to redirect to wp-login
@@ -69,6 +117,14 @@ apiClient.interceptors.response.use(
     // Update CSRF token if provided in error response
     if (error.response && error.response.data && error.response.data.fresh_nonce) {
       csrfTokenManager.update(error.response.data.fresh_nonce);
+      
+      // Update global variables as well for immediate availability
+      if (window.hospitalManagerData) {
+        window.hospitalManagerData.nonce = error.response.data.fresh_nonce;
+      }
+      if (window.wpApiSettings) {
+        window.wpApiSettings.nonce = error.response.data.fresh_nonce;
+      }
     }
     
     // If there's an auth-related redirect
