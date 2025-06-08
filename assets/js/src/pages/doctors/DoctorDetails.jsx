@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 // CSS utility for line clamping
 const lineClampStyle = {
@@ -26,6 +27,11 @@ const DoctorDetails = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdministrator, isDeskOfficer } = useUserAccess();
+  
+  // Check if user can manage doctors (edit)
+  const canManageDoctors = isAdministrator() || isDeskOfficer();
+  
   // Check if we came from a visitation page
   const fromVisitation = location.state?.fromVisitation || null;
   const [doctor, setDoctor] = useState(null);
@@ -412,14 +418,16 @@ const DoctorDetails = () => {
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
-          <Link to={`/doctors/${doctorId}/edit`}>
-            <Button variant="primary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-              Edit Doctor
-            </Button>
-          </Link>
+          {canManageDoctors && (
+            <Link to={`/doctors/${doctorId}/edit`}>
+              <Button variant="primary">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit Doctor
+              </Button>
+            </Link>
+          )}
           <Link to={`/appointments/book/${doctorId}`} state={{ 
             returnTo: 'doctor',
             returnPath: `/doctors/${doctorId}`,
@@ -663,9 +671,11 @@ const DoctorDetails = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <p className="text-sm">Working hours not set</p>
-                      <Link to={`/doctors/${doctorId}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
-                        Set working hours
-                      </Link>
+                      {canManageDoctors && (
+                        <Link to={`/doctors/${doctorId}/edit`} className="text-sm text-blue-600 hover:text-blue-800 mt-1 inline-block">
+                          Set working hours
+                        </Link>
+                      )}
                     </div>
                   );
                 }

@@ -4,9 +4,14 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
 import { api } from '../../services/apiService';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 const Doctors = () => {
   const location = useLocation();
+  const { role, isAdministrator, isDeskOfficer } = useUserAccess();
+  
+  // Check if user can manage doctors (add/edit)
+  const canManageDoctors = isAdministrator() || isDeskOfficer();
   
   // State management
   const [doctors, setDoctors] = useState([]);
@@ -357,16 +362,18 @@ const Doctors = () => {
               Manage doctor profiles, specialties, and scheduling
             </p>
           </div>
-          <Link to="/doctors/new">
-            <Button variant="secondary" className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700">
-              <span className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-                Add New Doctor
-              </span>
-            </Button>
-          </Link>
+          {canManageDoctors && (
+            <Link to="/doctors/new">
+              <Button variant="secondary" className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700">
+                <span className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  Add New Doctor
+                </span>
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -519,15 +526,17 @@ const Doctors = () => {
                           </svg>
                           Book Appointment
                         </Link>
-                        <Link
-                          to={`/doctors/${doctor.ID}/edit`}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Edit
-                        </Link>
+                        {canManageDoctors && (
+                          <Link
+                            to={`/doctors/${doctor.ID}/edit`}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit
+                          </Link>
+                        )}
                       </div>
                     </td>
                   </tr>

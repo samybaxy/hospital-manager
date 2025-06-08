@@ -1,15 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, Navigate } from 'react-router-dom';
 import DoctorForm from './DoctorForm';
 import { api } from '../../services/apiService';
 import Button from '../../components/Button';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 const EditDoctor = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
+  const { isAdministrator, isDeskOfficer, loading: accessLoading } = useUserAccess();
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Check if user has permission to edit doctors
+  const canEditDoctor = isAdministrator() || isDeskOfficer();
+  
+  // Show loading spinner while checking access
+  if (accessLoading) {
+    return (
+      <div className="flex justify-center p-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+  
+  // Redirect if user doesn't have permission
+  if (!canEditDoctor) {
+    return <Navigate to="/doctors" replace />;
+  }
 
   useEffect(() => {
     const fetchDoctor = async () => {

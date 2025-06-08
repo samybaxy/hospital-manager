@@ -21,7 +21,7 @@ const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
-  const { role, isLoading: accessLoading } = useUserAccess();
+  const { role, isLoading: accessLoading, isAdministrator } = useUserAccess();
   
   // Auto-collapse sidebar for appointments page
   useEffect(() => {
@@ -230,8 +230,8 @@ const Layout = ({ children }) => {
         </main>
       </div>
       
-      {/* Debug component for development */}
-      <AccessDebug />
+      {/* Debug component for administrators only */}
+      {isAdministrator() && <AccessDebug />}
     </div>
   );
 };
