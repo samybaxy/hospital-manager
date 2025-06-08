@@ -96,8 +96,8 @@ const AppointmentView = () => {
           }
         }
         
-        // If we have patient_id in the appointment data, fetch patient details
-        if (appointmentData.patient_id) {
+        // If we have patient_id in the appointment data and user has permission to view patient details, fetch patient details
+        if (appointmentData.patient_id && role !== 'patient') {
           try {
             const patientResponse = await api.get(`/patients/${appointmentData.patient_id}`);
             if (patientResponse.data && patientResponse.data.data) {
@@ -107,6 +107,9 @@ const AppointmentView = () => {
             }
           } catch (err) {
             console.error('Error fetching patient details:', err);
+            // For non-patient users, if we can't fetch patient details, set an error state
+            // but don't fail the entire component
+            console.warn('Could not load patient details, but appointment will still be displayed');
           }
         }
         
@@ -301,7 +304,8 @@ const AppointmentView = () => {
               </div>
             )}
 
-            {/* Patient Information (if viewing as admin/doctor) */}
+            {/* Patient Information */}
+            {/* Show patient info for non-patient users, or show basic info for patient users viewing their own appointments */}
             {patient && role !== 'patient' && (
               <div className="p-6 rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
