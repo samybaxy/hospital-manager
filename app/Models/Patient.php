@@ -649,6 +649,35 @@ class Patient extends BaseModel
     }
 
     /**
+     * Get visitation history for this patient
+     * 
+     * @return array Array of visitation records with doctor information
+     */
+    public function getVisitationHistory()
+    {
+        global $wpdb;
+        
+        if (!$this->ID) {
+            return [];
+        }
+        
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
+        
+        // Join with users table to get doctor name
+        $query = $wpdb->prepare(
+            "SELECT v.*, 
+            CONCAT(u.display_name) as doctor
+            FROM {$visitations_table} v
+            LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
+            WHERE v.patient_id = %d
+            ORDER BY v.date DESC, v.time DESC",
+            $this->ID
+        );
+        
+        return $wpdb->get_results($query);
+    }
+
+    /**
      * Update the WordPress user associated with the patient
      * 
      * @param int $user_id WordPress user ID

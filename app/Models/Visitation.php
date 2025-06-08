@@ -533,4 +533,93 @@ class Visitation extends BaseModel
     {
         return $this->toArray();
     }
+    
+    /**
+     * Update a visitation record by ID
+     * 
+     * @param int $id The visitation ID
+     * @param array $data The data to update
+     * @return bool|Visitation Returns updated visitation instance on success, false on failure
+     */
+    public static function updateById($id, array $data)
+    {
+        global $wpdb;
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        if (empty($id)) {
+            return false;
+        }
+        
+        // Validate that the record exists
+        $existing = self::find($id);
+        if (!$existing) {
+            return false;
+        }
+        
+        // Filter data to only include fillable fields
+        $fillable_data = [];
+        foreach ($instance->fillable as $field) {
+            if (array_key_exists($field, $data)) {
+                $fillable_data[$field] = $data[$field];
+            }
+        }
+        
+        if (empty($fillable_data)) {
+            return false;
+        }
+        
+        // Add updated_at timestamp
+        $fillable_data['updated_at'] = current_time('mysql');
+        
+        // Perform the update
+        $result = $wpdb->update(
+            $table,
+            $fillable_data,
+            ['ID' => $id],
+            array_map(function($field) {
+                return is_numeric($field) ? '%d' : '%s';
+            }, $fillable_data),
+            ['%d']
+        );
+        
+        if ($result === false) {
+            return false;
+        }
+        
+        // Return the updated record
+        return self::find($id);
+    }
+    
+    /**
+     * Delete a visitation record by ID
+     * 
+     * @param int $id The visitation ID
+     * @return bool Returns true on success, false on failure
+     */
+    public static function deleteById($id)
+    {
+        global $wpdb;
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        if (empty($id)) {
+            return false;
+        }
+        
+        // Validate that the record exists
+        $existing = self::find($id);
+        if (!$existing) {
+            return false;
+        }
+        
+        // Perform the delete
+        $result = $wpdb->delete(
+            $table,
+            ['ID' => $id],
+            ['%d']
+        );
+        
+        return $result !== false;
+    }
 }

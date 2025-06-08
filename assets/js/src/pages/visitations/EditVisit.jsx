@@ -42,7 +42,6 @@ const EditVisit = () => {
 
         if (visitRes.data?.success) {
           const visitData = visitRes.data.data;
-          console.log('Visit data loaded:', visitData);
           
           // Fetch associated patient data to ensure we have patient_name
           if (visitData.patient_id) {

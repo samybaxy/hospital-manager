@@ -30,7 +30,6 @@ const ViewVisitDetails = () => {
         // Check if response has data and success flag
         if (response.data?.success) {
           setVisit(response.data.data);
-          console.log('Visit data loaded:', response.data.data);
         } else {
           console.error('Unexpected API response format:', response.data);
           throw new Error('Visit data format is invalid');

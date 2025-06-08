@@ -398,22 +398,8 @@ class PatientController extends BaseController
                 return $this->error_response('Patient not found', 404);
             }
             
-            // Get patient visitations
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_visitations';
-            
-            // Join with users table to get doctor name
-            $query = $wpdb->prepare(
-                "SELECT v.*, 
-                CONCAT(u.display_name) as doctor
-                FROM {$table} v
-                LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
-                WHERE v.patient_id = %d
-                ORDER BY v.date DESC, v.time DESC",
-                $patient_id
-            );
-            
-            $visitations = $wpdb->get_results($query);
+            // Get patient visitations using the model method
+            $visitations = $patient->getVisitationHistory();
             
             return $this->success_response(
                 $visitations,
