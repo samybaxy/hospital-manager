@@ -699,4 +699,32 @@ class Patient extends BaseModel
         
         return false;
     }
+
+    /**
+     * Find a patient by WordPress user ID
+     * 
+     * @param int $user_id WordPress user ID
+     * @return Patient|null Returns Patient instance or null if not found
+     */
+    public static function findByUserId($user_id)
+    {
+        global $wpdb;
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        if (empty($user_id)) {
+            return null;
+        }
+        
+        // Fetch the patient record by user_id
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE user_id = %d", $user_id);
+        $patient_data = $wpdb->get_row($query, ARRAY_A);
+        
+        if (!$patient_data) {
+            return null;
+        }
+        
+        // Create a new Patient instance with the fetched data
+        return new self($patient_data);
+    }
 }

@@ -355,19 +355,12 @@ class PatientController extends BaseController
                 return $this->error_response('Not logged in', 401);
             }
             
-            // Find the patient record associated with the current user
-            global $wpdb;
-            $table = $wpdb->prefix . 'hm_patients';
-            $patient_data = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$table} WHERE user_id = %d", 
-                $current_user_id
-            ), ARRAY_A);
+            // Find the patient record using the Patient model
+            $patient = Patient::findByUserId($current_user_id);
             
-            if (!$patient_data) {
+            if (!$patient) {
                 return $this->error_response('No patient record found for this user', 404);
             }
-            
-            $patient = new Patient($patient_data);
             
             return $this->success_response(
                 $patient->toArray(),
@@ -437,17 +430,15 @@ class PatientController extends BaseController
             $user_id = get_current_user_id();
             
             // Find patient by user_id using the Patient model
-            $patients = Patient::query()->where('user_id', $user_id)->get();
+            $patient = Patient::findByUserId($user_id);
             
-            if (empty($patients)) {
+            if (!$patient) {
                 return new WP_Error(
                     'profile_not_found',
                     'Patient profile not found',
                     ['status' => 404]
                 );
             }
-            
-            $patient = $patients[0];
             
             // Get user information
             $user = get_userdata($user_id);
@@ -474,10 +465,10 @@ class PatientController extends BaseController
         try {
             $user_id = get_current_user_id();
             
-            // Find patient by user_id
-            $patients = Patient::query()->where('user_id', $user_id)->get();
+            // Find patient by user_id using the Patient model
+            $patient = Patient::findByUserId($user_id);
             
-            if (empty($patients)) {
+            if (!$patient) {
                 return new WP_Error(
                     'profile_not_found',
                     'Patient profile not found',
@@ -485,7 +476,6 @@ class PatientController extends BaseController
                 );
             }
             
-            $patient = $patients[0];
             $params = $request->get_params();
             
             // Fields that a patient can update about themselves

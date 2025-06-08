@@ -8,6 +8,7 @@ use WP_Error;
 use WP_REST_Server;
 use HospitalManager\Models\Appointment;
 use HospitalManager\Models\Doctor;
+use HospitalManager\Models\Patient;
 use HospitalManager\Services\NotificationService;
 use HospitalManager\Services\AppointmentService;
 
@@ -164,29 +165,53 @@ class AppointmentController extends BaseController
 
     public function create_appointment($request)
     {
-        // Get parameters from request body (form submission)
-        $user_id = $request->get_param('patient_id') ?: get_current_user_id();
+        // Get parameters from request body
+        $requested_patient_id = $request->get_param('patient_id');
         $doctor_id = $request->get_param('doctor_id');
         $date = $request->get_param('appointment_date') ?: $request->get_param('date');
         $time = $request->get_param('appointment_time') ?: $request->get_param('time');
         $reason = $request->get_param('reason');
         $notes = $request->get_param('notes');
 
-        // Get the actual patient ID from the patients table
-        global $wpdb;
-        $patient_table = $wpdb->prefix . 'hm_patients';
-        $patient_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT ID FROM {$patient_table} WHERE user_id = %d",
-            $user_id
-        ));
+        // Determine the patient ID to use
+        $patient_id = null;
+        $user_id = null;
 
-        // Check if patient record exists
-        if (!$patient_id) {
-            return new WP_Error(
-                'patient_not_found',
-                'Patient record not found for user',
-                ['status' => 400]
-            );
+        if ($requested_patient_id) {
+            // Admin/Doctor is creating appointment for a specific patient
+            // Verify the patient exists
+            $patient = Patient::find($requested_patient_id);
+            if (!$patient) {
+                return new WP_Error(
+                    'patient_not_found',
+                    'Patient not found with the provided patient_id',
+                    ['status' => 400]
+                );
+            }
+            $patient_id = $patient->ID;
+            $user_id = $patient->user_id; // For notifications
+        } else {
+            // Patient is creating their own appointment
+            $current_user_id = get_current_user_id();
+            if (!$current_user_id) {
+                return new WP_Error(
+                    'unauthorized',
+                    'Must be logged in to create appointment',
+                    ['status' => 401]
+                );
+            }
+
+            // Find the patient record using the current user's WordPress ID
+            $patient = Patient::findByUserId($current_user_id);
+            if (!$patient) {
+                return new WP_Error(
+                    'patient_not_found',
+                    'No patient record found for current user',
+                    ['status' => 400]
+                );
+            }
+            $patient_id = $patient->ID;
+            $user_id = $current_user_id;
         }
 
         // Validate required fields
@@ -289,13 +314,17 @@ class AppointmentController extends BaseController
         $appointment->save();
 
         // Notify patient about appointment status change
-        NotificationService::create(
-            $appointment->getAttribute('patient_id'),
-            'appointment_update',
-            'Appointment Update',
-            "Your appointment for {$appointment->getAttribute('appointment_date')} has been {$status}",
-            ['appointment_id' => $appointment_id]
-        );
+        // Get the patient's WordPress user ID for notifications
+        $patient = Patient::find($appointment->getAttribute('patient_id'));
+        if ($patient && $patient->user_id) {
+            NotificationService::create(
+                $patient->user_id, // Use WordPress user ID for notifications
+                'appointment_update',
+                'Appointment Update',
+                "Your appointment for {$appointment->getAttribute('appointment_date')} has been {$status}",
+                ['appointment_id' => $appointment_id]
+            );
+        }
 
         return new WP_REST_Response($appointment->toArray());
     }
