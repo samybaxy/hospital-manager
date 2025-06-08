@@ -7,6 +7,7 @@ import Unauthorized from './pages/Unauthorized';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import Patients from './pages/patients/Patients';
 import PatientDetails from './pages/patients/PatientDetails';
 import AddPatient from './pages/patients/AddPatient';
@@ -199,6 +200,12 @@ const AppRoutes = () => {
         <Route path="/" element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
           </ProtectedRoute>
         } />
         

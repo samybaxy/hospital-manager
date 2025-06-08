@@ -576,6 +576,7 @@ class DoctorController extends BaseController
             $user = get_userdata($user_id);
             $response = $doctor->attributes;
             $response['email'] = $user->user_email;
+            $response['user_registered'] = $user->user_registered;
             
             return new WP_REST_Response($response);
         } catch (\Exception $e) {
@@ -610,6 +611,14 @@ class DoctorController extends BaseController
             $params = $request->get_params();
             
             // Fields that a doctor can update about themselves
+            if (isset($params['first_name'])) {
+                $doctor->first_name = sanitize_text_field($params['first_name']);
+            }
+            
+            if (isset($params['last_name'])) {
+                $doctor->last_name = sanitize_text_field($params['last_name']);
+            }
+            
             if (isset($params['phone'])) {
                 $doctor->phone = sanitize_text_field($params['phone']);
             }
@@ -633,6 +642,7 @@ class DoctorController extends BaseController
             $user = get_userdata($user_id);
             $response = $updated_doctor->attributes;
             $response['email'] = $user->user_email;
+            $response['user_registered'] = $user->user_registered;
             
             return new WP_REST_Response($response);
         } catch (\Exception $e) {

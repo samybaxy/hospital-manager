@@ -203,6 +203,39 @@ class LabInvestigationController extends BaseController
         ]);
     }
 
+    /**
+     * Check if the current user has the patient role
+     * 
+     * @return bool
+     */
+    private function current_user_is_patient()
+    {
+        return current_user_can('patient') && !current_user_can('administrator') && !current_user_can('doctor');
+    }
+
+    /**
+     * Get the patient ID for the current user
+     * 
+     * @return int|null The patient ID or null if not found
+     */
+    private function get_current_user_patient_id()
+    {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+        
+        if (!$current_user_id) {
+            return null;
+        }
+        
+        $patient_table = $wpdb->prefix . 'hm_patients';
+        $patient_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT ID FROM {$patient_table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        
+        return $patient_id ? (int) $patient_id : null;
+    }
+
     public function get_investigations(WP_REST_Request $request) 
     {
         try {
@@ -217,6 +250,26 @@ class LabInvestigationController extends BaseController
             $page = max(1, intval($request->get_param('page') ?: 1));
             $per_page = min(100, max(1, intval($request->get_param('per_page') ?: 20)));
             $offset = ($page - 1) * $per_page;
+            
+            // Security: If the current user is a patient, restrict to their own records only
+            if ($this->current_user_is_patient()) {
+                $current_patient_id = $this->get_current_user_patient_id();
+                if ($current_patient_id) {
+                    // Override any patient_id parameter with the current user's patient ID
+                    $patient_id = $current_patient_id;
+                } else {
+                    // Patient user but no patient record found - return empty results
+                    return new WP_REST_Response([
+                        'data' => [],
+                        'pagination' => [
+                            'total' => 0,
+                            'total_pages' => 0,
+                            'current_page' => $page,
+                            'per_page' => $per_page
+                        ]
+                    ], 200);
+                }
+            }
             
             // Log pagination info for debugging
             error_log("Pagination: page={$page}, per_page={$per_page}, offset={$offset}");
@@ -379,6 +432,14 @@ class LabInvestigationController extends BaseController
                 return new WP_REST_Response(['error' => 'Investigation not found'], 404);
             }
 
+            // Security: If the current user is a patient, ensure they can only view their own investigations
+            if ($this->current_user_is_patient()) {
+                $current_patient_id = $this->get_current_user_patient_id();
+                if (!$current_patient_id || $investigation->patient_id != $current_patient_id) {
+                    return new WP_REST_Response(['error' => 'Investigation not found'], 404);
+                }
+            }
+
             // Get related data
             $patient = $investigation->patient();
             $doctor = $investigation->requestedBy();
@@ -494,6 +555,14 @@ class LabInvestigationController extends BaseController
                 ], 404);
             }
 
+            // Security: Patients should not be able to update lab investigations
+            if ($this->current_user_is_patient()) {
+                return new WP_REST_Response([
+                    'success' => false,
+                    'message' => 'Access denied'
+                ], 403);
+            }
+
             $params = $request->get_params();
             
             // Remove ID from params to avoid updating it
@@ -550,6 +619,11 @@ class LabInvestigationController extends BaseController
                 return new WP_REST_Response(['error' => 'Investigation not found'], 404);
             }
 
+            // Security: Patients should not be able to update lab results
+            if ($this->current_user_is_patient()) {
+                return new WP_REST_Response(['error' => 'Access denied'], 403);
+            }
+
             $test_results = $request->get_param('test_results');
             $flags = $request->get_param('flags');
             $lab_notes = $request->get_param('lab_notes');
@@ -581,6 +655,11 @@ class LabInvestigationController extends BaseController
                 return new WP_REST_Response(['error' => 'Investigation not found'], 404);
             }
 
+            // Security: Patients should not be able to update lab investigation status
+            if ($this->current_user_is_patient()) {
+                return new WP_REST_Response(['error' => 'Access denied'], 403);
+            }
+
             $status = $request->get_param('status');
             $success = $investigation->updateStatus($status);
             
@@ -604,6 +683,11 @@ class LabInvestigationController extends BaseController
             $investigation = LabInvestigation::find($request['ID']);
             if (!$investigation) {
                 return new WP_REST_Response(['error' => 'Investigation not found'], 404);
+            }
+
+            // Security: Patients should not be able to delete lab investigations
+            if ($this->current_user_is_patient()) {
+                return new WP_REST_Response(['error' => 'Access denied'], 403);
             }
 
             $success = $investigation->delete();

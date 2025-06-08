@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUserAccess } from '../hooks/useUserAccess';
@@ -23,6 +23,9 @@ const Layout = ({ children }) => {
   const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const { role, isLoading: accessLoading, isAdministrator } = useUserAccess();
   
+  // Ref for user menu dropdown
+  const userMenuRef = useRef(null);
+  
   // Auto-collapse sidebar for appointments page
   useEffect(() => {
     if (location.pathname === '/patients' || 
@@ -37,6 +40,22 @@ const Layout = ({ children }) => {
       setSidebarCollapsed(false);
     }
   }, [location.pathname]);
+  
+  // Handle click outside user menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [userMenuOpen]);
   
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
@@ -179,7 +198,7 @@ const Layout = ({ children }) => {
                 </button>
 
                 {/* User dropdown */}
-                <div className="ml-4 relative flex-shrink-0">
+                <div className="ml-4 relative flex-shrink-0" ref={userMenuRef}>
                   <div>
                     <button 
                       onClick={toggleUserMenu}
@@ -199,13 +218,21 @@ const Layout = ({ children }) => {
                   {/* Dropdown menu */}
                   {userMenuOpen && (
                     <div 
-                      className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none"
+                      className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
                       role="menu"
                     >
-                      <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link 
+                        to="/profile" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
                         Your Profile
                       </Link>
-                      <Link to="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Link 
+                        to="/settings" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
                         Settings
                       </Link>
                       <button 

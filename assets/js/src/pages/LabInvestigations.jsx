@@ -9,6 +9,8 @@ import laboratoryService from '../services/laboratoryService';
 // Import new components
 import AddLabInvestigation from '../components/AddLabInvestigation';
 import EditLabInvestigation from '../components/EditLabInvestigation';
+import { useAuth } from '../context/AuthContext';
+import { useUserAccess } from '../hooks/useUserAccess';
 const referenceRangeStyles = `
   .bg-blue-25 {
     background-color: #f0f9ff;
@@ -44,6 +46,11 @@ const getStatusBadgeColor = (status) => {
 const LabInvestigations = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isPatient } = useUserAccess();
+  
+  // Extract the patient role check to avoid function recreation in useCallback
+  const userIsPatient = isPatient();
   
   const [investigations, setInvestigations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,6 +102,9 @@ const LabInvestigations = () => {
       if (statusFilter && statusFilter !== 'all') {
         params.status = statusFilter;
       }
+      
+      // Note: Patient filtering is now handled automatically by the backend for security
+      // No need to pass patient_id parameter - the backend will enforce it based on user role
       
       // Use URLSearchParams to construct proper query string
       const queryParams = new URLSearchParams();
@@ -166,7 +176,7 @@ const LabInvestigations = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, statusFilter, perPage]);
+  }, [searchTerm, statusFilter, perPage, user, userIsPatient]);
 
   useEffect(() => {
     fetchInvestigations(1);
@@ -437,7 +447,10 @@ const LabInvestigations = () => {
           <div>
             <h1 className="text-3xl font-bold">Laboratory Investigations</h1>
             <p className="text-blue-100 mt-2">
-              Manage laboratory tests, results, and medical investigations
+              {userIsPatient 
+                ? "View your laboratory test results and medical investigations"
+                : "Manage laboratory tests, results, and medical investigations"
+              }
             </p>
           </div>
         </div>
@@ -449,7 +462,7 @@ const LabInvestigations = () => {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search by patient name, test type..."
+              placeholder={userIsPatient ? "Search by test type..." : "Search by patient name, test type..."}
               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
@@ -498,9 +511,11 @@ const LabInvestigations = () => {
                 <th scope="col" className="py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16 min-w-16">
                   S/N
                 </th>
-                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
-                </th>
+                {!userIsPatient && (
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient
+                  </th>
+                )}
                 <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Test Type
                 </th>
@@ -528,9 +543,11 @@ const LabInvestigations = () => {
                     <td className="py-4 text-center text-sm font-medium text-gray-900 whitespace-nowrap">
                       {(currentPage - 1) * perPage + index + 1}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {investigation.patient_name || 'Unknown Patient'}
-                    </td>
+                    {!userIsPatient && (
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {investigation.patient_name || 'Unknown Patient'}
+                      </td>
+                    )}
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {investigation.test_type || 'N/A'}
                     </td>
@@ -582,20 +599,22 @@ const LabInvestigations = () => {
                             Results
                           </Button>
                         )}
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => handleOpenEditModal(investigation)}
-                        >
-                          Edit
-                        </Button>
+                        {!isPatient() && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleOpenEditModal(investigation)}
+                          >
+                            Edit
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-4 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={userIsPatient ? 7 : 8} className="px-4 py-4 text-center text-sm text-gray-500">
                     {loading ? 'Loading...' : 'No investigations found'}
                   </td>
                 </tr>
