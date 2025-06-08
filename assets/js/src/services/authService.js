@@ -369,7 +369,40 @@ const authService = {
       console.error('Error checking token expiration:', e);
       return true; // If we can't check it, assume it will expire soon for safety
     }
-  }
+  },
+  
+  /**
+   * Proactively fetch a fresh CSRF token if needed
+   * @returns {Promise<string>} Fresh CSRF token
+   */
+  ensureFreshCsrfToken: async () => {
+    const currentToken = authService.getCsrfToken();
+    
+    // If we don't have a token at all, fetch one
+    if (!currentToken) {
+      try {
+        const response = await fetch(`${window.location.origin}/wp-json/hospital-manager/v1/auth/me`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.fresh_nonce) {
+            authService.updateCsrfToken(data.fresh_nonce);
+            return data.fresh_nonce;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch fresh CSRF token:', error);
+      }
+    }
+    
+    return currentToken;
+  },
 };
 
 // Register the CSRF token update function with apiClient to avoid circular dependencies

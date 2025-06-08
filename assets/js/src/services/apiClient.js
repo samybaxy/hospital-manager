@@ -114,6 +114,15 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Don't log CSRF errors that will likely be auto-retried
+    const isCsrfError = error.response && 
+                       error.response.status === 403 && 
+                       error.response.data && 
+                       error.response.data.code === 'csrf_failed' &&
+                       error.config &&
+                       error.config.url &&
+                       error.config.url.includes('/auth/login');
+    
     // Update CSRF token if provided in error response
     if (error.response && error.response.data && error.response.data.fresh_nonce) {
       csrfTokenManager.update(error.response.data.fresh_nonce);
@@ -124,6 +133,11 @@ apiClient.interceptors.response.use(
       }
       if (window.wpApiSettings) {
         window.wpApiSettings.nonce = error.response.data.fresh_nonce;
+      }
+      
+      // For CSRF failures on login, suppress the console error since it will be retried
+      if (isCsrfError) {
+        console.log('CSRF token refreshed for login retry');
       }
     }
     

@@ -123,8 +123,10 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setError(null);
       
-      // Add CSRF protection
-      const csrfToken = authService.getCsrfToken();
+      // Ensure we have a fresh CSRF token before attempting login
+      const csrfToken = isRetry ? 
+        authService.getCsrfToken() : 
+        await authService.ensureFreshCsrfToken();
       
       const response = await api.post('/auth/login', { 
         username, 
@@ -158,7 +160,12 @@ export function AuthProvider({ children }) {
         return false;
       }
     } catch (err) {
-      console.error('Login error:', err);
+      // Don't log CSRF errors that will be auto-retried
+      if (!(err.response && err.response.status === 403 && 
+            err.response.data && err.response.data.code === 'csrf_failed' && 
+            !isRetry)) {
+        console.error('Login error:', err);
+      }
       
       // Update CSRF token if provided in error response
       if (err.response && err.response.data && err.response.data.fresh_nonce) {
