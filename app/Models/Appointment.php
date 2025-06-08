@@ -341,8 +341,6 @@ class Appointment extends BaseModel
         // Update the model's attributes with the new data
         $this->attributes = array_merge($this->attributes, $fillable_data);
         
-        error_log("Appointment {$id} saved successfully with data: " . print_r($fillable_data, true));
-        
         return true;
     }
 

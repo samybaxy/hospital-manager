@@ -75,8 +75,7 @@ const AppointmentView = () => {
         
         // Handle different API response formats
         const appointmentData = response.data;
-        console.log('Received appointment data:', appointmentData);
-        
+
         if (!appointmentData) {
           throw new Error('No appointment data received');
         }

@@ -118,7 +118,6 @@ class AppointmentController extends BaseController
             $params = $request->get_params();
             
             // Use the service to handle all business logic
-            error_log('Fetching appointments with params: ' . print_r($params, true));
             $result = AppointmentService::getAppointments($params);
             
             return $this->success_response(
@@ -172,15 +171,6 @@ class AppointmentController extends BaseController
         $time = $request->get_param('appointment_time') ?: $request->get_param('time');
         $reason = $request->get_param('reason');
         $notes = $request->get_param('notes');
-
-        // Debug incoming parameters
-        error_log('Appointment creation parameters: ' . json_encode([
-            'patient_id' => $patient_id,
-            'doctor_id' => $doctor_id,
-            'date' => $date,
-            'time' => $time,
-            'reason' => $reason
-        ]));
 
         // Validate required fields
         if (!$patient_id || !$doctor_id || !$date || !$time) {
