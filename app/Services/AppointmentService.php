@@ -51,12 +51,43 @@ class AppointmentService
         
         // Apply role-based restrictions
         $user = wp_get_current_user();
+        $count_values = []; // Initialize count values array
+        
         if (in_array('patient', $user->roles)) {
             // Patients can only see their own appointments
-            $query .= " AND a.patient_id = %d";
-            $countQuery .= " AND a.patient_id = %d";
-            $values[] = $user->ID;
-            error_log('AppointmentService::getAppointments - Role restriction: patient can only see own appointments');
+            // Get the patient ID from the hm_patients table using the user_id
+            $patient_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT ID FROM {$patient_table} WHERE user_id = %d",
+                $user->ID
+            ));
+            
+            if ($patient_id) {
+                $query .= " AND a.patient_id = %d";
+                $countQuery .= " AND a.patient_id = %d";
+                $values[] = $patient_id;
+                $count_values[] = $patient_id;
+                error_log('AppointmentService::getAppointments - Role restriction: patient can only see own appointments for user ID: ' . $user->ID . ', patient ID: ' . $patient_id);
+            } else {
+                // If no patient record found, return empty results
+                error_log('AppointmentService::getAppointments - No patient record found for user ID: ' . $user->ID);
+                return [
+                    'appointments' => (object)[
+                        'items' => [],
+                        'currentPage' => 1,
+                        'lastPage' => 1,
+                        'perPage' => (int)$perPage,
+                        'total' => 0
+                    ],
+                    'meta' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => (int)$perPage,
+                        'total' => 0,
+                        'from' => 0,
+                        'to' => 0
+                    ]
+                ];
+            }
         } elseif (in_array('doctor', $user->roles)) {
             // Doctors can only see their own appointments if doctor_id not specified
             if (empty($params['doctor_id'])) {
@@ -69,6 +100,7 @@ class AppointmentService
                     $query .= " AND a.doctor_id = %d";
                     $countQuery .= " AND a.doctor_id = %d";
                     $values[] = $doctor_id;
+                    $count_values[] = $doctor_id;
                     error_log('AppointmentService::getAppointments - Role restriction: doctor can only see own appointments');
                 }
             }
@@ -82,6 +114,9 @@ class AppointmentService
             $values[] = $search;
             $values[] = $search;
             $values[] = $search;
+            $count_values[] = $search;
+            $count_values[] = $search;
+            $count_values[] = $search;
             error_log('AppointmentService::getAppointments - Filter by search: ' . print_r($params, true));
         }
         
@@ -90,6 +125,7 @@ class AppointmentService
             $query .= " AND a.doctor_id = %d";
             $countQuery .= " AND a.doctor_id = %d";
             $values[] = intval($params['doctor_id']);
+            $count_values[] = intval($params['doctor_id']);
             error_log('AppointmentService::getAppointments - Filter by doctor: ' . $params['doctor_id']);
         }
         
@@ -98,6 +134,7 @@ class AppointmentService
             $query .= " AND a.patient_id = %d";
             $countQuery .= " AND a.patient_id = %d";
             $values[] = intval($params['patient_id']);
+            $count_values[] = intval($params['patient_id']);
             error_log('AppointmentService::getAppointments - Filter by patient: ' . $params['patient_id']);
         }
         
@@ -106,6 +143,7 @@ class AppointmentService
             $query .= " AND a.status = %s";
             $countQuery .= " AND a.status = %s";
             $values[] = sanitize_text_field($params['status']);
+            $count_values[] = sanitize_text_field($params['status']);
             error_log('AppointmentService::getAppointments - Filter by status: ' . $params['status']);
         }
         
@@ -115,6 +153,7 @@ class AppointmentService
             $query .= " AND (a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
             $countQuery .= " AND (a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
             $values[] = $today;
+            $count_values[] = $today;
             error_log('AppointmentService::getAppointments - Filter by upcoming appointments');
         }
         
@@ -123,20 +162,22 @@ class AppointmentService
             $query .= " AND a.appointment_date >= %s";
             $countQuery .= " AND a.appointment_date >= %s";
             $values[] = sanitize_text_field($params['date_from']);
+            $count_values[] = sanitize_text_field($params['date_from']);
         }
         
         if (!empty($params['date_to'])) {
             $query .= " AND a.appointment_date <= %s";
             $countQuery .= " AND a.appointment_date <= %s";
             $values[] = sanitize_text_field($params['date_to']);
+            $count_values[] = sanitize_text_field($params['date_to']);
         }
         
         // Get total count for pagination
-        $count_values = $values; // Copy values for count query
         $prepared_count = $wpdb->prepare($countQuery, $count_values);
         $total = (int)$wpdb->get_var($prepared_count);
+        error_log('AppointmentService::getAppointments - Total count: ' . $total . ' for user: ' . $user->ID);
         
-        // Apply sorting
+        // Apply sorting - default to DESC for dates
         $sortField = !empty($params['sort_by']) ? $params['sort_by'] : 'appointment_date';
         $sortOrder = !empty($params['sort_order']) && strtolower($params['sort_order']) === 'asc' ? 'ASC' : 'DESC';
         
@@ -171,9 +212,16 @@ class AppointmentService
         
         // Execute query
         $prepared_query = $wpdb->prepare($query, $values);
+        error_log('AppointmentService::getAppointments - Final Query: ' . $prepared_query);
+        error_log('AppointmentService::getAppointments - Count Query: ' . $wpdb->prepare($countQuery, $count_values));
         
         $items = $wpdb->get_results($prepared_query);
-        error_log('Query returned ' . count($items) . ' appointments');
+        error_log('Query returned ' . count($items) . ' appointments out of total ' . $total . ' for page ' . $page . ' (perPage: ' . $perPage . ')');
+        
+        // Debug: Log the actual items returned
+        foreach ($items as $index => $item) {
+            error_log('Item ' . $index . ': patient_id=' . $item->patient_id . ', patient_name=' . ($item->patient_name ?? 'NULL'));
+        }
         
         // Process results
         $appointments = [];

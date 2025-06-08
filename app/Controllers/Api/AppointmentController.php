@@ -165,12 +165,29 @@ class AppointmentController extends BaseController
     public function create_appointment($request)
     {
         // Get parameters from request body (form submission)
-        $patient_id = $request->get_param('patient_id') ?: get_current_user_id();
+        $user_id = $request->get_param('patient_id') ?: get_current_user_id();
         $doctor_id = $request->get_param('doctor_id');
         $date = $request->get_param('appointment_date') ?: $request->get_param('date');
         $time = $request->get_param('appointment_time') ?: $request->get_param('time');
         $reason = $request->get_param('reason');
         $notes = $request->get_param('notes');
+
+        // Get the actual patient ID from the patients table
+        global $wpdb;
+        $patient_table = $wpdb->prefix . 'hm_patients';
+        $patient_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT ID FROM {$patient_table} WHERE user_id = %d",
+            $user_id
+        ));
+
+        // Check if patient record exists
+        if (!$patient_id) {
+            return new WP_Error(
+                'patient_not_found',
+                'Patient record not found for user',
+                ['status' => 400]
+            );
+        }
 
         // Validate required fields
         if (!$patient_id || !$doctor_id || !$date || !$time) {
@@ -219,7 +236,7 @@ class AppointmentController extends BaseController
             // Create notification for the appointment
             Appointment::createAppointmentNotification(
                 $appointment->ID,
-                $patient_id,
+                $user_id, // Use the WordPress user ID for notifications
                 $doctor_id,
                 $date,
                 $time
