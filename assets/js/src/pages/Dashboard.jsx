@@ -302,11 +302,13 @@ const Dashboard = () => {
                     View Inventory
                   </Button>
                 </Link>
-                <Link to="/inventory/new" className="flex-1 min-w-0">
-                  <Button variant="secondary" className="w-full text-sm">
-                    Add Item
-                  </Button>
-                </Link>
+                {!isPatient() && (
+                  <Link to="/inventory/new" className="flex-1 min-w-0">
+                    <Button variant="secondary" className="w-full text-sm">
+                      Add Item
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </Card>
