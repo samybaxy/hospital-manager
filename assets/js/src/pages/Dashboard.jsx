@@ -142,9 +142,23 @@ const Dashboard = () => {
                 </Link>
               </>
             )}
-            <Link to="/doctors?from=dashboard" state={{ from: 'dashboard' }}>
-              <Button variant="secondary">Book Appointment</Button>
-            </Link>
+            <div className="relative group">
+              <Link to={isPatient() ? "/doctors?from=dashboard" : "#"} state={isPatient() ? { from: 'dashboard' } : undefined}>
+                <Button 
+                  variant="secondary" 
+                  disabled={!isPatient()}
+                  className={isPatient() ? "" : "cursor-not-allowed opacity-50"}
+                >
+                  Book Appointment
+                </Button>
+              </Link>
+              {!isPatient() && (
+                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                  Only patients can book appointments with doctors
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+              )}
+            </div>
           </div>
         </Card>
         
@@ -207,9 +221,25 @@ const Dashboard = () => {
             ) : (
               <div className="text-center py-6">
                 <p className="text-gray-500 mb-4">No upcoming appointments</p>
-                <Link to="/doctors">
-                  <Button variant="primary" className="text-sm">Schedule Appointment</Button>
-                </Link>
+                {isPatient() ? (
+                  <Link to="/doctors">
+                    <Button variant="primary" className="text-sm">Schedule Appointment</Button>
+                  </Link>
+                ) : (
+                  <div className="relative group inline-block">
+                    <Button 
+                      variant="primary" 
+                      className="text-sm cursor-not-allowed opacity-50" 
+                      disabled
+                    >
+                      Schedule Appointment
+                    </Button>
+                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                      Only patients can book appointments with doctors
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Card>

@@ -408,18 +408,30 @@ const DoctorDetails = () => {
               </Button>
             </Link>
           )}
-          <Link to={`/appointments/book/${doctorId}`} state={{ 
-            returnTo: 'doctor',
-            returnPath: `/doctors/${doctorId}`,
-            doctorName: `${doctor?.first_name} ${doctor?.last_name}`
-          }}>
-            <Button variant="success">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-              </svg>
-              Book Appointment
-            </Button>
-          </Link>
+          <div className="relative group">
+            <Link to={isPatientUser ? `/appointments/book/${doctorId}` : "#"} state={isPatientUser ? { 
+              returnTo: 'doctor',
+              returnPath: `/doctors/${doctorId}`,
+              doctorName: `${doctor?.first_name} ${doctor?.last_name}`
+            } : undefined}>
+              <Button 
+                variant="success" 
+                disabled={!isPatientUser}
+                className={isPatientUser ? "" : "cursor-not-allowed opacity-50"}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                </svg>
+                Book Appointment
+              </Button>
+            </Link>
+            {!isPatientUser && (
+              <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                Only patients can book appointments with doctors
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
+            )}
+          </div>
           <Button variant="danger" onClick={handleDelete}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />

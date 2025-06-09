@@ -475,17 +475,28 @@ const hasValidAppointmentData = () => {
               Manage patient appointments and scheduling
             </p>
           </div>
-          <Link to="/doctors">
-            <Button 
-              variant="secondary"
-              className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Book Appointment
-            </Button>
-          </Link>
+          <div className="relative group">
+            <Link to={role === 'patient' ? "/doctors" : "#"}>
+              <Button 
+                variant="secondary"
+                className={`mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700 ${
+                  role !== 'patient' ? 'cursor-not-allowed opacity-50' : ''
+                }`}
+                disabled={role !== 'patient'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Book Appointment
+              </Button>
+            </Link>
+            {role !== 'patient' && (
+              <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                Only patients can book appointments with doctors
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -779,12 +790,30 @@ const hasValidAppointmentData = () => {
                 ? `You don't have any ${filterStatus} appointments.` 
                 : "You don't have any appointments yet."}
             </p>
-            <Link to="/doctors" className="inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Book an Appointment
-            </Link>
+            <div className="relative group inline-block">
+              <Link to={role === 'patient' ? "/doctors" : "#"}>
+                <Button 
+                  variant="primary"
+                  className={`inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    role === 'patient'
+                      ? 'text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500'
+                      : 'text-gray-400 bg-gray-300 cursor-not-allowed'
+                  }`}
+                  disabled={role !== 'patient'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Book an Appointment
+                </Button>
+              </Link>
+              {role !== 'patient' && (
+                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                  Only patients can book appointments with doctors
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
