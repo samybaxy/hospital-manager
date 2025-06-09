@@ -109,22 +109,22 @@ const Dashboard = () => {
           ) : (
             <div className="bg-primary-50 p-4 rounded-md border border-primary-200">
               <h2 className="font-semibold text-primary-900">Quick Stats</h2>
-              <div className="grid grid-cols-2 gap-4 mt-3 sm:grid-cols-4">
-                <div className="bg-white p-3 rounded shadow-sm text-center">
-                  <span className="block text-2xl font-bold">{stats.patients}</span>
-                  <span className="text-sm text-gray-500">Patients</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.patients}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Patients</span>
                 </div>
-                <div className="bg-white p-3 rounded shadow-sm text-center">
-                  <span className="block text-2xl font-bold">{stats.doctors}</span>
-                  <span className="text-sm text-gray-500">Doctors</span>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.doctors}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Doctors</span>
                 </div>
-                <div className="bg-white p-3 rounded shadow-sm text-center">
-                  <span className="block text-2xl font-bold">{stats.appointments}</span>
-                  <span className="text-sm text-gray-500">Appointments</span>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.appointments}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Appointments</span>
                 </div>
-                <div className="bg-white p-3 rounded shadow-sm text-center">
-                  <span className="block text-2xl font-bold">{stats.departments}</span>
-                  <span className="text-sm text-gray-500">Departments</span>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.departments}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Departments</span>
                 </div>
               </div>
             </div>
