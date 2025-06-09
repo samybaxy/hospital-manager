@@ -119,6 +119,8 @@ const ViewVisitDetails = () => {
 
   const handleViewPatient = useCallback(() => {
     if (visit?.patient_id) {
+      // For patients viewing their own record, ensure they can access their profile
+      // Backend will handle permission validation
       navigate(`/patients/${visit.patient_id}`, {
         state: { 
           fromVisitation: { 
