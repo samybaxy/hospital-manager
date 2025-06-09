@@ -27,10 +27,13 @@ const DoctorDetails = () => {
   const { doctorId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAdministrator, isDeskOfficer } = useUserAccess();
+  const { isAdministrator, isDeskOfficer, isPatient } = useUserAccess();
   
   // Check if user can manage doctors (edit)
   const canManageDoctors = isAdministrator() || isDeskOfficer();
+  
+  // Check if user is a patient (for privacy restrictions)
+  const isPatientUser = isPatient();
   
   // Check if we came from a visitation page
   const fromVisitation = location.state?.fromVisitation || null;
@@ -758,17 +761,31 @@ const DoctorDetails = () => {
                           </td>
                           <td className="px-4 py-3 text-sm font-medium">
                             <div className="flex space-x-2">
-                              <Link 
-                                to={`/patients/${patientId}`} 
-                                state={{ fromDoctor: { ID: doctorId, doctorId, name: fullName, specialty: specialty } }}
-                                className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                                View
-                              </Link>
+                              {isPatientUser ? (
+                                <button 
+                                  disabled
+                                  title="Patient privacy protected - you can only view your own patient records"
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View
+                                </button>
+                              ) : (
+                                <Link 
+                                  to={`/patients/${patientId}`} 
+                                  state={{ fromDoctor: { ID: doctorId, doctorId, name: fullName, specialty: specialty } }}
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View
+                                </Link>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -975,49 +992,89 @@ const DoctorDetails = () => {
                           <td className="px-4 py-3 text-sm font-medium">
                             <div className="flex space-x-2">
                               {status === 'pending' && (
-                                <button 
-                                  className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100"
-                                  onClick={() => {
-                                    // Add logic to confirm appointment
-                                    // You can call the API endpoint to update the appointment status
-                                    api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' })
-                                      .then(() => fetchAppointments())
-                                      .catch(err => console.error('Error confirming appointment:', err));
-                                  }}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  Confirm
-                                </button>
+                                isPatientUser ? (
+                                  <button 
+                                    disabled
+                                    title="Patient privacy protected - you cannot manage other patients' appointments"
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Confirm
+                                  </button>
+                                ) : (
+                                  <button 
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100"
+                                    onClick={() => {
+                                      // Add logic to confirm appointment
+                                      // You can call the API endpoint to update the appointment status
+                                      api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' })
+                                        .then(() => fetchAppointments())
+                                        .catch(err => console.error('Error confirming appointment:', err));
+                                    }}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Confirm
+                                  </button>
+                                )
                               )}
                               {(status === 'confirmed' || status === 'pending' || status === 'rescheduled') && (
-                                <button 
-                                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
-                                  onClick={() => {
-                                    // Add logic to cancel appointment
-                                    if (window.confirm('Are you sure you want to cancel this appointment?')) {
-                                      api.put(`/appointments/${appointment.ID}`, { status: 'cancelled' })
-                                        .then(() => fetchAppointments())
-                                        .catch(err => console.error('Error cancelling appointment:', err));
-                                    }
-                                  }}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  Cancel
-                                </button>
+                                isPatientUser ? (
+                                  <button 
+                                    disabled
+                                    title="Patient privacy protected - you cannot manage other patients' appointments"
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Cancel
+                                  </button>
+                                ) : (
+                                  <button 
+                                    className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100"
+                                    onClick={() => {
+                                      // Add logic to cancel appointment
+                                      if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                                        api.put(`/appointments/${appointment.ID}`, { status: 'cancelled' })
+                                          .then(() => fetchAppointments())
+                                          .catch(err => console.error('Error cancelling appointment:', err));
+                                      }
+                                    }}
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Cancel
+                                  </button>
+                                )
                               )}
-                              <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${doctorId}`, doctorName: fullName }}>
-                                <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
+                              {isPatientUser ? (
+                                <button 
+                                  disabled
+                                  title="Patient privacy protected - you can only view your own appointments"
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
+                                >
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
                                   View
                                 </button>
-                              </Link>
+                              ) : (
+                                <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${doctorId}`, doctorName: fullName }}>
+                                  <button className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View
+                                  </button>
+                                </Link>
+                              )}
                             </div>
                           </td>
                         </tr>
