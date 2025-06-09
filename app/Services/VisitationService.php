@@ -25,6 +25,7 @@ class VisitationService
         try {
             // Initialize parameters
             $params = $query_params['params'] ?? $query_params;
+            error_log('VisitationService::getVisitations called with params: ' . print_r($params, true));
             
             // Default parameters
             $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
@@ -56,16 +57,8 @@ class VisitationService
                 // Patients can only see their own visitations
                 $query .= " AND v.patient_id = %d";
                 $countQuery .= " AND v.patient_id = %d";
-                $values[] = $user->ID;
+                $values[] = Patient::findByUserId( $user->ID )->ID;
                 error_log('VisitationService::getVisitations - Role restriction: patient can only see own visitations');
-            }
-            
-            // Apply filters if provided
-            if (!empty($params['patient_id'])) {
-                $query .= " AND v.patient_id = %d";
-                $countQuery .= " AND v.patient_id = %d";
-                $values[] = intval($params['patient_id']);
-                error_log('VisitationService::getVisitations - Filter by patient: ' . $params['patient_id']);
             }
             
             if (!empty($params['doctor_id'])) {

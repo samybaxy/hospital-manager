@@ -63,11 +63,6 @@ const Visitations = () => {
             // Make sure to clear any search parameter when empty
             params.search = '';
         }
-      
-        // For patients, only show their own visits
-        if (role === 'patient' && user?.ID) {
-            params.patient_id = user.ID;
-        }
         
         const response = await api.get('/visitations', { params });
         if (response.data) {
