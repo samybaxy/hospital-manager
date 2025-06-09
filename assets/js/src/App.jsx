@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-d
 import Layout from './components/Layout';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PatientDetailsProtectedRoute from './components/PatientDetailsProtectedRoute';
 import Unauthorized from './pages/Unauthorized';
 
 // Import all page components
@@ -226,9 +227,9 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
         <Route path="/patients/:patientId" element={
-          <ProtectedRoute routeName="patients">
+          <PatientDetailsProtectedRoute>
             <PatientDetails />
-          </ProtectedRoute>
+          </PatientDetailsProtectedRoute>
         } />
         <Route path="/doctors" element={
           <ProtectedRoute routeName="doctors">

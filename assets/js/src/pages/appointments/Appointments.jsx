@@ -706,15 +706,28 @@ const hasValidAppointmentData = () => {
                       
                         {appointment.status === 'pending' && (
                           <>
-                            <button
-                              onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments)}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Confirm
-                            </button>
+                            <div className="relative group">
+                              <button
+                                onClick={() => role !== 'patient' ? api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments) : null}
+                                disabled={role === 'patient'}
+                                className={`inline-flex items-center px-2.5 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                  role === 'patient'
+                                    ? 'border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed'
+                                    : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100 focus:ring-green-500'
+                                }`}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Confirm
+                              </button>
+                              {role === 'patient' && (
+                                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                                  The doctor will need to confirm your appointment
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              )}
+                            </div>
                             <button
                               onClick={() => handleCancelClick(appointment.ID)}
                               className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
