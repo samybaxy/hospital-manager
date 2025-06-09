@@ -463,14 +463,14 @@ const LabInvestigations = () => {
             <input
               type="text"
               placeholder={userIsPatient ? "Search by test type..." : "Search by patient name, test type..."}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
           <div className="md:w-48">
             <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={statusFilter}
               onChange={(e) => handleStatusFilter(e.target.value)}
             >
@@ -485,7 +485,7 @@ const LabInvestigations = () => {
           </div>
           <div className="md:w-32">
             <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
               value={perPage}
               onChange={(e) => {
                 setPerPage(Number(e.target.value));

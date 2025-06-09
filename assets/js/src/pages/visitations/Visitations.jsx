@@ -445,7 +445,7 @@ const Visitations = () => {
                 <input
                   type="text"
                   placeholder="Search by patient name, doctor name..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="block w-full pl-3 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                   value={searchTerm}
                   onChange={(e) => {
                     const newSearchTerm = e.target.value;
@@ -471,8 +471,8 @@ const Visitations = () => {
                 />
               </div>
               <div className="flex space-x-2">
-                <Button type="submit" variant="secondary" className="whitespace-nowrap">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <Button type="submit" variant="secondary" className="whitespace-nowrap px-2.5 py-1.5 text-xs">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                   </svg>
                   Search
@@ -480,7 +480,7 @@ const Visitations = () => {
                 <Button 
                   type="button" 
                   variant="secondary" 
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap px-2.5 py-1.5 text-xs"
                   onClick={() => {
                     setSearchTerm('');
                     setCurrentPage(1);
@@ -512,7 +512,7 @@ const Visitations = () => {
                     setPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
                 >
                   <option value={5}>5</option>
                   <option value={10}>10</option>
