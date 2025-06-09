@@ -537,24 +537,27 @@ class Doctor extends BaseModel
      */
     public function toArray()
     {
+        // Log the attributes for debugging
+        error_log('Doctor->toArray() attributes: ' . json_encode($this->attributes));
+        
         return [
-            'ID' => $this->ID,
-            'first_name' => $this->first_name,
-            'last_name' => $this->last_name,
-            'fullName' => $this->first_name . ' ' . $this->last_name,
-            'phone' => $this->phone,
-            'email' => $this->email,
-            'specialty' => $this->specialty,
-            'license_number' => $this->license_number,
-            'years_experience' => $this->years_experience,
-            'education' => $this->education,
-            'certification' => $this->certification,
-            'office' => $this->office,
-            'department' => $this->department,
-            'status' => $this->status,
-            'appointment_availability' => $this->appointment_availability,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at
+            'ID' => $this->attributes['ID'] ?? null,
+            'first_name' => $this->attributes['first_name'] ?? '',
+            'last_name' => $this->attributes['last_name'] ?? '',
+            'fullName' => ($this->attributes['first_name'] ?? '') . ' ' . ($this->attributes['last_name'] ?? ''),
+            'phone' => $this->attributes['phone'] ?? '',
+            'email' => $this->attributes['email'] ?? '',
+            'specialty' => $this->attributes['specialty'] ?? '',
+            'license_number' => $this->attributes['license_number'] ?? '',
+            'years_experience' => $this->attributes['years_experience'] ?? null,
+            'education' => $this->attributes['education'] ?? '',
+            'certification' => $this->attributes['board_certification'] ?? '',
+            'office' => $this->attributes['office'] ?? '',
+            'department' => $this->attributes['department'] ?? '',
+            'status' => $this->attributes['status'] ?? 'active',
+            'appointment_availability' => $this->attributes['appointment_availability'] ?? '',
+            'created_at' => $this->attributes['created_at'] ?? null,
+            'updated_at' => $this->attributes['updated_at'] ?? null
         ];
     }
 }

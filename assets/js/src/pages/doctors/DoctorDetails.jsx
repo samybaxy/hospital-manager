@@ -150,9 +150,20 @@ const DoctorDetails = () => {
       console.log('Appointments response:', response.data);
       
       if (response.data && response.data.success) {
-        // Handle successful response with data structure
-        const appointments = response.data.data || [];
-        console.log('Found appointments:', appointments.length);
+        // Handle the new nested structure: data.appointments.items
+        let appointments = [];
+        
+        if (response.data.data && response.data.data.appointments && Array.isArray(response.data.data.appointments.items)) {
+          appointments = response.data.data.appointments.items;
+          console.log('Found appointments in nested structure:', appointments.length);
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          appointments = response.data.data;
+          console.log('Found appointments in data array:', appointments.length);
+        } else {
+          console.log('No appointments found in expected structure');
+          appointments = [];
+        }
+        
         setUpcomingAppointments(appointments);
         
         // Update stats based on the appointment data
@@ -164,22 +175,7 @@ const DoctorDetails = () => {
           upcomingAppointments: appointments.length,
           pendingAppointments: pendingCount,
           confirmedAppointments: confirmedCount,
-          // Don't override totalAppointments from the upcoming appointments call
-          // Keep the value from the stats endpoint which shows all appointments
-        }));
-      } else if (response.data && response.data.data && Array.isArray(response.data.data)) {
-        // Handle nested data structure
-        console.log('Found nested data structure with appointments:', response.data.data.length);
-        setUpcomingAppointments(response.data.data);
-        
-        const pendingCount = response.data.data.filter(a => a.status === 'pending').length;
-        const confirmedCount = response.data.data.filter(a => a.status === 'confirmed').length;
-        
-        setScheduleStats(prev => ({
-          ...prev,
-          upcomingAppointments: response.data.data.length,
-          pendingAppointments: pendingCount,
-          confirmedAppointments: confirmedCount,
+          // Use total from meta if available
           totalAppointments: response.data.meta?.total || prev.totalAppointments
         }));
       } else if (response.data && Array.isArray(response.data)) {
@@ -276,15 +272,9 @@ const DoctorDetails = () => {
           const statsResponse = await api.get(`/appointments/stats?doctor_id=${doctorId}`);
 
           if (statsResponse.data) {
-            console.log('Schedule stats received:', statsResponse.data);
             setScheduleStats({
               ...statsResponse.data,
               // Make sure we include both pending and confirmed appointments in upcomingAppointments count
-              upcomingAppointments: (statsResponse.data.pendingAppointments || 0) + 
-                                   (statsResponse.data.confirmedAppointments || 0)
-            });
-            console.log('Schedule stats set to:', {
-              ...statsResponse.data,
               upcomingAppointments: (statsResponse.data.pendingAppointments || 0) + 
                                    (statsResponse.data.confirmedAppointments || 0)
             });
@@ -317,19 +307,6 @@ const DoctorDetails = () => {
     
     fetchDoctor();
   }, [doctorId]);
-
-  // Check for success messages from edit form
-  useEffect(() => {
-    if (location.state?.success) {
-      // Flash a success message briefly then clear it
-      setSuccess(location.state.success);
-      setTimeout(() => {
-        setSuccess(null);
-        // Clear the state so refreshing doesn't show the message again
-        navigate(location.pathname, { replace: true });
-      }, 5000);
-    }
-  }, [location.state, navigate, location.pathname]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this doctor? This action cannot be undone.')) {
