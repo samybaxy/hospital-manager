@@ -58,8 +58,9 @@ const ViewVisitDetails = () => {
     // Desk officers can view any visit
     if (role === 'desk_officer') return true;
     
-    // Patients can only view their own visits
-    if (role === 'patient' && visit.patient_id === user?.ID) return true;
+    // Patients can view their own visits - backend already handles this restriction
+    // If the backend returned the data, the patient has permission to view it
+    if (role === 'patient') return true;
     
     return false;
   }, [visit, role, user?.ID]);

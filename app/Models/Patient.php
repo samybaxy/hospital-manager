@@ -727,4 +727,27 @@ class Patient extends BaseModel
         // Create a new Patient instance with the fetched data
         return new self($patient_data);
     }
+
+    /**
+     * Get patient ID from WordPress user ID
+     * 
+     * @param int $user_id WordPress user ID
+     * @return int|null Returns patient ID or null if not found
+     */
+    public static function get_pid_from_wp($user_id)
+    {
+        global $wpdb;
+        $instance = new self();
+        $table = $instance->getTable();
+        
+        if (empty($user_id)) {
+            return null;
+        }
+        
+        // Fetch only the patient ID by user_id
+        $query = $wpdb->prepare("SELECT ID FROM {$table} WHERE user_id = %d", $user_id);
+        $patient_id = $wpdb->get_var($query);
+        
+        return $patient_id ? (int)$patient_id : null;
+    }
 }

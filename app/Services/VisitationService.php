@@ -291,7 +291,7 @@ class VisitationService
             
             // Check user permission to view this visitation
             $user = wp_get_current_user();
-            if (in_array('patient', $user->roles) && $visitationArray['patient_id'] !== $user->ID) {
+            if (in_array('patient', $user->roles) && (int) $visitationArray['patient_id'] !== Patient::get_pid_from_wp($user->ID)) {
                 // Patients can only see their own visitations
                 error_log('VisitationService::getVisitation - Permission denied: patient attempted to view another patient\'s visitation');
                 return false;
