@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { Link } from 'react-router-dom';
@@ -25,6 +25,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [shouldStack, setShouldStack] = useState(false);
+  const resourcesRef = useRef(null);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -89,6 +91,29 @@ const Dashboard = () => {
     
     fetchDashboardData();
   }, []);
+
+  // Monitor container width to determine stacking
+  useEffect(() => {
+    const checkContainerWidth = () => {
+      if (resourcesRef.current) {
+        const width = resourcesRef.current.offsetWidth;
+        setShouldStack(width <= 300);
+      }
+    };
+
+    // Check on mount
+    checkContainerWidth();
+
+    // Set up ResizeObserver to monitor container width changes
+    const resizeObserver = new ResizeObserver(checkContainerWidth);
+    if (resourcesRef.current) {
+      resizeObserver.observe(resourcesRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [loading]); // Re-run when loading changes
 
   return (
     <div className="space-y-6 px-4 md:px-6 lg:px-8">
@@ -245,7 +270,7 @@ const Dashboard = () => {
           </Card>
           
           <Card title="Hospital Resources">
-            <div className="space-y-4">
+            <div className="space-y-4" ref={resourcesRef}>
               {/* Inventory Summary */}
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
@@ -254,18 +279,18 @@ const Dashboard = () => {
                   </svg>
                   Inventory Overview
                 </h3>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div className="bg-white p-3 rounded shadow-sm text-center">
-                    <span className="block text-lg font-bold text-gray-700">{stats.inventory_summary.total_items}</span>
-                    <span className="text-xs text-gray-500">Total Items</span>
+                <div className={`gap-3 ${shouldStack ? 'flex flex-col' : 'grid grid-cols-3'}`}>
+                  <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                    <span className="block text-base sm:text-lg font-bold text-gray-700 truncate">{stats.inventory_summary.total_items}</span>
+                    <span className="text-xs text-gray-500 truncate">Total Items</span>
                   </div>
-                  <div className="bg-white p-3 rounded shadow-sm text-center">
-                    <span className="block text-lg font-bold text-red-600">{stats.inventory_summary.critical_items}</span>
-                    <span className="text-xs text-gray-500">Critical</span>
+                  <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                    <span className="block text-base sm:text-lg font-bold text-red-600 truncate">{stats.inventory_summary.critical_items}</span>
+                    <span className="text-xs text-gray-500 truncate">Critical</span>
                   </div>
-                  <div className="bg-white p-3 rounded shadow-sm text-center">
-                    <span className="block text-lg font-bold text-orange-600">{stats.inventory_summary.expiring_soon}</span>
-                    <span className="text-xs text-gray-500">Expiring Soon</span>
+                  <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                    <span className="block text-base sm:text-lg font-bold text-orange-600 truncate">{stats.inventory_summary.expiring_soon}</span>
+                    <span className="text-xs text-gray-500 truncate">Expiring Soon</span>
                   </div>
                 </div>
                 
