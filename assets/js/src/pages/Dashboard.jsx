@@ -26,7 +26,9 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [shouldStack, setShouldStack] = useState(false);
+  const [shouldStackAppointments, setShouldStackAppointments] = useState(false);
   const resourcesRef = useRef(null);
+  const appointmentsRef = useRef(null);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -99,6 +101,11 @@ const Dashboard = () => {
         const width = resourcesRef.current.offsetWidth;
         setShouldStack(width <= 300);
       }
+      
+      if (appointmentsRef.current) {
+        const width = appointmentsRef.current.offsetWidth;
+        setShouldStackAppointments(width <= 300);
+      }
     };
 
     // Check on mount
@@ -108,6 +115,9 @@ const Dashboard = () => {
     const resizeObserver = new ResizeObserver(checkContainerWidth);
     if (resourcesRef.current) {
       resizeObserver.observe(resourcesRef.current);
+    }
+    if (appointmentsRef.current) {
+      resizeObserver.observe(appointmentsRef.current);
     }
 
     return () => {
@@ -189,6 +199,7 @@ const Dashboard = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card title="Upcoming Appointments">
+            <div ref={appointmentsRef}>
             {loading ? (
               <div className="flex justify-center p-6">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -196,9 +207,9 @@ const Dashboard = () => {
             ) : upcomingAppointments.length > 0 ? (
               <div className="divide-y divide-gray-100">
                 {upcomingAppointments.map((appointment) => (
-                  <div key={appointment.ID} className="py-3 flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">
+                  <div key={appointment.ID} className={`py-3 ${shouldStackAppointments ? 'flex flex-col space-y-2' : 'flex justify-between items-center'}`}>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
                         {isPatient() ? (
                           // For patients: Show doctor name instead of patient name for privacy
                           appointment.doctor_name ? `Dr. ${appointment.doctor_name}` : 'Doctor'
@@ -207,11 +218,11 @@ const Dashboard = () => {
                           `${appointment.first_name} ${appointment.last_name}`
                         )}
                       </p>
-                      <div className="flex items-center mt-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex items-center mt-1 flex-wrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 mr-1 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        <span className="text-sm text-gray-600">{appointment.formatted_date}</span>
+                        <span className="text-sm text-gray-600 truncate">{appointment.formatted_date}</span>
                         <span className="text-sm text-gray-600 mx-1">•</span>
                         <span className="text-sm text-gray-600">
                           {new Date(`2000-01-01T${appointment.appointment_time}`).toLocaleTimeString('en-US', { 
@@ -229,11 +240,13 @@ const Dashboard = () => {
                       </div>
                     </div>
                     {!isPatient() && (
-                      <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
-                        <Button variant="secondary" className="text-xs px-3 py-1">
-                          Details
-                        </Button>
-                      </Link>
+                      <div className={shouldStackAppointments ? 'self-start' : 'flex-shrink-0'}>
+                        <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'dashboard', returnPath: '/' }}>
+                          <Button variant="secondary" className="text-xs px-3 py-1">
+                            Details
+                          </Button>
+                        </Link>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -267,6 +280,7 @@ const Dashboard = () => {
                 )}
               </div>
             )}
+            </div>
           </Card>
           
           <Card title="Hospital Resources">
