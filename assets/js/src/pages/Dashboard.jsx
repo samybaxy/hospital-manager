@@ -27,8 +27,10 @@ const Dashboard = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [shouldStack, setShouldStack] = useState(false);
   const [shouldStackAppointments, setShouldStackAppointments] = useState(false);
+  const [shouldStackCards, setShouldStackCards] = useState(false);
   const resourcesRef = useRef(null);
   const appointmentsRef = useRef(null);
+  const cardsContainerRef = useRef(null);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -106,6 +108,13 @@ const Dashboard = () => {
         const width = appointmentsRef.current.offsetWidth;
         setShouldStackAppointments(width <= 300);
       }
+      
+      if (cardsContainerRef.current) {
+        const containerWidth = cardsContainerRef.current.offsetWidth;
+        // Calculate individual card width in 2-column layout (accounting for gap)
+        const cardWidth = (containerWidth - 24) / 2; // 24px is the gap
+        setShouldStackCards(cardWidth <= 153);
+      }
     };
 
     // Check on mount
@@ -118,6 +127,9 @@ const Dashboard = () => {
     }
     if (appointmentsRef.current) {
       resizeObserver.observe(appointmentsRef.current);
+    }
+    if (cardsContainerRef.current) {
+      resizeObserver.observe(cardsContainerRef.current);
     }
 
     return () => {
@@ -165,24 +177,24 @@ const Dashboard = () => {
             </div>
           )}
           
-          <div className="mt-6 flex flex-wrap gap-4">
+          <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
             {/* Only show patient management buttons for non-patient users */}
             {!isPatient() && (
               <>
-                <Link to="/patients/new">
-                  <Button variant="primary">Add New Patient</Button>
+                <Link to="/patients/new" className="flex-1 sm:flex-none">
+                  <Button variant="primary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">Add New Patient</Button>
                 </Link>
-                <Link to="/patients">
-                  <Button variant="secondary">View All Patients</Button>
+                <Link to="/patients" className="flex-1 sm:flex-none">
+                  <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">View All Patients</Button>
                 </Link>
               </>
             )}
-            <div className="relative group">
+            <div className="relative group flex-1 sm:flex-none">
               <Link to={isPatient() ? "/doctors?from=dashboard" : "#"} state={isPatient() ? { from: 'dashboard' } : undefined}>
                 <Button 
                   variant="secondary" 
                   disabled={!isPatient()}
-                  className={isPatient() ? "" : "cursor-not-allowed opacity-50"}
+                  className={`w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 ${isPatient() ? "" : "cursor-not-allowed opacity-50"}`}
                 >
                   Book Appointment
                 </Button>
@@ -197,7 +209,7 @@ const Dashboard = () => {
           </div>
         </Card>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`gap-6 ${shouldStackCards ? 'flex flex-col' : 'grid grid-cols-1 md:grid-cols-2'}`} ref={cardsContainerRef}>
           <Card title="Upcoming Appointments">
             <div ref={appointmentsRef}>
             {loading ? (
