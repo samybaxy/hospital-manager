@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/apiService';
 
@@ -20,6 +21,153 @@ const Patients = () => {
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
   const isInitializedRef = useRef(false);
+
+  // Table columns configuration
+  const columns = useMemo(() => [
+    {
+      id: 'serialNumber',
+      header: 'S/N',
+      accessorFn: (row, index) => index + 1,
+      cell: ({ getValue }) => (
+        <span className="text-sm font-medium text-gray-900">
+          {((currentPage - 1) * perPage) + getValue()}
+        </span>
+      ),
+      meta: { hideOnMobile: false, hideOnTablet: false },
+      size: 60,
+    },
+    {
+      id: 'patient',
+      header: 'Patient',
+      accessorFn: row => `${row.first_name || 'Unknown'} ${row.last_name || ''}`,
+      cell: ({ row }) => {
+        const patient = row.original;
+        
+        // Create initials
+        let firstInitial = '?';
+        let lastInitial = '';
+        
+        if (patient.first_name && typeof patient.first_name === 'string') {
+          firstInitial = patient.first_name[0];
+        }
+        
+        if (patient.last_name && typeof patient.last_name === 'string') {
+          lastInitial = patient.last_name[0];
+        }
+
+        return (
+          <div className="flex items-center min-w-0">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 flex items-center justify-center mr-2 sm:mr-3 text-gray-600 font-medium text-xs sm:text-sm flex-shrink-0">
+              {firstInitial}{lastInitial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                {patient.first_name || 'Unknown'} {patient.last_name || ''}
+              </div>
+              <div className="text-xs sm:text-sm text-gray-500 truncate">
+                {patient.gender || 'Unknown'}, {patient.age || '-'} years
+              </div>
+            </div>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false, hideOnTablet: false },
+      size: 200,
+    },
+    {
+      id: 'contact',
+      header: 'Contact',
+      accessorFn: row => row.phone || row.email,
+      cell: ({ row }) => {
+        const patient = row.original;
+        return (
+          <div className="min-w-0">
+            <div className="text-sm text-gray-900 truncate">{patient.phone || '-'}</div>
+            <div className="text-xs text-gray-500 truncate">{patient.email || '-'}</div>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: true, hideOnTablet: false },
+      size: 150,
+    },
+    {
+      id: 'hmo',
+      header: 'HMO',
+      accessorKey: 'hmo_name',
+      cell: ({ getValue }) => {
+        const hmoName = getValue();
+        return (
+          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full truncate max-w-24 ${
+            hmoName
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {hmoName || 'None'}
+          </span>
+        );
+      },
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 100,
+    },
+    {
+      id: 'lastVisit',
+      header: 'Last Visit',
+      accessorKey: 'last_visit_date',
+      cell: ({ getValue }) => {
+        const date = getValue();
+        return (
+          <span className="text-xs sm:text-sm text-gray-500 truncate">
+            {date || '-'}
+          </span>
+        );
+      },
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 100,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => {
+        const patient = row.original;
+        const patientId = patient.ID || patient.id;
+        
+        return (
+          <div className="flex justify-end space-x-1 sm:space-x-2">
+            <Link 
+              to={`/patients/${patientId}`} 
+              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span className="hidden sm:inline">View</span>
+            </Link>
+            <Link 
+              to={`/patients/${patientId}/edit`} 
+              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              <span className="hidden sm:inline">Edit</span>
+            </Link>
+            <Link 
+              to={`/visitations/new/${patientId}`} 
+              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span className="hidden lg:inline">Add Visit</span>
+            </Link>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false, hideOnTablet: false },
+      size: 150,
+    },
+  ], [currentPage, perPage]);
 
   const fetchPatients = useCallback(async () => {
     try {
@@ -229,6 +377,13 @@ const Patients = () => {
     );
   }, [currentPage, totalPages, handlePageChange]);
 
+  // Handle row click for navigation
+  const handleRowClick = useCallback((patient) => {
+    const patientId = patient.ID || patient.id;
+    // You can navigate to patient details here if needed
+    console.log('Patient clicked:', patient);
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
@@ -346,160 +501,20 @@ const Patients = () => {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading ? (
-          <div className="flex justify-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
-          </div>
-        ) : hasValidPatientData ? (
-          <div className="overflow-x-auto rounded-md border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th 
-                    scope="col" 
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    <div className="flex items-center">
-                      S/N
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('last_name')}
-                  >
-                    <div className="flex items-center">
-                      Patient
-                      <SortIndicator field="last_name" />
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('phone')}
-                  >
-                    <div className="flex items-center">
-                      Contact
-                      <SortIndicator field="phone" />
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('hmo_name')}
-                  >
-                    <div className="flex items-center">
-                      HMO
-                      <SortIndicator field="hmo_name" />
-                    </div>
-                  </th>
-                  <th 
-                    scope="col" 
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('last_visit_date')}
-                  >
-                    <div className="flex items-center">
-                      Last Visit
-                      <SortIndicator field="last_visit_date" />
-                    </div>
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {patients.map((patient, index) => {
-                  // Get patient ID safely for the key and links
-                  const patientId = patient.ID || index;
-                  
-                  // Create initials from name or use placeholder
-                  let firstInitial = '?';
-                  let lastInitial = '';
-                  
-                  if (patient.first_name && typeof patient.first_name === 'string') {
-                    firstInitial = patient.first_name[0];
-                  }
-                  
-                  if (patient.last_name && typeof patient.last_name === 'string') {
-                    lastInitial = patient.last_name[0];
-                  }
-                  
-                  return (
-                    <tr key={patientId} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {((currentPage - 1) * perPage) + index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
-                            {firstInitial}{lastInitial}
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {patient.first_name || 'Unknown'} {patient.last_name || ''}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {patient.gender || 'Unknown'}, {patient.age || '-'} years
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{patient.phone || '-'}</div>
-                        <div className="text-sm text-gray-500">{patient.email || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          patient.hmo_name
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {patient.hmo_name || 'None'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {patient.last_visit_date || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end space-x-2">
-                          <Link 
-                            to={`/patients/${patientId}`} 
-                            className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View
-                          </Link>
-                          <Link 
-                            to={`/patients/${patientId}/edit`} 
-                            className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </Link>
-                          <Link 
-                            to={`/visitations/new/${patientId}`} 
-                            className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Add Visit
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        {/* Patients Table */}
+        {hasValidPatientData ? (
+          <ResponsiveTable
+            data={patients}
+            columns={columns}
+            loading={loading}
+            emptyMessage={searchTerm ? 'No patients match your search criteria. Try a different search term.' : 'There are no patients in the system yet.'}
+            onRowClick={handleRowClick}
+            enableSorting={true}
+            enableFiltering={false}
+            enablePagination={false}
+            showPagination={false}
+            pageSize={perPage}
+          />
         ) : (
           <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-md border border-gray-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -525,68 +540,68 @@ const Patients = () => {
               <p>
                 Showing <span className="font-semibold">{((currentPage - 1) * perPage) + 1}</span>{' '}
                 to <span className="font-semibold">{Math.min(currentPage * perPage, totalPatients)}</span>{' '}
-                of <span className="font-semibold">{totalPatients}</span> patients
+                of <span className="font-semibold">{totalPatients}</span> results
               </p>
             </div>
             
-            <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
-              <div className="flex items-center justify-center w-full sm:w-auto">
-                <div className="flex-1 flex justify-between sm:hidden">
-                  <Button
-                    onClick={handlePreviousPage}
-                    disabled={currentPage === 1}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={handleNextPage}
-                    disabled={currentPage === totalPages}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Next
-                  </Button>
-                </div>
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                  currentPage === 1
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`ml-3 relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            
+            <div className="hidden sm:flex">
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium ${
+                    currentPage === 1
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
                 
-                <div className="hidden sm:flex">
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={handlePreviousPage}
-                      disabled={currentPage === 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === 1 
-                          ? 'text-gray-300 cursor-not-allowed' 
-                          : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Previous</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                    
-                    {/* Page numbers */}
-                    {renderPagination}
-                    
-                    <button
-                      onClick={handleNextPage}
-                      disabled={currentPage === totalPages}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === totalPages 
-                          ? 'text-gray-300 cursor-not-allowed' 
-                          : 'text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="sr-only">Next</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </nav>
-                </div>
-              </div>
+                {/* Page numbers */}
+                {renderPagination}
+                
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
             </div>
           </div>
         )}

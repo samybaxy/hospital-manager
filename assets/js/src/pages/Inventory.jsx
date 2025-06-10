@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
-import Table from '../components/Table';
+import ResponsiveTable from '../components/ResponsiveTable';
 import InventoryForm from '../components/InventoryForm';
 import LoadingState from '../components/LoadingState';
 import Alert from '../components/Alert';
@@ -351,31 +351,45 @@ const Inventory = () => {
   };
 
   // Table columns configuration with permission-based filtering
-  const getAllColumns = () => [
+  const columns = useMemo(() => [
     {
+      id: 'item_name',
       header: 'Item Name',
-      accessor: 'item_name',
-      render: (item) => (
-        <div>
-          <div className="font-medium text-gray-900">{item.item_name}</div>
-          <div className="text-sm text-gray-500">{item.category}</div>
-        </div>
-      )
+      accessorKey: 'item_name',
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="min-w-0">
+            <div className="font-medium text-gray-900 truncate">{item.item_name}</div>
+            <div className="text-sm text-gray-500 truncate">{item.category}</div>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false },
+      size: 200,
     },
     {
+      id: 'quantity',
       header: 'Quantity',
-      accessor: 'quantity',
-      render: (item) => (
-        <div className="text-right">
-          <div className="font-medium">{item.quantity} {item.unit}</div>
-          <div className="text-sm text-gray-500">Min: {item.reorder_level}</div>
-        </div>
-      )
+      accessorKey: 'quantity',
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="text-right min-w-0">
+            <div className="font-medium truncate">{item.quantity} {item.unit}</div>
+            <div className="text-sm text-gray-500 truncate">Min: {item.reorder_level}</div>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false },
+      size: 120,
     },
     {
+      id: 'status',
       header: 'Status',
-      accessor: 'status',
-      render: (item) => {
+      accessorKey: 'status',
+      cell: ({ row }) => {
+        const item = row.original;
         const { text, color } = inventoryService.getStatusInfo(item.status);
         const colorClasses = {
           green: 'bg-green-100 text-green-800',
@@ -390,17 +404,27 @@ const Inventory = () => {
             {text}
           </span>
         );
-      }
+      },
+      meta: { hideOnMobile: true, hideOnTablet: false },
+      size: 120,
     },
     {
+      id: 'location',
       header: 'Location',
-      accessor: 'location'
+      accessorKey: 'location',
+      cell: ({ getValue }) => (
+        <span className="text-sm text-gray-900 truncate">{getValue() || '-'}</span>
+      ),
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 100,
     },
     {
+      id: 'expiry_date',
       header: 'Expiry',
-      accessor: 'expiry_date',
-      render: (item) => {
-        if (!item.expiry_date) return '-';
+      accessorKey: 'expiry_date',
+      cell: ({ row }) => {
+        const item = row.original;
+        if (!item.expiry_date) return <span className="text-gray-500">-</span>;
         
         const expiryDate = new Date(item.expiry_date);
         const today = new Date();
@@ -414,61 +438,76 @@ const Inventory = () => {
         }
         
         return (
-          <div className={className}>
-            {expiryDate.toLocaleDateString()}
+          <div className={`${className} min-w-0`}>
+            <div className="truncate">{expiryDate.toLocaleDateString()}</div>
             {daysUntilExpiry <= 30 && (
-              <div className="text-xs">
+              <div className="text-xs truncate">
                 {daysUntilExpiry < 0 ? 'Expired' : `${daysUntilExpiry} days`}
               </div>
             )}
           </div>
         );
-      }
+      },
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 120,
     },
     // Cost column - only show if user has reports permission
     ...(permissions.canViewReports ? [{
+      id: 'cost',
       header: 'Cost',
-      accessor: 'cost',
-      render: (item) => item.cost ? `₦${Number(item.cost).toLocaleString()}` : '-'
+      accessorKey: 'cost',
+      cell: ({ getValue }) => {
+        const cost = getValue();
+        return (
+          <span className="text-sm font-medium">
+            {cost ? `₦${Number(cost).toLocaleString()}` : '-'}
+          </span>
+        );
+      },
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 100,
     }] : []),
     // Actions column - only show if user can edit or delete
     ...((permissions.canEdit || permissions.canDelete) ? [{
+      id: 'actions',
       header: 'Actions',
-      accessor: 'actions',
-      render: (item) => (
-        <div className="flex space-x-2">
-          <PermissionGate permission="edit">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedItem(item);
-                setShowEditModal(true);
-              }}
-            >
-              Edit
-            </Button>
-          </PermissionGate>
-          <PermissionGate permission="delete">
-            <Button
-              size="sm"
-              variant="danger"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedItem(item);
-                setShowDeleteModal(true);
-              }}
-            >
-              Delete
-            </Button>
-          </PermissionGate>
-        </div>
-      )
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <div className="flex space-x-2 justify-end">
+            <PermissionGate permission="edit">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedItem(item);
+                  setShowEditModal(true);
+                }}
+              >
+                Edit
+              </Button>
+            </PermissionGate>
+            <PermissionGate permission="delete">
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedItem(item);
+                  setShowDeleteModal(true);
+                }}
+              >
+                Delete
+              </Button>
+            </PermissionGate>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false },
+      size: 150,
     }] : [])
-  ];
-
-  const columns = getAllColumns();
+  ], [permissions.canViewReports, permissions.canEdit, permissions.canDelete]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -844,30 +883,22 @@ const Inventory = () => {
       {/* Items Table */}
       <div ref={inventoryTableRef}>
         <Card title="📋 Inventory Items">
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <LoadingState message="Loading inventory items..." />
-          </div>
-        ) : (
-          <>
-            <Table
-              columns={columns}
-              data={items}
-              emptyMessage="No inventory items found matching your criteria"
-              pagination={true}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={summary?.total_items || items.length}
-              onPageChange={handlePageChange}
-              onItemsPerPageChange={handleItemsPerPageChange}
-              showExportButtons={true}
-              onExport={handleExport}
-              onPrint={() => window.print()}
-            />
-          </>
-        )}
-      </Card>
+          <ResponsiveTable
+            data={items}
+            columns={columns}
+            loading={loading}
+            emptyMessage="No inventory items found matching your criteria"
+            onRowClick={(item) => {
+              setSelectedItem(item);
+              setShowEditModal(true);
+            }}
+            enableSorting={true}
+            enableFiltering={false}
+            enablePagination={true}
+            showPagination={true}
+            pageSize={itemsPerPage}
+          />
+        </Card>
       </div>
         </div>
         )}

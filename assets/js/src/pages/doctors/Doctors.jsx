@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import StatusMessage from '../../components/StatusMessage';
+import ResponsiveTable from '../../components/ResponsiveTable';
 import { api } from '../../services/apiService';
 import { useUserAccess } from '../../hooks/useUserAccess';
 
@@ -28,6 +29,106 @@ const Doctors = () => {
   const [perPage, setPerPage] = useState(10);
   const [successMessage, setSuccessMessage] = useState('');
   const [showBookingTooltip, setShowBookingTooltip] = useState(false);
+  const [showButtonHighlight, setShowButtonHighlight] = useState(false);
+
+  // Table columns configuration
+  const columns = useMemo(() => [
+    {
+      id: 'name',
+      header: 'Name',
+      accessorFn: row => `${row.first_name || ''} ${row.last_name || ''}`,
+      cell: ({ row }) => {
+        const doctor = row.original;
+        const fullName = doctor.fullName || `${doctor.first_name} ${doctor.last_name}`;
+        
+        return (
+          <div className="flex items-center min-w-0">
+            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 text-blue-600 font-medium text-sm flex-shrink-0">
+              {fullName.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                {fullName}
+              </div>
+              <div className="text-sm text-gray-500 truncate">
+                ID: {doctor.ID}
+              </div>
+            </div>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false },
+      size: 200,
+    },
+    {
+      id: 'specialty',
+      header: 'Specialty',
+      accessorKey: 'specialty',
+      cell: ({ getValue }) => (
+        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 truncate">
+          {getValue() || 'General'}
+        </span>
+      ),
+      meta: { hideOnMobile: true, hideOnTablet: false },
+      size: 150,
+    },
+    {
+      id: 'phone',
+      header: 'Phone',
+      accessorKey: 'phone',
+      cell: ({ getValue }) => (
+        <span className="text-sm text-gray-900 truncate">
+          {getValue() || '-'}
+        </span>
+      ),
+      meta: { hideOnMobile: true, hideOnTablet: true },
+      size: 120,
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => {
+        const doctor = row.original;
+        
+        return (
+          <div className="flex space-x-2 justify-center">
+            <Link
+              to={`/doctors/${doctor.ID}`}
+              className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              View
+            </Link>
+            {canManageDoctors && (
+              <Link
+                to={`/doctors/${doctor.ID}/edit`}
+                className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit
+              </Link>
+            )}
+            <Link
+              to={`/appointments/book/${doctor.ID}`}
+              className={`inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${showButtonHighlight ? 'ring-2 ring-green-500 ring-offset-2 animate-pulse' : ''}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Book
+            </Link>
+          </div>
+        );
+      },
+      meta: { hideOnMobile: false },
+      size: 200,
+    },
+  ], [canManageDoctors, showButtonHighlight]);
 
   // Fetch doctors from API
   const fetchDoctors = useCallback(async () => {
@@ -107,9 +208,6 @@ const Doctors = () => {
     // We don't need a return function here as we're not setting up any timers or subscriptions
   }, [fetchDoctors, manualFetchRequested, doctors.length]);
   
-  // State to control button highlight effect
-  const [showButtonHighlight, setShowButtonHighlight] = useState(false);
-
   // Check if user came from dashboard and show the booking tooltip and button highlights
   useEffect(() => {
     // Check if referrer is the dashboard
@@ -251,7 +349,7 @@ const Doctors = () => {
           </p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0">
+        <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
           <div className="flex items-center justify-center w-full sm:w-auto">
             <div className="flex-1 flex justify-between sm:hidden">
               <Button
@@ -441,109 +539,14 @@ const Doctors = () => {
           <div className="bg-red-50 text-red-800 p-4 rounded-lg">
             {error}
           </div>
-        ) : !hasValidDoctorData() ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">No doctors found.</p>
-          </div>
         ) : (
-          <div className="overflow-x-auto relative">
-            {/* Add a positioned container for the tooltip */}
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('last_name')}
-                  >
-                    <span className="flex items-center">
-                      Name
-                      <SortIndicator field="last_name" />
-                    </span>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                    onClick={() => handleSort('specialty')}
-                  >
-                    <span className="flex items-center">
-                      Specialty
-                      <SortIndicator field="specialty" />
-                    </span>
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Phone
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {doctors.map((doctor) => (
-                  <tr key={doctor.ID} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {doctor.fullName || `${doctor.first_name} ${doctor.last_name}`}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        {doctor.specialty}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {doctor.phone}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex justify-center space-x-2">
-                        <Link
-                          to={`/doctors/${doctor.ID}`}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View
-                        </Link>
-                        <Link
-                          to={`/appointments/book/${doctor.ID}`}
-                          className={`inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${showButtonHighlight ? 'ring-2 ring-green-500 ring-offset-2 animate-pulse' : ''}`}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          Book Appointment
-                        </Link>
-                        {canManageDoctors && (
-                          <Link
-                            to={`/doctors/${doctor.ID}/edit`}
-                            className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
-                          </Link>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ResponsiveTable
+            data={doctors}
+            columns={columns}
+            loading={loading}
+            emptyMessage="No doctors found"
+            showPagination={false} // We'll use custom pagination
+          />
         )}
         
         {/* Booking tooltip */}
