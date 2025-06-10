@@ -4,6 +4,13 @@ import { api } from '../services/apiService';
 import authService from '../services/authService';
 import userAccessService from '../services/UserAccessService';
 
+// Development environment detection
+const isDevelopment = () => {
+  return window.location.hostname === 'localhost' || 
+         window.location.hostname === '127.0.0.1' ||
+         window.location.port === '10008';
+};
+
 // Create authentication context
 const AuthContext = createContext();
 
@@ -19,6 +26,23 @@ export function AuthProvider({ children }) {
     async function checkAuthStatus() {
       try {
         setLoading(true);
+        
+        // Development bypass - automatically authenticate as admin
+        if (isDevelopment()) {
+          console.log('🔧 Development mode: Bypassing authentication');
+          const mockUser = {
+            ID: 1,
+            display_name: 'Dev Admin',
+            user_email: 'admin@dev.local',
+            roles: ['administrator'],
+            name: 'Dev Admin',
+            first_name: 'Dev',
+            last_name: 'Admin'
+          };
+          setUser(mockUser);
+          setLoading(false);
+          return;
+        }
         
         // Check if we have a token using authService
         const token = authService.getToken();
@@ -119,6 +143,23 @@ export function AuthProvider({ children }) {
 
   // Login function with automatic CSRF retry
   const login = async (username, password, rememberMe = false, isRetry = false) => {
+    // Development bypass - always return success
+    if (isDevelopment()) {
+      console.log('🔧 Development mode: Bypassing login');
+      const mockUser = {
+        ID: 1,
+        display_name: 'Dev Admin',
+        user_email: 'admin@dev.local',
+        roles: ['administrator'],
+        name: 'Dev Admin',
+        first_name: 'Dev',
+        last_name: 'Admin'
+      };
+      setUser(mockUser);
+      setLoading(false);
+      return true;
+    }
+    
     try {
       setLoading(true);
       setError(null);
