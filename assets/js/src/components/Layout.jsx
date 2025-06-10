@@ -113,7 +113,7 @@ const Layout = ({ children }) => {
 
   // Render the main layout
   return (
-    <div className="min-h-screen flex bg-gray-100 w-full">
+    <div className="min-h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -128,6 +128,7 @@ const Layout = ({ children }) => {
         md:translate-x-0 fixed md:sticky top-0 h-screen z-50 md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
+        md:block
       `}>
         <Sidebar 
           isOpen={sidebarOpen} 
@@ -140,7 +141,7 @@ const Layout = ({ children }) => {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <header className="shadow-sm z-10 sticky top-0 bg-gradient-to-r from-blue-50 to-primary-50">
-          <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="px-2 md:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 {/* Mobile menu button */}
@@ -251,7 +252,7 @@ const Layout = ({ children }) => {
 
         {/* Main content area */}
         <main className="flex-1 bg-gray-100">
-          <div className="py-6 px-4 md:px-6 lg:px-8 w-full max-w-full">
+          <div className="py-6 px-0 md:px-6 lg:px-8 w-full max-w-full">
             {children}
           </div>
         </main>

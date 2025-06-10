@@ -11,6 +11,15 @@
   @apply py-6;
 }
 
+/* Responsive mobile fixes - remove padding for screens 800px and below */
+@media (max-width: 800px) {
+  .entry-content,
+  .hospital-manager-container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
 /* Custom utility classes */
 .border-b-3 {
   border-bottom-width: 3px;

@@ -260,7 +260,7 @@ const Profile = () => {
           )}
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 md:mx-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div className="flex items-center space-x-4">
             <div className="h-16 w-16 rounded-full bg-white bg-opacity-20 flex items-center justify-center">

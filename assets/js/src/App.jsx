@@ -46,6 +46,8 @@ const appStyles = `
     position: relative !important;
     z-index: 999 !important;
     transform: translateY(-20px) !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   /* Remove any default WordPress spacing */
@@ -53,6 +55,8 @@ const appStyles = `
     margin-top: 0 !important;
     padding-top: 10px !important;
     min-height: calc(100vh - 80px);
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   /* Override any theme-specific margins */
@@ -61,11 +65,46 @@ const appStyles = `
   main #hospital-manager-root {
     margin-top: -120px !important;
     margin-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
   
   /* Adjust for WordPress admin bar if present */
   body.admin-bar #hospital-manager-root {
     margin-top: -60px !important;
+  }
+  
+  /* Mobile responsive fixes */
+  @media (max-width: 768px) {
+    body #hospital-manager-root,
+    #hospital-manager-root {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      width: 100vw !important;
+      max-width: 100vw !important;
+      overflow-x: hidden !important;
+    }
+    
+    #hospital-manager-root .hospital-manager-app {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    
+    /* Ensure WordPress container doesn't add padding on mobile */
+    .wp-site-blocks #hospital-manager-root,
+    .site-content #hospital-manager-root,
+    main #hospital-manager-root {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
   }
   
   /* Force positioning for any container elements */
@@ -376,9 +415,14 @@ const App = () => {
       style={{ 
         marginTop: '0', 
         paddingTop: '10px',
+        paddingLeft: '0',
+        paddingRight: '0',
         minHeight: 'calc(100vh - 80px)',
         position: 'relative',
-        zIndex: 999
+        zIndex: 999,
+        width: '100%',
+        maxWidth: '100%',
+        overflowX: 'hidden'
       }}
     >
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
