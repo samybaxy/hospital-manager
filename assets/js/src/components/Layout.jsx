@@ -122,7 +122,7 @@ const Layout = ({ children }) => {
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="md:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity ease-linear"
+          className="md:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity ease-linear h-full"
           onClick={toggleSidebar}
         ></div>
       )}
@@ -130,7 +130,7 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 fixed md:sticky top-0 h-screen z-50 md:z-auto left-0
+        md:translate-x-0 fixed md:sticky top-0 h-full md:h-screen z-50 md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
         md:block

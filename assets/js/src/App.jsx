@@ -63,7 +63,7 @@ const appStyles = `
   .wp-site-blocks #hospital-manager-root,
   .site-content #hospital-manager-root,
   main #hospital-manager-root {
-    margin-top: -120px !important;
+    margin-top: -90px !important;
     margin-bottom: 0 !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -78,6 +78,10 @@ const appStyles = `
   
   /* Mobile responsive fixes */
   @media (max-width: 768px) {
+    /* Ensure the root element takes full width on mobile */
+    .wp-site-blocks > header {
+        display: none !important; /* Hide header on mobile */
+    }
     body #hospital-manager-root,
     #hospital-manager-root {
       margin-left: 0 !important;
@@ -130,7 +134,7 @@ const injectStyles = () => {
     // Also apply direct styles to the root element if it exists
     const rootElement = document.getElementById('hospital-manager-root');
     if (rootElement) {
-      rootElement.style.marginTop = '-60px';
+      rootElement.style.marginTop = '-90px';
       rootElement.style.position = 'relative';
       rootElement.style.zIndex = '999';
       rootElement.style.transform = 'translateY(-20px)';
