@@ -40,6 +40,11 @@ const Layout = ({ children }) => {
       setSidebarCollapsed(false);
     }
   }, [location.pathname]);
+
+  // Close mobile sidebar when location changes (navigation occurs)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
   
   // Handle click outside user menu
   useEffect(() => {
