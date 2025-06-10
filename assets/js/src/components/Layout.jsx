@@ -118,7 +118,7 @@ const Layout = ({ children }) => {
 
   // Render the main layout
   return (
-    <div className="min-h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -130,10 +130,10 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 fixed md:sticky top-0 h-full md:h-screen z-50 md:z-auto left-0
+        md:translate-x-0 fixed md:sticky top-0 md:top-0 h-full md:h-[100vh] ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
-        md:block
+        md:block sidebar-mobile-fix
       `}>
         <Sidebar 
           isOpen={sidebarOpen} 
@@ -145,7 +145,7 @@ const Layout = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="shadow-sm z-10 sticky top-0 bg-gradient-to-r from-blue-50 to-primary-50">
+        <header className={`shadow-sm ${sidebarOpen ? 'z-40' : 'z-50'} sticky top-0 bg-gradient-to-r from-blue-50 to-primary-50`}>
           <div className="px-2 md:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">

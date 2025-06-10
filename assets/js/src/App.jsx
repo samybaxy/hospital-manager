@@ -82,6 +82,10 @@ const appStyles = `
     .wp-site-blocks > header {
         display: none !important; /* Hide header on mobile */
     }
+    .sidebar-mobile-fix {
+        margin-top: 30px !important; /* Adjust sidebar margin for mobile */
+    }
+
     body #hospital-manager-root,
     #hospital-manager-root {
       margin-left: 0 !important;
