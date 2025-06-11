@@ -11,6 +11,17 @@
 
 #hospital-manager-root {
   @apply py-6;
+  /* Prevent unwanted scrollbars */
+  overflow-x: hidden;
+  height: auto;
+  min-height: auto;
+}
+
+/* Prevent fixed height constraints that cause overflow */
+.hospital-manager-app {
+  height: auto !important;
+  min-height: auto !important;
+  overflow-x: hidden;
 }
 
 /* Ensure fluid width for larger screens while preserving responsive design */
@@ -37,6 +48,47 @@
     padding-left: 0 !important;
     padding-right: 0 !important;
   }
+}
+
+/* Prevent unwanted scrollbars and height overflow issues */
+body.admin-bar #hospital-manager-root,
+body #hospital-manager-root {
+  height: auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+  overflow-x: hidden !important;
+}
+
+/* Fix layout height issues */
+.hospital-manager-app > div[data-reach-router-wrapper] {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+/* Ensure main content areas don't have fixed heights */
+main.flex-1 {
+  height: auto !important;
+  min-height: auto !important;
+  flex: 1 1 auto !important;
+}
+
+/* Fix sidebar height on desktop to prevent overflow */
+@media (min-width: 768px) {
+  .sidebar-mobile-fix {
+    height: auto !important;
+    min-height: 100vh;
+    max-height: none !important;
+  }
+}
+
+/* Remove height constraints from containers */
+.min-h-screen {
+  min-height: auto !important;
+}
+
+/* Allow content to flow naturally without height constraints */
+div[class*="h-screen"] {
+  height: auto !important;
 }
 
 /* Custom utility classes */

@@ -54,7 +54,6 @@ const appStyles = `
   #hospital-manager-root .hospital-manager-app {
     margin-top: 0 !important;
     padding-top: 10px !important;
-    min-height: calc(100vh - 80px);
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -438,7 +437,6 @@ const App = () => {
         paddingTop: '10px',
         paddingLeft: '0',
         paddingRight: '0',
-        minHeight: 'calc(100vh - 80px)',
         position: 'relative',
         zIndex: 999,
         width: '100%',

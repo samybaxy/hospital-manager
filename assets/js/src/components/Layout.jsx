@@ -118,7 +118,7 @@ const Layout = ({ children }) => {
 
   // Render the main layout
   return (
-    <div className="min-h-screen h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -130,7 +130,7 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 fixed md:sticky top-0 md:top-0 h-full md:h-[100vh] ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
+        md:translate-x-0 fixed md:sticky top-0 md:top-0 h-full md:h-auto ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
         md:block sidebar-mobile-fix
