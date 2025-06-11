@@ -490,7 +490,7 @@ const Visitations = () => {
         const visitation = row.original;
         
         return (
-          <div className="flex space-x-1 justify-end">
+          <div className="flex space-x-1 justify-center">
             <Button 
               variant="secondary" 
               size="sm" 
@@ -546,7 +546,7 @@ const Visitations = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      meta: { hideOnMobile: false, headerAlign: 'text-center' },
       size: 300,
     },
   ], [currentPage, perPage, canEditVisit, canAddLabInvestigation, canDeleteVisit, handleViewVisit, handleEditVisit, handleAddLabInvestigation, handleDeleteVisit, deleteLoading, formatDateTime]);

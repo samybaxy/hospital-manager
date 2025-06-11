@@ -110,12 +110,17 @@ const ResponsiveTable = ({
                     return (
                       <th
                         key={header.id}
-                        className={`px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                        className={`px-4 lg:px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                          column.meta?.headerAlign || 'text-left'
+                        } ${
                           header.column.getCanSort() ? 'cursor-pointer select-none hover:bg-gray-100' : ''
                         }`}
                         onClick={header.column.getToggleSortingHandler()}
                       >
-                        <div className="flex items-center space-x-1">
+                        <div className={`flex items-center space-x-1 ${
+                          column.meta?.headerAlign === 'text-center' ? 'justify-center' :
+                          column.meta?.headerAlign === 'text-right' ? 'justify-end' : 'justify-start'
+                        }`}>
                           <span>
                             {header.isPlaceholder
                               ? null
@@ -156,7 +161,9 @@ const ResponsiveTable = ({
                     if (hideOnTablet) return null;
                     
                     return (
-                      <td key={cell.id} className="px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td key={cell.id} className={`px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${
+                        column.meta?.headerAlign || 'text-left'
+                      }`}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     );

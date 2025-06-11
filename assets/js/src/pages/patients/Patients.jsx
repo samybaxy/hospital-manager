@@ -97,7 +97,7 @@ const Patients = () => {
       cell: ({ getValue }) => {
         const hmoName = getValue();
         return (
-          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full truncate max-w-24 ${
+          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
             hmoName
               ? 'bg-green-100 text-green-800'
               : 'bg-gray-100 text-gray-800'
@@ -107,7 +107,7 @@ const Patients = () => {
         );
       },
       meta: { hideOnMobile: true, hideOnTablet: true },
-      size: 100,
+      size: 120,
     },
     {
       id: 'lastVisit',
@@ -132,7 +132,7 @@ const Patients = () => {
         const patientId = patient.ID || patient.id;
         
         return (
-          <div className="flex justify-end space-x-1 sm:space-x-2">
+          <div className="flex justify-center space-x-1 sm:space-x-2">
             <Link 
               to={`/patients/${patientId}`} 
               className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -164,7 +164,7 @@ const Patients = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false, hideOnTablet: false },
+      meta: { hideOnMobile: false, hideOnTablet: false, headerAlign: 'text-center' },
       size: 150,
     },
   ], [currentPage, perPage]);

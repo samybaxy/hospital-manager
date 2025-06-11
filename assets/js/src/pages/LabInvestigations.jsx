@@ -194,7 +194,7 @@ const LabInvestigations = () => {
       cell: ({ row }) => {
         const investigation = row.original;
         return (
-          <div className="flex justify-end space-x-1 sm:space-x-2">
+          <div className="flex justify-center space-x-1 sm:space-x-2">
             <button
               onClick={() => { openModal(investigation, 'view'); }}
               className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -232,7 +232,8 @@ const LabInvestigations = () => {
       },
       meta: {
         hideOn: [],
-        cardLabel: 'Actions'
+        cardLabel: 'Actions',
+        headerAlign: 'text-center'
       }
     }
   ], [currentPage, perPage, userIsPatient]);

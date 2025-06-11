@@ -296,7 +296,7 @@ const Appointments = () => {
         const appointment = row.original;
         
         return (
-          <div className="flex space-x-2 justify-end">
+          <div className="flex space-x-2 justify-center">
             <Link 
               to={`/appointments/${appointment.ID}`} 
               state={{ returnTo: 'appointments', returnPath: '/appointments' }}
@@ -370,7 +370,7 @@ const Appointments = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      meta: { hideOnMobile: false, headerAlign: 'text-center' },
       size: 250,
     },
   ], [role, handleCancelClick, fetchAppointments]);
