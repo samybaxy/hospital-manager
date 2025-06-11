@@ -534,15 +534,6 @@ const LabInvestigations = () => {
 
   return (
     <div className="space-y-6">
-      {/* Status Message */}
-      {statusMessage.show && (
-        <StatusMessage
-          message={statusMessage.message}
-          type={statusMessage.type}
-          onDismiss={handleStatusMessageDismiss}
-        />
-      )}
-      
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
@@ -559,6 +550,17 @@ const LabInvestigations = () => {
       
       {/* Search and Filter Controls */}
       <Card>
+        {/* Status Message */}
+        {statusMessage.show && (
+          <div className="mb-6">
+            <StatusMessage
+              message={statusMessage.message}
+              type={statusMessage.type}
+              onDismiss={handleStatusMessageDismiss}
+            />
+          </div>
+        )}
+        
         <div className="mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">

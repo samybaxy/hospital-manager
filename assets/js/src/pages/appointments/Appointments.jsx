@@ -296,17 +296,17 @@ const Appointments = () => {
         const appointment = row.original;
         
         return (
-          <div className="flex space-x-2 justify-center">
+          <div className="flex justify-end space-x-1 sm:justify-center sm:space-x-2">
             <Link 
               to={`/appointments/${appointment.ID}`} 
               state={{ returnTo: 'appointments', returnPath: '/appointments' }}
-              className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              Details
+              <span className="hidden sm:inline">Details</span>
             </Link>
             
             {appointment.status === 'pending' && (
@@ -315,16 +315,16 @@ const Appointments = () => {
                   <button
                     onClick={() => role !== 'patient' ? api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments) : null}
                     disabled={role === 'patient'}
-                    className={`inline-flex items-center px-2.5 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                       role === 'patient'
                         ? 'border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed'
                         : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100 focus:ring-green-500'
                     }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Confirm
+                    <span className="hidden sm:inline">Confirm</span>
                   </button>
                   {role === 'patient' && (
                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
@@ -335,12 +335,12 @@ const Appointments = () => {
                 </div>
                 <button
                   onClick={() => handleCancelClick(appointment.ID)}
-                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Cancel
+                  <span className="hidden sm:inline">Cancel</span>
                 </button>
               </>
             )}
@@ -349,21 +349,21 @@ const Appointments = () => {
               <>
                 <button
                   onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'completed' }).then(fetchAppointments)}
-                  className="inline-flex items-center px-2.5 py-1.5 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Mark Completed
+                  <span className="hidden sm:inline">Mark Completed</span>
                 </button>
                 <button
                   onClick={() => handleCancelClick(appointment.ID)}
-                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  Cancel
+                  <span className="hidden sm:inline">Cancel</span>
                 </button>
               </>
             )}
@@ -638,10 +638,10 @@ const hasValidAppointmentData = () => {
                 }`}
                 disabled={role !== 'patient'}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Book Appointment
+                <span className="text-sm">Book Appointment</span>
               </Button>
             </Link>
             {role !== 'patient' && (
@@ -657,12 +657,14 @@ const hasValidAppointmentData = () => {
       <Card>
         {/* Success message */}
         {successMessage && (
-          <StatusMessage 
-            type="success"
-            message={successMessage}
-            duration={5000}
-            onDismiss={() => setSuccessMessage('')}
-          />
+          <div className="mb-6">
+            <StatusMessage 
+              type="success"
+              message={successMessage}
+              duration={5000}
+              onDismiss={() => setSuccessMessage('')}
+            />
+          </div>
         )}
 
         {/* Search and filters */}
@@ -777,17 +779,17 @@ const hasValidAppointmentData = () => {
               <Link to={role === 'patient' ? "/doctors" : "#"}>
                 <Button 
                   variant="primary"
-                  className={`inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  className={`inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 mt-4 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                     role === 'patient'
                       ? 'text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500'
                       : 'text-gray-400 bg-gray-300 cursor-not-allowed'
                   }`}
                   disabled={role !== 'patient'}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  Book an Appointment
+                  <span className="text-sm">Book an Appointment</span>
                 </Button>
               </Link>
               {role !== 'patient' && (

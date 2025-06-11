@@ -132,7 +132,7 @@ const Patients = () => {
         const patientId = patient.ID || patient.id;
         
         return (
-          <div className="flex justify-center space-x-1 sm:space-x-2">
+          <div className="flex justify-end space-x-1 sm:justify-center sm:space-x-2">
             <Link 
               to={`/patients/${patientId}`} 
               className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
