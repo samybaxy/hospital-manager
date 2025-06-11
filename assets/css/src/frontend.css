@@ -4,11 +4,30 @@
 
 /* Custom styles for Hospital Manager */
 .hospital-manager-container {
-  @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  /* Remove max-width constraint for larger screens */
+  max-width: none;
 }
 
 #hospital-manager-root {
   @apply py-6;
+}
+
+/* Ensure fluid width for larger screens while preserving responsive design */
+@media (min-width: 1280px) {
+  .hospital-manager-container,
+  #hospital-manager-root,
+  .hospital-manager-app {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure main content areas are also fluid */
+  main,
+  main > div {
+    max-width: none !important;
+    width: 100% !important;
+  }
 }
 
 /* Responsive mobile fixes - remove padding for screens 800px and below */

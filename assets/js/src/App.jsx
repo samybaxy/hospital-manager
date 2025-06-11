@@ -115,6 +115,19 @@ const appStyles = `
     }
   }
   
+  /* Fluid width for larger screens */
+  @media (min-width: 1280px) {
+    body #hospital-manager-root,
+    #hospital-manager-root,
+    #hospital-manager-root .hospital-manager-app,
+    .wp-site-blocks #hospital-manager-root,
+    .site-content #hospital-manager-root,
+    main #hospital-manager-root {
+      max-width: none !important;
+      width: 100% !important;
+    }
+  }
+  
   /* Force positioning for any container elements */
   #hospital-manager-root * {
     box-sizing: border-box;
