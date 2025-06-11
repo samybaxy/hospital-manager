@@ -302,6 +302,11 @@ const LabInvestigations = () => {
           setCurrentPage(page);
         }
         
+        // Show success message only on initial load (page 1) and if there are investigations
+        if (page === 1 && response.data && response.data.length > 0) {
+          showStatusMessage(`Lab Investigations data loaded successfully (${response.data.length} records found)`, 'success');
+        }
+        
         setError(null);
         setLoading(false);
         return; // Skip the original service call
@@ -324,6 +329,11 @@ const LabInvestigations = () => {
         setTotalPages(Math.ceil((response.total || 0) / perPage));
         setTotalRecords(response.total || 0);
         setCurrentPage(page);
+      }
+      
+      // Show success message only on initial load (page 1) and if there are investigations
+      if (page === 1 && response.data && response.data.length > 0) {
+        showStatusMessage(`Lab Investigations data loaded successfully (${response.data.length} records found)`, 'success');
       }
       
       setError(null);
@@ -533,7 +543,7 @@ const LabInvestigations = () => {
         />
       )}
       
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold">Laboratory Investigations</h1>
