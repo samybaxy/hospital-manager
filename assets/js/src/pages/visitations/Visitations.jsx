@@ -714,13 +714,9 @@ const Visitations = () => {
               data={visitations}
               columns={columns}
               rowKey="ID"
-              manualPagination
-              onPageChange={setCurrentPage}
-              onPageSizeChange={setPerPage}
-              pageSize={perPage}
-              currentPage={currentPage}
-              totalCount={totalRecords}
               loading={loading}
+              showPagination={false}
+              enablePagination={false}
               renderRowActions={(row) => {
                 const visitation = row.original;
                 

@@ -194,7 +194,7 @@ const LabInvestigations = () => {
       cell: ({ row }) => {
         const investigation = row.original;
         return (
-          <div className="flex justify-center space-x-1 sm:space-x-2">
+          <div className="flex justify-end space-x-1 sm:space-x-2">
             <button
               onClick={() => { openModal(investigation, 'view'); }}
               className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -407,6 +407,64 @@ const LabInvestigations = () => {
     handlePageChange(newPage);
   };
 
+  // Pagination render function
+  const renderPagination = useMemo(() => {
+    const pagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+    
+    if (endPage - startPage + 1 < pagesToShow) {
+      startPage = Math.max(1, endPage - pagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return (
+      <div className="flex items-center gap-1">
+        {startPage > 1 && (
+          <>
+            <button 
+              onClick={() => handlePageChange(1)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+        
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            className={`relative inline-flex items-center px-3 py-2 border ${
+              currentPage === page
+                ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+            } text-sm font-medium`}
+          >
+            {page}
+          </button>
+        ))}
+        
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }, [currentPage, totalPages, handlePageChange]);
+
   const openModal = (investigation, type = 'view') => {
     setSelectedInvestigation(investigation);
     setModalType(type);
@@ -614,16 +672,82 @@ const LabInvestigations = () => {
           loading={loading}
           onRowClick={handleRowClick}
           emptyMessage={loading ? 'Loading...' : 'No investigations found'}
-          pagination={{
-            currentPage,
-            totalPages,
-            totalRecords,
-            perPage,
-            onPageChange: setCurrentPage,
-            onPreviousPage: handlePreviousPage,
-            onNextPage: handleNextPage
-          }}
+          showPagination={false}
+          enablePagination={false}
         />
+
+        {/* Custom Pagination */}
+        {!loading && investigations.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+            <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+              <p>
+                Showing <span className="font-semibold">{((currentPage - 1) * perPage) + 1}</span>{' '}
+                to <span className="font-semibold">{Math.min(currentPage * perPage, totalRecords)}</span>{' '}
+                of <span className="font-semibold">{totalRecords}</span> investigations
+              </p>
+            </div>
+            
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                  currentPage === 1
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className={`ml-3 relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            
+            <div className="hidden sm:flex">
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium ${
+                    currentPage === 1
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                
+                {/* Page numbers */}
+                {renderPagination}
+                
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Modal for viewing/editing investigations and results */}
