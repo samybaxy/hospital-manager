@@ -6,9 +6,10 @@ import userAccessService from '../services/UserAccessService';
 
 // Development environment detection
 const isDevelopment = () => {
-  return window.location.hostname === 'localhost' || 
-         window.location.hostname === '127.0.0.1' ||
-         window.location.port === '10008';
+    return false; // Set to true if you want to enable development mode bypass
+    return window.location.hostname === 'localhost' || 
+            window.location.hostname === '127.0.0.1' ||
+            window.location.port === '10008';
 };
 
 // Create authentication context

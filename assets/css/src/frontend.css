@@ -7,6 +7,12 @@
 
 /* ===== CORE RESET & FOUNDATION ===== */
 /* Clean slate for the hospital manager app */
+div.wp-site-blocks > main,
+.wp-block-group {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
 #hospital-manager-root {
   /* Reset all positioning and spacing */
   position: static !important;
