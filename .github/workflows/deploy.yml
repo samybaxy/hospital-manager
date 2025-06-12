@@ -44,4 +44,6 @@ jobs:
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
           REMOTE_USER: ${{ secrets.SSH_USER }}
           TARGET: ${{ secrets.SSH_TARGET }}
-          EXCLUDE: "--exclude=dist/ --exclude=node_modules/"
+          EXCLUDE: |
+            dist/
+            node_modules/
