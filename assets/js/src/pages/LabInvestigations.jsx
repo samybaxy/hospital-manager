@@ -103,7 +103,7 @@ const LabInvestigations = () => {
       accessorKey: 'serial',
       header: 'S/N',
       cell: ({ row }) => (
-        <span className="text-sm text-gray-500 font-medium">
+        <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
           {(currentPage - 1) * perPage + row.index + 1}
         </span>
       ),
@@ -111,11 +111,12 @@ const LabInvestigations = () => {
       meta: {
         hideOnMobile: true,
         hideOnTablet: true,
-        className: 'text-center font-medium w-16 min-w-16',
+        className: 'text-center font-medium min-w-[80px] w-20',
         cardLabel: 'Serial'
       },
       size: 80,
       minSize: 80,
+      maxSize: 80,
     },
     ...(userIsPatient ? [] : [{
       accessorKey: 'patient_name',
@@ -650,7 +651,7 @@ const LabInvestigations = () => {
   return (
     <div className="space-y-6">
       {/* Apply responsive header pattern from the guide */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Laboratory Investigations</h1>
