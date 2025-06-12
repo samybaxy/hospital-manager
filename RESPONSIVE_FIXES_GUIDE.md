@@ -286,7 +286,7 @@ return (
 
 ---
 
-### 4. `Patients.jsx` - Mobile-Optimized Table
+### 4. `Patients.jsx`, `Doctors.jsx` & `Appointments.jsx` - Mobile-Optimized Tables
 
 #### **Mobile Header Alignment**
 ```jsx
@@ -297,32 +297,53 @@ return (
 ```jsx
 const columns = useMemo(() => [
   {
-    id: 'serialNumber',
+    id: 'serialNumber', // (Patients only)
     header: 'S/N',
     // Hide on mobile AND tablet for better mobile experience
     meta: { hideOnMobile: true, hideOnTablet: true },
     size: 60,
   },
   {
-    id: 'patient',
-    header: 'Patient',
+    id: 'patient', // or 'name' for doctors, 'datetime' for appointments
+    header: 'Patient', // or 'Name' for doctors, 'Date & Time' for appointments
     // Always visible - core information
     meta: { hideOnMobile: false, hideOnTablet: false },
     size: 200,
   },
   {
-    id: 'contact',
-    header: 'Contact',
+    id: 'contact', // or 'specialty' for doctors, 'patient'/'doctor' for appointments
+    header: 'Contact', // or 'Specialty' for doctors, 'Patient'/'Doctor' for appointments
     // Hide on mobile only
     meta: { hideOnMobile: true, hideOnTablet: false },
     size: 150,
   },
   {
+    id: 'phone', // (Doctors only - additional column)
+    header: 'Phone',
+    // Hide on mobile AND tablet
+    meta: { hideOnMobile: true, hideOnTablet: true },
+    size: 120,
+  },
+  {
+    id: 'status', // (Appointments only)
+    header: 'Status',
+    // Always visible - important information
+    meta: { hideOnMobile: false, hideOnTablet: false },
+    size: 120,
+  },
+  {
+    id: 'reason', // (Appointments only - additional column)
+    header: 'Reason',
+    // Hide on mobile AND tablet
+    meta: { hideOnMobile: true, hideOnTablet: true },
+    size: 200,
+  },
+  {
     id: 'actions',
     header: 'Actions',
     // Always visible - critical functionality
-    meta: { hideOnMobile: false, hideOnTablet: false },
-    size: 150,
+    meta: { hideOnMobile: false, hideOnTablet: false, headerAlign: 'text-center' },
+    size: 150, // 250 for appointments (more actions)
   },
 ], [currentPage, perPage]);
 ```
@@ -335,6 +356,59 @@ const columns = useMemo(() => [
     <span className="hidden sm:inline">View</span>
   </Link>
 </div>
+```
+
+#### **Mobile-Responsive Avatar/Initials**
+```jsx
+<div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 flex items-center justify-center mr-2 sm:mr-3 text-gray-600 font-medium text-xs sm:text-sm flex-shrink-0">
+  {initials}
+</div>
+<div className="min-w-0 flex-1">
+  <div className="text-sm font-medium text-gray-900 truncate">
+    {name}
+  </div>
+  <div className="text-xs sm:text-sm text-gray-500 truncate">
+    {subtitle}
+  </div>
+</div>
+```
+
+#### **Appointments-Specific Patterns**
+```jsx
+// Status badges with responsive styling
+<span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(status)}`}>
+  {status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending'}
+</span>
+
+// DateTime formatting with fallbacks
+const formatDateTime = (date, time) => {
+  if (!date) return 'No date set';
+  try {
+    const appointmentDate = new Date(date);
+    const dateStr = appointmentDate.toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    });
+    const timeStr = time ? new Date(`1970-01-01T${time}`).toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true
+    }) : 'No time set';
+    return `${dateStr} at ${timeStr}`;
+  } catch (error) {
+    return `${date} ${time ? `at ${time}` : ''}`;
+  }
+};
+
+// Complex action buttons with conditional rendering
+{appointment.status === 'pending' && (
+  <>
+    <div className="relative group">
+      <button className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5">
+        <svg className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+        <span className="hidden sm:inline">Confirm</span>
+      </button>
+      {/* Tooltip for restricted users */}
+    </div>
+  </>
+)}
 ```
 
 ---

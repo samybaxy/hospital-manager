@@ -235,7 +235,7 @@ const Appointments = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 200,
     },
     ...(role !== 'patient' ? [{
@@ -274,7 +274,7 @@ const Appointments = () => {
           </span>
         );
       },
-      meta: { hideOnMobile: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 120,
     },
     {
@@ -370,7 +370,7 @@ const Appointments = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false, headerAlign: 'text-center' },
+      meta: { hideOnMobile: false, hideOnTablet: false, headerAlign: 'text-center' },
       size: 250,
     },
   ], [role, handleCancelClick, fetchAppointments]);
@@ -621,10 +621,10 @@ const hasValidAppointmentData = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Appointments</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Appointments</h1>
             <p className="text-blue-100 mt-2">
               Manage patient appointments and scheduling
             </p>

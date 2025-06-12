@@ -43,21 +43,21 @@ const Doctors = () => {
         
         return (
           <div className="flex items-center min-w-0">
-            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 text-blue-600 font-medium text-sm flex-shrink-0">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center mr-2 sm:mr-3 text-blue-600 font-medium text-xs sm:text-sm flex-shrink-0">
               {fullName.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 truncate">
                 {fullName}
               </div>
-              <div className="text-sm text-gray-500 truncate">
+              <div className="text-xs sm:text-sm text-gray-500 truncate">
                 ID: {doctor.ID}
               </div>
             </div>
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 200,
     },
     {
@@ -126,7 +126,7 @@ const Doctors = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false, headerAlign: 'text-center' },
+      meta: { hideOnMobile: false, hideOnTablet: false, headerAlign: 'text-center' },
       size: 200,
     },
   ], [canManageDoctors, showButtonHighlight]);
@@ -453,10 +453,10 @@ const Doctors = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Doctors</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Doctors</h1>
             <p className="text-blue-100 mt-2">
               Manage doctor profiles, specialties, and scheduling
             </p>
