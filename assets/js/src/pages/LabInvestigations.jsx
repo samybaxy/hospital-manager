@@ -97,53 +97,100 @@ const LabInvestigations = () => {
     labTechId: null
   });
 
-  // Define table columns
+  // Define table columns - applying responsive patterns from guide
   const columns = useMemo(() => [
     {
       accessorKey: 'serial',
       header: 'S/N',
-      cell: ({ row }) => (currentPage - 1) * perPage + row.index + 1,
+      cell: ({ row }) => (
+        <span className="text-sm text-gray-500 font-medium">
+          {(currentPage - 1) * perPage + row.index + 1}
+        </span>
+      ),
+      // Hide on mobile AND tablet for better mobile experience
       meta: {
+        hideOnMobile: true,
+        hideOnTablet: true,
         className: 'text-center font-medium w-16 min-w-16',
-        hideOn: [],
         cardLabel: 'Serial'
-      }
+      },
+      size: 60,
     },
     ...(userIsPatient ? [] : [{
       accessorKey: 'patient_name',
       header: 'Patient',
-      cell: ({ getValue }) => getValue() || 'Unknown Patient',
+      cell: ({ getValue }) => {
+        const patientName = getValue() || 'Unknown Patient';
+        const initials = patientName.charAt(0).toUpperCase();
+        
+        return (
+          <div className="flex items-center min-w-0">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 flex items-center justify-center mr-2 sm:mr-3 text-gray-600 font-medium text-xs sm:text-sm flex-shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium text-gray-900 truncate">
+                {patientName}
+              </div>
+            </div>
+          </div>
+        );
+      },
+      // Hide on mobile only
       meta: {
-        hideOn: ['mobile'],
+        hideOnMobile: true,
+        hideOnTablet: false,
         cardLabel: 'Patient'
-      }
+      },
+      size: 200,
     }]),
     {
       accessorKey: 'test_type',
       header: 'Test Type',
-      cell: ({ getValue }) => getValue() || 'N/A',
+      cell: ({ getValue }) => (
+        <div className="text-sm font-medium text-gray-900 truncate">
+          {getValue() || 'N/A'}
+        </div>
+      ),
+      // Always visible - core information
       meta: {
-        hideOn: [],
+        hideOnMobile: false,
+        hideOnTablet: false,
         cardLabel: 'Test Type'
-      }
+      },
+      size: 180,
     },
     {
       accessorKey: 'doctor_name',
       header: 'Doctor',
-      cell: ({ getValue }) => getValue() || 'Unknown Doctor',
+      cell: ({ getValue }) => (
+        <div className="text-sm font-medium text-gray-900 truncate">
+          {getValue() || 'Unknown Doctor'}
+        </div>
+      ),
+      // Hide on mobile only
       meta: {
-        hideOn: ['mobile'],
+        hideOnMobile: true,
+        hideOnTablet: false,
         cardLabel: 'Doctor'
-      }
+      },
+      size: 150,
     },
     {
       accessorKey: 'created_at',
       header: 'Date',
-      cell: ({ getValue }) => formatDate(getValue()),
+      cell: ({ getValue }) => (
+        <div className="text-sm font-medium text-gray-900">
+          {formatDate(getValue())}
+        </div>
+      ),
+      // Hide on mobile only
       meta: {
-        hideOn: ['mobile'],
+        hideOnMobile: true,
+        hideOnTablet: false,
         cardLabel: 'Date'
-      }
+      },
+      size: 130,
     },
     {
       accessorKey: 'status',
@@ -153,10 +200,13 @@ const LabInvestigations = () => {
           {getValue()?.replace('_', ' ').toUpperCase()}
         </span>
       ),
+      // Always visible - important information
       meta: {
-        hideOn: [],
+        hideOnMobile: false,
+        hideOnTablet: false,
         cardLabel: 'Status'
-      }
+      },
+      size: 120,
     },
     {
       accessorKey: 'priority',
@@ -183,10 +233,13 @@ const LabInvestigations = () => {
           </div>
         );
       },
+      // Hide on mobile AND tablet
       meta: {
-        hideOn: ['mobile', 'tablet'],
+        hideOnMobile: true,
+        hideOnTablet: true,
         cardLabel: 'Priority'
-      }
+      },
+      size: 150,
     },
     {
       accessorKey: 'actions',
@@ -230,11 +283,14 @@ const LabInvestigations = () => {
           </div>
         );
       },
+      // Always visible - critical functionality
       meta: {
-        hideOn: [],
-        cardLabel: 'Actions',
-        headerAlign: 'text-center'
-      }
+        hideOnMobile: false,
+        hideOnTablet: false,
+        headerAlign: 'text-center',
+        cardLabel: 'Actions'
+      },
+      size: 300,
     }
   ], [currentPage, perPage, userIsPatient]);
 
@@ -592,10 +648,11 @@ const LabInvestigations = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
+      {/* Apply responsive header pattern from the guide */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Laboratory Investigations</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Laboratory Investigations</h1>
             <p className="text-blue-100 mt-2">
               {userIsPatient 
                 ? "View your laboratory test results and medical investigations"

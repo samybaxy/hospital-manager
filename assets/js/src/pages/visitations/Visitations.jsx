@@ -395,7 +395,7 @@ const Visitations = () => {
     );
   };
 
-  // Table columns configuration
+  // Table columns configuration - applying responsive patterns from guide
   const columns = useMemo(() => [
     {
       id: 'serial',
@@ -406,7 +406,8 @@ const Visitations = () => {
           {getValue()}
         </span>
       ),
-      meta: { hideOnMobile: true, hideOnTablet: false },
+      // Hide on mobile AND tablet for better mobile experience
+      meta: { hideOnMobile: true, hideOnTablet: true },
       size: 60,
     },
     {
@@ -416,13 +417,14 @@ const Visitations = () => {
       cell: ({ row }) => {
         const visitation = row.original;
         const patientName = visitation.patient_name || `Patient #${visitation.patient_id}`;
+        const initials = patientName.charAt(0).toUpperCase();
         
         return (
           <div className="flex items-center min-w-0">
-            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-xs flex-shrink-0">
-              {patientName.charAt(0).toUpperCase()}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gray-200 flex items-center justify-center mr-2 sm:mr-3 text-gray-600 font-medium text-xs sm:text-sm flex-shrink-0">
+              {initials}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-medium text-gray-900 truncate">
                 {patientName}
               </div>
@@ -430,7 +432,8 @@ const Visitations = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      // Always visible - core information
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 200,
     },
     {
@@ -439,12 +442,15 @@ const Visitations = () => {
       accessorKey: 'doctor_name',
       cell: ({ row }) => {
         const visitation = row.original;
+        const doctorName = visitation.doctor_name || `Doctor #${visitation.doctor_id}`;
+        
         return (
           <div className="text-sm font-medium text-gray-900 truncate">
-            {visitation.doctor_name || `Doctor #${visitation.doctor_id}`}
+            {doctorName}
           </div>
         );
       },
+      // Hide on mobile only
       meta: { hideOnMobile: true, hideOnTablet: false },
       size: 150,
     },
@@ -465,6 +471,7 @@ const Visitations = () => {
           </div>
         );
       },
+      // Hide on mobile AND tablet
       meta: { hideOnMobile: true, hideOnTablet: true },
       size: 200,
     },
@@ -480,7 +487,8 @@ const Visitations = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false },
+      // Always visible - important information
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 150,
     },
     {
@@ -495,9 +503,9 @@ const Visitations = () => {
               variant="secondary" 
               size="sm" 
               onClick={() => handleViewVisit(visitation.ID)}
-              className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
@@ -508,9 +516,9 @@ const Visitations = () => {
                 variant="primary" 
                 size="sm" 
                 onClick={() => handleEditVisit(visitation.ID)}
-                className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <span className="hidden sm:inline">Edit</span>
@@ -521,9 +529,9 @@ const Visitations = () => {
                 variant="success" 
                 size="sm" 
                 onClick={() => handleAddLabInvestigation(visitation)}
-                className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span className="hidden sm:inline">Lab</span>
@@ -535,9 +543,9 @@ const Visitations = () => {
                 size="sm" 
                 onClick={() => handleDeleteVisit(visitation.ID)} 
                 disabled={deleteLoading === visitation.ID}
-                className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 <span className="hidden sm:inline">{deleteLoading === visitation.ID ? '...' : 'Del'}</span>
@@ -546,17 +554,19 @@ const Visitations = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: false, headerAlign: 'text-center' },
+      // Always visible - critical functionality
+      meta: { hideOnMobile: false, hideOnTablet: false, headerAlign: 'text-center' },
       size: 300,
     },
   ], [currentPage, perPage, canEditVisit, canAddLabInvestigation, canDeleteVisit, handleViewVisit, handleEditVisit, handleAddLabInvestigation, handleDeleteVisit, deleteLoading, formatDateTime]);
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
+      {/* Apply responsive header pattern from the guide */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Patient Visitations</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Patient Visitations</h1>
             <p className="text-blue-100 mt-2">
               {role === 'patient' 
                 ? 'View your visit history and medical records' 
@@ -567,7 +577,7 @@ const Visitations = () => {
           {hasAccess('visitations', 'create') && (
             <Button 
               variant="secondary" 
-              className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700 px-3 py-2 sm:px-4 sm:py-2 text-sm sm:text-base"
+              className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700 px-2 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base"
               onClick={() => navigate('/visitations/new')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 sm:mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -726,9 +736,9 @@ const Visitations = () => {
                       variant="secondary" 
                       size="sm" 
                       onClick={() => handleViewVisit(visitation.ID)}
-                      className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
@@ -739,9 +749,9 @@ const Visitations = () => {
                         variant="primary" 
                         size="sm" 
                         onClick={() => handleEditVisit(visitation.ID)}
-                        className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         <span className="hidden sm:inline">Edit</span>
@@ -752,9 +762,9 @@ const Visitations = () => {
                         variant="success" 
                         size="sm" 
                         onClick={() => handleAddLabInvestigation(visitation)}
-                        className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="hidden sm:inline">Lab</span>
@@ -766,9 +776,9 @@ const Visitations = () => {
                         size="sm" 
                         onClick={() => handleDeleteVisit(visitation.ID)} 
                         disabled={deleteLoading === visitation.ID}
-                        className="inline-flex items-center px-1.5 py-1 sm:px-2 sm:py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                         <span className="hidden sm:inline">{deleteLoading === visitation.ID ? '...' : 'Del'}</span>
