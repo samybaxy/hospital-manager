@@ -195,6 +195,38 @@ class UserAccessService {
   }
 
   /**
+   * Check if user is hospital nurse
+   * @returns {boolean} - Whether current user is hospital nurse
+   */
+  isNurse() {
+    return this.getRole() === 'hospital_nurse';
+  }
+
+  /**
+   * Check if user is hospital staff
+   * @returns {boolean} - Whether current user is hospital staff
+   */
+  isHospitalStaff() {
+    return this.getRole() === 'hospital_staff';
+  }
+
+  /**
+   * Check if user is pharmacy staff
+   * @returns {boolean} - Whether current user is pharmacy staff
+   */
+  isPharmacyStaff() {
+    return this.getRole() === 'pharmacy_staff';
+  }
+
+  /**
+   * Check if user is inventory manager
+   * @returns {boolean} - Whether current user is inventory manager
+   */
+  isInventoryManager() {
+    return this.getRole() === 'inventory_manager';
+  }
+
+  /**
    * Get user-friendly role name
    * @returns {string} - User-friendly role name
    */
@@ -204,7 +236,11 @@ class UserAccessService {
       'doctor': 'Doctor',
       'patient': 'Patient',
       'lab_tech': 'Lab Technician',
-      'developer': 'Developer'
+      'developer': 'Developer',
+      'hospital_nurse': 'Hospital Nurse',
+      'hospital_staff': 'Hospital Staff',
+      'pharmacy_staff': 'Pharmacy Staff',
+      'inventory_manager': 'Inventory Manager'
     };
 
     return roleMap[this.getRole()] || 'Unknown Role';

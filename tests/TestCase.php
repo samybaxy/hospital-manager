@@ -61,12 +61,10 @@ class TestCase extends \WP_UnitTestCase
                 [
                     'read' => true,
                     'view_patients' => true,
-                    'edit_patients' => true,
+                    'edit_patient' => true,
+                    'manage_medical_reports' => true,
                     'schedule_appointments' => true,
-                    'create_medical_reports' => true,
-                    'add_visitation' => true,
-                    'edit_visitation' => true,
-                    'manage_medical_reports' => true
+                    'add_visitation' => true
                 ]
             );
         }
@@ -113,6 +111,62 @@ class TestCase extends \WP_UnitTestCase
                 ]
             );
         }
+        
+        // Nurse role
+        if (!get_role('hospital_nurse')) {
+            add_role(
+                'hospital_nurse',
+                'Nurse',
+                [
+                    'read' => true,
+                    'view_patients' => true,
+                    'edit_patient' => true,
+                    'add_visitation' => true
+                ]
+            );
+        }
+        
+        // Hospital Staff role
+        if (!get_role('hospital_staff')) {
+            add_role(
+                'hospital_staff',
+                'Hospital Staff',
+                [
+                    'read' => true,
+                    'view_patients' => true,
+                    'schedule_appointments' => true
+                ]
+            );
+        }
+        
+        // Pharmacy Staff role
+        if (!get_role('pharmacy_staff')) {
+            add_role(
+                'pharmacy_staff',
+                'Pharmacy Staff',
+                [
+                    'read' => true,
+                    'access_inventory' => true,
+                    'view_inventory' => true
+                ]
+            );
+        }
+        
+        // Inventory Manager role
+        if (!get_role('inventory_manager')) {
+            add_role(
+                'inventory_manager',
+                'Inventory Manager',
+                [
+                    'read' => true,
+                    'manage_inventory' => true,
+                    'view_inventory' => true,
+                    'create_inventory' => true,
+                    'edit_inventory' => true,
+                    'delete_inventory' => true
+                ]
+            );
+        }
     }
 
     /**
@@ -125,6 +179,10 @@ class TestCase extends \WP_UnitTestCase
         remove_role('patient');
         remove_role('developer');
         remove_role('lab_tech');
+        remove_role('hospital_nurse');
+        remove_role('hospital_staff');
+        remove_role('pharmacy_staff');
+        remove_role('inventory_manager');
         parent::tearDown();
     }
 

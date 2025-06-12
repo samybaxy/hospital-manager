@@ -9,6 +9,10 @@ class UserSeeder extends Seeder
         'patient' => 100,
         'lab_tech' => 5,
         'developer' => 3,
+        'hospital_nurse' => 10,
+        'hospital_staff' => 8,
+        'pharmacy_staff' => 4,
+        'inventory_manager' => 2,
         'administrator' => 1,
     ];
 
@@ -32,7 +36,17 @@ class UserSeeder extends Seeder
         }
         
         // Create one demo user for each role with known credentials
-        $demo_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'developer'];
+        $demo_roles = [
+            'administrator', 
+            'doctor', 
+            'patient', 
+            'lab_tech', 
+            'developer',
+            'hospital_nurse',
+            'hospital_staff',
+            'pharmacy_staff',
+            'inventory_manager'
+        ];
         
         foreach ($demo_roles as $role) {
             $username = 'demo_' . $role;
@@ -44,6 +58,9 @@ class UserSeeder extends Seeder
                 $user_id = wp_create_user($username, $password, $email);
                 
                 if (!is_wp_error($user_id)) {
+                    // Explicitly set password again to ensure it's properly hashed
+                    wp_set_password($password, $user_id);
+                    
                     $user = new \WP_User($user_id);
                     $user->set_role($role);
                     
@@ -72,6 +89,10 @@ class UserSeeder extends Seeder
             'patient' => 'Patient', 
             'lab_tech' => 'Lab Technician',
             'developer' => 'Developer',
+            'hospital_nurse' => 'Nurse',
+            'hospital_staff' => 'Hospital Staff',
+            'pharmacy_staff' => 'Pharmacy Staff',
+            'inventory_manager' => 'Inventory Manager',
             'administrator' => 'Administrator'
         ];
         
@@ -132,6 +153,10 @@ class UserSeeder extends Seeder
             $this->log("Error creating user: " . $user_id->get_error_message(), 'error');
             return false;
         }
+        
+        // Ensure wp_create_user properly sets the password hash
+        // This is necessary because sometimes wp_create_user doesn't correctly set the password
+        wp_set_password($password, $user_id);
         
         // Set role
         $user = new \WP_User($user_id);

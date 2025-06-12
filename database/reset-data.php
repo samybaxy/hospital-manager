@@ -80,7 +80,17 @@ foreach ($tables as $table) {
 // Remove users with plugin-specific roles
 echo "\n\033[33m" . "Removing users with plugin roles..." . "\033[0m\n";
 
-$roles = ['doctor', 'patient', 'lab_tech', 'developer', 'hospital_admin', 'inventory_manager', 'pharmacy_staff', 'hospital_nurse', 'hospital_staff'];
+$roles = [
+    'doctor', 
+    'patient', 
+    'lab_tech', 
+    'developer', 
+    'hospital_admin', 
+    'inventory_manager', 
+    'pharmacy_staff', 
+    'hospital_nurse', 
+    'hospital_staff'
+];
 $deleted_users = 0;
 
 try {

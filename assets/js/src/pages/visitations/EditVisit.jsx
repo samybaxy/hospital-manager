@@ -101,6 +101,9 @@ const EditVisit = () => {
     // Desk officers can edit any visit
     if (role === 'developer') return true;
     
+    // Nurses can edit any visit
+    if (role === 'hospital_nurse') return true;
+    
     return false;
   };
 

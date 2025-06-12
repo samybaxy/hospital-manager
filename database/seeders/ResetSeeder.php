@@ -78,7 +78,16 @@ class ResetSeeder extends Seeder
     {
         try {
             // Custom roles created by the plugin
-            $roles = ['doctor', 'patient', 'lab_tech', 'developer'];
+            $roles = [
+                'doctor', 
+                'patient', 
+                'lab_tech', 
+                'developer',
+                'hospital_nurse',
+                'hospital_staff',
+                'pharmacy_staff',
+                'inventory_manager'
+            ];
             
             foreach ($roles as $role) {
                 // Get users with this role

@@ -78,7 +78,17 @@ class BaseController extends WP_REST_Controller
             }
             
             // Check if the user has one of the allowed roles for this application
-            $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'developer'];
+            $allowed_roles = [
+                'administrator', 
+                'doctor', 
+                'patient', 
+                'lab_tech', 
+                'developer',
+                'hospital_nurse',
+                'hospital_staff',
+                'pharmacy_staff',
+                'inventory_manager'
+            ];
             $user = wp_get_current_user();
             $user_roles = (array) $user->roles;
             

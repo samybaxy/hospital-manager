@@ -88,7 +88,7 @@ const AddVisit = () => {
   };
 
   // Check access permissions
-  if (!hasAccess('visitations') || (role !== 'administrator' && role !== 'doctor' && role !== 'developer')) {
+  if (!hasAccess('visitations') || (role !== 'administrator' && role !== 'doctor' && role !== 'developer' && role !== 'hospital_nurse')) {
     return (
       <div className="max-w-2xl mx-auto py-8">
         <Card>

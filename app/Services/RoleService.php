@@ -345,6 +345,64 @@ class RoleService
             'access_settings' => false,
             'access_lab_dashboard' => true,
         ]);
+        
+        // Add Hospital Nurse role
+        add_role('hospital_nurse', 'Hospital Nurse', [
+            'read' => true,
+            'access_hospital_manager' => true,
+            'create_patients' => false,
+            'edit_patients' => true,
+            'edit_doctors' => false,
+            'delete_patients' => false,
+            'schedule_appointments' => true,
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
+            'add_visitation' => true,
+            'edit_visitation' => true,
+            'access_patients' => true,
+            'access_doctors' => true,
+            'access_departments' => true,
+            'access_appointments' => true,
+            'access_visitations' => true,
+            'access_chat' => true,
+            'access_notifications' => true,
+            'access_audit_log' => false,
+            'access_billing' => false,
+            'access_inventory' => false,
+            'access_reports' => true,
+            'access_statistics' => false,
+            'access_settings' => false,
+            'access_lab_dashboard' => false,
+        ]);
+        
+        // Add Hospital Staff role
+        add_role('hospital_staff', 'Hospital Staff', [
+            'read' => true,
+            'access_hospital_manager' => true,
+            'create_patients' => true,
+            'edit_patients' => true,
+            'edit_doctors' => false,
+            'delete_patients' => false,
+            'schedule_appointments' => true,
+            'add_lab_results' => false,
+            'edit_lab_results' => false,
+            'delete_lab_results' => false,
+            'access_patients' => true,
+            'access_doctors' => true,
+            'access_departments' => true,
+            'access_appointments' => true,
+            'access_visitations' => false,
+            'access_chat' => true,
+            'access_notifications' => true,
+            'access_audit_log' => false,
+            'access_billing' => true,
+            'access_inventory' => false,
+            'access_reports' => true,
+            'access_statistics' => true,
+            'access_settings' => false,
+            'access_lab_dashboard' => false,
+        ]);
     }
 
     /**
@@ -403,6 +461,9 @@ class RoleService
             'developer' => self::$rolePermissions[self::ROLE_DESK_OFFICER],
         ];
 
+        $existing_roles['hospital_nurse'] = self::$rolePermissions[self::ROLE_NURSE];
+        $existing_roles['hospital_staff'] = self::$rolePermissions[self::ROLE_STAFF];
+        
         foreach ($existing_roles as $role_name => $permissions) {
             $role = get_role($role_name);
             if ($role) {

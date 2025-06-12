@@ -58,6 +58,12 @@ const ViewVisitDetails = () => {
     // Developers can view any visit
     if (role === 'developer') return true;
     
+    // Nurses can view any visit
+    if (role === 'hospital_nurse') return true;
+    
+    // Hospital staff can view any visit
+    if (role === 'hospital_staff') return true;
+    
     // Patients can view their own visits - backend already handles this restriction
     // If the backend returned the data, the patient has permission to view it
     if (role === 'patient') return true;
@@ -76,6 +82,9 @@ const ViewVisitDetails = () => {
     
     // Developers can edit any visit
     if (role === 'developer') return true;
+    
+    // Nurses can edit any visit
+    if (role === 'hospital_nurse') return true;
     
     return false;
   }, [visit, role, user?.ID]);
