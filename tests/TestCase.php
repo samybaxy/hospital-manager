@@ -84,11 +84,11 @@ class TestCase extends \WP_UnitTestCase
             );
         }
         
-        // Desk Officer Role
-        if (!get_role('desk_officer')) {
+        // Developer Role
+        if (!get_role('developer')) {
             add_role(
-                'desk_officer',
-                'Desk Officer',
+                'developer',
+                'Developer',
                 [
                     'read' => true,
                     'create_patients' => true,
@@ -123,7 +123,7 @@ class TestCase extends \WP_UnitTestCase
         // Common teardown code for all tests
         remove_role('doctor');
         remove_role('patient');
-        remove_role('desk_officer');
+        remove_role('developer');
         remove_role('lab_tech');
         parent::tearDown();
     }

@@ -671,7 +671,7 @@ class AuthController extends BaseController
             delete_transient($rate_limit_key);
             
             // Check if the user has one of the allowed roles for this application
-            $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
+            $allowed_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'developer'];
             $user_roles = (array) $user->roles;
             
             // Check if any of the user's roles are in the allowed roles array

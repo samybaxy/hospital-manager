@@ -187,11 +187,11 @@ class UserAccessService {
   }
 
   /**
-   * Check if user is desk officer
-   * @returns {boolean} - Whether current user is desk officer
+   * Check if user is developer
+   * @returns {boolean} - Whether current user is developer
    */
   isDeskOfficer() {
-    return this.getRole() === 'desk_officer';
+    return this.getRole() === 'developer';
   }
 
   /**
@@ -204,7 +204,7 @@ class UserAccessService {
       'doctor': 'Doctor',
       'patient': 'Patient',
       'lab_tech': 'Lab Technician',
-      'desk_officer': 'Desk Officer'
+      'developer': 'Developer'
     };
 
     return roleMap[this.getRole()] || 'Unknown Role';

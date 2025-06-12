@@ -11,7 +11,7 @@ class RoleService
     const ROLE_STAFF = 'hospital_staff';
     const ROLE_PATIENT = 'patient';
     const ROLE_LAB_TECH = 'lab_tech';
-    const ROLE_DESK_OFFICER = 'desk_officer';
+    const ROLE_DESK_OFFICER = 'developer';
     const ROLE_INVENTORY_MANAGER = 'inventory_manager';
     const ROLE_PHARMACY = 'pharmacy_staff';
 
@@ -318,8 +318,8 @@ class RoleService
             'access_lab_dashboard' => true,
         ]);
 
-        // Add Desk Officer role
-        add_role('desk_officer', 'Desk Officer', [
+        // Add Developer role
+        add_role('developer', 'Developer', [
             'read' => true,
             'access_hospital_manager' => true,
             'create_patients' => true,
@@ -400,7 +400,7 @@ class RoleService
             'doctor' => self::$rolePermissions[self::ROLE_DOCTOR],
             'patient' => self::$rolePermissions[self::ROLE_PATIENT],
             'lab_tech' => self::$rolePermissions[self::ROLE_LAB_TECH],
-            'desk_officer' => self::$rolePermissions[self::ROLE_DESK_OFFICER],
+            'developer' => self::$rolePermissions[self::ROLE_DESK_OFFICER],
         ];
 
         foreach ($existing_roles as $role_name => $permissions) {
@@ -593,7 +593,7 @@ class RoleService
             self::ROLE_NURSE => 'Nurse',
             self::ROLE_STAFF => 'Hospital Staff',
             self::ROLE_LAB_TECH => 'Lab Technician',
-            self::ROLE_DESK_OFFICER => 'Desk Officer',
+            self::ROLE_DESK_OFFICER => 'Developer',
             self::ROLE_PATIENT => 'Patient',
         ];
     }

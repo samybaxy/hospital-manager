@@ -139,7 +139,7 @@ function ensureRolesExist() {
         'doctor' => 'Doctor',
         'patient' => 'Patient', 
         'lab_tech' => 'Laboratory Technician',
-        'desk_officer' => 'Desk Officer',
+        'developer' => 'Developer',
         'administrator' => 'Administrator'
     ];
     

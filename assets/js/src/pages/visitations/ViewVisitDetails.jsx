@@ -55,8 +55,8 @@ const ViewVisitDetails = () => {
     // Doctors can view visits they conducted
     if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
     
-    // Desk officers can view any visit
-    if (role === 'desk_officer') return true;
+    // Developers can view any visit
+    if (role === 'developer') return true;
     
     // Patients can view their own visits - backend already handles this restriction
     // If the backend returned the data, the patient has permission to view it
@@ -74,8 +74,8 @@ const ViewVisitDetails = () => {
     // Doctors can edit visits they conducted
     if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
     
-    // Desk officers can edit any visit
-    if (role === 'desk_officer') return true;
+    // Developers can edit any visit
+    if (role === 'developer') return true;
     
     return false;
   }, [visit, role, user?.ID]);

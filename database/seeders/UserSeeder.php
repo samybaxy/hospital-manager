@@ -8,7 +8,7 @@ class UserSeeder extends Seeder
         'doctor' => 25,
         'patient' => 100,
         'lab_tech' => 5,
-        'desk_officer' => 3,
+        'developer' => 3,
         'administrator' => 1,
     ];
 
@@ -32,7 +32,7 @@ class UserSeeder extends Seeder
         }
         
         // Create one demo user for each role with known credentials
-        $demo_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'desk_officer'];
+        $demo_roles = ['administrator', 'doctor', 'patient', 'lab_tech', 'developer'];
         
         foreach ($demo_roles as $role) {
             $username = 'demo_' . $role;
@@ -71,7 +71,7 @@ class UserSeeder extends Seeder
             'doctor' => 'Doctor',
             'patient' => 'Patient', 
             'lab_tech' => 'Lab Technician',
-            'desk_officer' => 'Desk Officer',
+            'developer' => 'Developer',
             'administrator' => 'Administrator'
         ];
         

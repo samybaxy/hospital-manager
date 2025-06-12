@@ -28,7 +28,7 @@ class RoleManagerTest extends TestCase
         global $wp_roles;
         
         // Remove all custom roles before each test to ensure a clean state
-        foreach (['admin', 'doctor', 'patient', 'lab_tech', 'desk_officer'] as $role) {
+        foreach (['admin', 'doctor', 'patient', 'lab_tech', 'developer'] as $role) {
             if (get_role($role)) {
                 remove_role($role);
             }
@@ -56,7 +56,7 @@ class RoleManagerTest extends TestCase
             'doctor', 
             'patient', 
             'lab_tech',
-            'desk_officer'
+            'developer'
         ];
         
         // Initialize roles
@@ -137,15 +137,15 @@ class RoleManagerTest extends TestCase
         $this->assertTrue($lab_tech_role->has_cap('manage_medical_reports'));
         $this->assertTrue($lab_tech_role->has_cap('view_lab_dashboard'));
         
-        // Verify desk_officer role was created with correct capabilities
-        $desk_officer_role = get_role('desk_officer');
-        $this->assertNotNull($desk_officer_role);
-        $this->assertTrue($desk_officer_role->has_cap('read'));
-        $this->assertTrue($desk_officer_role->has_cap('view_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('create_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('edit_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('schedule_appointments'));
-        $this->assertTrue($desk_officer_role->has_cap('view_audit_log'));
+        // Verify developer role was created with correct capabilities
+        $developer_role = get_role('developer');
+        $this->assertNotNull($developer_role);
+        $this->assertTrue($developer_role->has_cap('read'));
+        $this->assertTrue($developer_role->has_cap('view_patients'));
+        $this->assertTrue($developer_role->has_cap('create_patients'));
+        $this->assertTrue($developer_role->has_cap('edit_patients'));
+        $this->assertTrue($developer_role->has_cap('schedule_appointments'));
+        $this->assertTrue($developer_role->has_cap('view_audit_log'));
     }
     
     /**
@@ -155,21 +155,21 @@ class RoleManagerTest extends TestCase
     {
         RoleManager::initializeRoles();
         
-        $desk_officer_role = get_role('desk_officer');
-        $this->assertNotNull($desk_officer_role);
+        $developer_role = get_role('developer');
+        $this->assertNotNull($developer_role);
         
-        // Core capabilities needed for desk officers
-        $this->assertTrue($desk_officer_role->has_cap('read'));
-        $this->assertTrue($desk_officer_role->has_cap('view_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('create_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('edit_patients'));
-        $this->assertTrue($desk_officer_role->has_cap('schedule_appointments'));
-        $this->assertTrue($desk_officer_role->has_cap('view_audit_log'));
+        // Core capabilities needed for developers
+        $this->assertTrue($developer_role->has_cap('read'));
+        $this->assertTrue($developer_role->has_cap('view_patients'));
+        $this->assertTrue($developer_role->has_cap('create_patients'));
+        $this->assertTrue($developer_role->has_cap('edit_patients'));
+        $this->assertTrue($developer_role->has_cap('schedule_appointments'));
+        $this->assertTrue($developer_role->has_cap('view_audit_log'));
         
-        // Desk officers should not have capabilities reserved for medical staff
-        $this->assertFalse($desk_officer_role->has_cap('add_visitation'));
-        $this->assertFalse($desk_officer_role->has_cap('edit_visitation'));
-        $this->assertFalse($desk_officer_role->has_cap('manage_medical_reports'));
+        // Developers should not have capabilities reserved for medical staff
+        $this->assertFalse($developer_role->has_cap('add_visitation'));
+        $this->assertFalse($developer_role->has_cap('edit_visitation'));
+        $this->assertFalse($developer_role->has_cap('manage_medical_reports'));
     }
     
     /**

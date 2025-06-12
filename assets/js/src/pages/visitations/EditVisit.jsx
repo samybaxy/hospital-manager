@@ -99,7 +99,7 @@ const EditVisit = () => {
     if (role === 'doctor' && visitData.doctor_id === user?.ID) return true;
     
     // Desk officers can edit any visit
-    if (role === 'desk_officer') return true;
+    if (role === 'developer') return true;
     
     return false;
   };

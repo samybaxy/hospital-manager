@@ -157,7 +157,7 @@ class HospitalManager extends Bridge
             remove_role('patient');
             remove_role('receptionist');
             remove_role('lab_tech');
-            remove_role('desk_officer');
+            remove_role('developer');
             
             // Cleanup inventory-specific roles
             RoleService::cleanupRoles();
