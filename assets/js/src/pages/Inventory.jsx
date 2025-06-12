@@ -272,11 +272,6 @@ const Inventory = () => {
     }, 100);
   };
 
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-  };
-
   // Handle items per page change
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
@@ -349,6 +344,77 @@ const Inventory = () => {
       setError('Failed to export data. Please try again.');
     }
   };
+
+  // Pagination handlers
+  const handlePageChange = useCallback((page) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePreviousPage = useCallback(() => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  }, []);
+
+  const handleNextPage = useCallback(() => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  }, [totalPages]);
+
+  // Pagination render function
+  const renderPagination = useMemo(() => {
+    const pagesToShow = 5;
+    const pages = [];
+    let startPage = Math.max(1, currentPage - Math.floor(pagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+    
+    if (endPage - startPage + 1 < pagesToShow) {
+      startPage = Math.max(1, endPage - pagesToShow + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return (
+      <div className="flex items-center gap-1">
+        {startPage > 1 && (
+          <>
+            <button 
+              onClick={() => handlePageChange(1)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              1
+            </button>
+            {startPage > 2 && <span className="px-2">...</span>}
+          </>
+        )}
+        
+        {pages.map(page => (
+          <button
+            key={page}
+            onClick={() => handlePageChange(page)}
+            className={`relative inline-flex items-center px-3 py-2 border ${
+              currentPage === page
+                ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
+                : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+            } text-sm font-medium`}
+          >
+            {page}
+          </button>
+        ))}
+        
+        {endPage < totalPages && (
+          <>
+            {endPage < totalPages - 1 && <span className="px-2">...</span>}
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+            >
+              {totalPages}
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }, [currentPage, totalPages, handlePageChange]);
 
   // Table columns configuration with permission-based filtering
   const columns = useMemo(() => [
@@ -510,30 +576,30 @@ const Inventory = () => {
   ], [permissions.canViewReports, permissions.canEdit, permissions.canDelete]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg border border-blue-300 p-6 text-white">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2 md:gap-3">
               🏥 Inventory Management
             </h1>
-            <p className="text-blue-100 mt-1">
+            <p className="text-blue-100 mt-1 text-sm md:text-base">
               Manage medical supplies, track stock levels, and monitor inventory health
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3">
             <PermissionGate permission="reports">
               <Button 
                 variant={showReports ? "primary" : "secondary"} 
                 size="sm"
                 onClick={() => setShowReports(!showReports)}
-                className={`whitespace-nowrap ${showReports ? 
+                className={`whitespace-nowrap text-xs sm:text-sm ${showReports ? 
                   'bg-yellow-300 text-blue-800 hover:bg-yellow-200 border border-yellow-400' : 
                   'bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300'}`}
               >
-                {showReports ? '📊 Hide Reports' : '📊 Show Reports'}
+                <span className="hidden sm:inline">{showReports ? '📊 Hide Reports' : '📊 Show Reports'}</span>
+                <span className="sm:hidden">{showReports ? '📊' : '📊'}</span>
               </Button>
             </PermissionGate>
             <PermissionGate permission="export">
@@ -541,19 +607,21 @@ const Inventory = () => {
                 variant="secondary" 
                 size="sm"
                 onClick={handleExport}
-                className="whitespace-nowrap bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300"
+                className="whitespace-nowrap bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300 text-xs sm:text-sm"
               >
-                📄 Export CSV
+                <span className="hidden sm:inline">📄 Export CSV</span>
+                <span className="sm:hidden">📄</span>
               </Button>
             </PermissionGate>
             <PermissionGate permission="create">
               <Button 
                 variant="primary" 
                 onClick={() => setShowAddModal(true)}
-                className="whitespace-nowrap bg-green-400 text-white hover:bg-green-500 border border-green-500 font-medium shadow-sm"
+                className="whitespace-nowrap bg-green-400 text-white hover:bg-green-500 border border-green-500 font-medium shadow-sm text-xs sm:text-sm"
               >
-                ➕ Add New Item
-                <span className="ml-2 text-xs opacity-75 hidden sm:inline">(Ctrl+N)</span>
+                <span className="hidden sm:inline">➕ Add New Item</span>
+                <span className="sm:hidden">➕</span>
+                <span className="ml-2 text-xs opacity-75 hidden lg:inline">(Ctrl+N)</span>
               </Button>
             </PermissionGate>
           </div>
@@ -562,7 +630,8 @@ const Inventory = () => {
 
       {/* Tab Navigation */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <nav className="flex space-x-0 overflow-x-auto scrollbar-hide">
+        {/* Desktop Tab Navigation */}
+        <nav className="hidden md:flex space-x-0 overflow-x-auto">
           <PermissionGate key="nav-inventory" permission="view">
             <button
               onClick={() => setActiveTab('inventory')}
@@ -650,6 +719,107 @@ const Inventory = () => {
               <span className="flex items-center gap-2">
                 📊 Reports & Analytics
               </span>
+            </button>
+          </PermissionGate>
+        </nav>
+
+        {/* Mobile Tab Navigation - Icon Only */}
+        <nav className="md:hidden grid grid-cols-6 gap-0">
+          <PermissionGate key="nav-inventory-mobile" permission="view">
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+                activeTab === 'inventory'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-lg">📦</span>
+                <span className="text-xs leading-tight">Items</span>
+              </div>
+            </button>
+          </PermissionGate>
+          <PermissionGate key="nav-alerts-mobile" permission="view">
+            <button
+              onClick={() => setActiveTab('alerts')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs relative transition-all duration-200 ${
+                activeTab === 'alerts'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <div className="relative">
+                  <span className="text-lg">🚨</span>
+                  {alertCounts.unacknowledged > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center animate-pulse">
+                      {alertCounts.unacknowledged > 9 ? '9+' : alertCounts.unacknowledged}
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs leading-tight">Alerts</span>
+              </div>
+            </button>
+          </PermissionGate>
+          <PermissionGate key="nav-transactions-mobile" permission="view">
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+                activeTab === 'transactions'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-lg">📋</span>
+                <span className="text-xs leading-tight">History</span>
+              </div>
+            </button>
+          </PermissionGate>
+          <PermissionGate key="nav-suppliers-mobile" permission="view">
+            <button
+              onClick={() => setActiveTab('suppliers')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+                activeTab === 'suppliers'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-lg">🏢</span>
+                <span className="text-xs leading-tight">Suppliers</span>
+              </div>
+            </button>
+          </PermissionGate>
+          <PermissionGate key="nav-reorders-mobile" permission="view">
+            <button
+              onClick={() => setActiveTab('reorders')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+                activeTab === 'reorders'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-lg">🔄</span>
+                <span className="text-xs leading-tight">Reorders</span>
+              </div>
+            </button>
+          </PermissionGate>
+          <PermissionGate key="nav-reports-mobile" permission="reports">
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+                activeTab === 'reports'
+                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-lg">📊</span>
+                <span className="text-xs leading-tight">Reports</span>
+              </div>
             </button>
           </PermissionGate>
         </nav>
@@ -894,10 +1064,83 @@ const Inventory = () => {
             }}
             enableSorting={true}
             enableFiltering={false}
-            enablePagination={true}
-            showPagination={true}
+            enablePagination={false}
+            showPagination={false}
             pageSize={itemsPerPage}
           />
+
+          {/* Custom Pagination */}
+          {!loading && items.length > 0 && totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6">
+              <div className="mb-4 sm:mb-0 text-sm text-gray-700">
+                <p>
+                  Showing <span className="font-semibold">{((currentPage - 1) * itemsPerPage) + 1}</span>{' '}
+                  to <span className="font-semibold">{Math.min(currentPage * itemsPerPage, totalItems)}</span>{' '}
+                  of <span className="font-semibold">{totalItems}</span> items
+                </p>
+              </div>
+              
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                    currentPage === 1
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`ml-3 relative inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md ${
+                    currentPage === totalPages
+                      ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+              
+              <div className="hidden sm:flex">
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={handlePreviousPage}
+                    disabled={currentPage === 1}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-l-md border text-sm font-medium ${
+                      currentPage === 1
+                        ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {renderPagination}
+                  
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                    className={`relative inline-flex items-center px-2 py-2 rounded-r-md border text-sm font-medium ${
+                      currentPage === totalPages
+                        ? 'bg-gray-100 border-gray-300 text-gray-400 cursor-not-allowed'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
         </div>
@@ -1020,7 +1263,6 @@ const Inventory = () => {
           </div>
         </div>
       </Modal>
-      </div>
     </div>
   );
 };

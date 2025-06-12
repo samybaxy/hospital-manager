@@ -651,7 +651,7 @@ const LabInvestigations = () => {
   return (
     <div className="space-y-6">
       {/* Apply responsive header pattern from the guide */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white md:mx-0">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">Laboratory Investigations</h1>
@@ -724,20 +724,22 @@ const LabInvestigations = () => {
           </div>
         </div>
       </Card>
+      
+      {/* Investigations Table */}
       <Card>
         <ResponsiveTable
           data={investigations}
           columns={columns}
           loading={loading}
           onRowClick={handleRowClick}
-          emptyMessage={loading ? 'Loading...' : 'No investigations found'}
+          emptyMessage={loading ? 'Loading investigations...' : 'No laboratory investigations found'}
           showPagination={false}
           enablePagination={false}
         />
 
         {/* Custom Pagination */}
-        {!loading && investigations.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6 mt-4">
+        {!loading && investigations.length > 0 && totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-4 bg-white border-t border-gray-200 sm:px-6">
             <div className="mb-4 sm:mb-0 text-sm text-gray-700">
               <p>
                 Showing <span className="font-semibold">{((currentPage - 1) * perPage) + 1}</span>{' '}

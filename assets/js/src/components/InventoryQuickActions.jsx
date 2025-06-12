@@ -84,7 +84,7 @@ const InventoryQuickActions = ({ onReload }) => {
     },
     { 
       id: 'currently-in-stock',
-      label: 'Currently in Stock', 
+      label: 'In Stock', 
       description: 'Healthy stock levels',
       filter: { status: 'In Stock', low_stock: false, expiring: false },
       count: inStockCount,
