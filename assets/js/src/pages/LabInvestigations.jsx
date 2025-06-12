@@ -114,7 +114,8 @@ const LabInvestigations = () => {
         className: 'text-center font-medium w-16 min-w-16',
         cardLabel: 'Serial'
       },
-      size: 60,
+      size: 80,
+      minSize: 80,
     },
     ...(userIsPatient ? [] : [{
       accessorKey: 'patient_name',

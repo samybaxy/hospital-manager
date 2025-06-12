@@ -34,7 +34,8 @@ const Patients = () => {
         </span>
       ),
       meta: { hideOnMobile: true, hideOnTablet: true },
-      size: 60,
+      size: 80,
+      minSize: 80,
     },
     {
       id: 'patient',
