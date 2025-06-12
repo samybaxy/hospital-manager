@@ -37,106 +37,79 @@ import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
 
-// Add global styles for the hospital manager app positioning
+// Clean responsive styles - no complex positioning hacks
 const appStyles = `
-  /* Target the hospital manager root with higher specificity */
-  body #hospital-manager-root,
+  /* Clean foundation for hospital manager app */
   #hospital-manager-root {
-    margin-top: -100px !important;
-    position: relative !important;
-    z-index: 999 !important;
-    transform: translateY(-20px) !important;
+    /* Reset all problematic positioning */
+    position: static !important;
+    margin: 0 !important;
+    padding: 1rem 0 !important;
+    transform: none !important;
+    z-index: 1 !important;
+    
+    /* Full width, proper box model */
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
   
-  /* Remove any default WordPress spacing */
-  #hospital-manager-root .hospital-manager-app {
-    margin-top: 0 !important;
-    padding-top: 10px !important;
+  /* Clean app container */
+  .hospital-manager-app {
     width: 100% !important;
-    max-width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
   }
   
-  /* Override any theme-specific margins */
-  .wp-site-blocks #hospital-manager-root,
-  .site-content #hospital-manager-root,
-  main #hospital-manager-root {
-    margin-top: -90px !important;
-    margin-bottom: 0 !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  
-  /* Adjust for WordPress admin bar if present */
-  body.admin-bar #hospital-manager-root {
-    margin-top: -60px !important;
-  }
-  
-  /* Mobile responsive fixes */
-  @media (max-width: 768px) {
-    /* Ensure the root element takes full width on mobile */
-    .wp-site-blocks > header {
-        display: none !important; /* Hide header on mobile */
-    }
-    .sidebar-mobile-fix {
-        margin-top: 30px !important; /* Adjust sidebar margin for mobile */
-    }
-
-    body #hospital-manager-root,
+  /* MOBILE: Aggressive WordPress override */
+  @media (max-width: 767px) {
+    /* Force the root to break out of any WordPress containers */
     #hospital-manager-root {
-      margin-left: 0 !important;
-      margin-right: 0 !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
+      position: relative !important;
       width: 100vw !important;
       max-width: 100vw !important;
-      overflow-x: hidden !important;
+      left: 50% !important;
+      right: 50% !important;
+      margin-left: -50vw !important;
+      margin-right: -50vw !important;
+      padding: 0.5rem 0 !important;
     }
     
-    #hospital-manager-root .hospital-manager-app {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
+    .hospital-manager-app {
+      width: 100vw !important;
+      max-width: 100vw !important;
     }
     
-    /* Ensure WordPress container doesn't add padding on mobile */
-    .wp-site-blocks #hospital-manager-root,
-    .site-content #hospital-manager-root,
-    main #hospital-manager-root {
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-      margin-left: 0 !important;
-      margin-right: 0 !important;
+    /* Override any parent WordPress block padding */
+    #hospital-manager-root .wp-block-group,
+    #hospital-manager-root .wp-site-blocks,
+    #hospital-manager-root .entry-content {
+      padding: 0 !important;
+      margin: 0 !important;
     }
   }
   
-  /* Fluid width for larger screens */
-  @media (min-width: 1280px) {
-    body #hospital-manager-root,
-    #hospital-manager-root,
-    #hospital-manager-root .hospital-manager-app,
-    .wp-site-blocks #hospital-manager-root,
-    .site-content #hospital-manager-root,
-    main #hospital-manager-root {
-      max-width: none !important;
-      width: 100% !important;
+  /* Responsive padding system for larger screens */
+  @media (min-width: 768px) {
+    #hospital-manager-root {
+      padding: 1rem 0 !important;
     }
   }
   
-  /* Force positioning for any container elements */
-  #hospital-manager-root * {
-    box-sizing: border-box;
+  @media (min-width: 1024px) {
+    #hospital-manager-root {
+      padding: 1.5rem 0 !important;
+    }
   }
 `;
 
-// More aggressive CSS injection
+// Simple, clean style injection
 const injectStyles = () => {
   if (typeof document !== 'undefined') {
-    // Remove any existing styles first
     const existingStyle = document.getElementById('hospital-manager-positioning');
     if (existingStyle) {
       existingStyle.remove();
@@ -146,80 +119,19 @@ const injectStyles = () => {
     styleElement.id = 'hospital-manager-positioning';
     styleElement.textContent = appStyles;
     document.head.appendChild(styleElement);
-    
-    // Also apply direct styles to the root element if it exists
-    const rootElement = document.getElementById('hospital-manager-root');
-    if (rootElement) {
-      rootElement.style.marginTop = '-90px';
-      rootElement.style.position = 'relative';
-      rootElement.style.zIndex = '999';
-      rootElement.style.transform = 'translateY(-20px)';
-    }
   }
 };
 
-// Inject styles immediately and on DOM ready
-injectStyles();
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', injectStyles);
-}
-
-// ScrollToTop component for smooth scrolling on route changes
+// Simple scroll to top on route changes
 const ScrollToTop = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Function to smoothly scroll to the top of the app
-    const scrollToAppTop = () => {
-      const appElement = document.getElementById('hospital-manager-root');
-      if (appElement) {
-        // Get the position of the app element
-        const appRect = appElement.getBoundingClientRect();
-        const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const targetPosition = currentScrollTop + appRect.top - 20; // 20px padding from top
-        
-        // Smooth scroll animation
-        const startPosition = currentScrollTop;
-        const distance = targetPosition - startPosition;
-        const duration = 800; // 800ms for smooth animation
-        let startTime = null;
-
-        const animateScroll = (currentTime) => {
-          if (startTime === null) startTime = currentTime;
-          const timeElapsed = currentTime - startTime;
-          const progress = Math.min(timeElapsed / duration, 1);
-          
-          // Easing function for smooth animation (ease-in-out)
-          const easeInOutCubic = (t) => {
-            return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
-          };
-          
-          const easedProgress = easeInOutCubic(progress);
-          const currentPosition = startPosition + (distance * easedProgress);
-          
-          window.scrollTo(0, currentPosition);
-          
-          if (progress < 1) {
-            requestAnimationFrame(animateScroll);
-          }
-        };
-
-        requestAnimationFrame(animateScroll);
-      } else {
-        // Fallback: scroll to top of page if app element not found
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-    };
-
-    // Small delay to ensure the new route content has rendered
-    const scrollTimer = setTimeout(() => {
-      scrollToAppTop();
-    }, 100);
-
-    return () => clearTimeout(scrollTimer);
+    // Simple scroll to top of page
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }, [location.pathname]);
 
   return null;
@@ -414,40 +326,16 @@ const AppRoutes = () => {
 
 // Main App component with router
 const App = () => {
-  // Apply positioning fix when component mounts
+  // Simple style injection on mount
   useEffect(() => {
     injectStyles();
-    
-    // Continuously check and apply styles in case they get overridden
-    const intervalId = setInterval(() => {
-      const rootElement = document.getElementById('hospital-manager-root');
-      if (rootElement && rootElement.style.marginTop !== '-60px') {
-        injectStyles();
-      }
-    }, 1000);
-    
-    return () => clearInterval(intervalId);
   }, []);
 
   return (
-    <div 
-      className="hospital-manager-app" 
-      style={{ 
-        marginTop: '0', 
-        paddingTop: '10px',
-        paddingLeft: '0',
-        paddingRight: '0',
-        position: 'relative',
-        zIndex: 999,
-        width: '100%',
-        maxWidth: '100%',
-        overflowX: 'hidden'
-      }}
-    >
+    <div className="hospital-manager-app">
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <ScrollToTop />
-          {/* Wrap the entire application with AccessProvider for permissions check */}
           <Routes>
             {/* Login route outside of Layout */}
             <Route path="/login" element={<Login />} />

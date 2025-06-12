@@ -1,97 +1,218 @@
+/* ===== HOSPITAL MANAGER RESPONSIVE SYSTEM ===== */
+/* Clean, robust responsive solution for the hospital manager app */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles for Hospital Manager */
-.hospital-manager-container {
-  @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
-  /* Remove max-width constraint for larger screens */
-  max-width: none;
-}
-
+/* ===== CORE RESET & FOUNDATION ===== */
+/* Clean slate for the hospital manager app */
 #hospital-manager-root {
-  @apply py-6;
-  /* Prevent unwanted scrollbars */
-  overflow-x: hidden;
-  height: auto;
-  min-height: auto;
-}
-
-/* Prevent fixed height constraints that cause overflow */
-.hospital-manager-app {
-  height: auto !important;
-  min-height: auto !important;
-  overflow-x: hidden;
-}
-
-/* Ensure fluid width for larger screens while preserving responsive design */
-@media (min-width: 1280px) {
-  .hospital-manager-container,
-  #hospital-manager-root,
-  .hospital-manager-app {
-    max-width: none !important;
-    width: 100% !important;
-  }
+  /* Reset all positioning and spacing */
+  position: static !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
   
-  /* Ensure main content areas are also fluid */
-  main,
-  main > div {
-    max-width: none !important;
-    width: 100% !important;
-  }
-}
-
-/* Responsive mobile fixes - remove padding for screens 800px and below */
-@media (max-width: 800px) {
-  .entry-content,
-  .hospital-manager-container {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-  }
-}
-
-/* Prevent unwanted scrollbars and height overflow issues */
-body.admin-bar #hospital-manager-root,
-body #hospital-manager-root {
+  /* Full width, no constraints */
+  width: 100% !important;
+  max-width: none !important;
+  
+  /* Natural height, no overflow issues */
   height: auto !important;
   min-height: auto !important;
   overflow: visible !important;
   overflow-x: hidden !important;
+  
+  /* Ensure proper rendering context */
+  box-sizing: border-box !important;
 }
 
-/* Fix layout height issues */
-.hospital-manager-app > div[data-reach-router-wrapper] {
+/* Main app container */
+.hospital-manager-app {
+  /* Reset positioning */
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  
+  /* Full width with proper box model */
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  
+  /* Natural height flow */
   height: auto !important;
   min-height: auto !important;
+  overflow-x: hidden !important;
 }
 
-/* Ensure main content areas don't have fixed heights */
+/* ===== RESPONSIVE CONTAINER SYSTEM ===== */
+.hospital-manager-container {
+  /* Base container with responsive padding */
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 auto !important;
+  box-sizing: border-box !important;
+  
+  /* Responsive padding system */
+  padding-left: 0.75rem !important; /* 12px */
+  padding-right: 0.75rem !important;
+}
+
+/* Tablet responsive */
+@media (min-width: 640px) {
+  .hospital-manager-container {
+    padding-left: 1rem !important; /* 16px */
+    padding-right: 1rem !important;
+  }
+}
+
+/* Desktop responsive */
+@media (min-width: 1024px) {
+  .hospital-manager-container {
+    padding-left: 1.5rem !important; /* 24px */
+    padding-right: 1.5rem !important;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1280px) {
+  .hospital-manager-container {
+    padding-left: 2rem !important; /* 32px */
+    padding-right: 2rem !important;
+  }
+}
+
+/* ===== LAYOUT FIXES ===== */
+/* Fix WordPress theme interference */
+body #hospital-manager-root,
+body.admin-bar #hospital-manager-root,
+.wp-site-blocks #hospital-manager-root,
+.site-content #hospital-manager-root,
+main #hospital-manager-root {
+  /* Override any theme positioning */
+  position: static !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  
+  /* Ensure full width */
+  width: 100% !important;
+  max-width: none !important;
+}
+
+/* Fix main content layout */
 main.flex-1 {
+  /* Natural flex behavior */
+  flex: 1 1 auto !important;
   height: auto !important;
   min-height: auto !important;
-  flex: 1 1 auto !important;
+  overflow: visible !important;
 }
 
-/* Fix sidebar height on desktop to prevent overflow */
+/* Sidebar responsive fixes */
+.sidebar-mobile-fix {
+  /* Mobile - full height */
+  height: 100vh !important;
+  max-height: 100vh !important;
+}
+
 @media (min-width: 768px) {
   .sidebar-mobile-fix {
+    /* Desktop - natural height */
     height: auto !important;
-    min-height: 100vh;
+    min-height: 100vh !important;
     max-height: none !important;
   }
 }
 
-/* Remove height constraints from containers */
+/* ===== MOBILE OPTIMIZATIONS ===== */
+@media (max-width: 767px) {
+  /* AGGRESSIVE WordPress theme override for mobile */
+  body,
+  .wp-site-blocks,
+  .wp-block-group,
+  .wp-block-group__inner-container,
+  .site-content,
+  .entry-content,
+  main,
+  .has-global-padding,
+  .wp-container-core-group-is-layout-1,
+  .wp-container-core-group-is-layout-2,
+  .wp-container-core-group-is-layout-3 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* Force full width for hospital manager on mobile */
+  #hospital-manager-root,
+  .hospital-manager-app {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+  
+  /* Remove container padding on mobile for edge-to-edge layout */
+  .hospital-manager-container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+  
+  /* Special mobile content spacing */
+  .mobile-content-padding {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* Ensure any nested WordPress containers don't add padding */
+  #hospital-manager-root .wp-block-group,
+  #hospital-manager-root .wp-site-blocks,
+  #hospital-manager-root .site-content,
+  #hospital-manager-root .entry-content {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Mobile header alignment fix */
+.mobile-header-margin {
+  margin-left: 1rem !important;
+  margin-right: 1rem !important;
+}
+
+/* ===== UTILITY OVERRIDES ===== */
+/* Remove problematic height constraints */
 .min-h-screen {
   min-height: auto !important;
 }
 
-/* Allow content to flow naturally without height constraints */
 div[class*="h-screen"] {
   height: auto !important;
 }
 
-/* Custom utility classes */
+/* Fix router wrapper */
+.hospital-manager-app > div[data-reach-router-wrapper] {
+  height: auto !important;
+  min-height: auto !important;
+  width: 100% !important;
+}
+
+/* ===== CUSTOM UTILITY CLASSES ===== */
 .border-b-3 {
   border-bottom-width: 3px;
 }
@@ -106,7 +227,7 @@ div[class*="h-screen"] {
   display: none;
 }
 
-/* Add your custom component classes here */
+/* ===== COMPONENT CLASSES ===== */
 @layer components {
   .hm-btn {
     @apply px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors;

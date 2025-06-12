@@ -33,7 +33,7 @@ const Patients = () => {
           {((currentPage - 1) * perPage) + getValue()}
         </span>
       ),
-      meta: { hideOnMobile: false, hideOnTablet: false },
+      meta: { hideOnMobile: true, hideOnTablet: true },
       size: 60,
     },
     {
@@ -386,10 +386,10 @@ const Patients = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white mx-4 sm:mx-0">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 md:p-6 text-white mobile-header-margin md:mx-0">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Patients</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Patients</h1>
             <p className="text-blue-100 mt-2">
               Manage patient records, personal information and medical history
             </p>

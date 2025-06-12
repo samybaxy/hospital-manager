@@ -118,11 +118,11 @@ const Layout = ({ children }) => {
 
   // Render the main layout
   return (
-    <div className="min-h-screen flex bg-gray-100 w-full max-w-full overflow-x-hidden">
+    <div className="flex bg-gray-100 w-full">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
-          className="md:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity ease-linear h-full"
+          className="md:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75"
           onClick={toggleSidebar}
         ></div>
       )}
@@ -130,7 +130,7 @@ const Layout = ({ children }) => {
       {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0 fixed md:sticky top-0 md:top-0 h-full md:h-auto ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
+        md:translate-x-0 fixed md:sticky top-0 h-screen md:h-auto ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
         md:block sidebar-mobile-fix
@@ -143,10 +143,10 @@ const Layout = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className={`shadow-sm ${sidebarOpen ? 'z-40' : 'z-50'} sticky top-0 bg-gradient-to-r from-blue-50 to-primary-50`}>
-          <div className="px-2 md:px-6 lg:px-8 py-4">
+          <div className="hospital-manager-container py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 {/* Mobile menu button */}
@@ -256,8 +256,8 @@ const Layout = ({ children }) => {
         </header>
 
         {/* Main content area */}
-        <main className="flex-1 bg-gray-100">
-          <div className="py-6 px-0 md:px-6 lg:px-8 w-full max-w-full">
+        <main className="flex-1 bg-gray-100 min-w-0">
+          <div className="hospital-manager-container mobile-content-padding py-6">
             {children}
           </div>
         </main>
