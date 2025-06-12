@@ -10,41 +10,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Get Yarn cache directory
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
       - name: Use Yarn cache
         uses: actions/cache@v4
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ matrix.node-version }}-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-${{ matrix.node-version }}-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies and build
         run: |
           yarn install --prefer-offline --frozen-lockfile
           yarn build  # Adjust if your build process differs
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
-        with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS }}
-
       - name: Deploy with ssh-deploy
-        uses: easingthemes/ssh-deploy@v2.2.7
+        uses: easingthemes/ssh-deploy@v5.0.3
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+          SSH_USERNAME: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           ARGS: "-avz --delete"
           SOURCE: "build/"
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
