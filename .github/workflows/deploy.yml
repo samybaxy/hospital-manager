@@ -35,19 +35,13 @@ jobs:
           yarn install --prefer-offline --frozen-lockfile
           yarn build  # Adjust if your build process differs
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
+      - name: Deploy to Bluehost
+        uses: mai-space/action-sshpass-rsync@v3.0
         with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS }}
-
-      - name: Deploy with ssh-deploy
-        uses: easingthemes/ssh-deploy@v5.0.3
-        with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ARGS: "-avz --delete"
-          SOURCE: "build/"
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          REMOTE_PORT: "2222"
-          TARGET: "/home/${{ secrets.SSH_USER }}/public_html/website_77900271/wp-content/plugins/hospital-manager/"
+          host: ${{ secrets.SSH_HOST }}
+          user: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          pass: ${{ secrets.SSH_PASSWORD }}
+          local: "build/"
+          extra: "-avz --delete"
+          remote: "/home/${{ secrets.SSH_USER }}/public_html/website_77900271/wp-content/plugins/hospital-manager/"
