@@ -35,12 +35,16 @@ jobs:
           yarn install --prefer-offline --frozen-lockfile
           yarn build  # Adjust if your build process differs
 
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
       - name: Deploy with ssh-deploy
         uses: easingthemes/ssh-deploy@v5.0.3
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-          SSH_USERNAME: ${{ secrets.SSH_USER }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           ARGS: "-avz --delete"
           SOURCE: "build/"
           REMOTE_HOST: ${{ secrets.SSH_HOST }}
