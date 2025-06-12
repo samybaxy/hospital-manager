@@ -170,7 +170,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
   }
   
   return (
-    <div className="h-full flex flex-col w-full">
+    <div className="h-full flex flex-col w-full min-h-full">
       
       {/* Header container - logo for sticky positioning */}
       <div className="sticky top-0 z-20 bg-primary-900">
@@ -186,8 +186,8 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
       </div>
       
       {/* Navigation Menu */}
-      <nav className="mt-4 flex-1">
-        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full`}>
+      <nav className="mt-4 flex-1 flex flex-col">
+        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full flex-1 pb-20 md:pb-4`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (
             <NavItem 

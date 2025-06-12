@@ -122,9 +122,18 @@ main.flex-1 {
 
 /* Sidebar responsive fixes */
 .sidebar-mobile-fix {
-  /* Mobile - full height */
-  height: 100vh !important;
+  /* Mobile - full height with fallbacks for various browsers */
+  height: 100vh !important; /* Standard viewport height */
+  height: -webkit-fill-available !important; /* For iOS Safari */
+  height: -moz-available !important; /* For Firefox */
+  height: stretch !important; /* Future-proof standard */
   max-height: 100vh !important;
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important; /* Smooth scrolling on iOS */
 }
 
 @media (min-width: 768px) {
@@ -133,6 +142,7 @@ main.flex-1 {
     height: auto !important;
     min-height: 100vh !important;
     max-height: none !important;
+    position: sticky !important;
   }
 }
 
@@ -183,6 +193,22 @@ main.flex-1 {
     padding-right: 1rem !important;
   }
   
+  /* Mobile sidebar when open - additional fixes */
+  .mobile-sidebar-open {
+    height: 100% !important;
+    min-height: 100vh !important;
+    min-height: -webkit-fill-available !important;
+    min-height: -moz-available !important;
+    min-height: stretch !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* Additional fix for iOS Safari - ensure viewport height is set properly */
+  html, body, #hospital-manager-root, .hospital-manager-app {
+    min-height: -webkit-fill-available !important;
+  }
+
   /* Ensure any nested WordPress containers don't add padding */
   #hospital-manager-root .wp-block-group,
   #hospital-manager-root .wp-site-blocks,

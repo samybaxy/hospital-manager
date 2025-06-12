@@ -133,7 +133,7 @@ const Layout = ({ children }) => {
         md:translate-x-0 fixed md:sticky top-0 h-screen md:h-auto ${sidebarOpen ? 'z-50' : 'z-40'} md:z-auto left-0
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
         transition-all duration-300 transform bg-primary-800 overflow-y-auto flex-shrink-0
-        md:block sidebar-mobile-fix
+        md:block sidebar-mobile-fix ${sidebarOpen ? 'mobile-sidebar-open' : ''}
       `}>
         <Sidebar 
           isOpen={sidebarOpen} 
