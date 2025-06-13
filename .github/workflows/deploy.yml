@@ -12,6 +12,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'  # Adjust to your required PHP version
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-dev --optimize-autoloader
+
+      - name: Dump Composer autoload
+        run: composer dump-autoload --optimize --no-dev
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,13 +46,24 @@ jobs:
           yarn install --prefer-offline --frozen-lockfile
           yarn build  # Adjust if your build process differs
 
-      - name: Deploy to Bluehost
-        uses: easingthemes/ssh-deploy@main
+      - name: Debug build directory
+        run: |
+          echo "Listing root directory:"
+          ls -la
+          echo "Checking dist directory:"
+          ls -la dist/ || echo "dist directory not found"
+          echo "Checking build directory:"
+          ls -la build/ || echo "build directory not found"
+
+      - name: FTP Deploy to Bluehost
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ARGS: "-rlgoDzvc -i --delete"
-          SOURCE: "dist/"
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          TARGET: ${{ secrets.SSH_TARGET }}
-          EXCLUDE: "dist/,node_modules/"
+          server: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          local-dir: ./dist/  # Update to ./build/ if debug shows build
+          server-dir: /public_html/website_77900271/wp-content/plugins/hospital-manager/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
