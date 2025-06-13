@@ -4,7 +4,7 @@
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
-        "php": ">=7.4",
+        "php": "^8.2",
         "10quality/wpmvc": "^1.0",
         "10quality/wpmvc-commands": "^1.0",
         "10quality/wpmvc-mvc": "^2.0",
