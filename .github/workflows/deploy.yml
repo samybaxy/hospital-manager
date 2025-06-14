@@ -15,7 +15,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'  # Updated to match your composer.json requirement
+          php-version: '8.2'
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-dev --optimize-autoloader
@@ -46,14 +46,14 @@ jobs:
           yarn install --prefer-offline --frozen-lockfile
           yarn build
 
-      - name: Debug build directory
+      - name: Debug build output
         run: |
-          echo "Listing root directory:"
-          ls -la
-          echo "Checking dist directory:"
-          ls -la dist/ || echo "dist directory not found"
-          echo "Checking build directory:"
-          ls -la build/ || echo "build directory not found"
+          echo "Listing assets directory:"
+          ls -la assets/
+          echo "Listing js/dist directory:"
+          ls -la assets/js/dist/ || echo "js/dist directory not found"
+          echo "Listing css/dist directory:"
+          ls -la assets/css/dist/ || echo "css/dist directory not found"
 
       - name: FTP Deploy to Bluehost
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -61,9 +61,28 @@ jobs:
           server: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          local-dir: ./dist/
+          local-dir: ./
           server-dir: /public_html/website_77900271/wp-content/plugins/hospital-manager/
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
+            **/.env*
+            **/tests/**
+            **/.github/**
+            **/yarn.lock
+            **/package.json
+            **/vite.config.mjs
+            **/tailwind.config.js
+            **/postcss.config.js
+            **/.babelrc
+            **/.phpcs.xml.dist
+            **/.phpunit.result.cache
+            **/phpunit.xml*
+            **/composer.json
+            **/composer.lock
+            **/README.md
+            **/LICENSE
+            **/build.log
+            **/dev.sh
+            **/.npmrc
