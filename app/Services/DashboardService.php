@@ -2,6 +2,8 @@
 
 namespace HospitalManager\Services;
 
+use Error;
+
 class DashboardService
 {
     /**
@@ -228,7 +230,7 @@ class DashboardService
                 $limit
             )
         );
-        
+
         if ($wpdb->last_error) {
             error_log('DashboardService::getUpcomingAppointments error: ' . $wpdb->last_error);
             return [];
