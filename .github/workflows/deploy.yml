@@ -15,7 +15,7 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.0'  # Adjust to your required PHP version
+          php-version: '8.2'  # Updated to match your composer.json requirement
 
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-dev --optimize-autoloader
@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies and build
         run: |
           yarn install --prefer-offline --frozen-lockfile
-          yarn build  # Adjust if your build process differs
+          yarn build
 
       - name: Debug build directory
         run: |
@@ -61,7 +61,7 @@ jobs:
           server: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          local-dir: ./dist/  # Update to ./build/ if debug shows build
+          local-dir: ./dist/
           server-dir: /public_html/website_77900271/wp-content/plugins/hospital-manager/
           exclude: |
             **/.git*
