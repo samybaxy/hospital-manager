@@ -51,12 +51,7 @@ class UserSeeder extends Seeder
         ];
         
         foreach ($demo_roles as $role) {
-            $created = $this->createDemoUser($role);
-            if ($created) {
-                $this->log("Created demo {$role} user successfully", 'success');
-            } else {
-                $this->log("Failed to create demo {$role} user", 'warning');
-            }
+            $this->createDemoUser($role);
         }
         
         // Verify demo user credentials after creation
@@ -168,11 +163,10 @@ class UserSeeder extends Seeder
         $user_id = $this->createUserSafely($username, $password, $email, $role, $meta);
         
         if ($user_id) {
-            $this->log("Demo {$role}: username='{$username}', password='{$password}', email='{$email}'", 'success');
-            return true;
+            $this->log("Created demo {$role}: username='{$username}', password='******', email='{$email}'", 'success');
+        } else {
+            $this->log("Failed to create demo {$role} user", 'warning');
         }
-        
-        return false;
     }
     
     /**
@@ -192,6 +186,8 @@ class UserSeeder extends Seeder
                 } else {
                     $this->log("✗ {$username} cannot authenticate with password '{$password}'", 'error');
                 }
+            } else {
+                $this->log("✗ {$username} does not exist", 'warning');
             }
         }
     }
