@@ -115,6 +115,7 @@ abstract class Seeder
     
     /**
      * Verify that a user can authenticate with the given credentials
+     * Uses wp_check_password instead of wp_authenticate to avoid headers being sent
      * 
      * @param string $username Username or email
      * @param string $password Password
@@ -122,15 +123,24 @@ abstract class Seeder
      */
     protected function verifyUserCredentials($username, $password)
     {
-        $user = wp_authenticate($username, $password);
+        $user = get_user_by('login', $username);
+        if (!$user) {
+            // Try by email if username lookup failed
+            $user = get_user_by('email', $username);
+        }
         
-        if (is_wp_error($user)) {
-            $this->log("Authentication failed for {$username}: " . $user->get_error_message(), 'error');
+        if (!$user) {
+            $this->log("User '{$username}' not found", 'error');
             return false;
         }
         
-        $this->log("Authentication successful for {$username}", 'success');
-        return true;
+        if (wp_check_password($password, $user->user_pass, $user->ID)) {
+            $this->log("Password verification successful for '{$username}'", 'success');
+            return true;
+        } else {
+            $this->log("Password verification failed for '{$username}'", 'error');
+            return false;
+        }
     }
     
     /**

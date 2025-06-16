@@ -10,6 +10,16 @@
  * If no seeder is specified, all seeders will be run.
  */
 
+// Prevent headers already sent issues in CLI
+if (php_sapi_name() === 'cli') {
+    // We're in CLI mode, suppress any header output
+    define('DOING_AJAX', true);
+    define('WP_ADMIN', true);
+}
+
+// Start output buffering to catch any headers
+ob_start();
+
 // Bootstrap WordPress
 // Find the wp-load.php file by traversing up to the WordPress root directory
 $path = dirname(__FILE__);
@@ -17,6 +27,10 @@ while (!file_exists($path . '/wp-load.php') && dirname($path) !== $path) {
     $path = dirname($path);
 }
 require_once $path . '/wp-load.php';
+
+// Prevent any WordPress redirects or header modifications in CLI
+remove_all_actions('wp_loaded');
+remove_all_actions('init');
 
 // Load Faker library
 if (!class_exists('Faker\Factory')) {
@@ -121,11 +135,20 @@ set_error_handler(function($severity, $message, $file, $line) {
     return true; // Don't execute PHP internal error handler
 });
 
+// Clear any buffered output that might cause header issues
+if (ob_get_level()) {
+    ob_end_clean();
+}
+
 // Run the seeder
 try {
     if (isset($seeder_map[$seeder])) {
         $seederClass = $seeder_map[$seeder];
         echo "\nRunning seeder: $seeder\n";
+        
+        // Disable WordPress cookies and authentication for CLI
+        add_filter('send_headers', '__return_false');
+        add_filter('wp_redirect', '__return_false');
         
         $instance = new $seederClass();
         $result = $instance->run();

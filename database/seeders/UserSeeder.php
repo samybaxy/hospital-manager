@@ -35,6 +35,19 @@ class UserSeeder extends Seeder
     {
         global $wpdb;
         
+        // Prevent any WordPress authentication or cookie setting during CLI
+        if (php_sapi_name() === 'cli') {
+            // Remove all authentication hooks that might try to set cookies
+            remove_all_actions('wp_login');
+            remove_all_actions('wp_logout');
+            remove_all_actions('set_auth_cookie');
+            remove_all_actions('clear_auth_cookie');
+            
+            // Prevent cookie setting functions
+            add_filter('send_headers', '__return_false');
+            add_filter('wp_redirect', '__return_false');
+        }
+        
         // Check database connection first
         $this->log("Checking database connection...");
         $db_test = $wpdb->get_var("SELECT 1");
@@ -324,10 +337,12 @@ class UserSeeder extends Seeder
             $password = 'demo1234';
             
             if (username_exists($username)) {
-                if ($this->verifyUserCredentials($username, $password)) {
-                    $this->log("✓ {$username} can authenticate with password '{$password}'", 'success');
+                // Use a safer method to verify credentials without triggering authentication
+                $user = get_user_by('login', $username);
+                if ($user && wp_check_password($password, $user->user_pass, $user->ID)) {
+                    $this->log("✓ {$username} password verification successful", 'success');
                 } else {
-                    $this->log("✗ {$username} cannot authenticate with password '{$password}'", 'error');
+                    $this->log("✗ {$username} password verification failed", 'error');
                 }
             } else {
                 $this->log("✗ {$username} does not exist", 'warning');
