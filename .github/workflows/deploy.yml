@@ -66,6 +66,7 @@ jobs:
             --exclude='LICENSE' \
             --exclude='dev.sh' \
             --exclude='.npmrc' \
+            --exclude='deploy-package' \
             ./ deploy-package/
 
       - name: Debug deployment package
