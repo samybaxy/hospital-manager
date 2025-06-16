@@ -11,7 +11,7 @@ class LabInvestigation extends BaseModel
     protected $type = 'lab_investigation';
     protected $primaryKey = 'ID';
     protected $tableName = 'hm_lab_investigations';
-    protected $cache_expiration = 1200; // 20 minutes
+    protected static $cache_expiration = 1200; // 20 minutes
     
     protected $fillable = [
         'visitation_id',
@@ -31,11 +31,17 @@ class LabInvestigation extends BaseModel
         'updated_at'
     ];
     
-    public function __construct(array $attributes = [])
+    /**
+     * LabInvestigation constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_lab_investigations';
         
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
     
@@ -80,15 +86,16 @@ class LabInvestigation extends BaseModel
      */
     public static function getPendingForPatient($patientId)
     {
-        $cache_key = "lab_pending_patient_{$patientId}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getPendingForPatient', [$patientId]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $query = $wpdb->prepare(
             "SELECT * FROM {$table} 
@@ -103,7 +110,7 @@ class LabInvestigation extends BaseModel
             return new static($item);
         }, $results ?: []);
         
-        set_transient($cache_key, $labs, 600); // 10 minutes for pending data
+        static::setToCache($cache_key, $labs, 600); // 10 minutes for pending data
         
         return $labs;
     }
@@ -113,15 +120,16 @@ class LabInvestigation extends BaseModel
      */
     public static function getCompletedCountForTechToday($techId)
     {
-        $cache_key = "lab_completed_today_tech_{$techId}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getCompletedCountForTechToday', [$techId]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $count = (int)$wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$table} 
@@ -132,7 +140,7 @@ class LabInvestigation extends BaseModel
             'completed'
         ));
         
-        set_transient($cache_key, $count, 300); // 5 minutes for today's count
+        static::setToCache($cache_key, $count, 300); // 5 minutes for today's count
         
         return $count;
     }
@@ -142,15 +150,16 @@ class LabInvestigation extends BaseModel
      */
     public static function getPendingForTech($techId = null, $limit = 10)
     {
-        $cache_key = "lab_pending_tech_" . ($techId ?: 'all') . "_{$limit}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getPendingForTech', [$techId ?: 'all', $limit]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         if ($techId) {
             $query = $wpdb->prepare(
@@ -190,7 +199,7 @@ class LabInvestigation extends BaseModel
             return $model;
         }, $results ?: []);
         
-        set_transient($cache_key, $labs, 600); // 10 minutes for pending data
+        static::setToCache($cache_key, $labs, 600); // 10 minutes for pending data
         
         return $labs;
     }
@@ -200,15 +209,16 @@ class LabInvestigation extends BaseModel
      */
     public static function getForPatient($patientId, $limit = null)
     {
-        $cache_key = "lab_patient_{$patientId}_" . ($limit ?: 'all');
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getForPatient', [$patientId, $limit ?: 'all']);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $query = "SELECT * FROM {$table} WHERE patient_id = %d ORDER BY created_at DESC";
         
@@ -223,7 +233,7 @@ class LabInvestigation extends BaseModel
             return new static($data);
         }, $results);
         
-        set_transient($cache_key, $labs, 1200); // 20 minutes
+        static::setToCache($cache_key, $labs, 1200); // 20 minutes
         
         return $labs;
     }
@@ -233,15 +243,16 @@ class LabInvestigation extends BaseModel
      */
     public static function getStatistics()
     {
-        $cache_key = 'lab_investigation_statistics';
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getStatistics', []);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $stats = [
             'total' => (int)$wpdb->get_var("SELECT COUNT(*) FROM $table"),
@@ -261,7 +272,7 @@ class LabInvestigation extends BaseModel
             ))
         ];
         
-        set_transient($cache_key, $stats, 1800); // 30 minutes
+        static::setToCache($cache_key, $stats, 1800); // 30 minutes
         
         return $stats;
     }
@@ -417,29 +428,29 @@ class LabInvestigation extends BaseModel
     private function invalidateLabInvestigationCaches()
     {
         // Clear general statistics cache
-        delete_transient('lab_investigation_statistics');
+        static::invalidateCache('getStatistics');
         
         // Clear patient-specific caches if patient_id exists
         if (isset($this->attributes['patient_id'])) {
             $patientId = $this->attributes['patient_id'];
-            delete_transient("lab_pending_patient_{$patientId}");
-            delete_transient("lab_patient_{$patientId}_all");
+            static::invalidateCache('getPendingForPatient', [$patientId]);
+            static::invalidateCache('getForPatient', [$patientId, 'all']);
             
             // Clear limited result caches (common limits)
             foreach ([5, 10, 20, 50] as $limit) {
-                delete_transient("lab_patient_{$patientId}_{$limit}");
+                static::invalidateCache('getForPatient', [$patientId, $limit]);
             }
         }
         
         // Clear technician-specific caches if lab_tech_id exists
         if (isset($this->attributes['lab_tech_id'])) {
             $techId = $this->attributes['lab_tech_id'];
-            delete_transient("lab_completed_today_tech_{$techId}");
+            static::invalidateCache('getCompletedCountForTechToday', [$techId]);
             
             // Clear pending caches
             foreach ([5, 10, 20, 50] as $limit) {
-                delete_transient("lab_pending_tech_{$techId}_{$limit}");
-                delete_transient("lab_pending_tech_all_{$limit}");
+                static::invalidateCache('getPendingForTech', [$techId, $limit]);
+                static::invalidateCache('getPendingForTech', ['all', $limit]);
             }
         }
     }

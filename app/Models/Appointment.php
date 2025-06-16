@@ -22,18 +22,17 @@ class Appointment extends BaseModel
         'notes'
     ];
     
-    public function __construct($attributes = [])
+    /**
+     * Appointment constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_appointments';
         
-        // Ensure $attributes is an array
-        if (is_string($attributes)) {
-            $attributes = json_decode($attributes, true) ?: [];
-        } elseif (!is_array($attributes)) {
-            $attributes = [];
-        }
-        
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
 
@@ -57,7 +56,8 @@ class Appointment extends BaseModel
         }
 
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         $doctors_table = $wpdb->prefix . 'hm_doctors';
         
         $query = $wpdb->prepare(
@@ -114,7 +114,8 @@ class Appointment extends BaseModel
         }
 
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         $patients_table = $wpdb->prefix . 'hm_patients';
         
         $query = $wpdb->prepare(
@@ -167,7 +168,8 @@ class Appointment extends BaseModel
 
         global $wpdb;
         
-        $table_name = $wpdb->prefix . 'hm_appointments';
+        $instance = new static();
+        $table_name = $instance->getTable();
         $doctors_table = $wpdb->prefix . 'hm_doctors';
         $patients_table = $wpdb->prefix . 'hm_patients';
         
@@ -237,7 +239,8 @@ class Appointment extends BaseModel
         }
 
         global $wpdb;
-        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $instance = new static();
+        $appointments_table = $instance->getTable();
         
         $stats = $wpdb->get_row("
             SELECT 

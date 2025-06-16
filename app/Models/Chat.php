@@ -21,11 +21,17 @@ class Chat extends BaseModel
     protected static $conditions = [];
     protected static $orderBy = [];
 
-    public function __construct(array $attributes = [])
+    /**
+     * Chat constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_chats';
         
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
 
@@ -65,7 +71,8 @@ class Chat extends BaseModel
     public static function getUserChats($userId, $isDoctor = false)
     {
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         $messages_table = $wpdb->prefix . 'hm_chat_messages';
 
         if ($isDoctor) {
@@ -112,7 +119,7 @@ class Chat extends BaseModel
         
         // Get the table name
         $instance = new static();
-        $table = $instance->table;
+        $table = $instance->getTable();
         
         $result = $wpdb->insert(
             $table,
@@ -138,7 +145,7 @@ class Chat extends BaseModel
         global $wpdb;
         // Get the table name
         $instance = new static();
-        $table = $instance->table;
+        $table = $instance->getTable();
         
         $chat = $wpdb->get_row($wpdb->prepare("
             SELECT * FROM {$table}
@@ -156,7 +163,7 @@ class Chat extends BaseModel
         global $wpdb;
         // Get the table name
         $instance = new static();
-        $table = $instance->table;
+        $table = $instance->getTable();
         
         return $wpdb->update(
             $table,
@@ -173,7 +180,7 @@ class Chat extends BaseModel
         global $wpdb;
         // Get the table name
         $instance = new static();
-        $table = $instance->table;
+        $table = $instance->getTable();
         
         return $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) FROM {$table}

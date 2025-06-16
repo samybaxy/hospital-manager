@@ -9,7 +9,7 @@ class Visitation extends BaseModel
     
     protected $primaryKey = 'ID';
     protected $tableName = 'hm_visitations';
-    protected $cache_expiration = 1200; // 20 minutes
+    protected static $cache_expiration = 1200; // 20 minutes
 
     protected $fillable = [
         'patient_id',
@@ -22,11 +22,17 @@ class Visitation extends BaseModel
         'treatment'
     ];
     
-    public function __construct(array $attributes = [])
+    /**
+     * Visitation constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_visitations';
         
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
 
@@ -65,15 +71,16 @@ class Visitation extends BaseModel
      */
     public static function getForPatient($patientId)
     {
-        $cache_key = "visitations_patient_{$patientId}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getForPatient', [$patientId]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $results = $wpdb->get_results(
             $wpdb->prepare(
@@ -87,7 +94,7 @@ class Visitation extends BaseModel
             return new static($item);
         }, $results);
         
-        set_transient($cache_key, $visitations, 1200); // 20 minutes
+        static::setToCache($cache_key, $visitations, 1200); // 20 minutes
         
         return $visitations;
     }
@@ -97,15 +104,16 @@ class Visitation extends BaseModel
      */
     public static function getForDoctor($doctorId)
     {
-        $cache_key = "visitations_doctor_{$doctorId}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getForDoctor', [$doctorId]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $results = $wpdb->get_results(
             $wpdb->prepare(
@@ -119,7 +127,7 @@ class Visitation extends BaseModel
             return new static($item);
         }, $results);
         
-        set_transient($cache_key, $visitations, 1200); // 20 minutes
+        static::setToCache($cache_key, $visitations, 1200); // 20 minutes
         
         return $visitations;
     }
@@ -129,15 +137,16 @@ class Visitation extends BaseModel
      */
     public static function getForDateRange($startDate, $endDate)
     {
-        $cache_key = "visitations_daterange_" . md5($startDate . $endDate);
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getForDateRange', [$startDate, $endDate]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $results = $wpdb->get_results(
             $wpdb->prepare(
@@ -152,7 +161,7 @@ class Visitation extends BaseModel
             return new static($item);
         }, $results);
         
-        set_transient($cache_key, $visitations, 1800); // 30 minutes
+        static::setToCache($cache_key, $visitations, 1800); // 30 minutes
         
         return $visitations;
     }
@@ -163,15 +172,15 @@ class Visitation extends BaseModel
     public static function getTodaysVisitations()
     {
         $today = date('Y-m-d');
-        $cache_key = "visitations_today_{$today}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getTodaysVisitations', [$today]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         $visitations = static::getForDateRange($today, $today);
-        set_transient($cache_key, $visitations, 600); // 10 minutes for today's data
+        static::setToCache($cache_key, $visitations, 600); // 10 minutes for today's data
         
         return $visitations;
     }
@@ -181,15 +190,16 @@ class Visitation extends BaseModel
      */
     public static function getStatistics()
     {
-        $cache_key = 'visitation_statistics';
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getStatistics', []);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
         
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $stats = [
             'total' => (int)$wpdb->get_var("SELECT COUNT(*) FROM $table"),
@@ -207,7 +217,7 @@ class Visitation extends BaseModel
             ))
         ];
         
-        set_transient($cache_key, $stats, 1800); // 30 minutes
+        static::setToCache($cache_key, $stats, 1800); // 30 minutes
         
         return $stats;
     }
@@ -217,8 +227,8 @@ class Visitation extends BaseModel
      */
     public function getLabInvestigations()
     {
-        $cache_key = "visitation_labs_{$this->ID}";
-        $cached = get_transient($cache_key);
+        $cache_key = static::getCacheKey('getLabInvestigations', [$this->ID]);
+        $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
@@ -228,7 +238,7 @@ class Visitation extends BaseModel
         $labInvestigation = new \HospitalManager\Models\LabInvestigation();
         $results = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT * FROM {$labInvestigation->table} WHERE visitation_id = %d",
+                "SELECT * FROM {$labInvestigation->getTable()} WHERE visitation_id = %d",
                 $this->ID
             ),
             ARRAY_A
@@ -238,7 +248,7 @@ class Visitation extends BaseModel
             return new $labInvestigation($item);
         }, $results);
         
-        set_transient($cache_key, $labs, 1200); // 20 minutes
+        static::setToCache($cache_key, $labs, 1200); // 20 minutes
         
         return $labs;
     }
@@ -277,25 +287,25 @@ class Visitation extends BaseModel
     private function invalidateVisitationCaches()
     {
         // Clear general statistics cache
-        delete_transient('visitation_statistics');
+        static::invalidateCache('getStatistics');
         
         // Clear today's visitations cache
         $today = date('Y-m-d');
-        delete_transient("visitations_today_{$today}");
+        static::invalidateCache('getTodaysVisitations', [$today]);
         
         // Clear patient-specific cache if patient_id exists
         if (isset($this->attributes['patient_id'])) {
-            delete_transient("visitations_patient_{$this->attributes['patient_id']}");
+            static::invalidateCache('getForPatient', [$this->attributes['patient_id']]);
         }
         
         // Clear doctor-specific cache if doctor_id exists
         if (isset($this->attributes['doctor_id'])) {
-            delete_transient("visitations_doctor_{$this->attributes['doctor_id']}");
+            static::invalidateCache('getForDoctor', [$this->attributes['doctor_id']]);
         }
         
         // Clear lab investigations cache if ID exists
         if (isset($this->attributes['ID'])) {
-            delete_transient("visitation_labs_{$this->attributes['ID']}");
+            static::invalidateCache('getLabInvestigations', [$this->attributes['ID']]);
         }
     }
 }
