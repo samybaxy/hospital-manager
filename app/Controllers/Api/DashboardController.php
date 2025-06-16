@@ -2,6 +2,11 @@
 
 namespace HospitalManager\Controllers\Api;
 
+use HospitalManager\Models\LabInvestigation;
+use HospitalManager\Models\Appointment;
+use HospitalManager\Models\MedicalReport;
+use HospitalManager\Models\Visitation;
+use HospitalManager\Models\Patient;
 use WP_REST_Controller;
 use WP_REST_Server;
 use WP_REST_Response;
@@ -59,7 +64,7 @@ class DashboardController extends WP_REST_Controller
      */
     private function get_patient_dashboard($user_id) 
     {
-        $patients = \HospitalManager\Models\Patient::findWhere(['user_id' => $user_id]);
+        $patients = Patient::findWhere(['user_id' => $user_id]);
         $patient = !empty($patients) ? $patients[0] : null;
         
         if (!$patient) {
@@ -67,13 +72,13 @@ class DashboardController extends WP_REST_Controller
         }
 
         // Get recent visitations
-        $visitations = \HospitalManager\Models\Visitation::forPatient($patient->ID);
+        $visitations = Visitation::forPatient($patient->ID);
 
         // Get pending lab tests
-        $lab_tests = \HospitalManager\Models\LabInvestigation::getPendingForPatient($patient->ID);
+        $lab_tests = LabInvestigation::getPendingForPatient($patient->ID);
 
         // Get upcoming appointments
-        $appointments = \HospitalManager\Models\Appointment::getUpcomingForPatient($patient->ID);
+        $appointments = Appointment::getUpcomingForPatient($patient->ID);
 
         return new WP_REST_Response([
             'patient' => $patient,
@@ -91,8 +96,8 @@ class DashboardController extends WP_REST_Controller
      */
     private function get_doctor_dashboard($user_id) 
     {
-        $todays_appointments = \HospitalManager\Models\Appointment::getTodaysForDoctor($user_id);
-        $pending_reports = \HospitalManager\Models\MedicalReport::getPendingForDoctor($user_id);
+        $todays_appointments = Appointment::getTodaysForDoctor($user_id);
+        $pending_reports = MedicalReport::getPendingForDoctor($user_id);
 
         return new WP_REST_Response([
             'todays_appointments' => $todays_appointments,
@@ -109,8 +114,8 @@ class DashboardController extends WP_REST_Controller
      */
     private function get_lab_dashboard($user_id) 
     {
-        $pending_tests = \HospitalManager\Models\LabInvestigation::getPendingForTech($user_id);
-        $completed_tests = \HospitalManager\Models\LabInvestigation::getCompletedCountForTechToday($user_id);
+        $pending_tests = LabInvestigation::getPendingForTech($user_id);
+        $completed_tests = LabInvestigation::getCompletedCountForTechToday($user_id);
 
         return new WP_REST_Response([
             'pending_tests' => $pending_tests,

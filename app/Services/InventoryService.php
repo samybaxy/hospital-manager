@@ -3,11 +3,8 @@
 namespace HospitalManager\Services;
 
 use HospitalManager\Models\Inventory;
-use HospitalManager\Models\InventoryTransaction;
-use HospitalManager\Models\InventoryAlert;
-use HospitalManager\Models\InventoryReorder;
 
-class InventoryService
+class InventoryService extends BaseService
 {
     /**
      * Record an inventory transaction
@@ -17,7 +14,7 @@ class InventoryService
      */
     public static function recordTransaction($data)
     {
-        global $wpdb;
+        $wpdb = self::getWpdb();
         
         // Get the current inventory item
         $item = Inventory::findOne($data['item_id']);
@@ -95,7 +92,7 @@ class InventoryService
      */
     public static function acknowledgeAlert($alert_id, $user_id)
     {
-        global $wpdb;
+        $wpdb = self::getWpdb();
         
         return $wpdb->update(
             $wpdb->prefix . 'hm_inventory_alerts',

@@ -2,7 +2,6 @@
 namespace HospitalManager\Models;
 
 use WPMVC\MVC\Traits\FindTrait;
-use  \HospitalManager\Models\Patient;
 
 class Doctor extends BaseModel
 {
@@ -10,6 +9,8 @@ class Doctor extends BaseModel
     
     protected $primaryKey = 'ID';
     protected $tableName = 'hm_doctors';
+    protected static $cache_expiration = 3600; // 1 hour for doctor data
+    
     protected $fillable = [
         'user_id',
         'first_name',
@@ -26,248 +27,185 @@ class Doctor extends BaseModel
     ];
     
     /**
-     * Magic getter with compatibility for parent class.
+     * Doctor constructor
      * 
-     * @param string $property Property name
-     * @return mixed
+     * @param int|array $attributes Model ID or attributes array
      */
-    public function &__get($property)
+    public function __construct($attributes = 0)
     {
-        // For phone property, handle it specially for the test
-        if ($property === 'phone' && isset($this->attributes['ID'])) {
-            global $wpdb;
-            $table = $wpdb->prefix . $this->tableName;
-            $sql = $wpdb->prepare("SELECT phone FROM $table WHERE ID = %d", $this->attributes['ID']);
-            $value = $wpdb->get_var($sql);
-            
-            // Store in attributes for next time
-            if ($value !== null) {
-                $this->attributes[$property] = $value;
-            }
-        }
+        // Set the table name for this model
+        $this->tableName = 'hm_doctors';
         
-        // We need to return by reference to be compatible with parent
-        if (isset($this->attributes[$property])) {
-            return $this->attributes[$property];
-        }
-        
-        // If property not found, delegate to parent
-        return parent::__get($property);
-    }
-    
-    public function __construct(array $attributes = [])
-    {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
 
     /**
-     * Override the find method from FindTrait to handle our constructor's array requirement
-     * 
-     * @param mixed $ID Record ID.
-     * @return object|null
+     * Find doctors by specialty with caching
      */
-    public static function find($ID = 0)
+    public static function findBySpecialty($specialty)
     {
-        global $wpdb;
+        $cache_key = static::getCacheKey('findBySpecialty', [$specialty]);
+        $cached = static::getFromCache($cache_key);
         
-        if (empty($ID)) {
-            return null;
+        if ($cached !== false) {
+            return $cached;
         }
-        
-        // Get the table name
-        $instance = new self();
-        $table = $instance->getTable();
-        
-        // Add SQL_NO_CACHE to prevent caching issues
-        $query = $wpdb->prepare("SELECT SQL_NO_CACHE * FROM {$table} WHERE ID = %d", $ID);
-        error_log("Doctor::find() Query: $query");
-        
-        $doctor_data = $wpdb->get_row($query, ARRAY_A);
-        error_log("Doctor::find() Result: " . json_encode($doctor_data));
-        
-        if (!$doctor_data) {
-            return null;
-        }
-        
-        // Using uppercase 'ID' consistently throughout the application
-        
-        // Create a new doctor instance with the fetched data
-        $doctor = new self($doctor_data);
-        
-        return $doctor;
-    }
 
-    /**
-     * Create a new doctor record
-     */
-    public static function create(array $data)
-    {
-        global $wpdb;
-        // Get the table name
-        $instance = new static();
-        $table = $instance->getTable();
-        
-        // Set created_at if applicable
-        if (!isset($data['created_at'])) {
-            $data['created_at'] = current_time('mysql');
-        }
-        
-        // Set updated_at if applicable
-        if (!isset($data['updated_at'])) {
-            $data['updated_at'] = current_time('mysql');
-        }
-        
-        try {
-            // Ensure data only contains valid column names
-            $filtered_data = array_intersect_key($data, array_flip([
-                'user_id', 'first_name', 'last_name', 'phone', 'specialty', 'status', 'created_at', 'updated_at'
-            ]));
-            
-            // Define format for each field
-            $formats = [];
-            foreach ($filtered_data as $key => $value) {
-                // Ensure phone is always treated as a string to preserve leading zeros
-                if ($key === 'phone') {
-                    $formats[] = '%s';
-                } else {
-                    $formats[] = is_numeric($value) ? '%d' : '%s';
-                }
-            }
-            
-            // Insert the record
-            $result = $wpdb->insert(
-                $table,
-                $filtered_data,
-                $formats
-            );
-            
-            if ($result === false) {
-                throw new \Exception($wpdb->last_error);
-            }
-            
-            $filtered_data['ID'] = $wpdb->insert_id;
-            
-            return new static($filtered_data);
-        } catch (\Exception $e) {
-            throw new \Exception('Failed to create doctor record: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Get doctors by a specific condition
-     */
-    public static function where($column, $value)
-    {
         global $wpdb;
         $table = (new static)->table;
         
         $results = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT * FROM $table WHERE $column = %s",
-                $value
+                "SELECT * FROM $table WHERE specialty = %s AND status = 'active'",
+                $specialty
             ),
             ARRAY_A
         );
         
-        return array_map(function($item) {
+        $models = array_map(function($item) {
             return new static($item);
-        }, $results);
+        }, $results ?: []);
+        
+        static::setToCache($cache_key, $models, 3600); // 1 hour cache
+        
+        return $models;
     }
 
     /**
-     * Order doctors by a column
+     * Get active doctors with caching
      */
-    public static function orderBy($column, $direction = 'ASC')
+    public static function getActive()
     {
+        $cache_key = static::getCacheKey('getActive', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
-        $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         
         $results = $wpdb->get_results(
-            "SELECT * FROM $table ORDER BY $column $direction",
+            "SELECT * FROM $table WHERE status = 'active' ORDER BY last_name, first_name",
             ARRAY_A
         );
         
-        return array_map(function($item) {
+        $models = array_map(function($item) {
             return new static($item);
-        }, $results);
+        }, $results ?: []);
+        
+        static::setToCache($cache_key, $models, 3600); // 1 hour cache
+        
+        return $models;
     }
 
     /**
-     * Check if a doctor exists
+     * Get doctor statistics with caching
      */
-    public static function exists($conditions)
+    public static function getStatistics()
     {
+        $cache_key = static::getCacheKey('getStatistics', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $doctors_table = $wpdb->prefix . 'hm_doctors';
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        
+        $stats = $wpdb->get_row("
+            SELECT 
+                (SELECT COUNT(*) FROM {$doctors_table}) as total_doctors,
+                (SELECT COUNT(*) FROM {$doctors_table} WHERE status = 'active') as active_doctors,
+                (SELECT COUNT(DISTINCT specialty) FROM {$doctors_table} WHERE status = 'active') as specialties_count,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE appointment_date >= CURDATE()) as upcoming_appointments,
+                (SELECT AVG(years_experience) FROM {$doctors_table} WHERE years_experience > 0) as avg_experience
+        ", ARRAY_A);
+
+        static::setToCache($cache_key, $stats, 3600); // 1 hour cache
+        
+        return $stats;
+    }
+
+    /**
+     * Get all specialties with caching
+     */
+    public static function getSpecialties()
+    {
+        $cache_key = static::getCacheKey('getSpecialties', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
         
-        $where = [];
-        $values = [];
-        foreach ($conditions as $column => $value) {
-            $where[] = "$column = %s";
-            $values[] = $value;
+        $specialties = $wpdb->get_col("
+            SELECT DISTINCT specialty 
+            FROM $table 
+            WHERE status = 'active' AND specialty IS NOT NULL AND specialty != ''
+            ORDER BY specialty ASC
+        ");
+        
+        static::setToCache($cache_key, $specialties, 7200); // 2 hours cache (rarely changes)
+        
+        return $specialties;
+    }
+
+    /**
+     * Get appointments for this doctor with caching
+     */
+    public function getAppointments()
+    {
+        if (!$this->ID) {
+            return [];
         }
-        
-        $whereClause = implode(' AND ', $where);
-        $query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM $table WHERE $whereClause",
-            $values
-        );
-        
-        return (int) $wpdb->get_var($query) > 0;
-    }
 
-    /**
-     * Get active doctors
-     */
-    public static function getActiveDoctors()
-    {
-        return static::where('status', 'active');
-    }
+        $cache_key = static::getCacheKey('getAppointments', [$this->ID]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
 
-    /**
-     * Find doctors by specific conditions
-     */
-    public static function findWhere(array $conditions)
-    {
         global $wpdb;
-        $table = (new static)->table;
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $patients_table = $wpdb->prefix . 'hm_patients';
         
-        $where = [];
-        $values = [];
-        foreach ($conditions as $column => $value) {
-            $where[] = "$column = %s";
-            $values[] = $value;
-        }
-        
-        $whereClause = implode(' AND ', $where);
         $query = $wpdb->prepare(
-            "SELECT * FROM $table WHERE $whereClause",
-            $values
+            "SELECT a.*, 
+            CONCAT(p.first_name, ' ', p.last_name) as patient_name
+            FROM {$appointments_table} a
+            LEFT JOIN {$patients_table} p ON a.patient_id = p.ID
+            WHERE a.doctor_id = %d
+            ORDER BY a.appointment_date DESC, a.appointment_time DESC",
+            $this->ID
         );
         
-        $results = $wpdb->get_results($query, ARRAY_A);
-        return array_map(function($item) {
-            return new static($item);
-        }, $results);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 900); // 15 minutes cache (frequently changing)
+        
+        return $result;
     }
 
     /**
-     * Search doctors and return paginated results
-     * 
-     * @param string $search Search term for name or specialty
-     * @param int $page Current page number
-     * @param int $perPage Items per page
-     * @param string $status Filter by doctor status (default: all)
-     * @param string $specialty Filter by doctor specialty (default: null)
-     * @param string $orderby Field to order by (default: last_name)
-     * @param string $order Sort order: asc or desc (default: asc)
-     * @return array Paginated results with metadata
+     * Enhanced search with caching and pagination
      */
     public static function searchAndPaginate($search = null, $page = 1, $perPage = 20, $status = null, $specialty = null, $orderby = 'last_name', $order = 'asc')
     {
+        $cache_key = static::getCacheKey('searchAndPaginate', func_get_args());
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
         $offset = ($page - 1) * $perPage;
@@ -287,138 +225,92 @@ class Doctor extends BaseModel
         }
         
         if (!empty($search)) {
-            // Properly escape search terms for LIKE queries
             $search_param = '%' . $wpdb->esc_like($search) . '%';
             $where_parts[] = "(first_name LIKE %s OR last_name LIKE %s OR specialty LIKE %s)";
-            
-            // Make sure we're not modifying the existing $values array directly
-            // This can cause issues with parameter ordering
             $values[] = $search_param;
             $values[] = $search_param;
             $values[] = $search_param;
-            
-            // Add detailed debug logging
-            error_log("Doctor search query with params: " . print_r([
-                'search' => $search,
-                'search_param' => $search_param,
-                'where_clause' => implode(' AND ', $where_parts),
-                'values' => $values
-            ], true));
         }
         
         $where_clause = !empty($where_parts) ? "WHERE " . implode(' AND ', $where_parts) : '';
         
-        // Validate orderby to prevent SQL injection
+        // Validate orderby and order
         $allowed_order_fields = ['ID', 'first_name', 'last_name', 'specialty', 'created_at', 'updated_at'];
         if (!in_array($orderby, $allowed_order_fields)) {
             $orderby = 'last_name';
         }
-        
-        // Validate order direction
         $order = strtolower($order) === 'desc' ? 'DESC' : 'ASC';
         
-        // Count total records for pagination
+        // Count total records
         $count_query = "SELECT COUNT(*) FROM $table $where_clause";
         $prepared_count = !empty($values) ? $wpdb->prepare($count_query, $values) : $count_query;
         $total = (int)$wpdb->get_var($prepared_count);
         
-        // Get the actual records
+        // Get records
         $query = "SELECT * FROM $table $where_clause ORDER BY $orderby $order LIMIT %d OFFSET %d";
         $all_values = array_merge($values, [$perPage, $offset]);
         $prepared_query = $wpdb->prepare($query, $all_values);
         
         $results = $wpdb->get_results($prepared_query, ARRAY_A);
         
-        // Convert to Doctor model instances
         $doctors = array_map(function($item) {
             return new static($item);
-        }, $results);
+        }, $results ?: []);
         
-        return [
+        $result = [
             'data' => $doctors,
             'total' => $total,
             'per_page' => $perPage,
             'current_page' => $page,
             'last_page' => ceil($total / $perPage)
         ];
+
+        static::setToCache($cache_key, $result, 1800); // 30 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get a list of all unique specialties currently in use
-     * 
-     * @return array List of specialty names
-     */
-    public static function getUniqueSpecialties() 
-    {
-        global $wpdb;
-        $table = (new static)->table;
-        
-        // Query to get distinct specialties from active doctors
-        $specialties = $wpdb->get_col("
-            SELECT DISTINCT specialty 
-            FROM $table 
-            WHERE status = 'active' AND specialty IS NOT NULL AND specialty != ''
-            ORDER BY specialty ASC
-        ");
-        
-        return $specialties;
-    }
-    
-    /**
-     * Save the current doctor to the database
-     * 
-     * @return bool Success status
+     * Save with cache invalidation
      */
     public function save()
     {
         global $wpdb;
         
-        // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
         if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
             // Prepare the update data
             $update_data = [];
             
-            // Only include fields that are in the fillable array
             foreach ($this->fillable as $field) {
                 if (isset($this->attributes[$field])) {
                     $update_data[$field] = $this->attributes[$field];
                 }
             }
             
-            // Add updated_at
             $update_data['updated_at'] = current_time('mysql');
             
-            // Debug log the update operation
-            error_log(sprintf(
-                'Doctor->save(): Updating doctor ID %d with data: %s',
-                $this->attributes['ID'],
-                json_encode($update_data)
-            ));
-            
-            // Use WordPress's built-in update function which handles data types properly
             $result = $wpdb->update(
                 $table,
                 $update_data,
                 ['ID' => $this->attributes['ID']],
-                null, // Format will be determined automatically
-                ['%d'] // ID is an integer
+                null,
+                ['%d']
             );
             
-            error_log("Doctor->save() update result: " . var_export($result, true));
+            if ($result !== false) {
+                $this->invalidateDoctorCaches();
+            }
             
             return $result !== false;
-        } else {
-            // This should not happen as we use the create method for new records
-            return false;
         }
+        
+        return false;
     }
-    
+
     /**
-     * Delete the current doctor from the database
-     * 
-     * @return bool Success status
+     * Delete with cache invalidation
      */
     public function delete()
     {
@@ -428,118 +320,49 @@ class Doctor extends BaseModel
             return false;
         }
         
-        // Make sure we have the correct table name
         $table = $wpdb->prefix . $this->tableName;
         
-        // Delete the record
         $result = $wpdb->delete(
             $table,
             ['ID' => $this->attributes['ID']],
             ['%d']
         );
         
+        if ($result !== false) {
+            $this->invalidateDoctorCaches();
+        }
+        
         return $result !== false;
     }
 
     /**
-     * Get patients assigned to a specific doctor with pagination
-     * 
-     * @param int $doctor_id The doctor's ID
-     * @param int $page Current page number
-     * @param int $perPage Items per page
-     * @return array Paginated results with patient data and metadata
+     * Invalidate doctor-specific caches
      */
-    public static function getPatients($doctor_id, $page = 1, $perPage = 20)
+    private function invalidateDoctorCaches()
     {
-        global $wpdb;
-        $doctor_id = intval($doctor_id);
-        $offset = ($page - 1) * $perPage;
-        
-        // Get the patient table name
-        $patient_table = $wpdb->prefix . 'hm_patients';
-        
-        // Get the visitations table name
-        $visitations_table = $wpdb->prefix . 'hm_visitations';
-        
-        // Query to get patients who have visitations with this doctor, including time
-        $query = $wpdb->prepare(
-            "SELECT DISTINCT p.*, 
-                MAX(v.date) as last_visit_date,
-                (SELECT v2.time 
-                 FROM $visitations_table v2 
-                 WHERE v2.patient_id = p.ID 
-                 AND v2.doctor_id = %d 
-                 AND v2.date = MAX(v.date) 
-                 LIMIT 1) as last_visit_time  
-            FROM $patient_table p
-            INNER JOIN $visitations_table v ON p.ID = v.patient_id
-            WHERE v.doctor_id = %d
-            GROUP BY p.ID
-            ORDER BY MAX(v.date) DESC, p.last_name, p.first_name
-            LIMIT %d OFFSET %d",
-            $doctor_id,
-            $doctor_id,
-            $perPage,
-            $offset
-        );
-        
-        // Get count query for pagination - count distinct patients
-        $count_query = $wpdb->prepare(
-            "SELECT COUNT(DISTINCT p.ID)
-            FROM $patient_table p
-            INNER JOIN $visitations_table v ON p.ID = v.patient_id
-            WHERE v.doctor_id = %d",
-            $doctor_id
-        );
-        
-        // Execute the queries
-        $patients_data = $wpdb->get_results($query, ARRAY_A);
-        $total = (int)$wpdb->get_var($count_query);
-        
-        // If no patients found, return empty array
-        if (empty($patients_data)) {
-            return [
-                'data' => [],
-                'total' => 0,
-                'per_page' => $perPage,
-                'current_page' => $page,
-                'last_page' => 0
-            ];
+        // Invalidate specific caches
+        if (isset($this->attributes['ID'])) {
+            static::invalidateCache('findCached', [$this->attributes['ID']]);
+            static::invalidateCache('getAppointments', [$this->attributes['ID']]);
         }
         
-        // Load the Patient model and create instances
-        $patients = [];
-        foreach ($patients_data as $patient_data) {
-            // If we have a Patient model class, use it
-            if (class_exists('\\HospitalManager\\Models\\Patient')) {
-                $patients[] = new Patient($patient_data);
-            } else {
-                // Otherwise just return the raw data as a stdClass object
-                $patient_obj = new \stdClass();
-                foreach ($patient_data as $key => $value) {
-                    $patient_obj->$key = $value;
-                }
-                $patients[] = $patient_obj;
-            }
+        if (isset($this->attributes['specialty'])) {
+            static::invalidateCache('findBySpecialty', [$this->attributes['specialty']]);
         }
-
-        return [
-            'data' => $patients,
-            'total' => $total,
-            'per_page' => $perPage,
-            'current_page' => $page,
-            'last_page' => ceil($total / $perPage)
-        ];
+        
+        // Invalidate general caches
+        static::invalidateCache('getActive');
+        static::invalidateCache('getSpecialties');
+        static::invalidateCache('getStatistics');
+        static::invalidateCache('all');
+        static::invalidateCache('count');
     }
 
     /**
-     * Convert the doctor instance to an array
+     * Convert to array for API responses
      */
     public function toArray()
     {
-        // Log the attributes for debugging
-        error_log('Doctor->toArray() attributes: ' . json_encode($this->attributes));
-        
         return [
             'ID' => $this->attributes['ID'] ?? null,
             'first_name' => $this->attributes['first_name'] ?? '',
@@ -561,3 +384,4 @@ class Doctor extends BaseModel
         ];
     }
 }
+

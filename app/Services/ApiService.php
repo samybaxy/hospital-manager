@@ -2,27 +2,28 @@
 
 namespace HospitalManager\Services;
 
-use HospitalManager\Controllers\Api\PatientController;
-use HospitalManager\Controllers\Api\VisitationController;
-use HospitalManager\Controllers\Api\LabInvestigationController;
-use HospitalManager\Controllers\Api\ChatController;
-use HospitalManager\Controllers\Api\NotificationController;
-use HospitalManager\Controllers\Api\AppointmentController;
-use HospitalManager\Controllers\Api\AuthController;
-use HospitalManager\Controllers\Api\UserController;
-use HospitalManager\Controllers\Api\DoctorController;
-use HospitalManager\Controllers\Api\AuditController;
-use HospitalManager\Controllers\Api\DashboardController;
-use HospitalManager\Controllers\Api\StatsController;
-use HospitalManager\Controllers\Api\HMOController;
-use HospitalManager\Controllers\Api\InventoryController;
-use HospitalManager\Controllers\Api\ProfileController;
-use HospitalManager\Models\HMO;
+use HospitalManager\Controllers\Api\{
+    PatientController,
+    VisitationController,
+    LabInvestigationController,
+    ChatController,
+    NotificationController,
+    AppointmentController,
+    AuthController,
+    UserController,
+    DoctorController,
+    AuditController,
+    DashboardController,
+    StatsController,
+    HMOController,
+    InventoryController,
+    ProfileController
+};
 
 /**
  * Service for managing API registration and standardization
  */
-class ApiService
+class ApiService extends BaseService
 {
     /**
      * API version
@@ -33,28 +34,39 @@ class ApiService
 
     /**
      * Get the controllers that need to be registered
+     * Using a more maintainable approach with controller registry
      *
      * @return array Array of controller instances
      */
     public static function getControllers()
     {
-        return [
-            new PatientController(),
-            new VisitationController(),
-            new LabInvestigationController(),
-            new ChatController(),
-            new NotificationController(),
-            new AppointmentController(),
-            new AuthController(),
-            new UserController(), // Added for secure password change endpoint
-            new DoctorController(),
-            new AuditController(),
-            new DashboardController(),
-            new StatsController(),
-            new HMOController(),
-            new InventoryController(),
-            new ProfileController(),
+        $controllers = [
+            'patient' => PatientController::class,
+            'visitation' => VisitationController::class,
+            'lab_investigation' => LabInvestigationController::class,
+            'chat' => ChatController::class,
+            'notification' => NotificationController::class,
+            'appointment' => AppointmentController::class,
+            'auth' => AuthController::class,
+            'user' => UserController::class,
+            'doctor' => DoctorController::class,
+            'audit' => AuditController::class,
+            'dashboard' => DashboardController::class,
+            'stats' => StatsController::class,
+            'hmo' => HMOController::class,
+            'inventory' => InventoryController::class,
+            'profile' => ProfileController::class,
         ];
+
+        // Initialize controllers
+        $instances = [];
+        foreach ($controllers as $key => $controller_class) {
+            if (class_exists($controller_class)) {
+                $instances[$key] = new $controller_class();
+            }
+        }
+
+        return $instances;
     }
 
     /**
@@ -66,8 +78,12 @@ class ApiService
     {
         // Register regular API controllers
         $controllers = self::getControllers();
-        foreach ($controllers as $controller) {
-            $controller->register_routes();
+        foreach ($controllers as $key => $controller) {
+            if (method_exists($controller, 'register_routes')) {
+                $controller->register_routes();
+            } else {
+                self::logError('ApiService', 'registerRoutes', "Controller {$key} missing register_routes method");
+            }
         }
         
         // Register Http route classes

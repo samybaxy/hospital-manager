@@ -2,9 +2,7 @@
 
 namespace HospitalManager\Services;
 
-use Error;
-
-class DashboardService
+class DashboardService extends BaseService
 {
     /**
      * Get comprehensive dashboard statistics for admin dashboard
@@ -14,8 +12,6 @@ class DashboardService
      */
     public static function getDashboardStats()
     {
-        global $wpdb;
-        
         try {
             return [
                 'patients_count' => self::getPatientsCount(),
@@ -28,7 +24,7 @@ class DashboardService
             ];
             
         } catch (\Exception $e) {
-            error_log('DashboardService::getDashboardStats error: ' . $e->getMessage());
+            self::logError('DashboardService', 'getDashboardStats', $e->getMessage());
             throw $e;
         }
     }
@@ -40,19 +36,13 @@ class DashboardService
      */
     public static function getPatientsCount()
     {
-        global $wpdb;
-        
         // Check if patients table exists
         if (!self::tableExists('hm_patients')) {
             return 0;
         }
         
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hm_patients");
-        
-        if ($wpdb->last_error) {
-            error_log('DashboardService::getPatientsCount error: ' . $wpdb->last_error);
-            return 0;
-        }
+        $wpdb = self::getWpdb();
+        $count = self::getVar("SELECT COUNT(*) FROM {$wpdb->prefix}hm_patients");
         
         return (int) ($count ?: 0);
     }
@@ -75,19 +65,13 @@ class DashboardService
      */
     public static function getAppointmentsCount()
     {
-        global $wpdb;
-        
         // Check if appointments table exists
         if (!self::tableExists('hm_appointments')) {
             return 0;
         }
         
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hm_appointments");
-        
-        if ($wpdb->last_error) {
-            error_log('DashboardService::getAppointmentsCount error: ' . $wpdb->last_error);
-            return 0;
-        }
+        $wpdb = self::getWpdb();
+        $count = self::getVar("SELECT COUNT(*) FROM {$wpdb->prefix}hm_appointments");
         
         return (int) ($count ?: 0);
     }
@@ -99,19 +83,13 @@ class DashboardService
      */
     public static function getDepartmentsCount()
     {
-        global $wpdb;
-        
         // Check if departments table exists
         if (!self::tableExists('hm_departments')) {
             return 0;
         }
         
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hm_departments");
-        
-        if ($wpdb->last_error) {
-            error_log('DashboardService::getDepartmentsCount error: ' . $wpdb->last_error);
-            return 0;
-        }
+        $wpdb = self::getWpdb();
+        $count = self::getVar("SELECT COUNT(*) FROM {$wpdb->prefix}hm_departments");
         
         return (int) ($count ?: 0);
     }
@@ -123,8 +101,6 @@ class DashboardService
      */
     public static function getInventorySummary()
     {
-        global $wpdb;
-        
         $default_summary = [
             'total_items' => 0,
             'critical_items' => 0,
@@ -135,12 +111,11 @@ class DashboardService
         ];
         
         // Check if inventory table exists
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}hm_inventory'");
-        
-        if (!$table_exists) {
+        if (!self::tableExists('hm_inventory')) {
             return $default_summary;
         }
         
+        $wpdb = self::getWpdb();
         $inventory_summary = $wpdb->get_row("
             SELECT 
                 COUNT(*) as total_items,
@@ -153,7 +128,7 @@ class DashboardService
         ", ARRAY_A);
         
         if ($wpdb->last_error) {
-            error_log('DashboardService::getInventorySummary error: ' . $wpdb->last_error);
+            self::logError('DashboardService', 'getInventorySummary', $wpdb->last_error);
             return $default_summary;
         }
         
@@ -272,25 +247,5 @@ class DashboardService
             'recent_activities' => [],
             'upcoming_appointments' => [],
         ];
-    }
-
-    /**
-     * Check if a database table exists
-     * 
-     * @param string $table_name Table name without prefix
-     * @return bool True if table exists
-     */
-    private static function tableExists($table_name)
-    {
-        global $wpdb;
-        
-        $table_exists = $wpdb->get_var(
-            $wpdb->prepare(
-                "SHOW TABLES LIKE %s",
-                $wpdb->prefix . $table_name
-            )
-        );
-        
-        return !empty($table_exists);
     }
 }

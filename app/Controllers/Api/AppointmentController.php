@@ -25,24 +25,6 @@ class AppointmentController extends BaseController
             ]
         ]);
 
-        register_rest_route($this->namespace, '/appointments/book/(?P<ID>\d+)', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_booking_data'],
-                'permission_callback' => function() {
-                    return is_user_logged_in();
-                },
-                'args' => [
-                    'ID' => [
-                        'validate_callback' => function($param, $request, $key) {
-                            return is_numeric($param);
-                        },
-                        'sanitize_callback' => 'absint'
-                    ]
-                ]
-            ]
-        ]);
-
         register_rest_route($this->namespace, '/appointments', [
             [
                 'methods' => WP_REST_Server::CREATABLE,
@@ -128,36 +110,6 @@ class AppointmentController extends BaseController
             return $this->error_response(
                 'Error retrieving appointments: ' . $e->getMessage(), 
                 500
-            );
-        }
-    }
-
-    /**
-     * Get booking data for appointment booking form
-     */
-    public function get_booking_data($request)
-    {
-        $doctor_id = $request->get_param('ID');
-        
-        if (!$doctor_id) {
-            return new WP_Error(
-                'missing_doctor_id',
-                'Doctor ID is required',
-                ['status' => 400]
-            );
-        }
-        
-        try {
-            $booking_data = AppointmentService::getBookingData($doctor_id);
-            
-            return new WP_REST_Response($booking_data, 200);
-            
-        } catch (\Exception $e) {
-            error_log('Error getting booking data: ' . $e->getMessage());
-            return new WP_Error(
-                'booking_data_error',
-                'Failed to retrieve booking data: ' . $e->getMessage(),
-                ['status' => 500]
             );
         }
     }
