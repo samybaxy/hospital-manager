@@ -105,24 +105,6 @@ class PatientController extends BaseController
                 },
             ]
         ]);
-
-        // Get current patient profile
-        register_rest_route($this->namespace, '/patient/profile', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_my_profile'],
-                'permission_callback' => [$this, 'check_patient_permission']
-            ]
-        ]);
-
-        // Update current patient profile
-        register_rest_route($this->namespace, '/patient/profile', [
-            [
-                'methods' => WP_REST_Server::EDITABLE,
-                'callback' => [$this, 'update_my_profile'],
-                'permission_callback' => [$this, 'check_patient_permission']
-            ]
-        ]);
     }
 
     /**
@@ -419,96 +401,5 @@ class PatientController extends BaseController
         
         // Check if user has patient role
         return in_array('patient', $user->roles);
-    }
-
-    /**
-     * Get current patient's profile
-     */
-    public function get_my_profile($request)
-    {
-        try {
-            $user_id = get_current_user_id();
-            
-            // Find patient by user_id using the Patient model
-            $patient = Patient::findByUserId($user_id);
-            
-            if (!$patient) {
-                return new WP_Error(
-                    'profile_not_found',
-                    'Patient profile not found',
-                    ['status' => 404]
-                );
-            }
-            
-            // Get user information
-            $user = get_userdata($user_id);
-            $response = $patient->attributes;
-            $response['email'] = $user->user_email;
-            $response['user_registered'] = $user->user_registered;
-            
-            return new WP_REST_Response($response);
-        } catch (\Exception $e) {
-            error_log('Error getting patient profile: ' . $e->getMessage());
-            return new WP_Error(
-                'server_error',
-                'Failed to retrieve profile information',
-                ['status' => 500]
-            );
-        }
-    }
-
-    /**
-     * Update current patient's profile
-     */
-    public function update_my_profile($request)
-    {
-        try {
-            $user_id = get_current_user_id();
-            
-            // Find patient by user_id using the Patient model
-            $patient = Patient::findByUserId($user_id);
-            
-            if (!$patient) {
-                return new WP_Error(
-                    'profile_not_found',
-                    'Patient profile not found',
-                    ['status' => 404]
-                );
-            }
-            
-            $params = $request->get_params();
-            
-            // Fields that a patient can update about themselves
-            if (isset($params['first_name'])) {
-                $patient->first_name = sanitize_text_field($params['first_name']);
-            }
-            
-            if (isset($params['last_name'])) {
-                $patient->last_name = sanitize_text_field($params['last_name']);
-            }
-            
-            if (isset($params['phone'])) {
-                $patient->phone = sanitize_text_field($params['phone']);
-            }
-            
-            // Save patient record
-            $patient->save();
-            
-            // Return the updated profile
-            $updated_patient = Patient::find($patient->ID);
-            $user = get_userdata($user_id);
-            $response = $updated_patient->attributes;
-            $response['email'] = $user->user_email;
-            $response['user_registered'] = $user->user_registered;
-            
-            return new WP_REST_Response($response);
-        } catch (\Exception $e) {
-            error_log('Error updating patient profile: ' . $e->getMessage());
-            return new WP_Error(
-                'update_failed',
-                'Failed to update profile: ' . $e->getMessage(),
-                ['status' => 500]
-            );
-        }
     }
 }
