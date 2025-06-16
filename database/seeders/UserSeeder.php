@@ -174,10 +174,7 @@ class UserSeeder extends Seeder
      */
     protected function verifyDemoCredentials()
     {
-        $demo_roles = [
-            'administrator', 'doctor', 'patient', 'lab_tech', 'developer',
-            'hospital_nurse', 'hospital_staff', 'pharmacy_staff', 'inventory_manager'
-        ];
+        $demo_roles = self::DEMO_ROLES;
         
         foreach ($demo_roles as $role) {
             $username = 'demo_' . $role;
