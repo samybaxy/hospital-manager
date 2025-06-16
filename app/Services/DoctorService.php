@@ -4,55 +4,47 @@ namespace HospitalManager\Services;
 
 use HospitalManager\Models\Doctor;
 
-class DoctorService
+class DoctorService extends BaseService
 {
     /**
-     * Get comprehensive patient statistics for a doctor
+     * Get comprehensive patient statistics for a doctor with caching
      * 
      * @param int $doctor_id Doctor ID
      * @return array Patient statistics
      */
     public static function getDoctorPatientStatistics($doctor_id)
     {
-        global $wpdb;
-        
-        // Ensure doctor exists and is active
-        $doctor = Doctor::find($doctor_id);
-        if (!$doctor || $doctor->status !== 'active') {
-            return null;
-        }
-        
-        $visitations_table = $wpdb->prefix . 'hm_visitations';
-        
-        // Get total number of unique patients this doctor has seen
-        $total_patients = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(DISTINCT patient_id) FROM $visitations_table WHERE doctor_id = %d", 
-            $doctor_id
-        ));
-        
-        // Count recent visits (last 30 days)
-        $recent_visits = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $visitations_table 
-            WHERE doctor_id = %d AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)",
-            $doctor_id
-        ));
-        
-        // Count active patients (had a visit in the last 90 days)
-        $active_patients = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(DISTINCT patient_id) FROM $visitations_table 
-            WHERE doctor_id = %d AND date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)",
-            $doctor_id
-        ));
-        
-        return [
-            'total_patients' => (int) ($total_patients ?: 0),
-            'recent_visits' => (int) ($recent_visits ?: 0),
-            'active_patients' => (int) ($active_patients ?: 0)
-        ];
+        return self::executeCached('getDoctorPatientStatistics', ['doctor_id' => $doctor_id], function() use ($doctor_id) {
+            // Ensure doctor exists and is active using optimized model method
+            $doctor = Doctor::find($doctor_id);
+            if (!$doctor || $doctor->status !== 'active') {
+                return null;
+            }
+            
+            global $wpdb;
+            $visitations_table = $wpdb->prefix . 'hm_visitations';
+            
+            // Optimized single query to get all statistics
+            $stats = $wpdb->get_row($wpdb->prepare(
+                "SELECT 
+                    COUNT(DISTINCT patient_id) as total_patients,
+                    COUNT(CASE WHEN date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) THEN 1 END) as recent_visits,
+                    COUNT(DISTINCT CASE WHEN date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) THEN patient_id END) as active_patients
+                FROM $visitations_table 
+                WHERE doctor_id = %d", 
+                $doctor_id
+            ), ARRAY_A);
+            
+            return [
+                'total_patients' => (int) ($stats['total_patients'] ?: 0),
+                'recent_visits' => (int) ($stats['recent_visits'] ?: 0),
+                'active_patients' => (int) ($stats['active_patients'] ?: 0)
+            ];
+        }, 3600); // Cache for 1 hour
     }
     
     /**
-     * Get patients for a doctor with pagination
+     * Get patients for a doctor with pagination and caching
      * 
      * @param int $doctor_id Doctor ID
      * @param int $page Page number
@@ -61,58 +53,102 @@ class DoctorService
      */
     public static function getDoctorPatients($doctor_id, $page = 1, $per_page = 20)
     {
-        // Validate doctor exists and is active
-        $doctor = Doctor::find($doctor_id);
-        if (!$doctor || $doctor->status !== 'active') {
-            return null;
-        }
-        
-        // Use the Doctor model's getPatients method
-        return Doctor::getPatients($doctor_id, $page, $per_page);
+        return self::executeCached('getDoctorPatients', [
+            'doctor_id' => $doctor_id,
+            'page' => $page,
+            'per_page' => $per_page
+        ], function() use ($doctor_id, $page, $per_page) {
+            // Validate doctor exists and is active
+            $doctor = Doctor::find($doctor_id);
+            if (!$doctor || $doctor->status !== 'active') {
+                return null;
+            }
+            
+            global $wpdb;
+            $visitations_table = $wpdb->prefix . 'hm_visitations';
+            $patients_table = $wpdb->prefix . 'hm_patients';
+            $offset = ($page - 1) * $per_page;
+            
+            // Optimized count query
+            $total = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(DISTINCT patient_id) FROM $visitations_table WHERE doctor_id = %d",
+                $doctor_id
+            ));
+            
+            // Optimized paginated query with better indexing
+            $results = $wpdb->get_results($wpdb->prepare(
+                "SELECT p.*, v.last_visit_date, v.visit_count
+                FROM $patients_table p
+                INNER JOIN (
+                    SELECT patient_id, 
+                           MAX(date) as last_visit_date,
+                           COUNT(*) as visit_count
+                    FROM $visitations_table 
+                    WHERE doctor_id = %d 
+                    GROUP BY patient_id
+                    ORDER BY last_visit_date DESC
+                    LIMIT %d OFFSET %d
+                ) v ON p.ID = v.patient_id
+                ORDER BY v.last_visit_date DESC",
+                $doctor_id, $per_page, $offset
+            ), ARRAY_A);
+            
+            return [
+                'data' => $results ?: [],
+                'total' => (int) ($total ?: 0),
+                'per_page' => $per_page,
+                'current_page' => $page,
+                'last_page' => ceil(($total ?: 0) / $per_page)
+            ];
+        }, 900); // Cache for 15 minutes
     }
     
     /**
-     * Search and paginate doctors using the model
+     * Search and paginate doctors using optimized model caching
      * 
      * @param array $params Search parameters
      * @return array Paginated doctors with metadata
      */
     public static function searchDoctors($params = [])
     {
-        // Extract parameters with defaults
-        $search = $params['search'] ?? '';
-        $per_page = (int) ($params['per_page'] ?? 10);
-        $page = (int) ($params['page'] ?? 1);
-        $orderby = $params['orderby'] ?? 'last_name';
-        $order = $params['order'] ?? 'asc';
-        $specialty = $params['specialty'] ?? '';
-        $status = $params['status'] ?? 'active';
-        
-        // Handle 'all' specialty as empty string
-        if ($specialty === 'all') {
-            $specialty = '';
-        }
-        
-        // Use the Doctor model's searchAndPaginate method
-        return Doctor::searchAndPaginate(
-            $search,
-            $page,
-            $per_page,
-            $status,
-            $specialty,
-            $orderby,
-            $order
-        );
+        return self::executeCached('searchDoctors', $params, function() use ($params) {
+            // Extract parameters with defaults
+            $search = $params['search'] ?? '';
+            $per_page = (int) ($params['per_page'] ?? 10);
+            $page = (int) ($params['page'] ?? 1);
+            $orderby = $params['orderby'] ?? 'last_name';
+            $order = $params['order'] ?? 'asc';
+            $specialty = $params['specialty'] ?? '';
+            $status = $params['status'] ?? 'active';
+            
+            // Handle 'all' specialty as empty string
+            if ($specialty === 'all') {
+                $specialty = '';
+            }
+            
+            // Use the Doctor model's cached searchAndPaginate method
+            return Doctor::searchAndPaginate(
+                $search,
+                $page,
+                $per_page,
+                $status,
+                $specialty,
+                $orderby,
+                $order
+            );
+        }, 1800); // Cache for 30 minutes
     }
     
     /**
-     * Get all available doctor specialties
+     * Get all available doctor specialties with caching
      * 
      * @return array List of unique specialties
      */
     public static function getSpecialties()
     {
-        // return Doctor::getUniqueSpecialties();
+        return self::executeCached('getSpecialties', [], function() {
+            return Doctor::getSpecialties();
+        }, 7200); // Cache for 2 hours (specialties rarely change)
     }
     
     /**
@@ -148,8 +184,13 @@ class DoctorService
         
         // Validate license number uniqueness for new doctors
         if (!$is_update && !empty($data['license_number'])) {
-            $existing = Doctor::where('license_number', $data['license_number']);
-            if (!empty($existing)) {
+            global $wpdb;
+            $doctors_table = $wpdb->prefix . 'hm_doctors';
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $doctors_table WHERE license_number = %s",
+                $data['license_number']
+            ));
+            if ($existing > 0) {
                 $errors[] = 'License number already exists';
             }
         }

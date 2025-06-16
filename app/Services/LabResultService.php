@@ -9,7 +9,7 @@ use HospitalManager\Services\NotificationService;
 use HospitalManager\Services\WebSocketService;
 use HospitalManager\Services\AuditLogger;
 
-class LabResultService
+class LabResultService extends BaseService
 {
     /**
      * Update lab results and send notifications
@@ -239,7 +239,10 @@ class LabResultService
      */
     public static function getPendingInvestigations($techId = null, $page = 1, $perPage = 20)
     {
-        return LabInvestigation::getPendingForTech($techId, $perPage);
+        $cache_params = ['techId' => $techId, 'page' => $page, 'perPage' => $perPage];
+        return self::executeCached('getPendingInvestigations', $cache_params, function() use ($techId, $perPage) {
+            return LabInvestigation::getPendingForTech($techId, $perPage);
+        }, 300); // Cache for 5 minutes (frequently changing)
     }
 
     /**
@@ -247,7 +250,10 @@ class LabResultService
      */
     public static function getPatientResults($patientId, $page = 1, $perPage = 20)
     {
-        return LabInvestigation::getForPatient($patientId, $perPage);
+        $cache_params = ['patientId' => $patientId, 'page' => $page, 'perPage' => $perPage];
+        return self::executeCached('getPatientResults', $cache_params, function() use ($patientId, $perPage) {
+            return LabInvestigation::getForPatient($patientId, $perPage);
+        }, 1200); // Cache for 20 minutes
     }
 
     /**
@@ -255,7 +261,17 @@ class LabResultService
      */
     public static function getDashboardStats($techId = null)
     {
-        global $wpdb;
+        return self::executeCached('getDashboardStats', ['techId' => $techId], function() use ($techId) {
+            return self::getDashboardStatsUncached($techId);
+        }, 1800); // Cache for 30 minutes
+    }
+
+    /**
+     * Get dashboard statistics without caching (internal method)
+     */
+    private static function getDashboardStatsUncached($techId = null)
+    {
+        $wpdb = self::getWpdb();
         $table = $wpdb->prefix . 'hm_lab_investigations';
         
         $where_tech = $techId ? $wpdb->prepare(" AND lab_tech_id = %d", $techId) : "";

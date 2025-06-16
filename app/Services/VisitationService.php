@@ -10,7 +10,7 @@ use Exception;
 /**
  * Service class for visitation-related business logic
  */
-class VisitationService
+class VisitationService extends BaseService
 {
     /**
      * Get visitations with enhanced filtering and pagination
@@ -20,7 +20,20 @@ class VisitationService
      */
     public static function getVisitations(array $query_params = [])
     {
-        global $wpdb;
+        return self::executeCached('getVisitations', $query_params, function() use ($query_params) {
+            return self::getVisitationsUncached($query_params);
+        });
+    }
+
+    /**
+     * Get visitations without caching (internal method)
+     * 
+     * @param array $query_params Query parameters including pagination, sorting, and filtering
+     * @return array Visitation data with related information
+     */
+    private static function getVisitationsUncached(array $query_params = [])
+    {
+        $wpdb = self::getWpdb();
 
         try {
             // Initialize parameters
@@ -234,7 +247,21 @@ class VisitationService
      */
     public static function getVisitation(int $id)
     {
-        global $wpdb;
+        return self::executeCached('getVisitation', ['id' => $id], function() use ($id) {
+            return self::getVisitationUncached($id);
+        }, 1800); // Cache for 30 minutes
+    }
+
+    /**
+     * Get a single visitation record without caching (internal method)
+     * 
+     * @param int $id The visitation ID
+     * @return array|false Visitation data with related information, or false if not found
+     * @throws Exception If there's a database error
+     */
+    private static function getVisitationUncached(int $id)
+    {
+        $wpdb = self::getWpdb();
 
         try {
             // Initialize tables

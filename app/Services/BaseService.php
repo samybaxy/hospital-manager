@@ -17,12 +17,253 @@ abstract class BaseService
     protected static $wpdb;
 
     /**
+     * Cache settings for services
+     * 
+     * @var array
+     */
+    protected static $cache_settings = [
+        'enabled' => true,
+        'default_expiration' => 1800, // 30 minutes default
+        'group' => 'hospital_manager_services'
+    ];
+
+    /**
+     * Service-specific cache configurations
+     * 
+     * @var array
+     */
+    protected static $service_cache_config = [
+        'PatientService' => [
+            'enabled' => true,
+            'expiration' => 1800, // 30 minutes
+            'critical_methods' => ['searchPatients' => 600] // 10 minutes for search
+        ],
+        'DoctorService' => [
+            'enabled' => true,
+            'expiration' => 3600, // 1 hour
+            'critical_methods' => ['getDoctorPatients' => 900] // 15 minutes for patient lists
+        ],
+        'AppointmentService' => [
+            'enabled' => true,
+            'expiration' => 1200, // 20 minutes
+            'critical_methods' => [
+                'getAppointments' => 600, // 10 minutes for appointment lists
+                'getAvailability' => 600, // 10 minutes for availability
+                'isSlotAvailable' => 300, // 5 minutes for slot checking
+                'getBookingData' => 900 // 15 minutes for booking data
+            ]
+        ],
+        'VisitationService' => [
+            'enabled' => true,
+            'expiration' => 1200, // 20 minutes
+            'critical_methods' => ['getVisitations' => 600] // 10 minutes for visitation lists
+        ],
+        'LabResultService' => [
+            'enabled' => true,
+            'expiration' => 1200, // 20 minutes
+            'critical_methods' => [
+                'getPendingInvestigations' => 300, // 5 minutes for pending investigations
+                'getPatientResults' => 1200, // 20 minutes for patient results
+                'getDashboardStats' => 1800 // 30 minutes for statistics
+            ]
+        ],
+        'InventoryService' => [
+            'enabled' => true,
+            'expiration' => 1800, // 30 minutes
+            'critical_methods' => ['getDashboardData' => 900] // 15 minutes for dashboard
+        ]
+    ];
+
+    /**
      * Initialize the base service
      */
     public static function init()
     {
         global $wpdb;
         self::$wpdb = $wpdb;
+    }
+
+    /**
+     * Get cache key for service method
+     * 
+     * @param string $service_class Service class name
+     * @param string $method Method name
+     * @param array $params Method parameters
+     * @return string Cache key
+     */
+    protected static function getCacheKey($service_class, $method, $params = [])
+    {
+        $params_hash = md5(serialize($params));
+        return "hospital_manager_service_{$service_class}_{$method}_{$params_hash}";
+    }
+
+    /**
+     * Get data from cache
+     * 
+     * @param string $cache_key Cache key
+     * @return mixed Cached data or false if not found
+     */
+    protected static function getFromCache($cache_key)
+    {
+        if (!self::isCacheEnabled()) {
+            return false;
+        }
+        
+        return get_transient($cache_key);
+    }
+
+    /**
+     * Set data to cache
+     * 
+     * @param string $cache_key Cache key
+     * @param mixed $data Data to cache
+     * @param int|null $expiration Cache expiration in seconds
+     * @return bool Success status
+     */
+    protected static function setToCache($cache_key, $data, $expiration = null)
+    {
+        if (!self::isCacheEnabled()) {
+            return false;
+        }
+        
+        if ($expiration === null) {
+            $expiration = self::getCacheExpiration(get_called_class());
+        }
+        
+        return set_transient($cache_key, $data, $expiration);
+    }
+
+    /**
+     * Check if caching is enabled for the service
+     * 
+     * @param string|null $service_class Service class name
+     * @return bool Cache enabled status
+     */
+    protected static function isCacheEnabled($service_class = null)
+    {
+        if (!self::$cache_settings['enabled']) {
+            return false;
+        }
+        
+        if ($service_class === null) {
+            $service_class = get_called_class();
+        }
+        
+        $class_name = basename(str_replace('\\', '/', $service_class));
+        
+        return isset(self::$service_cache_config[$class_name]['enabled']) 
+            ? self::$service_cache_config[$class_name]['enabled'] 
+            : true;
+    }
+
+    /**
+     * Get cache expiration for service or method
+     * 
+     * @param string $service_class Service class name
+     * @param string|null $method Method name
+     * @return int Cache expiration in seconds
+     */
+    protected static function getCacheExpiration($service_class, $method = null)
+    {
+        $class_name = basename(str_replace('\\', '/', $service_class));
+        
+        // Check for method-specific cache duration
+        if ($method && isset(self::$service_cache_config[$class_name]['critical_methods'][$method])) {
+            return self::$service_cache_config[$class_name]['critical_methods'][$method];
+        }
+        
+        // Return service-specific default or global default
+        return isset(self::$service_cache_config[$class_name]['expiration']) 
+            ? self::$service_cache_config[$class_name]['expiration'] 
+            : self::$cache_settings['default_expiration'];
+    }
+
+    /**
+     * Invalidate service cache by pattern
+     * 
+     * @param string $service_class Service class name
+     * @param string|null $method_pattern Method pattern (optional)
+     * @param array $params Specific parameters (optional)
+     */
+    protected static function invalidateServiceCache($service_class, $method_pattern = null, $params = [])
+    {
+        global $wpdb;
+        
+        $class_name = basename(str_replace('\\', '/', $service_class));
+        
+        if ($method_pattern && !empty($params)) {
+            // Invalidate specific cache entry
+            $cache_key = self::getCacheKey($class_name, $method_pattern, $params);
+            delete_transient($cache_key);
+        } else {
+            // Invalidate all cache entries for the service
+            $pattern = "hospital_manager_service_{$class_name}%";
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                "_transient_{$pattern}"
+            ));
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+                "_transient_timeout_{$pattern}"
+            ));
+        }
+    }
+
+    /**
+     * Execute cached service method
+     * 
+     * @param string $method Method name
+     * @param array $params Method parameters
+     * @param callable $callback Method callback
+     * @param int|null $custom_expiration Custom cache expiration
+     * @return mixed Method result
+     */
+    protected static function executeCached($method, $params, $callback, $custom_expiration = null)
+    {
+        $service_class = get_called_class();
+        $class_name = basename(str_replace('\\', '/', $service_class));
+        
+        // Generate cache key
+        $cache_key = self::getCacheKey($class_name, $method, $params);
+        
+        // Try to get from cache
+        $cached_result = self::getFromCache($cache_key);
+        if ($cached_result !== false) {
+            return $cached_result;
+        }
+        
+        // Execute the callback
+        $result = call_user_func($callback);
+        
+        // Cache the result
+        $expiration = $custom_expiration ?: self::getCacheExpiration($service_class, $method);
+        self::setToCache($cache_key, $result, $expiration);
+        
+        return $result;
+    }
+
+    /**
+     * Configure cache settings
+     * 
+     * @param array $settings Cache settings
+     */
+    public static function configureCacheSettings($settings)
+    {
+        self::$cache_settings = array_merge(self::$cache_settings, $settings);
+    }
+
+    /**
+     * Configure service-specific cache settings
+     * 
+     * @param string $service Service name
+     * @param array $config Cache configuration
+     */
+    public static function configureServiceCache($service, $config)
+    {
+        self::$service_cache_config[$service] = array_merge(
+            self::$service_cache_config[$service] ?? [],
+            $config
+        );
     }
 
     /**
