@@ -2,7 +2,7 @@
 
 namespace HospitalManager\Services;
 
-class RoleService
+class RoleService extends BaseService
 {
     // Hospital roles
     const ROLE_ADMIN = 'administrator';
@@ -15,145 +15,118 @@ class RoleService
     const ROLE_INVENTORY_MANAGER = 'inventory_manager';
     const ROLE_PHARMACY = 'pharmacy_staff';
 
-    // Inventory permissions
-    const PERM_INVENTORY_VIEW = 'inventory_view';
-    const PERM_INVENTORY_CREATE = 'inventory_create';
-    const PERM_INVENTORY_EDIT = 'inventory_edit';
-    const PERM_INVENTORY_DELETE = 'inventory_delete';
-    const PERM_INVENTORY_EXPORT = 'inventory_export';
-    const PERM_INVENTORY_REPORTS = 'inventory_reports';
-    const PERM_INVENTORY_BULK_OPERATIONS = 'inventory_bulk_operations';
-    const PERM_INVENTORY_CRITICAL_ITEMS = 'inventory_critical_items';
-
-    // Route access capabilities
-    const PERM_ACCESS_PATIENTS = 'access_patients';
-    const PERM_ACCESS_DOCTORS = 'access_doctors';
-    const PERM_ACCESS_DEPARTMENTS = 'access_departments';
-    const PERM_ACCESS_APPOINTMENTS = 'access_appointments';
-    const PERM_ACCESS_VISITATIONS = 'access_visitations';
-    const PERM_ACCESS_CHAT = 'access_chat';
-    const PERM_ACCESS_NOTIFICATIONS = 'access_notifications';
-    const PERM_ACCESS_AUDIT_LOG = 'access_audit_log';
-    const PERM_ACCESS_BILLING = 'access_billing';
-    const PERM_ACCESS_INVENTORY = 'access_inventory';
-    const PERM_ACCESS_REPORTS = 'access_reports';
-    const PERM_ACCESS_STATISTICS = 'access_statistics';
-    const PERM_ACCESS_SETTINGS = 'access_settings';
-    const PERM_ACCESS_LAB_DASHBOARD = 'access_lab_dashboard';
-
-    private static $rolePermissions = [
-        self::ROLE_ADMIN => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_INVENTORY_CREATE,
-            self::PERM_INVENTORY_EDIT,
-            self::PERM_INVENTORY_DELETE,
-            self::PERM_INVENTORY_EXPORT,
-            self::PERM_INVENTORY_REPORTS,
-            self::PERM_INVENTORY_BULK_OPERATIONS,
-            self::PERM_INVENTORY_CRITICAL_ITEMS,
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_DEPARTMENTS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_CHAT,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_AUDIT_LOG,
-            self::PERM_ACCESS_BILLING,
-            self::PERM_ACCESS_INVENTORY,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_STATISTICS,
-            self::PERM_ACCESS_SETTINGS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_INVENTORY_MANAGER => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_INVENTORY_CREATE,
-            self::PERM_INVENTORY_EDIT,
-            self::PERM_INVENTORY_DELETE,
-            self::PERM_INVENTORY_EXPORT,
-            self::PERM_INVENTORY_REPORTS,
-            self::PERM_INVENTORY_BULK_OPERATIONS,
-            self::PERM_INVENTORY_CRITICAL_ITEMS,
-            self::PERM_ACCESS_INVENTORY,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_NOTIFICATIONS,
-        ],
-        self::ROLE_PHARMACY => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_INVENTORY_CREATE,
-            self::PERM_INVENTORY_EDIT,
-            self::PERM_INVENTORY_EXPORT,
-            self::PERM_INVENTORY_REPORTS,
-            self::PERM_INVENTORY_CRITICAL_ITEMS,
-            self::PERM_ACCESS_INVENTORY,
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_NOTIFICATIONS,
-        ],
-        self::ROLE_DOCTOR => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_INVENTORY_REPORTS,
-            self::PERM_INVENTORY_CRITICAL_ITEMS,
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_DEPARTMENTS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_CHAT,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_STATISTICS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_NURSE => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_INVENTORY_CRITICAL_ITEMS,
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_DEPARTMENTS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_CHAT,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_STAFF => [
-            self::PERM_INVENTORY_VIEW,
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_DEPARTMENTS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_LAB_TECH => [
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_DESK_OFFICER => [
-            self::PERM_ACCESS_PATIENTS,
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_DEPARTMENTS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
-        self::ROLE_PATIENT => [
-            self::PERM_ACCESS_DOCTORS,
-            self::PERM_ACCESS_APPOINTMENTS,
-            self::PERM_ACCESS_VISITATIONS,
-            self::PERM_ACCESS_CHAT,
-            self::PERM_ACCESS_NOTIFICATIONS,
-            self::PERM_ACCESS_REPORTS,
-            self::PERM_ACCESS_LAB_DASHBOARD,
-        ],
+    // Grouped permissions for better organization
+    const INVENTORY_PERMISSIONS = [
+        'inventory_view',
+        'inventory_create',
+        'inventory_edit',
+        'inventory_delete',
+        'inventory_export',
+        'inventory_reports',
+        'inventory_bulk_operations',
+        'inventory_critical_items',
     ];
+
+    const ACCESS_PERMISSIONS = [
+        'access_patients',
+        'access_doctors',
+        'access_departments',
+        'access_appointments',
+        'access_visitations',
+        'access_chat',
+        'access_notifications',
+        'access_audit_log',
+        'access_billing',
+        'access_inventory',
+        'access_reports',
+        'access_statistics',
+        'access_settings',
+        'access_lab_dashboard',
+    ];
+
+    /**
+     * Get all permissions for a role
+     * 
+     * @param string $role Role name
+     * @return array Array of permissions
+     */
+    public static function getRolePermissions($role)
+    {
+        $role_permissions = [
+            self::ROLE_ADMIN => array_merge(self::INVENTORY_PERMISSIONS, self::ACCESS_PERMISSIONS),
+            self::ROLE_INVENTORY_MANAGER => array_merge(
+                self::INVENTORY_PERMISSIONS,
+                ['access_inventory', 'access_reports', 'access_notifications']
+            ),
+            self::ROLE_PHARMACY => array_merge(
+                array_diff(self::INVENTORY_PERMISSIONS, ['inventory_delete', 'inventory_bulk_operations']),
+                ['access_inventory', 'access_patients', 'access_reports', 'access_notifications']
+            ),
+            self::ROLE_DOCTOR => [
+                'inventory_view',
+                'inventory_reports',
+                'inventory_critical_items',
+                'access_patients',
+                'access_doctors',
+                'access_departments',
+                'access_appointments',
+                'access_visitations',
+                'access_chat',
+                'access_notifications',
+                'access_reports',
+                'access_lab_dashboard',
+            ],
+            self::ROLE_NURSE => [
+                'inventory_view',
+                'inventory_critical_items',
+                'access_patients',
+                'access_doctors',
+                'access_departments',
+                'access_appointments',
+                'access_visitations',
+                'access_chat',
+                'access_notifications',
+                'access_lab_dashboard',
+            ],
+            self::ROLE_STAFF => [
+                'inventory_view',
+                'access_patients',
+                'access_doctors',
+                'access_departments',
+                'access_appointments',
+                'access_visitations',
+                'access_notifications',
+                'access_reports',
+                'access_lab_dashboard',
+            ],
+            self::ROLE_LAB_TECH => [
+                'access_patients',
+                'access_notifications',
+                'access_lab_dashboard',
+            ],
+            self::ROLE_DESK_OFFICER => [
+                'access_patients',
+                'access_doctors',
+                'access_departments',
+                'access_appointments',
+                'access_visitations',
+                'access_notifications',
+                'access_reports',
+                'access_lab_dashboard',
+            ],
+            self::ROLE_PATIENT => [
+                'access_doctors',
+                'access_appointments',
+                'access_visitations',
+                'access_chat',
+                'access_notifications',
+                'access_reports',
+                'access_lab_dashboard',
+            ],
+        ];
+
+        return $role_permissions[$role] ?? [];
+    }
 
     /**
      * Initialize all custom roles for the hospital management system
@@ -416,16 +389,16 @@ class RoleService
                 'display_name' => 'Hospital Administrator',
                 'capabilities' => array_merge(
                     get_role('administrator')->capabilities ?? [],
-                    array_fill_keys(self::$rolePermissions[self::ROLE_ADMIN], true)
+                    array_fill_keys(self::getRolePermissions(self::ROLE_ADMIN), true)
                 )
             ],
             self::ROLE_INVENTORY_MANAGER => [
                 'display_name' => 'Inventory Manager',
-                'capabilities' => array_fill_keys(self::$rolePermissions[self::ROLE_INVENTORY_MANAGER], true)
+                'capabilities' => array_fill_keys(self::getRolePermissions(self::ROLE_INVENTORY_MANAGER), true)
             ],
             self::ROLE_PHARMACY => [
                 'display_name' => 'Pharmacy Staff',
-                'capabilities' => array_fill_keys(self::$rolePermissions[self::ROLE_PHARMACY], true)
+                'capabilities' => array_fill_keys(self::getRolePermissions(self::ROLE_PHARMACY), true)
             ],
         ];
 
@@ -443,7 +416,7 @@ class RoleService
         // Grant inventory permissions to WordPress admin
         $admin_role = get_role('administrator');
         if ($admin_role) {
-            foreach (self::$rolePermissions[self::ROLE_ADMIN] as $capability) {
+            foreach (self::getRolePermissions(self::ROLE_ADMIN) as $capability) {
                 $admin_role->add_cap($capability);
             }
         }
@@ -455,14 +428,14 @@ class RoleService
     private static function updateExistingRolesWithInventoryPermissions()
     {
         $existing_roles = [
-            'doctor' => self::$rolePermissions[self::ROLE_DOCTOR],
-            'patient' => self::$rolePermissions[self::ROLE_PATIENT],
-            'lab_tech' => self::$rolePermissions[self::ROLE_LAB_TECH],
-            'developer' => self::$rolePermissions[self::ROLE_DESK_OFFICER],
+            'doctor' => self::getRolePermissions(self::ROLE_DOCTOR),
+            'patient' => self::getRolePermissions(self::ROLE_PATIENT),
+            'lab_tech' => self::getRolePermissions(self::ROLE_LAB_TECH),
+            'developer' => self::getRolePermissions(self::ROLE_DESK_OFFICER),
         ];
 
-        $existing_roles['hospital_nurse'] = self::$rolePermissions[self::ROLE_NURSE];
-        $existing_roles['hospital_staff'] = self::$rolePermissions[self::ROLE_STAFF];
+        $existing_roles['hospital_nurse'] = self::getRolePermissions(self::ROLE_NURSE);
+        $existing_roles['hospital_staff'] = self::getRolePermissions(self::ROLE_STAFF);
         
         foreach ($existing_roles as $role_name => $permissions) {
             $role = get_role($role_name);

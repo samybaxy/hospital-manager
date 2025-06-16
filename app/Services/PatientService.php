@@ -10,7 +10,7 @@ use Exception;
 /**
  * Service class for patient-related business logic
  */
-class PatientService
+class PatientService extends BaseService
 {
     /**
      * Create a new patient with validation
@@ -21,26 +21,25 @@ class PatientService
      */
     public static function createPatient(array $data)
     {        
-        // Validate required fields
+        // Validate required fields using base service method
         $required_fields = ['first_name', 'last_name', 'phone', 'gender'];
-        foreach ($required_fields as $field) {
-            if (empty($data[$field])) {
-                throw new Exception("The {$field} field is required");
-            }
+        $validation_errors = self::validateRequiredFields($data, $required_fields);
+        
+        if (!empty($validation_errors)) {
+            throw new Exception(implode('; ', $validation_errors));
         }
         
         // Check for duplicate patients
         self::preventDuplicates($data);
         
-        // Validate phone number format
-        if (!preg_match('/^\d{10,15}$/', $data['phone'])) {
-            throw new Exception("Invalid phone number format. Phone number should contain 10-15 digits only");
+        // Validate phone number using base service method
+        $phone_error = self::validatePhone($data['phone']);
+        if ($phone_error) {
+            throw new Exception($phone_error);
         }
         
-        // Ensure phone number format consistency
-        if (substr($data['phone'], 0, 1) !== '0' && strlen($data['phone']) === 10) {
-            $data['phone'] = '0' . $data['phone'];
-        }
+        // Format phone number using base service method
+        $data['phone'] = self::formatPhone($data['phone']);
         
         // Validate gender field
         if (!in_array(strtolower($data['gender']), ['male', 'female', 'other', 'm', 'f'])) {
@@ -48,14 +47,16 @@ class PatientService
         }
         
         // Validate age if provided
-        if (isset($data['age']) && !is_numeric($data['age'])) {
-            throw new Exception("Invalid age value. Age must be a number");
+        if (isset($data['age'])) {
+            $age_error = self::validateNumeric($data['age'], 'age');
+            if ($age_error) {
+                throw new Exception($age_error);
+            }
         }
         
         // Validate bio_data if provided
         if (!empty($data['bio_data']) && is_string($data['bio_data'])) {
-            $decoded = json_decode($data['bio_data'], true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
+            if (self::safeJsonDecode($data['bio_data']) === null) {
                 throw new Exception("Invalid JSON format for bio_data");
             }
         }
