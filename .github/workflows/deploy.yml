@@ -20,9 +20,6 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --prefer-dist --no-dev --optimize-autoloader
 
-      - name: Dump Composer autoload
-        run: composer dump-autoload --optimize --no-dev
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -46,14 +43,40 @@ jobs:
           yarn install --prefer-offline --frozen-lockfile
           yarn build
 
-      - name: Debug build output
+      - name: Create deployment package
         run: |
-          echo "Listing assets directory:"
-          ls -la assets/
-          echo "Listing js/dist directory:"
-          ls -la assets/js/dist/ || echo "js/dist directory not found"
-          echo "Listing css/dist directory:"
-          ls -la assets/css/dist/ || echo "css/dist directory not found"
+          # Create a clean directory for deployment
+          mkdir -p deploy-package
+          
+          # Copy PHP files and built assets
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.github' \
+            --exclude='assets/js/src' \
+            --exclude='assets/css/src' \
+            --exclude='*.log' \
+            --exclude='.env*' \
+            --exclude='.babelrc' \
+            --exclude='.phpcs.xml.dist' \
+            --exclude='.phpunit.result.cache' \
+            --exclude='phpunit.xml*' \
+            --exclude='README.md' \
+            --exclude='LICENSE' \
+            --exclude='dev.sh' \
+            --exclude='.npmrc' \
+            ./ deploy-package/
+
+      - name: Debug deployment package
+        run: |
+          echo "Contents of deployment package:"
+          find deploy-package -type f | head -20
+          echo "Built assets:"
+          ls -la deploy-package/assets/js/dist/ || echo "No JS dist files"
+          ls -la deploy-package/assets/css/dist/ || echo "No CSS dist files"
+          echo "Vendor directory:"
+          ls -la deploy-package/vendor/ || echo "No vendor directory"
 
       - name: FTP Deploy to Bluehost
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -61,28 +84,12 @@ jobs:
           server: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           password: ${{ secrets.SSH_PASSWORD }}
-          local-dir: ./
+          local-dir: ./deploy-package/
           server-dir: /public_html/website_77900271/wp-content/plugins/hospital-manager/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/.env*
-            **/tests/**
-            **/.github/**
-            **/yarn.lock
-            **/package.json
-            **/vite.config.mjs
-            **/tailwind.config.js
-            **/postcss.config.js
-            **/.babelrc
-            **/.phpcs.xml.dist
-            **/.phpunit.result.cache
-            **/phpunit.xml*
-            **/composer.json
-            **/composer.lock
-            **/README.md
-            **/LICENSE
-            **/build.log
-            **/dev.sh
-            **/.npmrc
+
+      - name: Clean up deployment package
+        run: |
+          echo "Cleaning up deployment package..."
+          rm -rf deploy-package/
+          echo "Cleanup completed."
+        if: always()  # This ensures cleanup runs even if deployment fails
