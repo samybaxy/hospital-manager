@@ -45,6 +45,9 @@ jobs:
 
       - name: Create deployment package
         run: |
+          # Remove any existing deployment package (safety measure)
+          rm -rf deploy-package/
+          
           # Create a clean directory for deployment
           mkdir -p deploy-package
           
@@ -66,7 +69,6 @@ jobs:
             --exclude='LICENSE' \
             --exclude='dev.sh' \
             --exclude='.npmrc' \
-            --exclude='deploy-package' \
             ./ deploy-package/
 
       - name: Debug deployment package
