@@ -163,7 +163,7 @@ class UserSeeder extends Seeder
         $user_id = $this->createUserSafely($username, $password, $email, $role, $meta);
         
         if ($user_id) {
-            $this->log("Created demo {$role}: username='{$username}', password='{$password}', email='{$email}'", 'success');
+            $this->log("Created demo {$role}: username='{$username}', password='******', email='{$email}'", 'success');
         } else {
             $this->log("Failed to create demo {$role} user", 'warning');
         }
