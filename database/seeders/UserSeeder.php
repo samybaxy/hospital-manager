@@ -54,6 +54,8 @@ class UserSeeder extends Seeder
             $created = $this->createDemoUser($role);
             if ($created) {
                 $this->log("Created demo {$role} user successfully", 'success');
+            } else {
+                $this->log("Failed to create demo {$role} user", 'warning');
             }
         }
         
@@ -178,10 +180,7 @@ class UserSeeder extends Seeder
      */
     protected function verifyDemoCredentials()
     {
-        $demo_roles = [
-            'administrator', 'doctor', 'patient', 'lab_tech', 'developer',
-            'hospital_nurse', 'hospital_staff', 'pharmacy_staff', 'inventory_manager'
-        ];
+        $demo_roles = self::DEMO_ROLES;
         
         foreach ($demo_roles as $role) {
             $username = 'demo_' . $role;
