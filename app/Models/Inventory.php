@@ -6,6 +6,7 @@ class Inventory extends BaseModel
 {
     protected $tableName = 'hm_inventory';
     protected $primaryKey = 'ID';
+    protected static $cache_expiration = 600; // 10 minutes for frequently changing inventory data
 
     // Status constants
     const STATUS_IN_STOCK = 'In Stock';
@@ -21,39 +22,46 @@ class Inventory extends BaseModel
     const CATEGORY_CONSUMABLES = 'Consumables';
     const CATEGORY_SURGICAL = 'Surgical';
 
-    /**
-     * Find a single inventory item by ID
-     *
-     * @param int $id
-     * @return object|null
-     */
-    public static function findOne($id)
+    protected $fillable = [
+        'item_name',
+        'category',
+        'quantity',
+        'unit',
+        'cost',
+        'selling_price',
+        'supplier_id',
+        'location',
+        'reorder_level',
+        'max_stock_level',
+        'expiry_date',
+        'batch_number',
+        'manufacturer',
+        'status',
+        'notes'
+    ];
+
+    public function __construct(array $attributes = [])
     {
         global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
-        
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $id);
-        return $wpdb->get_row($query);
+        $this->table = $wpdb->prefix . $this->tableName;
+        parent::__construct($attributes);
     }
 
     /**
-     * Get all inventory items with filtering
-     *
+     * Build WHERE clause for filtering (shared between getFiltered and getFilteredCount)
+     * 
      * @param array $filters
-     * @return array
+     * @return array ['where' => array, 'values' => array]
      */
-    public static function getFiltered($filters = [])
+    private static function buildFilterWhereClause($filters = [])
     {
+        global $wpdb;
+        
         // When a status filter is applied, remove conflicting boolean filters to prevent contradictions
         if (!empty($filters['status'])) {
-            // Remove expiring and low_stock filters when status is explicitly set
-            // as status filters use computed logic that may conflict
             $filters['expiring'] = '';
             $filters['low_stock'] = '';
         }
-        
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
         
         $where = ['1=1'];
         $values = [];
@@ -79,7 +87,6 @@ class Inventory extends BaseModel
                     $where[] = 'expiry_date IS NOT NULL AND expiry_date <= CURDATE()';
                     break;
                 default:
-                    // Fallback to database status field for any other values
                     $where[] = 'status = %s';
                     $values[] = $filters['status'];
                     break;
@@ -99,7 +106,7 @@ class Inventory extends BaseModel
             $values[] = $search_term;
         }
 
-        // Handle expiring filter (from frontend 'expiring' parameter)
+        // Handle expiring filter
         if (isset($filters['expiring']) && $filters['expiring'] !== '') {
             $is_expiring = filter_var($filters['expiring'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
             if ($is_expiring === true) {
@@ -126,7 +133,33 @@ class Inventory extends BaseModel
             }
         }
 
-        $where_clause = implode(' AND ', $where);
+        return [
+            'where' => $where,
+            'values' => $values
+        ];
+    }
+
+    /**
+     * Enhanced filtering with business logic and caching
+     * 
+     * @param array $filters
+     * @return array
+     */
+    public static function getFiltered($filters = [])
+    {
+        $cache_key = static::getCacheKey('getFiltered', $filters);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $filter_data = static::buildFilterWhereClause($filters);
+        $where_clause = implode(' AND ', $filter_data['where']);
+        $values = $filter_data['values'];
         
         $order_by = 'ORDER BY created_at DESC, ID DESC';
         if (!empty($filters['sort_by'])) {
@@ -151,100 +184,33 @@ class Inventory extends BaseModel
             $query = $wpdb->prepare($query, $values);
         }
         
-        return $wpdb->get_results($query);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 600); // 10 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get count of filtered inventory items (for pagination)
-     *
+     * Get count of filtered inventory items with caching
+     * 
      * @param array $filters
      * @return int
      */
     public static function getFilteredCount($filters = [])
     {
-        // When a status filter is applied, remove conflicting boolean filters to prevent contradictions
-        if (!empty($filters['status'])) {
-            // Remove expiring and low_stock filters when status is explicitly set
-            // as status filters use computed logic that may conflict
-            $filters['expiring'] = '';
-            $filters['low_stock'] = '';
-        }
+        $cache_key = static::getCacheKey('getFilteredCount', $filters);
+        $cached = static::getFromCache($cache_key);
         
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
-        $where = ['1=1'];
-        $values = [];
-
-        if (!empty($filters['category'])) {
-            $where[] = 'category = %s';
-            $values[] = $filters['category'];
-        }
-
-        if (!empty($filters['status'])) {
-            // Handle computed status filtering based on business logic
-            switch ($filters['status']) {
-                case 'In Stock':
-                    $where[] = 'quantity > reorder_level AND (expiry_date IS NULL OR expiry_date > CURDATE())';
-                    break;
-                case 'Low Stock':
-                    $where[] = 'quantity <= reorder_level AND quantity > 0 AND (expiry_date IS NULL OR expiry_date > CURDATE())';
-                    break;
-                case 'Out of Stock':
-                    $where[] = 'quantity = 0';
-                    break;
-                case 'Expired':
-                    $where[] = 'expiry_date IS NOT NULL AND expiry_date <= CURDATE()';
-                    break;
-                default:
-                    // Fallback to database status field for any other values
-                    $where[] = 'status = %s';
-                    $values[] = $filters['status'];
-                    break;
-            }
-        }
-
-        if (!empty($filters['location'])) {
-            $where[] = 'location = %s';
-            $values[] = $filters['location'];
-        }
-
-        if (!empty($filters['search'])) {
-            $where[] = '(item_name LIKE %s OR category LIKE %s OR location LIKE %s)';
-            $search_term = '%' . $wpdb->esc_like($filters['search']) . '%';
-            $values[] = $search_term;
-            $values[] = $search_term;
-            $values[] = $search_term;
-        }
-
-        // Handle expiring filter (from frontend 'expiring' parameter)
-        if (isset($filters['expiring']) && $filters['expiring'] !== '') {
-            $is_expiring = filter_var($filters['expiring'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            if ($is_expiring === true) {
-                $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)';
-            } elseif ($is_expiring === false) {
-                $where[] = '(expiry_date IS NULL OR expiry_date > DATE_ADD(CURDATE(), INTERVAL 30 DAY))';
-            }
-        }
-
-        // Backward compatibility for expiring_soon with custom days
-        if (!empty($filters['expiring_soon'])) {
-            $days = intval($filters['expiring_soon']);
-            $where[] = 'expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL %d DAY)';
-            $values[] = $days;
-        }
-
-        // Handle low_stock filter
-        if (isset($filters['low_stock']) && $filters['low_stock'] !== '') {
-            $is_low_stock = filter_var($filters['low_stock'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            if ($is_low_stock === true) {
-                $where[] = 'quantity <= reorder_level';
-            } elseif ($is_low_stock === false) {
-                $where[] = 'quantity > reorder_level';
-            }
-        }
-
-        $where_clause = implode(' AND ', $where);
+        $filter_data = static::buildFilterWhereClause($filters);
+        $where_clause = implode(' AND ', $filter_data['where']);
+        $values = $filter_data['values'];
         
         $query = "SELECT COUNT(*) FROM {$table} WHERE {$where_clause}";
         
@@ -252,32 +218,52 @@ class Inventory extends BaseModel
             $query = $wpdb->prepare($query, $values);
         }
         
-        return intval($wpdb->get_var($query));
+        $result = intval($wpdb->get_var($query));
+        static::setToCache($cache_key, $result, 600); // 10 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get critical inventory items (below reorder level)
-     *
+     * Get low stock items with caching
+     * 
      * @return array
      */
-    public static function getCritical()
+    public static function getLowStockItems()
     {
+        $cache_key = static::getCacheKey('getLowStockItems', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
-        $query = "SELECT * FROM {$table} WHERE quantity <= reorder_level ORDER BY quantity ASC";
+        $query = "SELECT * FROM {$table} WHERE quantity <= reorder_level AND quantity > 0 ORDER BY quantity ASC";
         
-        return $wpdb->get_results($query);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 300); // 5 minutes cache (critical alerts)
+        
+        return $result;
     }
 
     /**
-     * Get items expiring soon
-     *
+     * Get items expiring soon with caching
+     * 
      * @param int $days Number of days to look ahead
      * @return array
      */
-    public static function getExpiringSoon($days = 30)
+    public static function getExpiringItems($days = 30)
     {
+        $cache_key = static::getCacheKey('getExpiringItems', [$days]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -290,16 +276,26 @@ class Inventory extends BaseModel
             $days
         );
         
-        return $wpdb->get_results($query);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 900); // 15 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get expired items
-     *
+     * Get expired items with caching
+     * 
      * @return array
      */
-    public static function getExpired()
+    public static function getExpiredItems()
     {
+        $cache_key = static::getCacheKey('getExpiredItems', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -308,16 +304,26 @@ class Inventory extends BaseModel
                   AND expiry_date < CURDATE()
                   ORDER BY expiry_date DESC";
         
-        return $wpdb->get_results($query);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 900); // 15 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get inventory summary statistics
-     *
-     * @return array
+     * Get inventory summary statistics with caching
+     * 
+     * @return array|null Statistics array or null on error
      */
-    public static function getSummary()
+    public static function getSummaryStats()
     {
+        $cache_key = static::getCacheKey('getSummaryStats', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -326,24 +332,35 @@ class Inventory extends BaseModel
                 COUNT(*) as total_items,
                 COUNT(CASE WHEN quantity <= reorder_level AND quantity > 0 THEN 1 END) as low_stock,
                 COUNT(CASE WHEN quantity > reorder_level THEN 1 END) as in_stock,
-                COUNT(CASE WHEN quantity <= reorder_level THEN 1 END) as critical_items,
+                COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock,
                 COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date <= DATE_ADD(CURDATE(), INTERVAL 30 DAY) AND expiry_date >= CURDATE() THEN 1 END) as expiring_soon,
                 COUNT(CASE WHEN expiry_date IS NOT NULL AND expiry_date < CURDATE() THEN 1 END) as expired_items,
-                COUNT(CASE WHEN status = 'Out of Stock' THEN 1 END) as out_of_stock,
-                SUM(quantity * COALESCE(cost, 0)) as total_value
+                SUM(quantity * COALESCE(cost, 0)) as total_value,
+                COUNT(DISTINCT category) as categories_count,
+                COUNT(DISTINCT location) as locations_count,
+                AVG(CASE WHEN cost > 0 THEN cost END) as avg_cost
             FROM {$table}
         ", ARRAY_A);
 
+        static::setToCache($cache_key, $stats, 600); // 10 minutes cache
+        
         return $stats;
     }
 
     /**
-     * Get categories with item counts
-     *
+     * Get category summary with caching
+     * 
      * @return array
      */
     public static function getCategorySummary()
     {
+        $cache_key = static::getCacheKey('getCategorySummary', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = $wpdb->prefix . 'hm_inventory';
         
@@ -351,17 +368,165 @@ class Inventory extends BaseModel
                     category,
                     COUNT(*) as item_count,
                     SUM(quantity) as total_quantity,
-                    SUM(quantity * COALESCE(cost, 0)) as category_value
+                    SUM(quantity * COALESCE(cost, 0)) as category_value,
+                    COUNT(CASE WHEN quantity <= reorder_level THEN 1 END) as low_stock_items
                   FROM {$table}
                   GROUP BY category
                   ORDER BY item_count DESC";
         
-        return $wpdb->get_results($query, ARRAY_A);
+        $result = $wpdb->get_results($query, ARRAY_A);
+        static::setToCache($cache_key, $result, 3600); // 1 hour cache (stable data)
+        
+        return $result;
+    }
+
+    /**
+     * Get all categories with caching
+     * 
+     * @return array
+     */
+    public static function getCategories()
+    {
+        $cache_key = static::getCacheKey('getCategories', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $categories = [
+            self::CATEGORY_MEDICATION,
+            self::CATEGORY_EQUIPMENT,
+            self::CATEGORY_SUPPLIES,
+            self::CATEGORY_PPE,
+            self::CATEGORY_CONSUMABLES,
+            self::CATEGORY_SURGICAL
+        ];
+
+        static::setToCache($cache_key, $categories, 3600); // 1 hour cache
+        
+        return $categories;
+    }
+
+    /**
+     * Get all suppliers with caching
+     * 
+     * @return array
+     */
+    public static function getSuppliers()
+    {
+        $cache_key = static::getCacheKey('getSuppliers', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $suppliers_table = $wpdb->prefix . 'hm_inventory_suppliers';
+        
+        $query = "SELECT * FROM {$suppliers_table} WHERE is_active = 1 ORDER BY name ASC";
+        $result = $wpdb->get_results($query);
+        
+        static::setToCache($cache_key, $result, 3600); // 1 hour cache
+        
+        return $result;
+    }
+
+    /**
+     * Enhanced create with cache invalidation
+     * 
+     * @param array $data
+     * @return int|false Item ID on success, false on failure
+     */
+    public static function create($data)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $defaults = [
+            'quantity' => 0,
+            'unit' => 'units',
+            'reorder_level' => 10,
+            'status' => self::STATUS_IN_STOCK,
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+        
+        $data = array_merge($defaults, $data);
+        
+        // Validate required fields
+        if (empty($data['item_name']) || empty($data['category'])) {
+            return false;
+        }
+        
+        $result = $wpdb->insert($table, $data);
+        
+        if ($result !== false) {
+            $item_id = $wpdb->insert_id;
+            static::updateStatus($item_id);
+            static::invalidateInventoryCaches();
+            return $item_id;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Enhanced update with cache invalidation
+     * 
+     * @param int $id
+     * @param array $data
+     * @return bool
+     */
+    public static function updateItem($id, $data)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $data['updated_at'] = current_time('mysql');
+        
+        $result = $wpdb->update(
+            $table,
+            $data,
+            ['ID' => $id],
+            null,
+            ['%d']
+        );
+        
+        if ($result !== false) {
+            static::updateStatus($id);
+            static::invalidateInventoryCaches();
+            return true;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Enhanced delete with cache invalidation
+     * 
+     * @param int $id
+     * @return bool
+     */
+    public static function deleteItem($id)
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $result = $wpdb->delete($table, ['ID' => $id], ['%d']);
+        
+        if ($result !== false) {
+            static::invalidateInventoryCaches();
+            return true;
+        }
+        
+        return false;
     }
 
     /**
      * Update inventory status based on current quantity and expiry
-     *
+     * 
      * @param int $id Inventory item ID
      * @return bool
      */
@@ -394,140 +559,20 @@ class Inventory extends BaseModel
             $status = self::STATUS_LOW_STOCK;
         }
 
-        return $wpdb->update(
+        $result = $wpdb->update(
             $table,
             ['status' => $status, 'updated_at' => current_time('mysql')],
             ['ID' => $id],
             ['%s', '%s'],
             ['%d']
-        ) !== false;
-    }
-
-    /**
-     * Update all inventory statuses
-     *
-     * @return int Number of items updated
-     */
-    public static function updateAllStatuses()
-    {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
-        
-        // Get all items
-        $items = $wpdb->get_results("SELECT ID FROM {$table}");
-        $updated = 0;
-        
-        foreach ($items as $item) {
-            if (self::updateStatus($item->ID)) {
-                $updated++;
-            }
-        }
-        
-        return $updated;
-    }
-
-    /**
-     * Create a new inventory item
-     *
-     * @param array $data
-     * @return int|false Item ID on success, false on failure
-     */
-    public static function create($data)
-    {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
-        
-        $defaults = [
-            'quantity' => 0,
-            'unit' => 'units',
-            'reorder_level' => 10,
-            'status' => self::STATUS_IN_STOCK,
-            'created_at' => current_time('mysql'),
-            'updated_at' => current_time('mysql')
-        ];
-        
-        $data = array_merge($defaults, $data);
-        
-        // Validate required fields
-        if (empty($data['item_name']) || empty($data['category'])) {
-            return false;
-        }
-        
-        $result = $wpdb->insert($table, $data);
-        
-        if ($result !== false) {
-            $item_id = $wpdb->insert_id;
-            self::updateStatus($item_id);
-            return $item_id;
-        }
-        
-        return false;
-    }
-
-    /**
-     * Update an inventory item
-     *
-     * @param int $id
-     * @param array $data
-     * @return bool
-     */
-    public static function updateItem($id, $data)
-    {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
-        
-        $data['updated_at'] = current_time('mysql');
-        
-        $result = $wpdb->update(
-            $table,
-            $data,
-            ['ID' => $id],
-            null,
-            ['%d']
         );
-        
-        if ($result !== false) {
-            self::updateStatus($id);
-            return true;
-        }
-        
-        return false;
-    }
 
-    /**
-     * Delete an inventory item
-     *
-     * @param int $id
-     * @return bool
-     */
-    public static function deleteItem($id)
-    {
-        global $wpdb;
-        $table = $wpdb->prefix . 'hm_inventory';
-        
-        return $wpdb->delete($table, ['ID' => $id], ['%d']) !== false;
-    }
-
-    /**
-     * Get available categories
-     *
-     * @return array
-     */
-    public static function getCategories()
-    {
-        return [
-            self::CATEGORY_MEDICATION,
-            self::CATEGORY_EQUIPMENT,
-            self::CATEGORY_SUPPLIES,
-            self::CATEGORY_PPE,
-            self::CATEGORY_CONSUMABLES,
-            self::CATEGORY_SURGICAL
-        ];
+        return $result !== false;
     }
 
     /**
      * Get available statuses
-     *
+     * 
      * @return array
      */
     public static function getStatuses()
@@ -538,5 +583,99 @@ class Inventory extends BaseModel
             self::STATUS_OUT_OF_STOCK,
             self::STATUS_EXPIRED
         ];
+    }
+
+    /**
+     * Invalidate inventory-specific caches
+     * 
+     * @return void
+     */
+    private static function invalidateInventoryCaches()
+    {
+        // Invalidate frequently changing caches
+        static::invalidateCache('getFiltered');
+        static::invalidateCache('getFilteredCount');
+        static::invalidateCache('getLowStockItems');
+        static::invalidateCache('getExpiringItems');
+        static::invalidateCache('getExpiredItems');
+        static::invalidateCache('getSummaryStats');
+        static::invalidateCache('getCategorySummary');
+        
+        // Invalidate base model caches
+        static::invalidateCache('all');
+        static::invalidateCache('count');
+    }
+
+    /**
+     * Bulk update all inventory statuses (for maintenance)
+     * 
+     * @return int Number of items updated
+     */
+    public static function updateAllStatuses()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_inventory';
+        
+        $items = $wpdb->get_results("SELECT ID FROM {$table}");
+        $updated = 0;
+        
+        foreach ($items as $item) {
+            if (static::updateStatus($item->ID)) {
+                $updated++;
+            }
+        }
+        
+        // Clear caches after bulk update
+        if ($updated > 0) {
+            static::invalidateInventoryCaches();
+        }
+        
+        return $updated;
+    }
+
+    /**
+     * ============================================================================
+     * BACKWARD COMPATIBILITY ALIASES
+     * ============================================================================
+     */
+
+    /**
+     * @deprecated Use getLowStockItems() instead
+     */
+    public static function getCritical()
+    {
+        return static::getLowStockItems();
+    }
+
+    /**
+     * @deprecated Use getExpiringItems() instead
+     */
+    public static function getExpiringSoon($days = 30)
+    {
+        return static::getExpiringItems($days);
+    }
+
+    /**
+     * @deprecated Use getExpiredItems() instead
+     */
+    public static function getExpired()
+    {
+        return static::getExpiredItems();
+    }
+
+    /**
+     * @deprecated Use getSummaryStats() instead
+     */
+    public static function getSummary()
+    {
+        return static::getSummaryStats();
+    }
+
+    /**
+     * @deprecated Use find() instead
+     */
+    public static function findOne($id)
+    {
+        return static::find($id);
     }
 }

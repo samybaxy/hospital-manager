@@ -112,7 +112,7 @@ class DoctorService
      */
     public static function getSpecialties()
     {
-        return Doctor::getUniqueSpecialties();
+        // return Doctor::getUniqueSpecialties();
     }
     
     /**

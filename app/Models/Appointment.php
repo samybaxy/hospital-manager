@@ -10,6 +10,7 @@ class Appointment extends BaseModel
 
     protected $primaryKey = 'ID';
     protected $tableName = 'hm_appointments';
+    protected static $cache_expiration = 1200; // 20 minutes for scheduling data
     
     protected $fillable = [
         'patient_id',
@@ -18,14 +19,8 @@ class Appointment extends BaseModel
         'appointment_time',
         'status',
         'reason',
-        'notes',
-        'created_at',
-        'updated_at'
+        'notes'
     ];
-
-    protected $conditions = [];
-    protected $rawConditions = [];
-    protected $orderBy = [];
     
     public function __construct($attributes = [])
     {
@@ -43,348 +38,24 @@ class Appointment extends BaseModel
     }
 
     /**
-     * Override the find method from FindTrait to handle our constructor's array requirement
+     * Get upcoming appointments for a patient with caching
      * 
-     * @param mixed $ID Record ID.
-     * @return object|null
-     */
-    public static function find($ID = 0)
-    {
-        global $wpdb;
-        
-        if (empty($ID)) {
-            return null;
-        }
-        
-        // Get the table name
-        $instance = new self();
-        $table = $instance->getTable();
-        
-        // Fetch the appointment record directly from the database.
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
-        $appointment_data = $wpdb->get_row($query, ARRAY_A);
-        
-        if (!$appointment_data) {
-            return null;
-        }
-        
-        // Create a new appointment instance with the fetched data.
-        return new self($appointment_data);
-    }
-    
-    public function where($column, $operator = null, $value = null)
-    {
-        // Handle 2 argument scenario (implying = operator)
-        if ($value === null) {
-            $value = $operator;
-            $operator = '=';
-        }
-        
-        $this->conditions[] = [$column, $operator, $value];
-        return $this;
-    }
-
-    /**
-     * Add a raw where clause to the query
-     */
-    public function whereRaw($sql, $params = [])
-    {
-        $this->rawConditions[] = [
-            'sql' => $sql,
-            'params' => $params
-        ];
-        return $this;
-    }
-
-    public function orderBy($column, $direction = 'ASC')
-    {
-        $this->orderBy[] = [$column, $direction];
-        return $this;
-    }
-
-    public function get()
-    {
-        global $wpdb;
-        $query = "SELECT * FROM {$this->table} WHERE 1=1";
-        $params = [];
-
-        // Initialize rawConditions array if not already initialized
-        if (!isset($this->rawConditions)) {
-            $this->rawConditions = [];
-        }
-
-        // Add where conditions
-        foreach ($this->conditions as $condition) {
-            $column = $condition[0];
-            $operator = $condition[1];
-            $value = $condition[2];
-            
-            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
-        }
-        
-        // Add raw where conditions if any
-        foreach ($this->rawConditions as $rawCondition) {
-            $sql = $rawCondition['sql'];
-            $rawParams = $rawCondition['params'];
-            
-            // If there are params, use prepare, otherwise just append the raw SQL
-            if (!empty($rawParams)) {
-                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
-            } else {
-                $query .= ' AND ' . $sql;
-            }
-        }
-
-        // Add order by
-        if (!empty($this->orderBy)) {
-            $query .= " ORDER BY " . implode(', ', array_map(function($order) {
-                return "{$order[0]} {$order[1]}";
-            }, $this->orderBy));
-        }
-        
-        error_log("Final SQL query: $query");
-        $results = $wpdb->get_results($query);
-        
-        // Convert results to array of appointment objects
-        $formatted_results = [];
-        foreach ($results as $data) {
-            $data = (array)$data;
-            $formatted_results[] = new static($data);
-        }
-        
-        return $formatted_results;
-    }
-
-    public function exists()
-    {
-        global $wpdb;
-        $query = "SELECT COUNT(*) FROM {$this->table} WHERE 1=1";
-
-        // Initialize rawConditions array if not already initialized
-        if (!isset($this->rawConditions)) {
-            $this->rawConditions = [];
-        }
-
-        // Add where conditions
-        foreach ($this->conditions as $condition) {
-            $column = $condition[0];
-            $operator = $condition[1];
-            $value = $condition[2];
-            
-            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
-        }
-        
-        // Add raw where conditions if any
-        foreach ($this->rawConditions as $rawCondition) {
-            $sql = $rawCondition['sql'];
-            $rawParams = $rawCondition['params'];
-            
-            // If there are params, use prepare, otherwise just append the raw SQL
-            if (!empty($rawParams)) {
-                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
-            } else {
-                $query .= ' AND ' . $sql;
-            }
-        }
-
-        return (bool)$wpdb->get_var($query);
-    }
-
-    public static function query()
-    {
-        return new static();
-    }
-
-    public function pluck($column)
-    {
-        global $wpdb;
-        $query = "SELECT {$column} FROM {$this->table} WHERE 1=1";
-        
-        // Initialize rawConditions array if not already initialized
-        if (!isset($this->rawConditions)) {
-            $this->rawConditions = [];
-        }
-        
-        // Add where conditions
-        foreach ($this->conditions as $condition) {
-            $column = $condition[0];
-            $operator = $condition[1];
-            $value = $condition[2];
-            
-            $query .= $wpdb->prepare(" AND {$column} {$operator} %s", $value);
-        }
-        
-        // Add raw where conditions if any
-        foreach ($this->rawConditions as $rawCondition) {
-            $sql = $rawCondition['sql'];
-            $rawParams = $rawCondition['params'];
-            
-            // If there are params, use prepare, otherwise just append the raw SQL
-            if (!empty($rawParams)) {
-                $query .= ' AND ' . $wpdb->prepare($sql, $rawParams);
-            } else {
-                $query .= ' AND ' . $sql;
-            }
-        }
-
-        if (!empty($this->orderBy)) {
-            $query .= " ORDER BY " . implode(', ', array_map(function($order) {
-                return "{$order[0]} {$order[1]}";
-            }, $this->orderBy));
-        }
-
-        $results = $wpdb->get_col($query);
-        return $results;
-    }
-    
-    /**
-     * Create a new appointment record in the database
-     *
-     * @param array $data Appointment data to create
-     * @return Appointment The newly created appointment instance
-     */
-    public static function create(array $data)
-    {
-        global $wpdb;
-    
-        // Get table name
-        $instance = new static();
-        $table = $instance->getTable();
-        
-        // Set created_at timestamp if not provided
-        if (!isset($data['created_at'])) {
-            $data['created_at'] = current_time('mysql');
-        }
-        
-        // Set updated_at if not provided
-        if (!isset($data['updated_at'])) {
-            $data['updated_at'] = current_time('mysql');
-        }
-        
-        // Filter data to only include fillable fields
-        $fillable_data = array_intersect_key($data, array_flip($instance->fillable));
-        
-        // Insert the record
-        $result = $wpdb->insert(
-            $table,
-            $fillable_data,
-            array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
-            }, $fillable_data)
-        );
-        
-        if ($result === false) {
-            throw new \Exception($wpdb->last_error);
-        }
-        
-        // Get the newly created ID and add it to the data
-        $data['ID'] = $wpdb->insert_id;
-        
-        // Return a new instance with the created data
-        return new static($data);
-    }
-
-    /**
-     * Save the current model instance to the database
-     * 
-     * @return bool True if saved successfully, false otherwise
-     */
-    public function save()
-    {
-        global $wpdb;
-        
-        // Ensure we have an ID for updating
-        $id = $this->getAttribute('ID');
-        if (empty($id)) {
-            throw new \Exception('Cannot save appointment without ID. Use create() for new appointments.');
-        }
-        
-        // Get current attributes
-        $data = $this->attributes;
-        
-        // Set updated_at timestamp
-        $data['updated_at'] = current_time('mysql');
-        
-        // Filter data to only include fillable fields (excluding ID)
-        $fillable_data = array_intersect_key($data, array_flip($this->fillable));
-        
-        // Remove ID from the data to update (we don't want to update the primary key)
-        unset($fillable_data['ID']);
-        
-        if (empty($fillable_data)) {
-            return true; // Nothing to update
-        }
-        
-        // Prepare format array for wpdb
-        $format = array_map(function($field) {
-            // Determine format based on field name or value
-            if (in_array($field, ['patient_id', 'doctor_id'])) {
-                return '%d';
-            }
-            return '%s';
-        }, array_keys($fillable_data));
-        
-        // Update the record
-        $result = $wpdb->update(
-            $this->getTable(),
-            $fillable_data,
-            ['ID' => $id],
-            $format,
-            ['%d'] // ID format
-        );
-        
-        if ($result === false) {
-            error_log('Appointment save error: ' . $wpdb->last_error);
-            throw new \Exception('Failed to save appointment: ' . $wpdb->last_error);
-        }
-        
-        // Update the model's attributes with the new data
-        $this->attributes = array_merge($this->attributes, $fillable_data);
-        
-        return true;
-    }
-
-    public function doctor()
-    {
-        return get_user_by('ID', $this->doctor_id);
-    }
-
-    public function patient()
-    {
-        return get_user_by('ID', $this->patient_id);
-    }
-
-    /**
-     * Convert the model instance to an array
-     * 
-     * @return array
-     */
-    public function toArray()
-    {
-        // Start with the attributes
-        $data = $this->attributes;
-        
-        // Process notes if it's a JSON string
-        if (!empty($data['notes']) && is_string($data['notes'])) {
-            $decoded = json_decode($data['notes'], true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $data['notes'] = $decoded;
-            }
-        }
-        
-        // Ensure status defaults to 'pending' if not set
-        if (empty($data['status'])) {
-            $data['status'] = 'pending';
-        }
-        
-        return $data;
-    }
-
-    /**
-     * Get upcoming appointments for a patient
+     * @param int $patientId Patient ID
+     * @return array Array of appointment objects
      */
     public static function getUpcomingForPatient($patientId)
     {
+        if (empty($patientId)) {
+            return [];
+        }
+
+        $cache_key = static::getCacheKey('getUpcomingForPatient', [$patientId]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
         $doctors_table = $wpdb->prefix . 'hm_doctors';
@@ -419,14 +90,29 @@ class Appointment extends BaseModel
             return $appointment;
         }, $results ?: []);
         
+        static::setToCache($cache_key, $appointments, 1200); // 20 minutes cache
         return $appointments;
     }
 
     /**
-     * Get today's appointments for a doctor with patient details
+     * Get today's appointments for a doctor with caching
+     * 
+     * @param int $doctorId Doctor ID
+     * @return array Array of appointment objects
      */
     public static function getTodaysForDoctor($doctorId)
     {
+        if (empty($doctorId)) {
+            return [];
+        }
+
+        $cache_key = static::getCacheKey('getTodaysForDoctor', [$doctorId]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
         $patients_table = $wpdb->prefix . 'hm_patients';
@@ -439,13 +125,13 @@ class Appointment extends BaseModel
             LEFT JOIN {$patients_table} p ON a.patient_id = p.ID 
             WHERE a.doctor_id = %d 
             AND DATE(a.appointment_date) = %s 
-            ORDER BY a.appointment_date ASC",
+            ORDER BY a.appointment_time ASC",
             $doctorId,
             current_time('Y-m-d')
         );
 
         $results = $wpdb->get_results($query, ARRAY_A);
-        return array_map(function($item) {            
+        $appointments = array_map(function($item) {            
             $model = new static($item);
             if (isset($item['patient_name'])) {
                 $model->patient_name = $item['patient_name'];
@@ -455,21 +141,31 @@ class Appointment extends BaseModel
             }
             return $model;
         }, $results ?: []);
+        
+        static::setToCache($cache_key, $appointments, 600); // 10 minutes cache (frequent changes)
+        return $appointments;
     }
-    
+
     /**
-     * Get a single appointment with related doctor and patient information
+     * Get appointment with detailed information with caching
      * 
      * @param int $ID Appointment ID
      * @return array|null Appointment data with related information or null if not found
      */
     public static function getWithDetails($ID)
     {
-        global $wpdb;
-        
-        if (!$ID) {
+        if (empty($ID)) {
             return null;
         }
+
+        $cache_key = static::getCacheKey('getWithDetails', [$ID]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
         
         $table_name = $wpdb->prefix . 'hm_appointments';
         $doctors_table = $wpdb->prefix . 'hm_doctors';
@@ -498,11 +194,12 @@ class Appointment extends BaseModel
         $appointment = $wpdb->get_row($query, ARRAY_A);
         
         if (!$appointment) {
+            static::setToCache($cache_key, null, 1200); // Cache null results
             return null;
         }
         
         // Format response data
-        return [
+        $result = [
             'ID' => (int) $appointment['ID'],
             'patient_id' => (int) $appointment['patient_id'],
             'doctor_id' => (int) $appointment['doctor_id'],
@@ -520,6 +217,172 @@ class Appointment extends BaseModel
             'patient_name' => $appointment['patient_name'],
             'patient_phone' => $appointment['patient_phone']
         ];
+        
+        static::setToCache($cache_key, $result, 1200); // 20 minutes cache
+        return $result;
+    }
+
+    /**
+     * Get appointment statistics with caching
+     * 
+     * @return array|null Statistics array
+     */
+    public static function getStatistics()
+    {
+        $cache_key = static::getCacheKey('getStatistics', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        
+        $stats = $wpdb->get_row("
+            SELECT 
+                (SELECT COUNT(*) FROM {$appointments_table}) as total_appointments,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE status = 'pending') as pending_appointments,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE status = 'confirmed') as confirmed_appointments,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE status = 'completed') as completed_appointments,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE DATE(appointment_date) = CURDATE()) as today_appointments,
+                (SELECT COUNT(*) FROM {$appointments_table} WHERE appointment_date >= CURDATE() AND appointment_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)) as week_appointments
+        ", ARRAY_A);
+
+        // Ensure all values are integers
+        if ($stats) {
+            foreach ($stats as $key => $value) {
+                $stats[$key] = (int)$value;
+            }
+        }
+
+        static::setToCache($cache_key, $stats, 3600); // 1 hour cache for statistics
+        return $stats;
+    }
+
+    /**
+     * Enhanced save with cache invalidation
+     * 
+     * @return bool True if saved successfully, false otherwise
+     */
+    public function save()
+    {
+        global $wpdb;
+        
+        $table = $this->getTable();
+        $data = [];
+        
+        // Prepare only fillable attributes for saving
+        foreach ($this->fillable as $field) {
+            if (isset($this->attributes[$field])) {
+                $data[$field] = $this->attributes[$field];
+            }
+        }
+        
+        // Add updated_at timestamp
+        $data['updated_at'] = current_time('mysql');
+        
+        // Return false if no data to save
+        if (empty($data)) {
+            return false;
+        }
+        
+        // Determine if this is an update or insert
+        if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
+            // This is an update
+            $formats = array_map(function($value) {
+                return is_numeric($value) ? '%d' : '%s';
+            }, array_values($data));
+            
+            $result = $wpdb->update(
+                $table,
+                $data,
+                ['ID' => $this->attributes['ID']],
+                $formats,
+                ['%d']
+            );
+            
+            if ($result !== false) {
+                // Invalidate caches
+                $this->invalidateAppointmentCaches();
+            }
+            
+            return $result !== false;
+        } else {
+            // This is an insert
+            $data['created_at'] = current_time('mysql');
+            $formats = array_map(function($value) {
+                return is_numeric($value) ? '%d' : '%s';
+            }, array_values($data));
+            
+            $result = $wpdb->insert(
+                $table,
+                $data,
+                $formats
+            );
+            
+            if ($result !== false) {
+                $this->attributes['ID'] = $wpdb->insert_id;
+                // Invalidate caches
+                static::invalidateCache();
+                return true;
+            }
+            
+            return false;
+        }
+    }
+
+    /**
+     * Enhanced delete with cache invalidation
+     * 
+     * @return bool True on success, false on failure
+     */
+    public function delete()
+    {
+        global $wpdb;
+        
+        if (!isset($this->attributes['ID']) || empty($this->attributes['ID'])) {
+            return false;
+        }
+        
+        $table = $this->getTable();
+        $result = $wpdb->delete(
+            $table,
+            ['ID' => (int)$this->attributes['ID']],
+            ['%d']
+        );
+        
+        if ($result !== false) {
+            $this->invalidateAppointmentCaches();
+        }
+        
+        return $result !== false;
+    }
+
+    /**
+     * Invalidate appointment-specific caches
+     * 
+     * @return void
+     */
+    private function invalidateAppointmentCaches()
+    {
+        if (isset($this->attributes['patient_id'])) {
+            static::invalidateCache('getUpcomingForPatient', [$this->attributes['patient_id']]);
+        }
+        
+        if (isset($this->attributes['doctor_id'])) {
+            static::invalidateCache('getTodaysForDoctor', [$this->attributes['doctor_id']]);
+        }
+        
+        if (isset($this->attributes['ID'])) {
+            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('getWithDetails', [$this->attributes['ID']]);
+        }
+        
+        // Invalidate general caches
+        static::invalidateCache('all');
+        static::invalidateCache('count');
+        static::invalidateCache('getStatistics');
     }
     
     /**

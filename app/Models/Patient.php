@@ -10,9 +10,7 @@ class Patient extends BaseModel
     
     protected $primaryKey = 'ID';
     protected $tableName = 'hm_patients';
-    protected static $conditions = [];
-    protected static $orderBy = [];
-    protected static $queryType = 'static'; // Track if we're using static or instance query
+    protected static $cache_expiration = 1800; // 30 minutes for frequently accessed patient data
 
     protected $fillable = [
         'user_id',
@@ -30,6 +28,11 @@ class Patient extends BaseModel
         'bio_data'
     ];
     
+    /**
+     * Patient constructor
+     * 
+     * @param array $attributes Model attributes
+     */
     public function __construct(array $attributes = [])
     {
         global $wpdb;
@@ -60,382 +63,248 @@ class Patient extends BaseModel
     }
 
     /**
-     * Override the find method from FindTrait to handle our constructor's array requirement
+     * Find a patient by WordPress user ID with caching
      * 
-     * @param mixed $ID Record ID.
-     * @return object|null
+     * @param int $user_id WordPress user ID
+     * @return Patient|null Returns Patient instance or null if not found
      */
-    public static function find($ID = 0)
+    public static function findByUserId($user_id)
     {
-        global $wpdb;
-        
-        if (empty($ID)) {
+        if (empty($user_id)) {
             return null;
         }
+
+        $cache_key = static::getCacheKey('findByUserId', [$user_id]);
+        $cached = static::getFromCache($cache_key);
         
-        // Get the table name
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
         $instance = new self();
         $table = $instance->getTable();
         
-        // Fetch the patient record directly from the database
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE user_id = %d", $user_id);
         $patient_data = $wpdb->get_row($query, ARRAY_A);
         
         if (!$patient_data) {
+            static::setToCache($cache_key, null, 1800); // Cache null results for 30 min
             return null;
         }
         
-        // Ensure phone number has leading zero if needed (but not in tests)
-        if (defined('RUNNING_PHPUNIT_TESTS') && isset($patient_data['phone']) && strlen($patient_data['phone']) === 10 && substr($patient_data['phone'], 0, 1) !== '0') {
-            $patient_data['phone'] = '0' . $patient_data['phone'];
-        }
+        $result = new self($patient_data);
+        static::setToCache($cache_key, $result, 1800); // 30 minutes cache
         
-        // Create a new Patient instance with the fetched data
-        return new self($patient_data);
+        return $result;
     }
 
     /**
-     * Get all patients
+     * Get patient ID from WordPress user ID with caching
      * 
-     * @return array
+     * @param int $user_id WordPress user ID
+     * @return int|null Returns patient ID or null if not found
      */
-    public static function all()
+    public static function get_pid_from_wp($user_id)
     {
-        global $wpdb;
+        if (empty($user_id)) {
+            return null;
+        }
+
+        $cache_key = static::getCacheKey('get_pid_from_wp', [$user_id]);
+        $cached = static::getFromCache($cache_key);
         
-        // Get the table name
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
         $instance = new self();
         $table = $instance->getTable();
         
-        // Get all patients
-        $patients = $wpdb->get_results("SELECT * FROM $table ORDER BY ID ASC", ARRAY_A);
+        $query = $wpdb->prepare("SELECT ID FROM {$table} WHERE user_id = %d", $user_id);
+        $patient_id = $wpdb->get_var($query);
         
-        // Convert to Patient models
-        return array_map(function($patient) {
-            return new self($patient);
-        }, $patients ?: []);
+        $result = $patient_id ? (int)$patient_id : null;
+        static::setToCache($cache_key, $result, 1800); // 30 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Create a new patient record
+     * Get appointments for this patient with caching
+     * 
+     * @return array Array of appointment records
      */
-    public static function create(array $attributes)
+    public function getAppointments()
     {
+        if (!$this->ID) {
+            return [];
+        }
+
+        $cache_key = static::getCacheKey('getAppointments', [$this->ID]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
-        $table = (new static)->table;
-        
-        // Set created_at if applicable
-        if (in_array('created_at', (new static)->fillable)) {
-            $attributes['created_at'] = $attributes['created_at'] ?? current_time('mysql');
-        }
-        
-        // Clone the attributes to avoid modifying the original
-        $db_attributes = $attributes;
-        
-        // Make sure bio_data is properly encoded
-        if (isset($db_attributes['bio_data']) && is_array($db_attributes['bio_data'])) {
-            $db_attributes['bio_data'] = json_encode($db_attributes['bio_data']);
-        }
-        
-        $result = $wpdb->insert(
-            $table,
-            $db_attributes,
-            array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
-            }, $db_attributes)
-        );
-
-        if ($result === false) {
-            throw new \Exception($wpdb->last_error);
-        }
-
-        $attributes['ID'] = $wpdb->insert_id;
-        return new static($attributes);
-    }
-
-    /**
-     * Initialize a new query builder instance
-     */
-    public static function query()
-    {
-        $instance = new static();
-        static::$queryType = 'instance';
-        return $instance;
-    }
-
-    /**
-     * Query builder: where clause
-     */
-    public function where($column, $operator = null, $value = null)
-    {
-        // Handle closure for complex where conditions
-        if ($column instanceof \Closure) {
-            $query = new static();
-            $column($query);
-            static::$conditions = array_merge(static::$conditions, $query::$conditions);
-            return static::$queryType === 'instance' ? $this : new static();
-        }
-
-        if ($value === null) {
-            $value = $operator;
-            $operator = '=';
-        }
-        
-        // Add the condition directly - special case will be handled in get()
-        static::$conditions[] = [$column, $operator, $value];
-        
-        static::$queryType = 'instance'; // Ensure we're in instance query mode
-        return static::$queryType === 'instance' ? $this : new static();
-    }
-
-    /**
-     * Query builder: orWhere clause
-     */
-    public function orWhere($column, $operator = null, $value = null)
-    {
-        if ($value === null) {
-            $value = $operator;
-            $operator = '=';
-        }
-        
-        static::$conditions[] = ['OR', $column, $operator, $value];
-        return static::$queryType === 'instance' ? $this : new static();
-    }
-
-    /**
-     * Query builder: order by
-     */
-    public function orderBy($column, $direction = 'ASC')
-    {
-        static::$orderBy[] = [$column, strtoupper($direction)];
-        return static::$queryType === 'instance' ? $this : new static();
-    }
-
-    /**
-     * Execute query and get results
-     */
-    public function get()
-    {
-        global $wpdb;
-        $table = $this->table;
-        $query = "SELECT SQL_NO_CACHE * FROM {$table} WHERE 1=1";
-        $values = [];
-        
-        // Add where conditions
-        $where = [];
-        $orWhere = [];
-        
-        foreach (static::$conditions as $condition) {
-            if (isset($condition[0]) && $condition[0] === 'OR') {
-                if ($condition[2] === 'LIKE') {
-                    $orWhere[] = "{$condition[1]} {$condition[2]} %s";
-                    $values[] = '%' . $wpdb->esc_like($condition[3]) . '%';
-                } else if ($condition[2] === 'IN' && is_array($condition[3])) {
-                    $placeholders = array_fill(0, count($condition[3]), '%s');
-                    $orWhere[] = "({$condition[1]} IN (" . implode(', ', $placeholders) . "))";
-                    foreach ($condition[3] as $val) {
-                        $values[] = $val;
-                    }
-                } else {
-                    $orWhere[] = "{$condition[1]} {$condition[2]} %s";
-                    $values[] = $condition[3];
-                }
-            } else {
-                if ($condition[1] === 'LIKE') {
-                    $where[] = "{$condition[0]} {$condition[1]} %s";
-                    $values[] = '%' . $wpdb->esc_like($condition[2]) . '%';
-                } else if ($condition[1] === 'IN' && is_array($condition[2])) {
-                    if (!empty($condition[2])) {
-                        $placeholders = array_fill(0, count($condition[2]), '%s');
-                        $where[] = "({$condition[0]} IN (" . implode(', ', $placeholders) . "))";
-                        foreach ($condition[2] as $val) {
-                            $values[] = $val;
-                        }
-                    } else {
-                        // Empty array, will never match
-                        $where[] = "0=1";
-                    }
-                } else {
-                    $where[] = "{$condition[0]} {$condition[1]} %s";
-                    $values[] = $condition[2];
-                }
-            }
-        }
-        
-        if (!empty($where)) {
-            $query .= " AND (" . implode(" AND ", $where) . ")";
-        }
-        if (!empty($orWhere)) {
-            $query .= " OR (" . implode(" OR ", $orWhere) . ")";
-        }
-
-        // Add order by
-        if (!empty(static::$orderBy)) {
-            $query .= " ORDER BY " . implode(', ', array_map(function($order) {
-                return "{$order[0]} {$order[1]}";
-            }, static::$orderBy));
-        }
-
-        if (!empty($values)) {
-            $query = $wpdb->prepare($query, $values);
-        }
-
-        // Reset static properties
-        static::$conditions = [];
-        static::$orderBy = [];
-        static::$queryType = 'static';
-
-        $results = $wpdb->get_results($query, ARRAY_A);
-        
-        return array_map(function($item) {
-            return new static($item);
-        }, $results ?: []);
-    }
-
-    /**
-     * Paginate results
-     */
-    public function paginate($perPage = 20, $columns = ['*'], $pageName = 'page', $page = null)
-    {
-        global $wpdb;
-        $table = $this->table;
-        
-        // Build base query
-        $query = "SELECT SQL_CALC_FOUND_ROWS * FROM {$table} WHERE 1=1";
-        $values = [];
-        
-        // Add where conditions
-        $where = [];
-        $orWhere = [];
-        
-        foreach (static::$conditions as $condition) {
-            if (isset($condition[0]) && $condition[0] === 'OR') {
-                $orWhere[] = "{$condition[1]} {$condition[2]} %s";
-                $values[] = $condition[3];
-            } else {
-                $where[] = "{$condition[0]} {$condition[1]} %s";
-                $values[] = $condition[2];
-            }
-        }
-        
-        if (!empty($where)) {
-            $query .= " AND (" . implode(" AND ", $where) . ")";
-        }
-        if (!empty($orWhere)) {
-            $query .= " OR (" . implode(" OR ", $orWhere) . ")";
-        }
-
-        // Add order by
-        if (!empty(static::$orderBy)) {
-            $query .= " ORDER BY " . implode(', ', array_map(function($order) {
-                return "{$order[0]} {$order[1]}";
-            }, static::$orderBy));
-        }
-
-        // Add pagination
-        $offset = ($page - 1) * $perPage;
-        $query .= " LIMIT %d OFFSET %d";
-        $values[] = $perPage;
-        $values[] = $offset;
-
-        // Execute query
-        $query = $wpdb->prepare($query, $values);
-        $results = $wpdb->get_results($query, ARRAY_A);
-        $total = $wpdb->get_var('SELECT FOUND_ROWS()');
-
-        // Reset static properties
-        static::$conditions = [];
-        static::$orderBy = [];
-        static::$queryType = 'static';
-
-        // Create pagination object
-        return (object)[
-            'items' => array_map(function($item) {
-                return new static($item);
-            }, $results ?: []),
-            'currentPage' => (int)$page,
-            'lastPage' => ceil($total / $perPage),
-            'perPage' => (int)$perPage,
-            'total' => (int)$total
-        ];
-    }
-
-    /**
-     * Static method to search patients by name
-     */
-    public static function search($term)
-    {
-        global $wpdb;
-        $table = (new static)->table;
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
         
         $query = $wpdb->prepare(
-            "SELECT * FROM {$table} 
-            WHERE first_name LIKE %s 
-            OR last_name LIKE %s",
-            '%' . $wpdb->esc_like($term) . '%',
-            '%' . $wpdb->esc_like($term) . '%'
+            "SELECT a.*, 
+            CONCAT(u.display_name) as doctor_name
+            FROM {$appointments_table} a
+            LEFT JOIN {$wpdb->users} u ON a.doctor_id = u.ID
+            WHERE a.patient_id = %d
+            ORDER BY a.appointment_date DESC, a.appointment_time DESC",
+            $this->ID
         );
-
-        $results = $wpdb->get_results($query, ARRAY_A);
         
-        return array_map(function($item) {
-            return new static($item);
-        }, $results ?: []);
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 900); // 15 minutes cache
+        
+        return $result;
     }
 
     /**
-     * Get the count of records
+     * Get visitation history for this patient with caching
+     * 
+     * @return array Array of visitation records with doctor information
      */
-    public static function count()
+    public function getVisitationHistory()
     {
+        if (!$this->ID) {
+            return [];
+        }
+
+        $cache_key = static::getCacheKey('getVisitationHistory', [$this->ID]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+        
+        global $wpdb;
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
+        
+        $query = $wpdb->prepare(
+            "SELECT v.*, 
+            CONCAT(u.display_name) as doctor
+            FROM {$visitations_table} v
+            LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
+            WHERE v.patient_id = %d
+            ORDER BY v.date DESC, v.time DESC",
+            $this->ID
+        );
+        
+        $result = $wpdb->get_results($query);
+        static::setToCache($cache_key, $result, 1800); // 30 minutes cache
+        
+        return $result;
+    }
+
+    /**
+     * Get patient statistics with caching
+     * 
+     * @return array|null Statistics array or null on error
+     */
+    public static function getStatistics()
+    {
+        $cache_key = static::getCacheKey('getStatistics', []);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $patients_table = $wpdb->prefix . 'hm_patients';
+        $appointments_table = $wpdb->prefix . 'hm_appointments';
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
+        
+        $stats = $wpdb->get_row("
+            SELECT 
+                (SELECT COUNT(*) FROM `{$patients_table}`) as total_patients,
+                (SELECT COUNT(*) FROM `{$patients_table}` WHERE `gender` = 'Male') as male_patients,
+                (SELECT COUNT(*) FROM `{$patients_table}` WHERE `gender` = 'Female') as female_patients,
+                (SELECT COUNT(*) FROM `{$appointments_table}` WHERE `appointment_date` >= CURDATE()) as upcoming_appointments,
+                (SELECT COUNT(DISTINCT `patient_id`) FROM `{$visitations_table}` WHERE DATE(`created_at`) = CURDATE()) as today_visits,
+                (SELECT COUNT(*) FROM `{$patients_table}` WHERE DATE(`created_at`) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) as new_patients_month
+        ", ARRAY_A);
+
+        // Ensure all values are integers
+        if ($stats) {
+            foreach ($stats as $key => $value) {
+                $stats[$key] = (int)$value;
+            }
+        }
+
+        static::setToCache($cache_key, $stats, 3600); // 1 hour cache for statistics
+        
+        return $stats;
+    }
+
+    /**
+     * Enhanced search with caching
+     * 
+     * @param string $term Search term
+     * @param array $columns Columns to search in
+     * @return Patient[] Array of Patient instances
+     */
+    public static function search($term, $columns = ['first_name', 'last_name', 'phone'])
+    {
+        if (empty($term)) {
+            return [];
+        }
+        
+        // Validate columns to prevent SQL injection
+        $allowed_columns = ['first_name', 'last_name', 'phone', 'hmo_designated_id'];
+        $safe_columns = array_intersect($columns, $allowed_columns);
+        
+        if (empty($safe_columns)) {
+            return [];
+        }
+
+        $cache_key = static::getCacheKey('search', [$term, $safe_columns]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
         global $wpdb;
         $table = (new static)->table;
-        return (int)$wpdb->get_var("SELECT COUNT(*) FROM {$table}");
-    }
-
-    /**
-     * Find patients by specific conditions
-     *
-     * @param array $conditions Key-value pairs of column conditions
-     * @return Patient[] Array of Patient objects matching conditions
-     */
-    public static function findWhere(array $conditions)
-    {
-        $query = new static();
-        foreach ($conditions as $column => $value) {
-            $query->where($column, '=', $value);
+        
+        $where_parts = [];
+        $values = [];
+        $search_term = '%' . $wpdb->esc_like($term) . '%';
+        
+        foreach ($safe_columns as $column) {
+            $where_parts[] = "`$column` LIKE %s";
+            $values[] = $search_term;
         }
-        return $query->get();
+        
+        $where_clause = '(' . implode(' OR ', $where_parts) . ')';
+        $query = "SELECT * FROM `{$table}` WHERE {$where_clause} ORDER BY `last_name`, `first_name`";
+        
+        $query = $wpdb->prepare($query, $values);
+        $results = $wpdb->get_results($query, ARRAY_A);
+        
+        $models = array_map(function($item) {
+            return new static($item);
+        }, $results ?: []);
+        
+        static::setToCache($cache_key, $models, 1800); // 30 minutes cache
+        
+        return $models;
     }
 
     /**
-     * Relationship with WordPress user
-     */
-    public function user()
-    {
-        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'user_id', 'ID');
-    }
-
-    /**
-     * Relationship with HMO
-     */
-    public function hmo()
-    {
-        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'ID');
-    }
-
-    /**
-     * Relationship with visitations
-     */
-    public function visitations()
-    {
-        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'ID');
-    }
-    
-    /**
-     * Save the model to the database.
+     * Save the model with cache invalidation
      * 
-     * @return bool
+     * @return bool True on success, false on failure
      */
     public function save()
     {
@@ -461,32 +330,48 @@ class Patient extends BaseModel
             $data['bio_data'] = json_encode($data['bio_data']);
         }
         
+        // Return false if no data to save
+        if (empty($data)) {
+            return false;
+        }
+        
         // Determine if this is an update or insert
         if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
+            $formats = array_map(function($value) {
+                return is_numeric($value) ? '%d' : '%s';
+            }, array_values($data));
+            
             $result = $wpdb->update(
                 $table,
                 $data,
                 ['ID' => $this->attributes['ID']],
-                array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
-                }, $data),
+                $formats,
                 ['%d']
             );
+            
+            if ($result !== false) {
+                // Invalidate caches
+                $this->invalidatePatientCaches();
+            }
             
             return $result !== false;
         } else {
             // This is an insert
+            $formats = array_map(function($value) {
+                return is_numeric($value) ? '%d' : '%s';
+            }, array_values($data));
+            
             $result = $wpdb->insert(
                 $table,
                 $data,
-                array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
-                }, $data)
+                $formats
             );
             
             if ($result !== false) {
                 $this->attributes['ID'] = $wpdb->insert_id;
+                // Invalidate caches
+                static::invalidateCache();
                 return true;
             }
             
@@ -495,37 +380,48 @@ class Patient extends BaseModel
     }
 
     /**
-     * Update the patient with the given attributes
-     *
-     * @param array $attributes
-     * @return bool
+     * Update with cache invalidation
+     * 
+     * @param array $attributes Attributes to update
+     * @return bool True on success, false on failure
      */
     public function update(array $attributes)
     {
-        // Merge the new attributes with the existing ones
-        foreach ($attributes as $key => $value) {
-            if ($key === 'phone' && !empty($value)) {
-                // Don't modify phone numbers in test environments
-                if (defined('RUNNING_PHPUNIT_TESTS')) {
-                    // Keep the phone number as is for tests
-                } else if (substr($value, 0, 1) !== '0' && strlen($value) === 10) {
-                    // In production, ensure phone number format consistency
-                    $value = '0' . $value;
-                }
-            }
-            
-            $this->attributes[$key] = $value;
-            $this->$key = $value; // Also update object properties
+        if (empty($attributes) || !is_array($attributes)) {
+            return false;
         }
         
-        // Save the changes
-        return $this->save();
+        // Handle phone number formatting for non-test environments
+        if (isset($attributes['phone']) && !empty($attributes['phone'])) {
+            if (!defined('RUNNING_PHPUNIT_TESTS')) {
+                $phone = (string)$attributes['phone'];
+                if (substr($phone, 0, 1) !== '0' && strlen($phone) === 10) {
+                    $attributes['phone'] = '0' . $phone;
+                }
+            }
+        }
+        
+        // Merge the new attributes with the existing ones
+        foreach ($attributes as $key => $value) {
+            if (in_array($key, $this->fillable)) {
+                $this->attributes[$key] = $value;
+                $this->$key = $value;
+            }
+        }
+        
+        $result = $this->save();
+        
+        if ($result) {
+            $this->invalidatePatientCaches();
+        }
+        
+        return $result;
     }
 
     /**
-     * Delete the patient record from the database
+     * Delete with cache invalidation
      * 
-     * @return bool
+     * @return bool True on success, false on failure
      */
     public function delete()
     {
@@ -538,90 +434,64 @@ class Patient extends BaseModel
         $table = $this->getTable();
         $result = $wpdb->delete(
             $table,
-            ['ID' => $this->attributes['ID']],
+            ['ID' => (int)$this->attributes['ID']],
             ['%d']
         );
+        
+        if ($result !== false) {
+            $this->invalidatePatientCaches();
+        }
         
         return $result !== false;
     }
 
     /**
-     * Get the last visitation date for a patient
+     * Invalidate patient-specific caches
      * 
-     * @param int $patient_id
-     * @return string|null
+     * @return void
      */
-    public static function get_last_visitation_date(int $patient_id = 0)
+    private function invalidatePatientCaches()
     {
-        global $wpdb;
-        
-        // Ensure we have a valid patient ID
-        if (empty($patient_id)) return null;
-
-        $visitation_table = $wpdb->prefix . 'hm_visitations';
-        return $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT MAX(created_at) FROM {$visitation_table} WHERE patient_id = %d",
-                $patient_id
-            )
-        );
-    }
-
-    /**
-     * Get visitations for this patient
-     * 
-     * @return array Array of visitations
-     */
-    public function get_visitations()
-    {
-        global $wpdb;
-        
-        $visitation_table = $wpdb->prefix . 'hm_visitations';
-        $doctor_table = $wpdb->prefix . 'hm_doctors';
-        
-        $patient_id = $this->ID;
-        
-        $visitations = $wpdb->get_results($wpdb->prepare(
-            "SELECT v.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name 
-             FROM {$visitation_table} v
-             LEFT JOIN {$doctor_table} d ON v.doctor_id = d.ID
-             WHERE v.patient_id = %d
-             ORDER BY v.date DESC, v.time DESC",
-            $patient_id
-        ), ARRAY_A);
-        
-        // Format the visitations data
-        if ($visitations) {
-            foreach ($visitations as &$visitation) {
-                $visitation['doctor'] = $visitation['doctor_first_name'] . ' ' . $visitation['doctor_last_name'];
-                unset($visitation['doctor_first_name']);
-                unset($visitation['doctor_last_name']);
-            }
+        if (isset($this->attributes['user_id'])) {
+            static::invalidateCache('findByUserId', [$this->attributes['user_id']]);
+            static::invalidateCache('get_pid_from_wp', [$this->attributes['user_id']]);
         }
         
-        return $visitations;
+        if (isset($this->attributes['ID'])) {
+            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('getAppointments', [$this->attributes['ID']]);
+            static::invalidateCache('getVisitationHistory', [$this->attributes['ID']]);
+        }
+        
+        // Invalidate general caches
+        static::invalidateCache('all');
+        static::invalidateCache('count');
+        static::invalidateCache('getStatistics');
     }
 
     /**
      * Create a new WordPress user for the patient
      * 
-     * @param array $attributes Patient attributes
-     * @return int|string|null WordPress user ID or error message
+     * @param array $attributes User attributes
+     * @return int|string|null Returns user ID on success, error message on failure, or null if email missing/exists
      */
     public static function createWPUser($attributes)
     {
-        if (empty($attributes['email'])) {
+        if (empty($attributes['email']) || !is_email($attributes['email'])) {
             return null;
         }
 
         if (email_exists($attributes['email'])) {
-            return null; // Email already exists
+            return null;
         }
 
-        // Generate a username from email
         $username = sanitize_user(substr($attributes['email'], 0, strpos($attributes['email'], '@')));
         
-        // Check if username exists, append numbers if needed
+        // Ensure username is not empty
+        if (empty($username)) {
+            $username = 'patient_' . uniqid();
+        }
+        
         $suffix = 1;
         $original_username = $username;
         while (username_exists($username)) {
@@ -630,18 +500,16 @@ class Patient extends BaseModel
         }
 
         $user_data = [
-            'user_login'   => $username,                 // Username (sanitized)
-            'user_email'   => sanitize_email($attributes['email']), // Email (sanitized)
-            'user_pass'    => wp_generate_password(),    // Password (hashed)
-            'role'         => 'patient',                 // User role
-            'user_registered' => current_time('mysql'),  // Registration date
+            'user_login'   => $username,
+            'user_email'   => sanitize_email($attributes['email']),
+            'user_pass'    => wp_generate_password(),
+            'role'         => 'patient',
+            'user_registered' => current_time('mysql'),
         ];
 
         $user_id = wp_insert_user($user_data);
 
-        // Check for errors
-        if ( is_wp_error( $user_id ) ) {
-            // Handle error (e.g., log or return error message)
+        if (is_wp_error($user_id)) {
             return $user_id->get_error_message();
         }
         
@@ -649,50 +517,25 @@ class Patient extends BaseModel
     }
 
     /**
-     * Get visitation history for this patient
-     * 
-     * @return array Array of visitation records with doctor information
-     */
-    public function getVisitationHistory()
-    {
-        global $wpdb;
-        
-        if (!$this->ID) {
-            return [];
-        }
-        
-        $visitations_table = $wpdb->prefix . 'hm_visitations';
-        
-        // Join with users table to get doctor name
-        $query = $wpdb->prepare(
-            "SELECT v.*, 
-            CONCAT(u.display_name) as doctor
-            FROM {$visitations_table} v
-            LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
-            WHERE v.patient_id = %d
-            ORDER BY v.date DESC, v.time DESC",
-            $this->ID
-        );
-        
-        return $wpdb->get_results($query);
-    }
-
-    /**
      * Update the WordPress user associated with the patient
      * 
      * @param int $user_id WordPress user ID
-     * @param array $attributes Attributes to update
-     * @return bool
+     * @param array $attributes User attributes to update
+     * @return int|false|WP_Error User ID on success, false or WP_Error on failure
      */
     public static function updateWPUser($user_id, $attributes)
     {
-        if (empty($user_id) || empty($attributes)) {
+        if (empty($user_id) || empty($attributes) || !is_array($attributes)) {
             return false;
         }
 
-        if (isset($attributes['email'])) {
+        if (isset($attributes['email']) && !empty($attributes['email'])) {
+            if (!is_email($attributes['email'])) {
+                return false;
+            }
+            
             return wp_update_user([
-                'ID' => $user_id,
+                'ID' => (int)$user_id,
                 'user_email' => sanitize_email($attributes['email']),
             ]);
         }
@@ -701,53 +544,32 @@ class Patient extends BaseModel
     }
 
     /**
-     * Find a patient by WordPress user ID
+     * Relationship with WordPress user
      * 
-     * @param int $user_id WordPress user ID
-     * @return Patient|null Returns Patient instance or null if not found
+     * @return mixed User model relationship
      */
-    public static function findByUserId($user_id)
+    public function user()
     {
-        global $wpdb;
-        $instance = new self();
-        $table = $instance->getTable();
-        
-        if (empty($user_id)) {
-            return null;
-        }
-        
-        // Fetch the patient record by user_id
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE user_id = %d", $user_id);
-        $patient_data = $wpdb->get_row($query, ARRAY_A);
-        
-        if (!$patient_data) {
-            return null;
-        }
-        
-        // Create a new Patient instance with the fetched data
-        return new self($patient_data);
+        return $this->belongs_to('WPMVC\MVC\Models\UserModel', 'user_id', 'ID');
     }
 
     /**
-     * Get patient ID from WordPress user ID
+     * Relationship with HMO
      * 
-     * @param int $user_id WordPress user ID
-     * @return int|null Returns patient ID or null if not found
+     * @return mixed HMO model relationship
      */
-    public static function get_pid_from_wp($user_id)
+    public function hmo()
     {
-        global $wpdb;
-        $instance = new self();
-        $table = $instance->getTable();
-        
-        if (empty($user_id)) {
-            return null;
-        }
-        
-        // Fetch only the patient ID by user_id
-        $query = $wpdb->prepare("SELECT ID FROM {$table} WHERE user_id = %d", $user_id);
-        $patient_id = $wpdb->get_var($query);
-        
-        return $patient_id ? (int)$patient_id : null;
+        return $this->belongs_to('HospitalManager\Models\HMO', 'hmo_id', 'ID');
+    }
+
+    /**
+     * Relationship with visitations
+     * 
+     * @return mixed Visitation models relationship
+     */
+    public function visitations()
+    {
+        return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'ID');
     }
 }
