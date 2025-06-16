@@ -26,10 +26,17 @@ class Doctor extends BaseModel
         'appointment_availability',
     ];
     
-    public function __construct(array $attributes = [])
+    /**
+     * Doctor constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_doctors';
+        
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
 
@@ -335,7 +342,7 @@ class Doctor extends BaseModel
     {
         // Invalidate specific caches
         if (isset($this->attributes['ID'])) {
-            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('findCached', [$this->attributes['ID']]);
             static::invalidateCache('getAppointments', [$this->attributes['ID']]);
         }
         

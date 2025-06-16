@@ -18,6 +18,66 @@ abstract class BaseModel extends PostModel
     protected static $cache_group = 'hospital_manager';
     
     /**
+     * WPMVC-compatible constructor that handles int, array, or object parameters
+     * 
+     * @param int|array|\WP_Post $post_or_attributes Post ID, attributes array, or WP_Post object
+     */
+    public function __construct($post_or_attributes = 0)
+    {
+        // Set table name before calling parent constructor
+        if (!empty($this->tableName)) {
+            global $wpdb;
+            $this->table = $wpdb->prefix . $this->tableName;
+        }
+        
+        if ($post_or_attributes) {
+            if (is_numeric($post_or_attributes)) {
+                // Load by ID from our custom table
+                $this->load($post_or_attributes);
+            } elseif (is_array($post_or_attributes)) {
+                // Load from attributes array
+                $this->load_attributes($post_or_attributes);
+            } elseif (is_object($post_or_attributes) && is_a($post_or_attributes, 'WP_Post')) {
+                // Load from WP_Post object (for backward compatibility)
+                $this->load_wp_post($post_or_attributes);
+            }
+        }
+    }
+    
+    /**
+     * Override PostModel's load method to work with custom tables
+     * 
+     * @param int $id Record ID
+     */
+    public function load($id)
+    {
+        global $wpdb;
+        $table = $this->getTable();
+        
+        if (empty($table) || empty($id)) {
+            return;
+        }
+        
+        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $id);
+        $data = $wpdb->get_row($query, ARRAY_A);
+        
+        if ($data) {
+            $this->load_attributes($data);
+        }
+    }
+    
+    /**
+     * Check if the model has a valid trace (exists in database)
+     * This is used by the FindTrait to determine if the model exists
+     * 
+     * @return bool
+     */
+    public function has_trace()
+    {
+        return !empty($this->attributes) && isset($this->attributes['ID']) && !empty($this->attributes['ID']);
+    }
+    
+    /**
      * Get the table name with the correct prefix
      */
     public function getTable()
@@ -135,36 +195,38 @@ abstract class BaseModel extends PostModel
     }
 
     /**
-     * Enhanced find with caching
+     * Enhanced findCached with caching - use this instead of find() when you need caching
      */
-    public static function find($ID = 0)
+    public static function findCached($ID = 0)
     {
         if (empty($ID)) {
             return null;
         }
 
-        $cache_key = static::getCacheKey('find', [$ID]);
+        $cache_key = static::getCacheKey('findCached', [$ID]);
         $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
             return $cached;
         }
 
-        global $wpdb;
-        $instance = new static();
-        $table = $instance->getTable();
+        // Use the WPMVC find method which properly handles the constructor
+        $result = static::find($ID);
         
-        $query = $wpdb->prepare("SELECT * FROM {$table} WHERE ID = %d", $ID);
-        $data = $wpdb->get_row($query, ARRAY_A);
-        
-        if (!$data) {
-            return null;
+        if ($result) {
+            static::setToCache($cache_key, $result);
         }
         
-        $result = new static($data);
-        static::setToCache($cache_key, $result);
-        
         return $result;
+    }
+
+    /**
+     * Alias for findCached for backwards compatibility
+     * You can use this in places where you were using custom find() with caching
+     */
+    public static function findWithCache($ID = 0)
+    {
+        return static::findCached($ID);
     }
 
     /**
@@ -365,7 +427,7 @@ abstract class BaseModel extends PostModel
             
             // Invalidate related caches
             static::invalidateCache();
-            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('findCached', [$this->attributes['ID']]);
             
             return true;
         }
@@ -394,7 +456,7 @@ abstract class BaseModel extends PostModel
         if ($result !== false) {
             // Invalidate related caches
             static::invalidateCache();
-            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('findCached', [$this->attributes['ID']]);
             
             return true;
         }

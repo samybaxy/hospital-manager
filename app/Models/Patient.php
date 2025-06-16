@@ -31,13 +31,14 @@ class Patient extends BaseModel
     /**
      * Patient constructor
      * 
-     * @param array $attributes Model attributes
+     * @param int|array $attributes Model ID or attributes array
      */
-    public function __construct(array $attributes = [])
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_patients';
         
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
     
@@ -458,9 +459,10 @@ class Patient extends BaseModel
         }
         
         if (isset($this->attributes['ID'])) {
-            static::invalidateCache('find', [$this->attributes['ID']]);
+            static::invalidateCache('findCached', [$this->attributes['ID']]);
             static::invalidateCache('getAppointments', [$this->attributes['ID']]);
             static::invalidateCache('getVisitationHistory', [$this->attributes['ID']]);
+            static::invalidateCache('get_last_visitation_date', [$this->attributes['ID']]);
         }
         
         // Invalidate general caches
@@ -571,5 +573,42 @@ class Patient extends BaseModel
     public function visitations()
     {
         return $this->has_many('HospitalManager\Models\Visitation', 'patient_id', 'ID');
+    }
+
+    /**
+     * Get the last visitation date for this patient with caching
+     * 
+     * @param int $patient_id Patient ID
+     * @return string|null Last visitation date or null if no visitations
+     */
+    public static function get_last_visitation_date($patient_id)
+    {
+        if (empty($patient_id)) {
+            return null;
+        }
+
+        $cache_key = static::getCacheKey('get_last_visitation_date', [$patient_id]);
+        $cached = static::getFromCache($cache_key);
+        
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
+        
+        $query = $wpdb->prepare(
+            "SELECT DATE(created_at) as visit_date 
+            FROM {$visitations_table} 
+            WHERE patient_id = %d 
+            ORDER BY created_at DESC 
+            LIMIT 1",
+            $patient_id
+        );
+        
+        $result = $wpdb->get_var($query);
+        static::setToCache($cache_key, $result, 1800); // 30 minutes cache
+        
+        return $result;
     }
 }
