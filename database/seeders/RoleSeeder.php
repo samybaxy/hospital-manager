@@ -68,23 +68,23 @@ class RoleSeeder extends Seeder
                 continue;
             }
             
-            $username = strtolower($prefix) . '_user';
-            $email = strtolower($prefix) . '@example.com';
-            $password = 'password';
+            // Use a different naming pattern to avoid conflicts with UserSeeder
+            $username = 'example_' . strtolower($prefix);
+            $email = 'example_' . strtolower($prefix) . '@hospital.local';
+            $password = 'password123';
+            
+            $meta = [
+                'first_name' => $prefix,
+                'last_name' => 'Example',
+                'description' => "Example user for {$role} role"
+            ];
             
             // Only create if user doesn't exist
             if (!username_exists($username)) {
-                $user_id = wp_create_user($username, $password, $email);
+                $user_id = $this->createUserSafely($username, $password, $email, $role, $meta);
                 
-                if (!is_wp_error($user_id)) {
-                    $user = new \WP_User($user_id);
-                    $user->set_role($role);
-                    
-                    // Add profile data
-                    update_user_meta($user_id, 'first_name', $prefix);
-                    update_user_meta($user_id, 'last_name', 'User');
-                    
-                    $this->log(" - Created user: $username with role: $role", 'success');
+                if ($user_id) {
+                    $this->log(" - Created example user: $username with role: $role", 'success');
                 }
             } else {
                 $this->log(" - User $username already exists, skipping", 'warning');

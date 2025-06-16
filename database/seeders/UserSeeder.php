@@ -36,6 +36,8 @@ class UserSeeder extends Seeder
         }
         
         // Create one demo user for each role with known credentials
+        $this->log("Creating demo users with known credentials...");
+        
         $demo_roles = [
             'administrator', 
             'doctor', 
@@ -49,34 +51,17 @@ class UserSeeder extends Seeder
         ];
         
         foreach ($demo_roles as $role) {
-            $username = 'demo_' . $role;
-            $email = $role . '@example.com';
-            $password = 'demo1234'; // 8 characters, meets our requirement
-            
-            // Check if user exists
-            if (!username_exists($username) && !email_exists($email)) {
-                $user_id = wp_create_user($username, $password, $email);
-                
-                if (!is_wp_error($user_id)) {
-                    // Explicitly set password again to ensure it's properly hashed
-                    wp_set_password($password, $user_id);
-                    
-                    $user = new \WP_User($user_id);
-                    $user->set_role($role);
-                    
-                    // Set first and last name
-                    $first_name = ucfirst($role);
-                    $last_name = 'User';
-                    
-                    update_user_meta($user_id, 'first_name', $first_name);
-                    update_user_meta($user_id, 'last_name', $last_name);
-                    
-                    $this->log("Created demo {$role} user with username '{$username}' and password '{$password}'", 'success');
-                }
+            $created = $this->createDemoUser($role);
+            if ($created) {
+                $this->log("Created demo {$role} user successfully", 'success');
             } else {
-                $this->log("Demo {$role} user already exists", 'warning');
+                $this->log("Failed to create demo {$role} user", 'warning');
             }
         }
+        
+        // Verify demo user credentials after creation
+        $this->log("Verifying demo user credentials...");
+        $this->verifyDemoCredentials();
     }
     
     /**
@@ -154,10 +139,6 @@ class UserSeeder extends Seeder
             return false;
         }
         
-        // Ensure wp_create_user properly sets the password hash
-        // This is necessary because sometimes wp_create_user doesn't correctly set the password
-        wp_set_password($password, $user_id);
-        
         // Set role
         $user = new \WP_User($user_id);
         $user->set_role($role);
@@ -167,5 +148,51 @@ class UserSeeder extends Seeder
         update_user_meta($user_id, 'last_name', $last_name);
         
         return $user_id;
+    }
+    
+    /**
+     * Create a demo user with known credentials
+     */
+    protected function createDemoUser($role)
+    {
+        $username = 'demo_' . $role;
+        $email = $role . '@example.com';
+        $password = 'demo1234';
+        
+        $meta = [
+            'first_name' => ucfirst(str_replace('_', ' ', $role)),
+            'last_name' => 'Demo',
+            'description' => "Demo user for {$role} role"
+        ];
+        
+        $user_id = $this->createUserSafely($username, $password, $email, $role, $meta);
+        
+        if ($user_id) {
+            $this->log("Demo {$role}: username='{$username}', password='{$password}', email='{$email}'", 'success');
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verify that demo users can authenticate with their passwords
+     */
+    protected function verifyDemoCredentials()
+    {
+        $demo_roles = self::DEMO_ROLES;
+        
+        foreach ($demo_roles as $role) {
+            $username = 'demo_' . $role;
+            $password = 'demo1234';
+            
+            if (username_exists($username)) {
+                if ($this->verifyUserCredentials($username, $password)) {
+                    $this->log("✓ {$username} can authenticate with password '{$password}'", 'success');
+                } else {
+                    $this->log("✗ {$username} cannot authenticate with password '{$password}'", 'error');
+                }
+            }
+        }
     }
 }
