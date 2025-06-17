@@ -522,13 +522,12 @@ class DoctorController extends BaseController
             // Format the response data
             $patients = array_map(function($patient) {
                 return [
-                    'ID' => $patient->ID,
-                    'first_name' => $patient->first_name,
-                    'last_name' => $patient->last_name,
-                    'phone' => $patient->phone,
-                    'email' => $patient->email,
-                    'last_visit_date' => $patient->last_visit_date,
-                    'last_visit_time' => $patient->last_visit_time
+                    'ID' => $patient['ID'],
+                    'first_name' => $patient['first_name'],
+                    'last_name' => $patient['last_name'],
+                    'phone' => $patient['phone'],
+                    'last_visit_date' => $patient['last_visit_date'],
+                    'last_visit_time' => $patient['last_visit_time']
                 ];
             }, $results['data']);
             
