@@ -62,8 +62,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-16 px-4 sm:px-6 lg:px-8 my-12">
+      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl my-12 mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-primary-800">Hospital Manager</h2>
           <p className="text-gray-600 mt-2">Sign in to your account</p>

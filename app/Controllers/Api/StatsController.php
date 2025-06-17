@@ -34,13 +34,13 @@ class StatsController extends BaseController
             'pendingLabTests' => LabInvestigation::where('status', 'pending')->count(),
             
             // Get visitation trends for the last 30 days
-            'visitationsTrend' => Stats::getVisitationTrend(),
+            // 'visitationsTrend' => Stats::getVisitationTrend(),
             
             // Get patient distribution by HMO
-            'patientsByHMO' => Stats::getPatientsByHMO(),
+            // 'patientsByHMO' => Stats::getPatientsByHMO(),
             
             // Get monthly lab tests statistics
-            'monthlyLabTests' => Stats::getMonthlyLabTests()
+            // 'monthlyLabTests' => Stats::getMonthlyLabTests()
         ];
 
         return new WP_REST_Response($stats);

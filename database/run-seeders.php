@@ -136,11 +136,15 @@ function ensureRolesExist() {
     echo "Checking required roles...\n";
     
     $roles = [
+        'administrator' => 'Administrator',
         'doctor' => 'Doctor',
         'patient' => 'Patient', 
         'lab_tech' => 'Laboratory Technician',
         'developer' => 'Developer',
-        'administrator' => 'Administrator'
+        'hospital_nurse' => 'Hospital Nurse',
+        'hospital_staff' => 'Hospital Staff',
+        'pharmacy_staff' => 'Pharmacy Staff',
+        'inventory_manager' => 'Inventory Manager'
     ];
     
     foreach ($roles as $role_key => $role_name) {

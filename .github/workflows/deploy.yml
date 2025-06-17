@@ -10,44 +10,89 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-dev --optimize-autoloader
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Get Yarn cache directory
         id: yarn-cache-dir-path
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
       - name: Use Yarn cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         id: yarn-cache
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
-          key: ${{ runner.os }}-yarn-${{ matrix.node-version }}-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-${{ matrix.node-version }}-
+            ${{ runner.os }}-yarn-
 
       - name: Install dependencies and build
         run: |
           yarn install --prefer-offline --frozen-lockfile
-          yarn build  # Adjust if your build process differs
+          yarn build
 
-      - name: Install SSH key
-        uses: shimataro/ssh-key-action@v2
+      - name: Create deployment package
+        run: |
+          # Remove any existing deployment package (safety measure)
+          rm -rf deploy-package/
+          
+          # Create a clean directory for deployment
+          mkdir -p deploy-package
+          
+          # Copy PHP files and built assets
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.github' \
+            --exclude='assets/js/src' \
+            --exclude='assets/css/src' \
+            --exclude='*.log' \
+            --exclude='.env*' \
+            --exclude='.babelrc' \
+            --exclude='.phpcs.xml.dist' \
+            --exclude='.phpunit.result.cache' \
+            --exclude='phpunit.xml*' \
+            --exclude='README.md' \
+            --exclude='LICENSE' \
+            --exclude='dev.sh' \
+            --exclude='.npmrc' \
+            ./ deploy-package/
+
+      - name: Debug deployment package
+        run: |
+          echo "Contents of deployment package:"
+          find deploy-package -type f | head -20
+          echo "Built assets:"
+          ls -la deploy-package/assets/js/dist/ || echo "No JS dist files"
+          ls -la deploy-package/assets/css/dist/ || echo "No CSS dist files"
+          echo "Vendor directory:"
+          ls -la deploy-package/vendor/ || echo "No vendor directory"
+
+      - name: FTP Deploy to Bluehost
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          server: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          local-dir: ./deploy-package/
+          server-dir: /public_html/website_77900271/wp-content/plugins/hospital-manager/
 
-      - name: Deploy with ssh-deploy
-        uses: easingthemes/ssh-deploy@v2.2.7
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          ARGS: "-avz --delete"
-          SOURCE: "build/"
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          REMOTE_PORT: "2222"
-          TARGET: "/home/${{ secrets.SSH_USER }}/public_html/website_77900271/wp-content/plugins/hospital-manager/"
+      - name: Clean up deployment package
+        run: |
+          echo "Cleaning up deployment package..."
+          rm -rf deploy-package/
+          echo "Cleanup completed."
+        if: always()  # This ensures cleanup runs even if deployment fails

@@ -5,7 +5,7 @@ namespace HospitalManager\Services;
 use HospitalManager\Models\Notification;
 use WP_Error;
 
-class NotificationService
+class NotificationService extends BaseService
 {
     /**
      * Create a new notification
@@ -21,7 +21,7 @@ class NotificationService
     public static function create($user_id, $type, $title, $message, $meta = [])
     {
         if (empty($user_id) || !is_numeric($user_id)) {
-            error_log("NotificationService::create - Invalid user ID: " . print_r($user_id, true));
+            self::logError('NotificationService', 'create', 'Invalid user ID', $user_id);
             return new WP_Error('invalid_user_id', 'Invalid user ID');
         }
 
@@ -29,7 +29,7 @@ class NotificationService
             // Verify user exists
             $user = get_user_by('ID', $user_id);
             if (!$user) {
-                error_log("NotificationService::create - User not found: $user_id");
+                self::logError('NotificationService', 'create', "User not found: $user_id");
                 return new WP_Error('user_not_found', 'User not found');
             }
 
@@ -52,7 +52,7 @@ class NotificationService
             
             // Check if post was created successfully
             if (is_wp_error($post_id)) {
-                error_log("NotificationService::create - Error creating notification: " . $post_id->get_error_message());
+                self::logError('NotificationService', 'create', 'Error creating notification: ' . $post_id->get_error_message());
                 return $post_id; // Return the WP_Error
             }
 
@@ -66,12 +66,11 @@ class NotificationService
                 'post_author' => $user_id,
             ]);
 
-            error_log("NotificationService::create - Successfully created notification ID: $post_id for user: $user_id");
+            self::logError('NotificationService', 'create', "Successfully created notification ID: $post_id for user: $user_id");
             return $notification;
             
         } catch (\Exception $e) {
-            error_log("NotificationService::create - Exception: " . $e->getMessage());
-            error_log("NotificationService::create - Trace: " . $e->getTraceAsString());
+            self::logError('NotificationService', 'create', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
             return new WP_Error('notification_error', 'Failed to create notification: ' . $e->getMessage());
         }
     }

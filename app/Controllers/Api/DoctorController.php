@@ -76,24 +76,6 @@ class DoctorController extends BaseController
                 'permission_callback' => [$this, 'check_doctor_permission']
             ]
         ]);
-
-        // Get current doctor profile
-        register_rest_route($this->namespace, '/doctor/profile', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_my_profile'],
-                'permission_callback' => [$this, 'check_doctor_permission']
-            ]
-        ]);
-
-        // Update current doctor profile
-        register_rest_route($this->namespace, '/doctor/profile', [
-            [
-                'methods' => WP_REST_Server::EDITABLE,
-                'callback' => [$this, 'update_my_profile'],
-                'permission_callback' => [$this, 'check_doctor_permission']
-            ]
-        ]);
     }
 
     /**
@@ -494,110 +476,6 @@ class DoctorController extends BaseController
     }
 
     /**
-     * Get current doctor's profile
-     */
-    public function get_my_profile($request)
-    {
-        try {
-            $user_id = get_current_user_id();
-            
-            // Find doctor by user_id using the Doctor model
-            $doctors = Doctor::where('user_id', $user_id);
-            
-            if (empty($doctors)) {
-                return new WP_Error(
-                    'profile_not_found',
-                    'Doctor profile not found',
-                    ['status' => 404]
-                );
-            }
-            
-            $doctor = $doctors[0];
-            
-            // Get user information
-            $user = get_userdata($user_id);
-            $response = $doctor->attributes;
-            $response['email'] = $user->user_email;
-            $response['user_registered'] = $user->user_registered;
-            
-            return new WP_REST_Response($response);
-        } catch (\Exception $e) {
-            error_log('Error getting doctor profile: ' . $e->getMessage());
-            return new WP_Error(
-                'server_error',
-                'Failed to retrieve profile information',
-                ['status' => 500]
-            );
-        }
-    }
-
-    /**
-     * Update current doctor's profile
-     */
-    public function update_my_profile($request)
-    {
-        try {
-            $user_id = get_current_user_id();
-            
-            // Find doctor by user_id
-            $doctor = Doctor::where('user_id', $user_id)[0] ?? null;
-            
-            if (!$doctor) {
-                return new WP_Error(
-                    'profile_not_found',
-                    'Doctor profile not found',
-                    ['status' => 404]
-                );
-            }
-            
-            $params = $request->get_params();
-            
-            // Fields that a doctor can update about themselves
-            if (isset($params['first_name'])) {
-                $doctor->first_name = sanitize_text_field($params['first_name']);
-            }
-            
-            if (isset($params['last_name'])) {
-                $doctor->last_name = sanitize_text_field($params['last_name']);
-            }
-            
-            if (isset($params['phone'])) {
-                $doctor->phone = sanitize_text_field($params['phone']);
-            }
-            
-            // Save doctor record
-            $doctor->save();
-            
-            // Log the update
-            AuditLogger::log(
-                'update_doctor_profile',
-                'doctor',
-                $doctor->ID,
-                [
-                    'user_id' => $user_id,
-                    'updated_fields' => array_keys($request->get_params())
-                ]
-            );
-            
-            // Return the updated profile
-            $updated_doctor = Doctor::find($doctor->ID);
-            $user = get_userdata($user_id);
-            $response = $updated_doctor->attributes;
-            $response['email'] = $user->user_email;
-            $response['user_registered'] = $user->user_registered;
-            
-            return new WP_REST_Response($response);
-        } catch (\Exception $e) {
-            error_log('Error updating doctor profile: ' . $e->getMessage());
-            return new WP_Error(
-                'update_failed',
-                'Failed to update profile: ' . $e->getMessage(),
-                ['status' => 500]
-            );
-        }
-    }
-
-    /**
      * Get patients associated with a specific doctor
      * 
      * @param \WP_REST_Request $request The request object containing the doctor ID
@@ -644,13 +522,12 @@ class DoctorController extends BaseController
             // Format the response data
             $patients = array_map(function($patient) {
                 return [
-                    'ID' => $patient->ID,
-                    'first_name' => $patient->first_name,
-                    'last_name' => $patient->last_name,
-                    'phone' => $patient->phone,
-                    'email' => $patient->email,
-                    'last_visit_date' => $patient->last_visit_date,
-                    'last_visit_time' => $patient->last_visit_time
+                    'ID' => $patient['ID'],
+                    'first_name' => $patient['first_name'],
+                    'last_name' => $patient['last_name'],
+                    'phone' => $patient['phone'],
+                    'last_visit_date' => $patient['last_visit_date'],
+                    'last_visit_time' => $patient['last_visit_time']
                 ];
             }, $results['data']);
             

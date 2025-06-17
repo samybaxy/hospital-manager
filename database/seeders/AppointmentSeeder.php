@@ -50,8 +50,8 @@ class AppointmentSeeder extends Seeder
             $doctor_id = $doctor_ids[array_rand($doctor_ids)];
             
             // Create appointments across different time ranges
-            if ($i < 80) {
-                // Past appointments (80 appointments) - higher chance of completion
+            if ($i < 60) {
+                // Past appointments (60 appointments) - higher chance of completion
                 $days_ago = mt_rand(1, 90); // 1-90 days ago (max 3 months back)
                 $appointment_date = date('Y-m-d', strtotime("-{$days_ago} days"));
                 $status_weights = [
@@ -60,8 +60,8 @@ class AppointmentSeeder extends Seeder
                     'confirmed' => 10,  // 10% confirmed but no visitation yet
                     'pending' => 5      // 5% still pending
                 ];
-            } elseif ($i < 120) {
-                // Recent appointments (40 appointments) - last 2 weeks
+            } elseif ($i < 90) {
+                // Recent appointments (30 appointments) - last 2 weeks
                 $days_ago = mt_rand(0, 14); // 0-14 days ago
                 $appointment_date = date('Y-m-d', strtotime("-{$days_ago} days"));
                 $status_weights = [
@@ -70,7 +70,7 @@ class AppointmentSeeder extends Seeder
                     'pending' => 15,
                     'cancelled' => 5
                 ];
-            } else {
+            } elseif ($i < 120) {
                 // Today's appointments (30 appointments) - today only
                 $appointment_date = date('Y-m-d'); // Today's date
                 $status_weights = [
@@ -78,6 +78,16 @@ class AppointmentSeeder extends Seeder
                     'confirmed' => 50,
                     'cancelled' => 5,
                     'completed' => 5   // Some might be completed if early in the day
+                ];
+            } else {
+                // Future appointments (30 appointments) - next 30 days
+                $days_ahead = mt_rand(1, 30); // 1-30 days in the future
+                $appointment_date = date('Y-m-d', strtotime("+{$days_ahead} days"));
+                $status_weights = [
+                    'pending' => 50,    // Most future appointments are pending
+                    'confirmed' => 45,  // Some are already confirmed
+                    'cancelled' => 5,   // Few are cancelled in advance
+                    'completed' => 0    // Future appointments can't be completed
                 ];
             }
             
