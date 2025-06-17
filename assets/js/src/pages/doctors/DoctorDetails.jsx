@@ -389,26 +389,27 @@ const DoctorDetails = () => {
   const licenseNumber = doctor.license_number || doctor.licenseNumber || 'N/A';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Doctor Details</h1>
-          <p className="text-gray-600">
+    <div className="space-y-4 md:space-y-6 px-4 md:px-6 lg:px-8">
+      <div className="flex flex-col space-y-3 md:space-y-0 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Doctor Details</h1>
+          <p className="text-sm md:text-base text-gray-600">
             Doctor ID: {doctor.ID || '-'}
           </p>
         </div>
-        <div className="flex gap-2 mt-2 md:mt-0">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 md:mt-0">
           {canManageDoctors && (
-            <Link to={`/doctors/${doctorId}/edit`}>
-              <Button variant="primary">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <Link to={`/doctors/${doctorId}/edit`} className="flex-1 sm:flex-none">
+              <Button variant="primary" className="w-full sm:w-auto text-sm md:text-base px-3 py-2 md:px-4 md:py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                 </svg>
-                Edit Doctor
+                <span className="hidden sm:inline">Edit Doctor</span>
+                <span className="sm:hidden">Edit</span>
               </Button>
             </Link>
           )}
-          <div className="relative group">
+          <div className="relative group flex-1 sm:flex-none">
             <Link to={isPatientUser ? `/appointments/book/${doctorId}` : "#"} state={isPatientUser ? { 
               returnTo: 'doctor',
               returnPath: `/doctors/${doctorId}`,
@@ -417,12 +418,13 @@ const DoctorDetails = () => {
               <Button 
                 variant="success" 
                 disabled={!isPatientUser}
-                className={isPatientUser ? "" : "cursor-not-allowed opacity-50"}
+                className={`w-full sm:w-auto text-sm md:text-base px-3 py-2 md:px-4 md:py-2 ${isPatientUser ? "" : "cursor-not-allowed opacity-50"}`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
-                Book Appointment
+                <span className="hidden sm:inline">Book Appointment</span>
+                <span className="sm:hidden">Book</span>
               </Button>
             </Link>
             {!isPatientUser && (
@@ -433,11 +435,12 @@ const DoctorDetails = () => {
             )}
           </div>
           {canManageDoctors && (
-            <Button variant="danger" onClick={handleDelete}>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <Button variant="danger" onClick={handleDelete} className="w-full sm:w-auto text-sm md:text-base px-3 py-2 md:px-4 md:py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                Delete
+                <span className="hidden sm:inline">Delete</span>
+                <span className="sm:hidden">Del</span>
             </Button>
           )}
         </div>
@@ -455,29 +458,29 @@ const DoctorDetails = () => {
 
       {/* Doctor Header Card with Photo */}
       <Card>
-        <div className="flex flex-col md:flex-row items-center md:items-start p-4">
-          <div className="h-32 w-32 rounded-full bg-gray-200 flex items-center justify-center mb-4 md:mb-0 md:mr-6 text-4xl font-bold text-gray-500">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start p-4 md:p-6 space-y-4 sm:space-y-0 sm:space-x-6">
+          <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-gray-200 flex items-center justify-center text-2xl sm:text-4xl font-bold text-gray-500 flex-shrink-0">
             {firstName[0]}{lastName[0]}
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold mb-2">{fullName}</h2>
-            <div className="mb-3">
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3 truncate">{fullName}</h2>
+            <div className="mb-3 sm:mb-4">
               <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                 {specialty}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <div className="text-blue-600 text-sm font-medium mb-1">License Number</div>
-                <div className="text-gray-900 font-semibold">{licenseNumber}</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-100 min-w-0">
+                <div className="text-blue-600 text-xs sm:text-sm font-medium mb-1">License Number</div>
+                <div className="text-gray-900 font-semibold text-sm sm:text-base truncate" title={licenseNumber}>{licenseNumber}</div>
               </div>
-              <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                <div className="text-green-600 text-sm font-medium mb-1">Patients</div>
-                <div className="text-gray-900 font-semibold">{patientStats.total}</div>
+              <div className="bg-green-50 p-3 sm:p-4 rounded-lg border border-green-100 min-w-0">
+                <div className="text-green-600 text-xs sm:text-sm font-medium mb-1">Patients</div>
+                <div className="text-gray-900 font-semibold text-sm sm:text-base">{patientStats.total}</div>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <div className="text-purple-600 text-sm font-medium mb-1">Experience</div>
-                <div className="text-gray-900 font-semibold">{doctor.years_experience || '5+ years'}</div>
+              <div className="bg-purple-50 p-3 sm:p-4 rounded-lg border border-purple-100 min-w-0 sm:col-span-2 lg:col-span-1">
+                <div className="text-purple-600 text-xs sm:text-sm font-medium mb-1">Experience</div>
+                <div className="text-gray-900 font-semibold text-sm sm:text-base">{doctor.years_experience || '5+ years'}</div>
               </div>
             </div>
           </div>
@@ -485,103 +488,126 @@ const DoctorDetails = () => {
       </Card>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex">
+      <div className="border-b border-gray-200 overflow-x-auto">
+        <nav className="-mb-px flex space-x-0 min-w-max">
           <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
+            className={`hm-tab-button ${
               activeTab === 'profile'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'hm-tab-active'
+                : 'hm-tab-inactive'
             }`}
             onClick={() => setActiveTab('profile')}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
             Profile
           </button>
           <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
+            className={`hm-tab-button ${
               activeTab === 'patients'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'hm-tab-active'
+                : 'hm-tab-inactive'
             }`}
             onClick={() => setActiveTab('patients')}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
             Patients
+            {patientStats.total > 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                {patientStats.total}
+              </span>
+            )}
           </button>
           <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
+            className={`hm-tab-button ${
               activeTab === 'schedule'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'hm-tab-active'
+                : 'hm-tab-inactive'
             }`}
             onClick={() => setActiveTab('schedule')}
           >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             Schedule
+            {scheduleStats.upcomingAppointments > 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {scheduleStats.upcomingAppointments}
+              </span>
+            )}
           </button>
         </nav>
       </div>
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <Card title="Professional Information">
-            <table className="min-w-full divide-y divide-gray-200">
-              <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Full Name</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{fullName}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Specialty</td>
-                  <td className="px-4 py-2 text-sm">
-                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                      {specialty}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">License Number</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{licenseNumber}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Years of Experience</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.years_experience || '5+'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Education</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.education || 'MD, University Medical School'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Board Certification</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.certification || 'Board Certified'}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Full Name</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-words min-w-0">{fullName}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Specialty</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm">
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        {specialty}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">License Number</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-all min-w-0">{licenseNumber}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Years of Experience</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700">{doctor.years_experience || '5+'}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Education</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-words min-w-0">{doctor.education || 'MD, University Medical School'}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Board Certification</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-words min-w-0">{doctor.certification || 'Board Certified'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </Card>
 
           <Card title="Contact Information">
-            <table className="min-w-full divide-y divide-gray-200">
-              <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Phone</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.phone || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Email</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.email || '-'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Office</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.office || 'Room 101'}</td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Department</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{doctor.department || specialty}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Phone</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-all min-w-0">{doctor.phone || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Email</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-all min-w-0">{doctor.email || '-'}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Office</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700">{doctor.office || 'Room 101'}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-2 sm:px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Department</td>
+                    <td className="px-2 sm:px-4 py-2 text-sm text-gray-700 break-words min-w-0">{doctor.department || specialty}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </Card>
 
-          <Card title="Working Hours">            
+          <Card title="Working Hours" className="lg:col-span-2">            
             <div className="space-y-3">
               {(() => {
                 // Parse working hours from appointment_availability
@@ -675,7 +701,7 @@ const DoctorDetails = () => {
                 }
 
                 return workingHours.map((daySchedule) => (
-                  <div key={daySchedule.day} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                  <div key={daySchedule.day} className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-100 last:border-b-0 space-y-2 sm:space-y-0">
                     <span className="text-sm font-medium text-gray-900">
                       {daySchedule.day}
                     </span>
@@ -752,28 +778,28 @@ const DoctorDetails = () => {
                       
                       return (
                         <tr key={patientId} className="hover:bg-gray-50">
-                          <td className="px-4 py-3">
+                          <td className="px-2 sm:px-4 py-3">
                             <div className="flex items-center">
-                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
+                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm flex-shrink-0">
                                 {firstName[0]}{lastName[0]}
                               </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900 truncate">
                                   {firstName} {lastName}
                                 </div>
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-gray-500 truncate">
                                   ID: {patientId}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">{visitDate}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          <td className="px-2 sm:px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{visitDate}</td>
+                          <td className="px-2 sm:px-4 py-3">
+                            <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 whitespace-nowrap">
                               {visitTime}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium">
+                          <td className="px-2 sm:px-4 py-3 text-sm font-medium">
                             <div className="flex space-x-2">
                               {isPatientUser ? (
                                 <button 
@@ -785,7 +811,7 @@ const DoctorDetails = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
-                                  View
+                                  <span className="hidden sm:inline">View</span>
                                 </button>
                               ) : (
                                 <Link 
@@ -797,7 +823,7 @@ const DoctorDetails = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
-                                  View
+                                  <span className="hidden sm:inline">View</span>
                                 </Link>
                               )}
                             </div>
@@ -811,8 +837,8 @@ const DoctorDetails = () => {
               
               {/* Pagination Controls */}
               {patientStats.total > 0 && (
-                <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 mt-4">
-                  <div className="flex flex-1 justify-between sm:hidden">
+                <div className="flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 bg-white px-2 sm:px-4 py-3 mt-4 space-y-3 sm:space-y-0">
+                  <div className="flex flex-1 justify-between sm:hidden w-full">
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
@@ -823,7 +849,7 @@ const DoctorDetails = () => {
                     <button
                       onClick={() => setCurrentPage(prev => prev < patientStats.last_page ? prev + 1 : prev)}
                       disabled={currentPage >= patientStats.last_page}
-                      className={`relative ml-3 inline-flex items-center rounded-md border ${currentPage >= patientStats.last_page ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-gray-300 bg-white text-gray-700'} px-4 py-2 text-sm font-medium hover:bg-gray-50`}
+                      className={`relative inline-flex items-center rounded-md border ${currentPage >= patientStats.last_page ? 'border-gray-300 bg-gray-100 text-gray-400' : 'border-gray-300 bg-white text-gray-700'} px-4 py-2 text-sm font-medium hover:bg-gray-50`}
                     >
                       Next
                     </button>
@@ -882,60 +908,48 @@ const DoctorDetails = () => {
 
       {/* Schedule Tab */}
       {activeTab === 'schedule' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
+        <div className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="hm-summary-card bg-blue-50 border-blue-200">
+              <div className="flex items-center justify-center mb-4">
                 <div className="flex-shrink-0 p-3 rounded-md bg-blue-100">
                   <svg className="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Appointments</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{scheduleStats.totalAppointments}</div>
-                      <div className="text-xs text-gray-500 ml-2">(confirmed, pending, completed)</div>
-                    </dd>
-                  </dl>
-                </div>
+              </div>
+              <div className="text-center">
+                <dt className="text-sm font-medium text-gray-500 mb-1">Total Appointments</dt>
+                <dd className="text-2xl font-semibold text-gray-900">{scheduleStats.totalAppointments}</dd>
+                <div className="text-xs text-gray-500 mt-1">(confirmed, pending, completed)</div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
+            <div className="hm-summary-card bg-yellow-50 border-yellow-200">
+              <div className="flex items-center justify-center mb-4">
                 <div className="flex-shrink-0 p-3 rounded-md bg-yellow-100">
                   <svg className="h-6 w-6 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Upcoming Appointments</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{scheduleStats.upcomingAppointments}</div>
-                    </dd>
-                  </dl>
-                </div>
+              </div>
+              <div className="text-center">
+                <dt className="text-sm font-medium text-gray-500 mb-1">Upcoming</dt>
+                <dd className="text-2xl font-semibold text-gray-900">{scheduleStats.upcomingAppointments}</dd>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-              <div className="flex items-center">
+            <div className="hm-summary-card bg-green-50 border-green-200 sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center justify-center mb-4">
                 <div className="flex-shrink-0 p-3 rounded-md bg-green-100">
                   <svg className="h-6 w-6 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Completed Appointments</dt>
-                    <dd className="flex items-baseline">
-                      <div className="text-2xl font-semibold text-gray-900">{scheduleStats.completedAppointments}</div>
-                    </dd>
-                  </dl>
-                </div>
+              </div>
+              <div className="text-center">
+                <dt className="text-sm font-medium text-gray-500 mb-1">Completed</dt>
+                <dd className="text-2xl font-semibold text-gray-900">{scheduleStats.completedAppointments}</dd>
               </div>
             </div>
           </div>
@@ -978,7 +992,7 @@ const DoctorDetails = () => {
                       
                       return (
                         <tr key={appointment.ID} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap">
+                          <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{formattedDate}</div>
                             <div className="text-sm text-gray-500">
                               {formattedTime ? (
@@ -986,25 +1000,29 @@ const DoctorDetails = () => {
                               ) : 'No time specified'}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 sm:px-4 py-3">
                             <div className="flex items-center">
-                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm">
+                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-600 font-medium text-sm flex-shrink-0">
                                 {appointment.patient_name ? appointment.patient_name.charAt(0) : 'P'}
                               </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{appointment.patient_name || 'Unknown Patient'}</div>
-                                <div className="text-sm text-gray-500">ID: {appointment.patient_id || 'N/A'}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-medium text-gray-900 truncate">{appointment.patient_name || 'Unknown Patient'}</div>
+                                <div className="text-sm text-gray-500 truncate">ID: {appointment.patient_id || 'N/A'}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{appointment.reason || 'No reason specified'}</td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
+                          <td className="px-2 sm:px-4 py-3 text-sm text-gray-900">
+                            <div className="max-w-xs truncate" title={appointment.reason || 'No reason specified'}>
+                              {appointment.reason || 'No reason specified'}
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-4 py-3">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full whitespace-nowrap ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
                               {status.charAt(0).toUpperCase() + status.slice(1)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium">
-                            <div className="flex space-x-2">
+                          <td className="px-2 sm:px-4 py-3 text-sm font-medium">
+                            <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                               {status === 'pending' && (
                                 isPatientUser ? (
                                   <button 
@@ -1015,7 +1033,7 @@ const DoctorDetails = () => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    Confirm
+                                    <span className="hidden sm:inline">Confirm</span>
                                   </button>
                                 ) : (
                                   <button 
@@ -1031,7 +1049,7 @@ const DoctorDetails = () => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    Confirm
+                                    <span className="hidden sm:inline">Confirm</span>
                                   </button>
                                 )
                               )}
@@ -1045,7 +1063,7 @@ const DoctorDetails = () => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
-                                    Cancel
+                                    <span className="hidden sm:inline">Cancel</span>
                                   </button>
                                 ) : (
                                   <button 
@@ -1062,7 +1080,7 @@ const DoctorDetails = () => {
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
-                                    Cancel
+                                    <span className="hidden sm:inline">Cancel</span>
                                   </button>
                                 )
                               )}
@@ -1076,7 +1094,7 @@ const DoctorDetails = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                   </svg>
-                                  View
+                                  <span className="hidden sm:inline">View</span>
                                 </button>
                               ) : (
                                 <Link to={`/appointments/${appointment.ID}`} state={{ returnTo: 'doctor', returnPath: `/doctors/${doctorId}`, doctorName: fullName }}>
@@ -1085,7 +1103,7 @@ const DoctorDetails = () => {
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
-                                    View
+                                    <span className="hidden sm:inline">View</span>
                                   </button>
                                 </Link>
                               )}
@@ -1119,11 +1137,11 @@ const DoctorDetails = () => {
         </div>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 md:mt-6">
         {fromVisitation ? (
           <Link to={fromVisitation.returnPath || `/visitations/${fromVisitation.visitId}`}>
-            <Button variant="secondary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <Button variant="secondary" className="text-sm md:text-base px-3 py-2 md:px-4 md:py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
               </svg>
               {fromVisitation.returnLabel || 'Back to Visit Details'}
@@ -1131,8 +1149,8 @@ const DoctorDetails = () => {
           </Link>
         ) : (
           <Link to="/doctors">
-            <Button variant="secondary">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <Button variant="secondary" className="text-sm md:text-base px-3 py-2 md:px-4 md:py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 md:h-5 md:w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
               </svg>
               Back to Doctors
