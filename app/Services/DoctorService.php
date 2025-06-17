@@ -77,11 +77,12 @@ class DoctorService extends BaseService
             
             // Optimized paginated query with better indexing
             $results = $wpdb->get_results($wpdb->prepare(
-                "SELECT p.*, v.last_visit_date, v.visit_count
+                "SELECT p.*, v.last_visit_date, v.visit_count, v.last_visit_time
                 FROM $patients_table p
                 INNER JOIN (
                     SELECT patient_id, 
                            MAX(date) as last_visit_date,
+                           MAX(time) as last_visit_time,
                            COUNT(*) as visit_count
                     FROM $visitations_table 
                     WHERE doctor_id = %d 

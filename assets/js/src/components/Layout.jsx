@@ -30,7 +30,8 @@ const Layout = ({ children }) => {
   useEffect(() => {
     if (location.pathname === '/patients' || 
         location.pathname === '/doctors' || 
-        location.pathname === '/appointments' ||
+        location.pathname === '/appointments' || 
+        location.pathname.startsWith('/appointments/book/') ||
         location.pathname === '/visitations' || 
         location.pathname === '/inventory' || 
         location.pathname === '/lab-investigations'
