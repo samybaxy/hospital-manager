@@ -82,7 +82,7 @@ class DoctorService extends BaseService
                 INNER JOIN (
                     SELECT patient_id, 
                            MAX(date) as last_visit_date,
-                           time as last_visit_time,
+                           MAX(time) as last_visit_time,
                            COUNT(*) as visit_count
                     FROM $visitations_table 
                     WHERE doctor_id = %d 
