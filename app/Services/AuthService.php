@@ -79,11 +79,18 @@ class AuthService extends BaseService {
         }
         
         // For development environments, be more permissive
-        if (defined('WP_DEBUG') && WP_DEBUG) {
+        if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
             $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
             $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
             
             if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
+                // Set current user to admin for development mode if not already set
+                if (!is_user_logged_in()) {
+                    $admin_users = get_users(['role' => 'administrator', 'number' => 1]);
+                    if (!empty($admin_users)) {
+                        wp_set_current_user($admin_users[0]->ID);
+                    }
+                }
                 return true;
             }
         }

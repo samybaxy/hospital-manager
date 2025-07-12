@@ -4,11 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useUserAccess } from '../hooks/useUserAccess';
 import AccessDebug from './AccessDebug';
 import Sidebar from './Sidebar';
+import DevModeToggle from './DevModeToggle';
+import DevModeStatus from './DevModeStatus';
 
 // Separate loading component to avoid conditional hook calls
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+const LoadingSpinner = ({ message = "Loading..." }) => (
+  <div className="flex items-center justify-center h-screen flex-col">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-600">{message}</p>
   </div>
 );
 
@@ -71,21 +74,38 @@ const Layout = ({ children }) => {
       // Close the user menu dropdown immediately
       setUserMenuOpen(false);
       
+      console.log('Starting logout process...');
+      
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
       
-      // Short delay to ensure all state changes are processed
-      setTimeout(() => {
-        // Redirect to WordPress home page
-        window.location.href = '/'; // This will navigate to WordPress home, not the React app root
-      }, 100);
+      console.log('Logout completed, redirecting...');
+      
+      // Redirect to WordPress login page or home page
+      // Use a more direct approach to ensure redirection works
+      const redirectTo = window.location.origin + '/wp-login.php';
+      
+      // Clear any remaining application state
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Force a page reload to completely clear the React state
+      window.location.replace(redirectTo);
+      
     } catch (error) {
       console.error("Error during sign out process:", error);
-      // Even if there's an error, try to redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
+      
+      // Even if there's an error, force the redirect
+      console.log('Logout failed, forcing redirect anyway...');
+      
+      // Clear storage manually
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Force redirect to WordPress login
+      window.location.replace(window.location.origin + '/wp-login.php');
     } finally {
+      // This might not execute due to window.location.replace
       setIsSigningOut(false);
     }
   }, [logout]);
@@ -109,8 +129,12 @@ const Layout = ({ children }) => {
   }, []);
 
   // Handle loading and authentication states without conditional hook calls
-  if (authLoading || isSigningOut) {
-    return <LoadingSpinner />;
+  if (authLoading) {
+    return <LoadingSpinner message="Authenticating..." />;
+  }
+  
+  if (isSigningOut) {
+    return <LoadingSpinner message="Signing out..." />;
   }
 
   if (!isAuthenticated && location.pathname !== '/login') {
@@ -188,6 +212,9 @@ const Layout = ({ children }) => {
                     </span>
                   </div>
                 </div>
+                
+                {/* Development Mode Status */}
+                <DevModeStatus />
               </div>
 
               {/* Empty space to replace search bar */}
@@ -266,6 +293,9 @@ const Layout = ({ children }) => {
       
       {/* Debug component for administrators only */}
       {isAdministrator() && <AccessDebug />}
+      
+      {/* Development mode toggle - visible to admins and developers */}
+      <DevModeToggle />
     </div>
   );
 };

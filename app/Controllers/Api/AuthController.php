@@ -192,14 +192,23 @@ class AuthController extends BaseController
             
             // If request comes from our own site AND has valid nonce
             if ((strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) && $nonce_valid) {
+                // Get an actual admin user for development mode, or create a development user
+                $admin_user = get_users(['role' => 'administrator', 'number' => 1]);
+                $dev_user_id = !empty($admin_user) ? $admin_user[0]->ID : 1;
+                $dev_user_name = !empty($admin_user) ? $admin_user[0]->display_name : 'Development Admin';
+                $dev_user_email = !empty($admin_user) ? $admin_user[0]->user_email : 'dev@localhost';
+                
+                // Set the current user for WordPress session compatibility
+                wp_set_current_user($dev_user_id);
+                
                 $response = new WP_REST_Response([
                     'authenticated' => true,
                     'user' => [
-                        'ID' => 0,
-                        'name' => 'Development User (Limited)',
-                        'email' => ''
+                        'ID' => $dev_user_id,
+                        'name' => $dev_user_name,
+                        'email' => $dev_user_email
                     ],
-                    'role' => 'doctor', // Limited role, not admin
+                    'role' => 'administrator', // Fixed: Set as administrator for development
                     'auth_method' => 'development',
                     'debug_info' => $auth_debug,
                     'fresh_nonce' => $new_nonce

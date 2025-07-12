@@ -6,7 +6,13 @@ import { api } from '../services/apiService';
 import { useUserAccess } from '../hooks/useUserAccess';
 
 const Dashboard = () => {
-  const { isPatient } = useUserAccess();
+  const { 
+    isPatient, 
+    hasAccess, 
+    canCreatePatients, 
+    canEditPatients, 
+    canScheduleAppointments 
+  } = useUserAccess();
   const [stats, setStats] = useState({
     patients: 0,
     doctors: 0,
@@ -177,34 +183,92 @@ const Dashboard = () => {
           )}
           
           <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-            {/* Only show patient management buttons for non-patient users */}
-            {!isPatient() && (
-              <>
+            {/* Add New Patient Button - Only show if user can create patients */}
+            {canCreatePatients() && (
+              <div className="relative group flex-1 sm:flex-none">
                 <Link to="/patients/new" className="flex-1 sm:flex-none">
-                  <Button variant="primary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">Add New Patient</Button>
+                  <Button variant="primary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">
+                    Add New Patient
+                  </Button>
                 </Link>
-                <Link to="/patients" className="flex-1 sm:flex-none">
-                  <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">View All Patients</Button>
-                </Link>
-              </>
+              </div>
             )}
-            <div className="relative group flex-1 sm:flex-none">
-              <Link to={isPatient() ? "/doctors?from=dashboard" : "#"} state={isPatient() ? { from: 'dashboard' } : undefined}>
-                <Button 
-                  variant="secondary" 
-                  disabled={!isPatient()}
-                  className={`w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 ${isPatient() ? "" : "cursor-not-allowed opacity-50"}`}
+            
+            {/* View All Patients Button - Only show if user can access patients */}
+            {hasAccess('patients') && (
+              <div className="relative group flex-1 sm:flex-none">
+                <Link to="/patients" className="flex-1 sm:flex-none">
+                  <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">
+                    View All Patients
+                  </Button>
+                </Link>
+              </div>
+            )}
+            
+            {/* Book Appointment Button - Show for patients or users who can schedule appointments */}
+            {(isPatient() || canScheduleAppointments()) ? (
+              <div className="relative group flex-1 sm:flex-none">
+                <Link 
+                  to={isPatient() ? "/doctors?from=dashboard" : "/appointments/new"} 
+                  state={isPatient() ? { from: 'dashboard' } : undefined}
                 >
-                  Book Appointment
-                </Button>
-              </Link>
-              {!isPatient() && (
+                  <Button 
+                    variant="secondary" 
+                    className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2"
+                  >
+                    Book Appointment
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              /* Show disabled button with icon for users who can't schedule appointments */
+              <div className="relative group flex-1 sm:flex-none">
+                <div className="pointer-events-none">
+                  <Button 
+                    variant="secondary" 
+                    disabled={true}
+                    className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 relative !cursor-not-allowed !opacity-50 !bg-gray-100 !border-gray-300 !text-gray-400 hover:!bg-gray-100 hover:!border-gray-300"
+                    style={{
+                      cursor: 'not-allowed !important',
+                      backgroundColor: '#f3f4f6 !important',
+                      borderColor: '#d1d5db !important',
+                      color: '#9ca3af !important'
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <div className="flex items-center justify-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-4 w-4 mr-2 text-red-400" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" 
+                        />
+                      </svg>
+                      Book Appointment
+                    </div>
+                  </Button>
+                </div>
                 <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
-                  Only patients can book appointments with doctors
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    {isPatient() ? 'Patient access only' : 'Admin override: Appointment scheduling disabled'}
+                  </div>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </Card>
         
@@ -274,17 +338,54 @@ const Dashboard = () => {
                   <Link to="/doctors">
                     <Button variant="primary" className="text-sm">Schedule Appointment</Button>
                   </Link>
+                ) : canScheduleAppointments() ? (
+                  <Link to="/appointments/new">
+                    <Button variant="primary" className="text-sm">Schedule Appointment</Button>
+                  </Link>
                 ) : (
                   <div className="relative group inline-block">
-                    <Button 
-                      variant="primary" 
-                      className="text-sm cursor-not-allowed opacity-50" 
-                      disabled
-                    >
-                      Schedule Appointment
-                    </Button>
+                    <div className="pointer-events-none">
+                      <Button 
+                        variant="primary" 
+                        className="text-sm !cursor-not-allowed !opacity-50 !bg-gray-100 !border-gray-300 !text-gray-400 hover:!bg-gray-100 hover:!border-gray-300 relative" 
+                        disabled
+                        style={{
+                          cursor: 'not-allowed !important',
+                          backgroundColor: '#f3f4f6 !important',
+                          borderColor: '#d1d5db !important',
+                          color: '#9ca3af !important'
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <div className="flex items-center justify-center">
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="h-4 w-4 mr-2 text-red-400" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" 
+                            />
+                          </svg>
+                          Schedule Appointment
+                        </div>
+                      </Button>
+                    </div>
                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
-                      Only patients can book appointments with doctors
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Admin override: Appointment scheduling disabled
+                      </div>
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                     </div>
                   </div>
@@ -377,12 +478,14 @@ const Dashboard = () => {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2">
-                <Link to="/inventory" className="flex-1 min-w-0">
-                  <Button variant="outline" className="w-full text-sm">
-                    View Inventory
-                  </Button>
-                </Link>
-                {!isPatient() && (
+                {hasAccess('inventory') && (
+                  <Link to="/inventory" className="flex-1 min-w-0">
+                    <Button variant="outline" className="w-full text-sm">
+                      View Inventory
+                    </Button>
+                  </Link>
+                )}
+                {hasAccess('inventory') && !isPatient() && (
                   <Link to="/inventory/new" className="flex-1 min-w-0">
                     <Button variant="secondary" className="w-full text-sm">
                       Add Item

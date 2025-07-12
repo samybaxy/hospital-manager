@@ -7,6 +7,7 @@ use HospitalManager\Controllers\Api\BaseController;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
+use Exception;
 
 class AccessController extends BaseController
 {
@@ -52,5 +53,33 @@ class AccessController extends BaseController
                 'capabilities_count' => count(get_role($role)->capabilities ?? [])
             ]
         ], 'Access permissions retrieved successfully');
+    }
+
+    /**
+     * Sync role capabilities (temporary endpoint for testing)
+     *
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function syncRoles(WP_REST_Request $request)
+    {
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            return $this->error_response('Insufficient permissions', 403, ['error_code' => 'insufficient_permissions']);
+        }
+
+        try {
+            // Sync role capabilities
+            RoleService::syncRoleCapabilities();
+            
+            return $this->success_response([
+                'message' => 'Role capabilities synchronized successfully'
+            ], 'Roles synchronized');
+
+        } catch (Exception $e) {
+            return $this->error_response('Failed to sync roles: ' . $e->getMessage(), 500, [
+                'error_code' => 'sync_failed'
+            ]);
+        }
     }
 }

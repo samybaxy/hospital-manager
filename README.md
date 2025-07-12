@@ -24,6 +24,19 @@ yarn install
 
 ### Development Workflow
 
+#### Development Mode Toggle
+
+The plugin includes a sophisticated development mode toggle system for administrators and developers:
+
+- **Visual Toggle**: Click the floating button (🔧) in the bottom-right corner
+- **Console Commands**: Use browser console commands like `devMode.enable()`, `devMode.disable()`
+- **URL Parameters**: Add `?dev_mode=true` or `?dev_mode=false` to any URL
+- **Environment Detection**: Automatically detects localhost, development environments
+
+**For detailed usage instructions, see [DEVELOPMENT_MODE_GUIDE.md](./DEVELOPMENT_MODE_GUIDE.md)**
+
+#### Build Commands
+
 You can use either Yarn directly or the provided development script:
 
 #### Using Yarn

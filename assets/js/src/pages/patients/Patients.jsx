@@ -5,8 +5,10 @@ import StatusMessage from '../../components/StatusMessage';
 import ResponsiveTable from '../../components/ResponsiveTable';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/apiService';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 const Patients = () => {
+  const { canCreatePatients } = useUserAccess();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -395,14 +397,16 @@ const Patients = () => {
               Manage patient records, personal information and medical history
             </p>
           </div>
-          <Link to="/patients/new">
-            <Button variant="secondary" className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              Add New Patient
-            </Button>
-          </Link>
+          {canCreatePatients() && (
+            <Link to="/patients/new">
+              <Button variant="secondary" className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Add New Patient
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -525,12 +529,14 @@ const Patients = () => {
             <p className="text-sm">
               {searchTerm ? 'No patients match your search criteria. Try a different search term.' : 'There are no patients in the system yet.'}
             </p>
-            <Link to="/patients/new" className="inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add a patient
-            </Link>
+            {canCreatePatients() && (
+              <Link to="/patients/new" className="inline-flex items-center px-4 py-2 mt-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add a patient
+              </Link>
+            )}
           </div>
         )}
 

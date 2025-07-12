@@ -271,6 +271,32 @@ class UserAccessService {
     });
     return result;
   }
+
+  /**
+   * Check if user can create patients
+   * @returns {boolean} - Whether user can create patients
+   */
+  canCreatePatients() {
+    return this.hasAccess('create_patients');
+  }
+
+  /**
+   * Check if user can edit patients
+   * @returns {boolean} - Whether user can edit patients
+   */
+  canEditPatients() {
+    return this.hasAccess('edit_patients');
+  }
+
+  /**
+   * Check if user can schedule appointments
+   * @returns {boolean} - Whether user can schedule appointments
+   */
+  canScheduleAppointments() {
+    // Explicitly check the schedule_appointments permission
+    // Administrators should NOT have this permission by default
+    return this.hasCapability('schedule_appointments');
+  }
 }
 
 // Create singleton instance
