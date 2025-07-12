@@ -13,34 +13,105 @@ const DevModeToggle = () => {
     const [showDetails, setShowDetails] = useState(false);
     const { isAdministrator, role } = useUserAccess();
     
+    // Function to get current development mode status
+    const getCurrentDevMode = () => {
+        // Check localStorage override first
+        const override = localStorage.getItem('hospital_manager_dev_mode');
+        if (override !== null) {
+            return override === 'true';
+        }
+        
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('dev')) {
+            return urlParams.get('dev') === 'true' || urlParams.get('dev') === '1';
+        }
+        
+        // Check hostname for development environment
+        const hostname = window.location.hostname;
+        const isDevelopmentHost = hostname === 'localhost' || 
+                                 hostname === '127.0.0.1' || 
+                                 hostname.endsWith('.local') || 
+                                 hostname.endsWith('.dev') ||
+                                 window.location.port !== '';
+        
+        return isDevelopmentHost;
+    };
+    
+    // Function to get environment information
+    const getEnvironmentInfo = () => {
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+        const override = localStorage.getItem('hospital_manager_dev_mode');
+        
+        let mode = 'production';
+        if (getCurrentDevMode()) {
+            mode = 'development';
+        }
+        
+        return {
+            mode,
+            hostname,
+            port: port || '80',
+            localStorageOverride: override,
+            hasOverride: override !== null
+        };
+    };
+    
     useEffect(() => {
         // Only show to administrators and developers
         const shouldShow = isAdministrator() || role === 'developer';
         setShowToggle(shouldShow);
         
         if (shouldShow) {
-            // Get current mode from the global function
-            const isDev = window.hospitalManagerDevMode?.status();
+            // Get current mode
+            const isDev = getCurrentDevMode();
             setIsDevMode(isDev);
             
             // Get environment information
-            const info = window.hospitalManagerDevMode?.info();
-            setEnvInfo(info || {});
+            const info = getEnvironmentInfo();
+            setEnvInfo(info);
         }
     }, [isAdministrator, role]);
     
     const toggleMode = () => {
         const newMode = !isDevMode;
         
-        if (newMode) {
-            window.hospitalManagerDevMode?.enable();
-        } else {
-            window.hospitalManagerDevMode?.disable();
+        // Update localStorage without reloading the page
+        localStorage.setItem('hospital_manager_dev_mode', newMode.toString());
+        
+        // Update state immediately
+        setIsDevMode(newMode);
+        
+        // Update environment info
+        const info = getEnvironmentInfo();
+        setEnvInfo(info);
+        
+        // Notify user of change
+        console.log(`🔧 Development Mode ${newMode ? 'ENABLED' : 'DISABLED'} - Reload page to apply changes`);
+        
+        // Optional: Show a small notification
+        if (window.hospitalManagerConsole) {
+            window.hospitalManagerConsole.log(`Development Mode ${newMode ? 'ENABLED' : 'DISABLED'} - Reload page to apply changes`);
         }
     };
     
     const clearOverride = () => {
-        window.hospitalManagerDevMode?.clear();
+        localStorage.removeItem('hospital_manager_dev_mode');
+        
+        // Update state to reflect natural environment
+        const isDev = getCurrentDevMode();
+        setIsDevMode(isDev);
+        
+        // Update environment info
+        const info = getEnvironmentInfo();
+        setEnvInfo(info);
+        
+        console.log('🔧 Development Mode override cleared - Using natural environment');
+        
+        if (window.hospitalManagerConsole) {
+            window.hospitalManagerConsole.log('Development Mode override cleared - Using natural environment');
+        }
     };
     
     if (!showToggle) return null;
@@ -88,7 +159,7 @@ const DevModeToggle = () => {
                                 <div className="text-gray-300">Hostname:</div>
                                 <div className="text-blue-400">{envInfo.hostname || 'Unknown'}</div>
                                 
-                                {envInfo.port && (
+                                {envInfo.port && envInfo.port !== '80' && (
                                     <>
                                         <div className="text-gray-300">Port:</div>
                                         <div className="text-blue-400">{envInfo.port}</div>
@@ -96,10 +167,10 @@ const DevModeToggle = () => {
                                 )}
                             </div>
                             
-                            {envInfo.localStorageOverride && (
+                            {envInfo.hasOverride && (
                                 <div className="mt-2 pt-2 border-t border-gray-600">
                                     <div className="text-yellow-300 text-xs">
-                                        ⚠️ Override Active: {envInfo.localStorageOverride}
+                                        ⚠️ Override Active: {envInfo.localStorageOverride === 'true' ? 'Development' : 'Production'}
                                     </div>
                                     <button
                                         onClick={clearOverride}
@@ -112,7 +183,7 @@ const DevModeToggle = () => {
                             
                             <div className="mt-2 pt-2 border-t border-gray-600 text-xs text-gray-400">
                                 <div>• Click to toggle mode</div>
-                                <div>• Changes require page reload</div>
+                                <div>• {envInfo.hasOverride ? 'Page reload required for full effect' : 'Changes effective immediately'}</div>
                                 <div>• Only visible to admins & developers</div>
                             </div>
                         </div>
@@ -131,6 +202,9 @@ const DevModeToggle = () => {
                         : 'bg-blue-100 text-blue-800'
                 }`}>
                     {envInfo.mode || 'prod'}
+                    {envInfo.hasOverride && (
+                        <span className="ml-1 text-xs">*</span>
+                    )}
                 </span>
             </div>
         </div>

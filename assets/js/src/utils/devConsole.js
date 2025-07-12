@@ -27,9 +27,9 @@ const devModeUtils = {
     help: () => {
         console.group('🏥 Hospital Manager - Development Console Commands');
         console.log('🔧 Dev Mode Controls:');
-        console.log('  devMode.enable()     - Enable development mode');
-        console.log('  devMode.disable()    - Disable development mode');
-        console.log('  devMode.toggle()     - Toggle development mode');
+        console.log('  devMode.enable()     - Enable development mode (localStorage)');
+        console.log('  devMode.disable()    - Disable development mode (localStorage)');
+        console.log('  devMode.toggle()     - Toggle development mode (localStorage)');
         console.log('  devMode.status()     - Check current status');
         console.log('  devMode.info()       - Get environment info');
         console.log('  devMode.clear()      - Clear localStorage override');
@@ -45,53 +45,84 @@ const devModeUtils = {
         console.log('  quick.clearStorage() - Clear all storage');
         console.log('  quick.mockAdmin()    - Switch to mock admin (dev mode)');
         console.log('  quick.mockPatient()  - Switch to mock patient (dev mode)');
+        console.log('');
+        console.log('💡 Notes:');
+        console.log('  - Toggle button available in UI for admin/developer roles');
+        console.log('  - Changes take effect immediately for UI, reload for full effect');
+        console.log('  - Natural environment based on hostname/port detection');
         console.groupEnd();
     },
     
     // Development mode controls
     enable: () => {
         localStorage.setItem('hospital_manager_dev_mode', 'true');
-        hospitalManagerConsole.log('Development mode ENABLED');
-        window.location.reload();
+        hospitalManagerConsole.log('Development mode ENABLED - Reload page to apply changes');
+        return true;
     },
     
     disable: () => {
         localStorage.setItem('hospital_manager_dev_mode', 'false');
-        hospitalManagerConsole.log('Development mode DISABLED');
-        window.location.reload();
+        hospitalManagerConsole.log('Development mode DISABLED - Reload page to apply changes');
+        return false;
     },
     
     toggle: () => {
-        const current = window.hospitalManagerDevMode?.status();
+        const current = devModeUtils.status();
         if (current) {
-            devModeUtils.disable();
+            return devModeUtils.disable();
         } else {
-            devModeUtils.enable();
+            return devModeUtils.enable();
         }
     },
     
     status: () => {
-        const isDev = window.hospitalManagerDevMode?.status();
-        const info = window.hospitalManagerDevMode?.info();
+        // Check localStorage override first
+        const override = localStorage.getItem('hospital_manager_dev_mode');
+        if (override !== null) {
+            return override === 'true';
+        }
         
-        console.group('🔧 Development Mode Status');
-        console.log(`Status: ${isDev ? '✅ ENABLED' : '❌ DISABLED'}`);
-        console.log('Environment Info:', info);
-        console.groupEnd();
+        // Check URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('dev')) {
+            return urlParams.get('dev') === 'true' || urlParams.get('dev') === '1';
+        }
         
-        return isDev;
+        // Check hostname for development environment
+        const hostname = window.location.hostname;
+        const isDevelopmentHost = hostname === 'localhost' || 
+                                 hostname === '127.0.0.1' || 
+                                 hostname.endsWith('.local') || 
+                                 hostname.endsWith('.dev') ||
+                                 window.location.port !== '';
+        
+        return isDevelopmentHost;
     },
     
     info: () => {
-        const info = window.hospitalManagerDevMode?.info();
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+        const override = localStorage.getItem('hospital_manager_dev_mode');
+        const isDev = devModeUtils.status();
+        
+        const info = {
+            mode: isDev ? 'development' : 'production',
+            hostname,
+            port: port || '80',
+            localStorageOverride: override,
+            hasOverride: override !== null,
+            urlParams: new URLSearchParams(window.location.search).toString(),
+            currentUrl: window.location.href
+        };
+        
         console.table(info);
         return info;
     },
     
     clear: () => {
         localStorage.removeItem('hospital_manager_dev_mode');
-        hospitalManagerConsole.log('Development mode override CLEARED');
-        window.location.reload();
+        hospitalManagerConsole.log('Development mode override CLEARED - Using natural environment');
+        return devModeUtils.status();
     }
 };
 
@@ -216,7 +247,7 @@ if (typeof window !== 'undefined') {
     window.hospitalManagerConsole = hospitalManagerConsole;
     
     // Show welcome message in development mode
-    if (window.hospitalManagerDevMode?.status()) {
+    if (devModeUtils.status()) {
         console.log(
             '%c🏥 Hospital Manager - Development Mode Active',
             'color: #10B981; font-size: 16px; font-weight: bold;'
