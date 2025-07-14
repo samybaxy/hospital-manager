@@ -6,7 +6,15 @@ import userAccessService from '../services/UserAccessService';
 
 // Enhanced development environment detection with multiple override options
 const isDevelopment = () => {
-    // Check URL parameters for quick override (e.g., ?dev_mode=true or ?dev_mode=false)
+    // FIRST: Check localStorage for explicit override (this takes precedence over everything)
+    const localStorageMode = localStorage.getItem('hospital_manager_dev_mode');
+    if (localStorageMode !== null) {
+        const isDevMode = localStorageMode === 'true';
+        console.log(`🔧 Development mode ${isDevMode ? 'ENABLED' : 'DISABLED'} via localStorage override`);
+        return isDevMode;
+    }
+    
+    // SECOND: Check URL parameters for quick override (e.g., ?dev_mode=true or ?dev_mode=false)
     const urlParams = new URLSearchParams(window.location.search);
     const devModeParam = urlParams.get('dev_mode');
     
@@ -16,15 +24,7 @@ const isDevelopment = () => {
         return isDevMode;
     }
     
-    // Check localStorage for persistent override (used by toggle component)
-    const localStorageMode = localStorage.getItem('hospital_manager_dev_mode');
-    if (localStorageMode !== null) {
-        const isDevMode = localStorageMode === 'true';
-        console.log(`🔧 Development mode ${isDevMode ? 'ENABLED' : 'DISABLED'} via localStorage`);
-        return isDevMode;
-    }
-    
-    // Check environment variables
+    // THIRD: Check environment variables
     const envMode = import.meta.env.VITE_APP_MODE || import.meta.env.NODE_ENV;
     const devAuthEnabled = import.meta.env.VITE_ENABLE_DEBUG === 'true';
     
@@ -33,19 +33,19 @@ const isDevelopment = () => {
         return true;
     }
     
-    // Check WordPress constants (passed from PHP)
+    // FOURTH: Check WordPress constants (passed from PHP)
     const wpData = window.hospitalManagerData || {};
     if (wpData.developmentMode || (wpData.isDebugMode && wpData.isLocalEnvironment)) {
         console.log('🔧 Development mode ENABLED via WordPress constants');
         return true;
     }
     
-    // Fallback to hostname detection
+    // LAST: Fallback to hostname detection (only if no explicit setting exists)
     const hostnameDetection = window.location.hostname === 'localhost' || 
                              window.location.hostname === '127.0.0.1' ||
                              window.location.port === '10008' ||
                              window.location.hostname.includes('local');
-    
+
     if (hostnameDetection) {
         console.log('🔧 Development mode ENABLED via hostname detection');
         return true;
@@ -102,6 +102,9 @@ if (typeof window !== 'undefined') {
         status: isDevelopment,
         info: getEnvironmentInfo
     };
+    
+    // Also make the isDevelopment function available for debugging
+    window.hospitalManagerIsDevelopment = isDevelopment;
 }
 
 // Create authentication context
@@ -120,9 +123,9 @@ export function AuthProvider({ children }) {
       try {
         setLoading(true);
         
-        // Development bypass - automatically authenticate as admin
+        // Development bypass - only if explicitly enabled
         if (isDevelopment()) {
-          console.log('🔧 Development mode: Bypassing authentication');
+          console.log('🔧 Development mode: Auto-authenticating as admin');
           const mockUser = {
             ID: 1,
             display_name: 'Development Admin',
@@ -273,9 +276,9 @@ export function AuthProvider({ children }) {
 
   // Login function with automatic CSRF retry
   const login = async (username, password, rememberMe = false, isRetry = false) => {
-    // Development bypass - always return success
+    // Development bypass - only if explicitly enabled
     if (isDevelopment()) {
-      console.log('🔧 Development mode: Bypassing login');
+      console.log('🔧 Development mode: Bypassing login with mock admin');
       const mockUser = {
         ID: 1,
         display_name: 'Development Admin',
@@ -452,9 +455,11 @@ export function AuthProvider({ children }) {
       }
       
       // Production mode - full logout process
+      console.log('Production mode: Performing full logout process...');
+      
       // Add CSRF protection to logout request
       const csrfToken = authService.getCsrfToken();
-      await api.post('/auth/logout', { 
+      const response = await api.post('/auth/logout', { 
         nonce: csrfToken 
       });
       
@@ -462,6 +467,10 @@ export function AuthProvider({ children }) {
       authService.clearToken();
       setUser(null);
       userAccessService.clearAccessData();
+      
+      // Log the logout response for debugging
+      console.log('Logout API response:', response.data);
+      
     } catch (err) {
       console.error("Logout failed:", err);
       

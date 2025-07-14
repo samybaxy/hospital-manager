@@ -141,7 +141,11 @@ const DevModeToggle = () => {
                 
                 {/* Details Tooltip */}
                 {showDetails && (
-                    <div className="absolute bottom-full right-0 mb-2 w-80 bg-gray-900 text-white text-xs rounded-lg shadow-lg p-4 border border-gray-700">
+                    <div 
+                        className="absolute bottom-full right-0 mb-2 w-80 bg-gray-900 text-white text-xs rounded-lg shadow-lg p-4 border border-gray-700"
+                        onMouseEnter={() => setShowDetails(true)}
+                        onMouseLeave={() => setShowDetails(false)}
+                    >
                         <div className="space-y-2">
                             <div className="font-semibold text-yellow-300 border-b border-gray-600 pb-1">
                                 Development Mode Status

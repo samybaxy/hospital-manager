@@ -68,46 +68,46 @@ const Layout = ({ children }) => {
   
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    
+    // Close the user menu dropdown immediately
+    setUserMenuOpen(false);
+    
+    console.log('Starting logout process...');
+    
+    // Preserve dev mode setting before clearing storage
+    const devMode = localStorage.getItem('hospital_manager_dev_mode');
+    
     try {
-      setIsSigningOut(true);
-      
-      // Close the user menu dropdown immediately
-      setUserMenuOpen(false);
-      
-      console.log('Starting logout process...');
-      
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
       
-      console.log('Logout completed, redirecting...');
-      
-      // Redirect to WordPress login page or home page
-      // Use a more direct approach to ensure redirection works
-      const redirectTo = window.location.origin + '/wp-login.php';
-      
-      // Clear any remaining application state
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Force a page reload to completely clear the React state
-      window.location.replace(redirectTo);
+      console.log('Logout completed successfully');
       
     } catch (error) {
-      console.error("Error during sign out process:", error);
-      
-      // Even if there's an error, force the redirect
-      console.log('Logout failed, forcing redirect anyway...');
-      
-      // Clear storage manually
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      // Force redirect to WordPress login
-      window.location.replace(window.location.origin + '/wp-login.php');
-    } finally {
-      // This might not execute due to window.location.replace
-      setIsSigningOut(false);
+      console.error("Error during logout API call:", error);
+      // Continue with cleanup even if API call failed
     }
+    
+    console.log('Clearing local state and redirecting to homepage...');
+    
+    // Clear all application state except dev mode setting
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Restore dev mode setting if it existed
+    if (devMode !== null) {
+      localStorage.setItem('hospital_manager_dev_mode', devMode);
+      console.log('Preserved dev mode setting:', devMode);
+    }
+    
+    // Always redirect to homepage (never wp-login.php)
+    const homeUrl = window.location.origin + '/';
+    console.log('Redirecting to:', homeUrl);
+    
+    // Use window.location.href for a clean redirect
+    window.location.href = homeUrl;
+    
   }, [logout]);
 
   // We've moved all navigation items to the Sidebar component

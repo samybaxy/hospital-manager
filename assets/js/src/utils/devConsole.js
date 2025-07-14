@@ -76,7 +76,7 @@ const devModeUtils = {
     },
     
     status: () => {
-        // Check localStorage override first
+        // Check localStorage override first (highest priority)
         const override = localStorage.getItem('hospital_manager_dev_mode');
         if (override !== null) {
             return override === 'true';
@@ -84,17 +84,18 @@ const devModeUtils = {
         
         // Check URL parameters
         const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('dev')) {
-            return urlParams.get('dev') === 'true' || urlParams.get('dev') === '1';
+        if (urlParams.has('dev_mode')) {
+            return urlParams.get('dev_mode') === 'true' || urlParams.get('dev_mode') === '1';
         }
         
-        // Check hostname for development environment
+        // Check hostname for development environment (only if no explicit override)
         const hostname = window.location.hostname;
         const isDevelopmentHost = hostname === 'localhost' || 
                                  hostname === '127.0.0.1' || 
                                  hostname.endsWith('.local') || 
                                  hostname.endsWith('.dev') ||
-                                 window.location.port !== '';
+                                 window.location.port === '10008' ||
+                                 window.location.hostname.includes('local');
         
         return isDevelopmentHost;
     },
