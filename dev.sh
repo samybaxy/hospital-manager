@@ -22,7 +22,7 @@ function show_help() {
 
 function install_deps() {
     echo "Installing dependencies..."
-    yarn install
+    yarn install --production=false
     echo "Dependencies installed successfully!"
 }
 

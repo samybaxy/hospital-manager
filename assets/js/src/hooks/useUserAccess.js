@@ -55,7 +55,11 @@ export const useUserAccess = () => {
     getAccessibleRoutes: () => userAccessService.getAccessibleRoutes(),
     checkMultipleAccess: (routes) => userAccessService.checkMultipleAccess(routes),
     getAccessData: () => userAccessService.getAccessData(),
-    refreshAccess: () => userAccessService.fetchAccessData()
+    refreshAccess: () => userAccessService.fetchAccessData(),
+    // Add capability-specific methods
+    canCreatePatients: () => userAccessService.canCreatePatients(),
+    canEditPatients: () => userAccessService.canEditPatients(),
+    canScheduleAppointments: () => userAccessService.canScheduleAppointments()
   };
 };
 

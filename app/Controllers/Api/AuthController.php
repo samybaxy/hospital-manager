@@ -192,14 +192,23 @@ class AuthController extends BaseController
             
             // If request comes from our own site AND has valid nonce
             if ((strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) && $nonce_valid) {
+                // Get an actual admin user for development mode, or create a development user
+                $admin_user = get_users(['role' => 'administrator', 'number' => 1]);
+                $dev_user_id = !empty($admin_user) ? $admin_user[0]->ID : 1;
+                $dev_user_name = !empty($admin_user) ? $admin_user[0]->display_name : 'Development Admin';
+                $dev_user_email = !empty($admin_user) ? $admin_user[0]->user_email : 'dev@localhost';
+                
+                // Set the current user for WordPress session compatibility
+                wp_set_current_user($dev_user_id);
+                
                 $response = new WP_REST_Response([
                     'authenticated' => true,
                     'user' => [
-                        'ID' => 0,
-                        'name' => 'Development User (Limited)',
-                        'email' => ''
+                        'ID' => $dev_user_id,
+                        'name' => $dev_user_name,
+                        'email' => $dev_user_email
                     ],
-                    'role' => 'doctor', // Limited role, not admin
+                    'role' => 'administrator', // Fixed: Set as administrator for development
                     'auth_method' => 'development',
                     'debug_info' => $auth_debug,
                     'fresh_nonce' => $new_nonce
@@ -814,10 +823,55 @@ class AuthController extends BaseController
         }
     }
 
-    public function logout()
+    public function logout($request)
     {
+        // Log the logout attempt
+        error_log('Hospital Manager: Logout request initiated');
+        
+        // Prevent WordPress from redirecting to wp-login.php after logout
+        add_filter('wp_redirect', function($location, $status) {
+            if (strpos($location, 'wp-login.php') !== false) {
+                error_log('Hospital Manager: Blocked wp-login.php redirect during logout');
+                return home_url('/'); // Redirect to homepage instead
+            }
+            return $location;
+        }, 999, 2);
+        
+        // Prevent logout redirect hook
+        add_action('wp_logout', function() {
+            // Don't redirect after logout - let our frontend handle it
+            if (defined('DOING_AJAX') || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                return;
+            }
+        }, 1);
+        
+        // Perform WordPress logout
         wp_logout();
-        return new WP_REST_Response(['success' => true]);
+        
+        // Clear any custom authentication cookies/tokens
+        $auth_token_name = 'hospital_manager_auth_token';
+        if (isset($_COOKIE[$auth_token_name])) {
+            setcookie($auth_token_name, '', time() - 3600, '/', '', is_ssl(), true);
+        }
+        
+        // Clear custom auth cookie
+        $custom_auth_name = 'hospital_manager_auth';
+        if (isset($_COOKIE[$custom_auth_name])) {
+            setcookie($custom_auth_name, '', time() - 3600, '/', '', is_ssl(), true);
+        }
+        
+        // Clear any WordPress authentication cookies
+        wp_clear_auth_cookie();
+        
+        error_log('Hospital Manager: Logout completed successfully');
+        
+        return new WP_REST_Response([
+            'success' => true,
+            'message' => 'Successfully logged out',
+            'redirect_url' => home_url('/'),  // Explicitly provide homepage URL
+            'logout_complete' => true
+        ]);
     }
 
     private function get_primary_role(WP_User $user)

@@ -4,13 +4,108 @@ import { api } from '../services/apiService';
 import authService from '../services/authService';
 import userAccessService from '../services/UserAccessService';
 
-// Development environment detection
+// Enhanced development environment detection with multiple override options
 const isDevelopment = () => {
-    return false; // Set to true if you want to enable development mode bypass
-    return window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1' ||
-            window.location.port === '10008';
+    // FIRST: Check localStorage for explicit override (this takes precedence over everything)
+    const localStorageMode = localStorage.getItem('hospital_manager_dev_mode');
+    if (localStorageMode !== null) {
+        const isDevMode = localStorageMode === 'true';
+        console.log(`🔧 Development mode ${isDevMode ? 'ENABLED' : 'DISABLED'} via localStorage override`);
+        return isDevMode;
+    }
+    
+    // SECOND: Check URL parameters for quick override (e.g., ?dev_mode=true or ?dev_mode=false)
+    const urlParams = new URLSearchParams(window.location.search);
+    const devModeParam = urlParams.get('dev_mode');
+    
+    if (devModeParam !== null) {
+        const isDevMode = devModeParam === 'true';
+        console.log(`🔧 Development mode ${isDevMode ? 'ENABLED' : 'DISABLED'} via URL parameter`);
+        return isDevMode;
+    }
+    
+    // THIRD: Check environment variables
+    const envMode = import.meta.env.VITE_APP_MODE || import.meta.env.NODE_ENV;
+    const devAuthEnabled = import.meta.env.VITE_ENABLE_DEBUG === 'true';
+    
+    if (envMode === 'development' && devAuthEnabled) {
+        console.log('🔧 Development mode ENABLED via environment variables');
+        return true;
+    }
+    
+    // FOURTH: Check WordPress constants (passed from PHP)
+    const wpData = window.hospitalManagerData || {};
+    if (wpData.developmentMode || (wpData.isDebugMode && wpData.isLocalEnvironment)) {
+        console.log('🔧 Development mode ENABLED via WordPress constants');
+        return true;
+    }
+    
+    // LAST: Fallback to hostname detection (only if no explicit setting exists)
+    const hostnameDetection = window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1' ||
+                             window.location.port === '10008' ||
+                             window.location.hostname.includes('local');
+
+    if (hostnameDetection) {
+        console.log('🔧 Development mode ENABLED via hostname detection');
+        return true;
+    }
+    
+    console.log('🔧 Development mode DISABLED - running in production mode');
+    return false;
 };
+
+// Get comprehensive environment information
+const getEnvironmentInfo = () => {
+    const isDev = isDevelopment();
+    const wpData = window.hospitalManagerData || {};
+    
+    return {
+        isDevelopment: isDev,
+        mode: import.meta.env.VITE_APP_MODE || import.meta.env.NODE_ENV || 'production',
+        devAuthEnabled: import.meta.env.VITE_ENABLE_DEBUG === 'true',
+        wpDebug: wpData.isDebugMode,
+        wpEnvironment: wpData.environmentType,
+        hostname: window.location.hostname,
+        port: window.location.port,
+        urlOverride: new URLSearchParams(window.location.search).get('dev_mode'),
+        localStorageOverride: localStorage.getItem('hospital_manager_dev_mode'),
+        wpData: wpData
+    };
+};
+
+// Utility functions for manual mode switching (available globally)
+const enableDevelopmentMode = () => {
+    localStorage.setItem('hospital_manager_dev_mode', 'true');
+    console.log('🔧 Development mode ENABLED via localStorage');
+    window.location.reload();
+};
+
+const disableDevelopmentMode = () => {
+    localStorage.setItem('hospital_manager_dev_mode', 'false');
+    console.log('🔧 Development mode DISABLED via localStorage');
+    window.location.reload();
+};
+
+const clearDevelopmentModeOverride = () => {
+    localStorage.removeItem('hospital_manager_dev_mode');
+    console.log('🔧 Development mode override CLEARED - using default detection');
+    window.location.reload();
+};
+
+// Make functions available globally for console access
+if (typeof window !== 'undefined') {
+    window.hospitalManagerDevMode = {
+        enable: enableDevelopmentMode,
+        disable: disableDevelopmentMode,
+        clear: clearDevelopmentModeOverride,
+        status: isDevelopment,
+        info: getEnvironmentInfo
+    };
+    
+    // Also make the isDevelopment function available for debugging
+    window.hospitalManagerIsDevelopment = isDevelopment;
+}
 
 // Create authentication context
 const AuthContext = createContext();
@@ -28,19 +123,56 @@ export function AuthProvider({ children }) {
       try {
         setLoading(true);
         
-        // Development bypass - automatically authenticate as admin
+        // Development bypass - only if explicitly enabled
         if (isDevelopment()) {
-          console.log('🔧 Development mode: Bypassing authentication');
+          console.log('🔧 Development mode: Auto-authenticating as admin');
           const mockUser = {
             ID: 1,
-            display_name: 'Dev Admin',
+            display_name: 'Development Admin',
             user_email: 'admin@dev.local',
             roles: ['administrator'],
-            name: 'Dev Admin',
-            first_name: 'Dev',
+            name: 'Development Admin',
+            first_name: 'Development',
             last_name: 'Admin'
           };
           setUser(mockUser);
+          
+          // Set up mock access data for the development user
+          userAccessService.accessData = {
+            role: 'administrator',
+            permissions: {
+              // Route access
+              patients: true,
+              doctors: true,
+              departments: true,
+              appointments: true,
+              visitations: true,
+              chat: true,
+              notifications: true,
+              audit_log: true,
+              billing: true,
+              inventory: true,
+              reports: true,
+              statistics: true,
+              settings: true,
+              lab_dashboard: true,
+              // Action capabilities
+              create_patients: true,
+              edit_patients: true,
+              delete_patients: true,
+              schedule_appointments: false, // Administrators should NOT be able to schedule appointments
+              add_visitation: true,
+              edit_visitation: true,
+              manage_medical_reports: true,
+              add_lab_results: true,
+              edit_lab_results: true,
+              delete_lab_results: true,
+            }
+          };
+          userAccessService.loading = false;
+          userAccessService.error = null;
+          userAccessService.notify();
+          
           setLoading(false);
           return;
         }
@@ -144,19 +276,56 @@ export function AuthProvider({ children }) {
 
   // Login function with automatic CSRF retry
   const login = async (username, password, rememberMe = false, isRetry = false) => {
-    // Development bypass - always return success
+    // Development bypass - only if explicitly enabled
     if (isDevelopment()) {
-      console.log('🔧 Development mode: Bypassing login');
+      console.log('🔧 Development mode: Bypassing login with mock admin');
       const mockUser = {
         ID: 1,
-        display_name: 'Dev Admin',
+        display_name: 'Development Admin',
         user_email: 'admin@dev.local',
         roles: ['administrator'],
-        name: 'Dev Admin',
-        first_name: 'Dev',
+        name: 'Development Admin',
+        first_name: 'Development',
         last_name: 'Admin'
       };
       setUser(mockUser);
+      
+      // Set up mock access data for the development user
+      userAccessService.accessData = {
+        role: 'administrator',
+        permissions: {
+          // Route access
+          patients: true,
+          doctors: true,
+          departments: true,
+          appointments: true,
+          visitations: true,
+          chat: true,
+          notifications: true,
+          audit_log: true,
+          billing: true,
+          inventory: true,
+          reports: true,
+          statistics: true,
+          settings: true,
+          lab_dashboard: true,
+          // Action capabilities
+          create_patients: true,
+          edit_patients: true,
+          delete_patients: true,
+          schedule_appointments: false, // Administrators should NOT be able to schedule appointments
+          add_visitation: true,
+          edit_visitation: true,
+          manage_medical_reports: true,
+          add_lab_results: true,
+          edit_lab_results: true,
+          delete_lab_results: true,
+        }
+      };
+      userAccessService.loading = false;
+      userAccessService.error = null;
+      userAccessService.notify();
+      
       setLoading(false);
       return true;
     }
@@ -256,9 +425,41 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       
+      // Development mode - clear mock data but still perform actual logout actions
+      if (isDevelopment()) {
+        console.log('🔧 Development mode: Clearing mock authentication');
+        
+        // Clear the mock user data
+        setUser(null);
+        userAccessService.clearAccessData();
+        
+        // Even in development, try to call the real logout API if it exists
+        try {
+          const csrfToken = authService.getCsrfToken();
+          await api.post('/auth/logout', { 
+            nonce: csrfToken 
+          }).catch(() => {
+            // Ignore errors in development mode - the important thing is clearing local state
+            console.log('🔧 Development mode: Logout API call failed (expected)');
+          });
+        } catch (err) {
+          // Ignore API errors in development
+          console.log('🔧 Development mode: Logout API not available (expected)');
+        }
+        
+        // Clear any tokens that might exist
+        authService.clearToken();
+        
+        setLoading(false);
+        return;
+      }
+      
+      // Production mode - full logout process
+      console.log('Production mode: Performing full logout process...');
+      
       // Add CSRF protection to logout request
       const csrfToken = authService.getCsrfToken();
-      await api.post('/auth/logout', { 
+      const response = await api.post('/auth/logout', { 
         nonce: csrfToken 
       });
       
@@ -266,10 +467,14 @@ export function AuthProvider({ children }) {
       authService.clearToken();
       setUser(null);
       userAccessService.clearAccessData();
+      
+      // Log the logout response for debugging
+      console.log('Logout API response:', response.data);
+      
     } catch (err) {
       console.error("Logout failed:", err);
       
-      // Even if the API call fails, clear tokens
+      // Even if the API call fails, clear tokens and user state
       authService.clearToken();
       setUser(null);
       userAccessService.clearAccessData();

@@ -52,8 +52,27 @@ class RoleService extends BaseService
      */
     public static function getRolePermissions($role)
     {
+        // Define action-specific capabilities
+        $action_capabilities = [
+            'create_patients',
+            'edit_patients', 
+            'delete_patients',
+            'schedule_appointments',
+            'add_visitation',
+            'edit_visitation',
+            'manage_medical_reports',
+            'add_lab_results',
+            'edit_lab_results',
+            'delete_lab_results',
+        ];
+
         $role_permissions = [
-            self::ROLE_ADMIN => array_merge(self::INVENTORY_PERMISSIONS, self::ACCESS_PERMISSIONS),
+            self::ROLE_ADMIN => array_merge(
+                self::INVENTORY_PERMISSIONS, 
+                self::ACCESS_PERMISSIONS,
+                // Admin gets all action capabilities EXCEPT schedule_appointments
+                array_diff($action_capabilities, ['schedule_appointments'])
+            ),
             self::ROLE_INVENTORY_MANAGER => array_merge(
                 self::INVENTORY_PERMISSIONS,
                 ['access_inventory', 'access_reports', 'access_notifications']
@@ -64,7 +83,7 @@ class RoleService extends BaseService
             ),
             self::ROLE_DOCTOR => [
                 'inventory_view',
-                'inventory_reports',
+                'inventory_reports', 
                 'inventory_critical_items',
                 'access_patients',
                 'access_doctors',
@@ -75,6 +94,12 @@ class RoleService extends BaseService
                 'access_notifications',
                 'access_reports',
                 'access_lab_dashboard',
+                'create_patients',
+                'edit_patients',
+                'add_visitation',
+                'edit_visitation',
+                'add_lab_results',
+                'edit_lab_results',
             ],
             self::ROLE_NURSE => [
                 'inventory_view',
@@ -87,6 +112,10 @@ class RoleService extends BaseService
                 'access_chat',
                 'access_notifications',
                 'access_lab_dashboard',
+                'edit_patients',
+                'schedule_appointments',
+                'add_visitation',
+                'edit_visitation',
             ],
             self::ROLE_STAFF => [
                 'inventory_view',
@@ -98,11 +127,16 @@ class RoleService extends BaseService
                 'access_notifications',
                 'access_reports',
                 'access_lab_dashboard',
+                'create_patients',
+                'edit_patients',
+                'schedule_appointments',
             ],
             self::ROLE_LAB_TECH => [
                 'access_patients',
                 'access_notifications',
                 'access_lab_dashboard',
+                'add_lab_results',
+                'edit_lab_results',
             ],
             self::ROLE_DESK_OFFICER => [
                 'access_patients',
@@ -113,6 +147,8 @@ class RoleService extends BaseService
                 'access_notifications',
                 'access_reports',
                 'access_lab_dashboard',
+                'create_patients',
+                'edit_patients',
             ],
             self::ROLE_PATIENT => [
                 'access_doctors',
@@ -135,6 +171,9 @@ class RoleService extends BaseService
     {
         self::add_roles();
         self::initializeInventoryRoles();
+        
+        // Sync all role capabilities to ensure consistency
+        self::syncRoleCapabilities();
     }
 
     /**
@@ -176,17 +215,21 @@ class RoleService extends BaseService
                 'read' => true,
                 'access_hospital_manager' => true,
                 'view_patients' => true,
-                'edit_patient' => true,
+                'create_patients' => true,  // Fixed: Admin should be able to create patients
+                'edit_patients' => true,   // Fixed: Admin should be able to edit patients
                 'delete_patients' => true,
-                'schedule_appointments' => true,
+                'schedule_appointments' => false, // Fixed: Admin should be able to schedule appointments
                 'add_visitation' => true,
                 'edit_visitation' => true,
                 'manage_medical_reports' => true,
+                'add_lab_results' => true,
+                'edit_lab_results' => true,
+                'delete_lab_results' => true,
                 // Grant all route access capabilities to administrators
                 'access_patients' => true,
                 'access_doctors' => true,
                 'access_departments' => true,
-                'access_appointments' => true,
+                'access_appointments' => false,
                 'access_visitations' => true,
                 'access_chat' => true,
                 'access_notifications' => true,
@@ -470,6 +513,7 @@ class RoleService extends BaseService
         
         // Map route access capabilities to route names
         $route_access_map = [
+            // Route access capabilities
             'patients' => isset($capabilities['access_patients']) ? $capabilities['access_patients'] : false,
             'doctors' => isset($capabilities['access_doctors']) ? $capabilities['access_doctors'] : false,
             'departments' => isset($capabilities['access_departments']) ? $capabilities['access_departments'] : false,
@@ -484,6 +528,18 @@ class RoleService extends BaseService
             'statistics' => isset($capabilities['access_statistics']) ? $capabilities['access_statistics'] : false,
             'settings' => isset($capabilities['access_settings']) ? $capabilities['access_settings'] : false,
             'lab_dashboard' => isset($capabilities['access_lab_dashboard']) ? $capabilities['access_lab_dashboard'] : false,
+            
+            // Action-specific capabilities - these are crucial for proper access control
+            'create_patients' => isset($capabilities['create_patients']) ? $capabilities['create_patients'] : false,
+            'edit_patients' => isset($capabilities['edit_patients']) ? $capabilities['edit_patients'] : false,
+            'delete_patients' => isset($capabilities['delete_patients']) ? $capabilities['delete_patients'] : false,
+            'schedule_appointments' => isset($capabilities['schedule_appointments']) ? $capabilities['schedule_appointments'] : false,
+            'add_visitation' => isset($capabilities['add_visitation']) ? $capabilities['add_visitation'] : false,
+            'edit_visitation' => isset($capabilities['edit_visitation']) ? $capabilities['edit_visitation'] : false,
+            'manage_medical_reports' => isset($capabilities['manage_medical_reports']) ? $capabilities['manage_medical_reports'] : false,
+            'add_lab_results' => isset($capabilities['add_lab_results']) ? $capabilities['add_lab_results'] : false,
+            'edit_lab_results' => isset($capabilities['edit_lab_results']) ? $capabilities['edit_lab_results'] : false,
+            'delete_lab_results' => isset($capabilities['delete_lab_results']) ? $capabilities['delete_lab_results'] : false,
         ];
         
         return $route_access_map;
@@ -651,5 +707,102 @@ class RoleService extends BaseService
         foreach ($hospital_roles as $role) {
             remove_role($role);
         }
+    }
+
+    /**
+     * Sync all role capabilities based on the central getRolePermissions method
+     * This ensures consistency between role definitions and actual WordPress capabilities
+     */
+    public static function syncRoleCapabilities()
+    {
+        $all_roles = [
+            self::ROLE_ADMIN,
+            self::ROLE_DOCTOR,
+            self::ROLE_NURSE,
+            self::ROLE_STAFF,
+            self::ROLE_PATIENT,
+            self::ROLE_LAB_TECH,
+            self::ROLE_DESK_OFFICER,
+            self::ROLE_INVENTORY_MANAGER,
+            self::ROLE_PHARMACY,
+        ];
+
+        foreach ($all_roles as $role_name) {
+            $role = get_role($role_name);
+            if (!$role && $role_name !== self::ROLE_ADMIN) {
+                // Role doesn't exist, skip it
+                continue;
+            }
+
+            // Get the permissions for this role from our central method
+            $permissions = self::getRolePermissions($role_name);
+            
+            if ($role_name === self::ROLE_ADMIN) {
+                // Handle administrator role specially
+                $role = get_role('administrator');
+                if ($role) {
+                    // Clear existing hospital capabilities first for admin too
+                    $all_hospital_capabilities = array_merge(
+                        self::INVENTORY_PERMISSIONS,
+                        self::ACCESS_PERMISSIONS,
+                        [
+                            'create_patients',
+                            'edit_patients', 
+                            'delete_patients',
+                            'schedule_appointments',
+                            'add_visitation',
+                            'edit_visitation',
+                            'manage_medical_reports',
+                            'add_lab_results',
+                            'edit_lab_results',
+                            'delete_lab_results',
+                        ]
+                    );
+
+                    // Remove all hospital capabilities first
+                    foreach ($all_hospital_capabilities as $cap) {
+                        $role->remove_cap($cap);
+                    }
+
+                    // Add the correct capabilities for administrator
+                    foreach ($permissions as $permission) {
+                        $role->add_cap($permission, true);
+                    }
+                }
+            } else {
+                // For other roles, sync their capabilities
+                if ($role) {
+                    // Clear existing hospital capabilities first
+                    $all_hospital_capabilities = array_merge(
+                        self::INVENTORY_PERMISSIONS,
+                        self::ACCESS_PERMISSIONS,
+                        [
+                            'create_patients',
+                            'edit_patients', 
+                            'delete_patients',
+                            'schedule_appointments',
+                            'add_visitation',
+                            'edit_visitation',
+                            'manage_medical_reports',
+                            'add_lab_results',
+                            'edit_lab_results',
+                            'delete_lab_results',
+                        ]
+                    );
+
+                    // Remove all hospital capabilities first
+                    foreach ($all_hospital_capabilities as $cap) {
+                        $role->remove_cap($cap);
+                    }
+
+                    // Add the correct capabilities for this role
+                    foreach ($permissions as $permission) {
+                        $role->add_cap($permission, true);
+                    }
+                }
+            }
+        }
+
+        error_log("Hospital Manager: Role capabilities synchronized successfully");
     }
 }

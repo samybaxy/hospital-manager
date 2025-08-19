@@ -4,11 +4,14 @@ import { useAuth } from '../context/AuthContext';
 import { useUserAccess } from '../hooks/useUserAccess';
 import AccessDebug from './AccessDebug';
 import Sidebar from './Sidebar';
+import DevModeToggle from './DevModeToggle';
+import DevModeStatus from './DevModeStatus';
 
 // Separate loading component to avoid conditional hook calls
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+const LoadingSpinner = ({ message = "Loading..." }) => (
+  <div className="flex items-center justify-center h-screen flex-col">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-600">{message}</p>
   </div>
 );
 
@@ -65,29 +68,46 @@ const Layout = ({ children }) => {
   
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    
+    // Close the user menu dropdown immediately
+    setUserMenuOpen(false);
+    
+    console.log('Starting logout process...');
+    
+    // Preserve dev mode setting before clearing storage
+    const devMode = localStorage.getItem('hospital_manager_dev_mode');
+    
     try {
-      setIsSigningOut(true);
-      
-      // Close the user menu dropdown immediately
-      setUserMenuOpen(false);
-      
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
       
-      // Short delay to ensure all state changes are processed
-      setTimeout(() => {
-        // Redirect to WordPress home page
-        window.location.href = '/'; // This will navigate to WordPress home, not the React app root
-      }, 100);
+      console.log('Logout completed successfully');
+      
     } catch (error) {
-      console.error("Error during sign out process:", error);
-      // Even if there's an error, try to redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-    } finally {
-      setIsSigningOut(false);
+      console.error("Error during logout API call:", error);
+      // Continue with cleanup even if API call failed
     }
+    
+    console.log('Clearing local state and redirecting to homepage...');
+    
+    // Clear all application state except dev mode setting
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Restore dev mode setting if it existed
+    if (devMode !== null) {
+      localStorage.setItem('hospital_manager_dev_mode', devMode);
+      console.log('Preserved dev mode setting:', devMode);
+    }
+    
+    // Always redirect to homepage (never wp-login.php)
+    const homeUrl = window.location.origin + '/';
+    console.log('Redirecting to:', homeUrl);
+    
+    // Use window.location.href for a clean redirect
+    window.location.href = homeUrl;
+    
   }, [logout]);
 
   // We've moved all navigation items to the Sidebar component
@@ -109,8 +129,12 @@ const Layout = ({ children }) => {
   }, []);
 
   // Handle loading and authentication states without conditional hook calls
-  if (authLoading || isSigningOut) {
-    return <LoadingSpinner />;
+  if (authLoading) {
+    return <LoadingSpinner message="Authenticating..." />;
+  }
+  
+  if (isSigningOut) {
+    return <LoadingSpinner message="Signing out..." />;
   }
 
   if (!isAuthenticated && location.pathname !== '/login') {
@@ -188,6 +212,9 @@ const Layout = ({ children }) => {
                     </span>
                   </div>
                 </div>
+                
+                {/* Development Mode Status */}
+                <DevModeStatus />
               </div>
 
               {/* Empty space to replace search bar */}
@@ -266,6 +293,9 @@ const Layout = ({ children }) => {
       
       {/* Debug component for administrators only */}
       {isAdministrator() && <AccessDebug />}
+      
+      {/* Development mode toggle - visible to admins and developers */}
+      <DevModeToggle />
     </div>
   );
 };

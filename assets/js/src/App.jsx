@@ -6,6 +6,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PatientDetailsProtectedRoute from './components/PatientDetailsProtectedRoute';
 import Unauthorized from './pages/Unauthorized';
 
+// Import development utilities
+import './utils/devConsole';
+
 // Import all page components
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
