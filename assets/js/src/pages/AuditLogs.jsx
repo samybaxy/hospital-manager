@@ -3,6 +3,23 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import { api } from '../services/apiService';
 
+/**
+ * Page numbers to show: first, last, and up to 2 either side of the current page,
+ * with null for the gaps ("…"). All 156 pages used to render as buttons, making
+ * the pager 8,000px wide.
+ */
+const pageWindow = (current, total) => {
+  const pages = new Set([1, total]);
+  for (let p = current - 2; p <= current + 2; p++) if (p >= 1 && p <= total) pages.add(p);
+  const sorted = [...pages].sort((a, b) => a - b);
+  const out = [];
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push(null);
+    out.push(p);
+  });
+  return out;
+};
+
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +95,8 @@ const AuditLogs = () => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Audit Logs</h1>
       
-      <div className="flex justify-between items-center">
-        <p className="text-lg text-gray-600">System activity and security logs</p>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <p className="text-base sm:text-lg text-gray-600">System activity and security logs</p>
         <div className="flex items-center">
           <span className="mr-2 text-sm text-gray-700">Filter by:</span>
           <select 
@@ -88,7 +105,7 @@ const AuditLogs = () => {
               setFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="min-h-11 sm:min-h-0 border border-gray-300 rounded-md px-3 py-1.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             {logTypes.map((type) => (
               <option key={type.value} value={type.value}>{type.label}</option>
@@ -168,7 +185,7 @@ const AuditLogs = () => {
         
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+          <div className="px-4 sm:px-6 py-3 flex items-center justify-between border-t border-gray-200">
             <div className="flex-1 flex justify-between sm:hidden">
               <Button
                 variant="secondary"
@@ -202,7 +219,9 @@ const AuditLogs = () => {
                   >
                     Previous
                   </button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  {pageWindow(currentPage, totalPages).map((page, i) => page === null ? (
+                    <span key={`gap-${i}`} className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm text-gray-500">…</span>
+                  ) : (
                     <button
                       key={page}
                       onClick={() => handlePageChange(page)}

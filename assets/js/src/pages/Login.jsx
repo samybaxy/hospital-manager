@@ -67,8 +67,8 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-16 px-4 sm:px-6 lg:px-8 my-12">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl my-12 mx-auto">
+    <div className="min-h-[70dvh] flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-6 sm:py-16 px-4 sm:px-6 lg:px-8 sm:my-12">
+      <div className="max-w-md w-full p-5 sm:p-8 bg-white rounded-lg shadow-xl sm:my-12 mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-primary-800">Hospital Manager</h2>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
@@ -125,7 +125,7 @@ const Login = () => {
               </label>
               <a 
                 href="#" 
-                className="text-sm text-primary-600 hover:text-primary-800"
+                className="inline-flex items-center min-h-11 -my-3 pl-2 text-sm text-primary-600 hover:text-primary-800"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowResetModal(true);
@@ -154,16 +154,16 @@ const Login = () => {
             </div>
           </div>
           
-          <div className="flex items-center">
+          <div className="flex items-center min-h-11">
             <input
               id="remember-me"
               name="remember-me"
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="size-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="remember-me" className="ml-2 block py-2 pr-2 text-sm text-gray-700">
               Remember me
             </label>
           </div>
@@ -171,7 +171,7 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150"
+              className="w-full flex justify-center min-h-11 items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base sm:text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

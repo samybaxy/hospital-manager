@@ -13,7 +13,7 @@ const formStyles = {
                text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500
                transition-all duration-200 ease-in-out`,
   label: 'block text-sm font-medium text-gray-700 mb-1',
-  section: 'px-6 py-6 bg-white rounded-md shadow-md sm:overflow-hidden mb-6 border border-gray-100',
+  section: 'px-4 py-5 sm:px-6 sm:py-6 bg-white rounded-md shadow-md sm:overflow-hidden mb-6 border border-gray-100',
   sectionTitle: 'text-lg font-medium text-gray-900 pb-3 border-b border-gray-200 mb-5 flex items-center',
   sectionIcon: 'mr-2 h-5 w-5 text-primary-500',
   fieldGroup: 'mb-4',
@@ -725,22 +725,23 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
               
               <div className="space-y-4">
                 {Object.entries(formData.appointment_availability).map(([day, hours]) => (
-                  <div key={day} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center min-w-0 flex-1">
+                  <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 border border-gray-200 rounded-lg">
+                    {/* Day + checkbox on one line; on phones the times go on the next line */}
+                    <div className="flex items-center min-w-0 sm:flex-1 min-h-11">
                       <input
                         type="checkbox"
                         id={`${day}_enabled`}
                         checked={hours.enabled}
                         onChange={(e) => handleWorkingHoursChange(day, 'enabled', e.target.checked)}
-                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mr-3"
+                        className="size-5 flex-shrink-0 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mr-3"
                       />
-                      <label htmlFor={`${day}_enabled`} className="text-sm font-medium text-gray-900 capitalize min-w-0 flex-1">
+                      <label htmlFor={`${day}_enabled`} className="inline-flex items-center min-h-11 text-base sm:text-sm font-medium text-gray-900 capitalize min-w-[6rem] flex-1">
                         {day.charAt(0).toUpperCase() + day.slice(1)}
                       </label>
                     </div>
                     
                     {hours.enabled && (
-                      <div className="flex items-center space-x-2">
+                      <div className="grid grid-cols-[1fr_auto_1fr] sm:flex items-center gap-2">
                         <div>
                           <label htmlFor={`${day}_start`} className="sr-only">Start time for {day}</label>
                           <input
@@ -748,7 +749,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                             id={`${day}_start`}
                             value={hours.start_time}
                             onChange={(e) => handleWorkingHoursChange(day, 'start_time', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm"
+                            className="w-full sm:w-auto min-h-11 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                           />
                         </div>
                         <span className="text-gray-500">to</span>
@@ -759,13 +760,13 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                             id={`${day}_end`}
                             value={hours.end_time}
                             onChange={(e) => handleWorkingHoursChange(day, 'end_time', e.target.value)}
-                            className={`px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm ${
+                            className={`w-full sm:w-auto min-h-11 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm ${
                               hours.start_time >= hours.end_time ? 'border-red-300' : ''
                             }`}
                           />
                         </div>
                         {hours.start_time >= hours.end_time && (
-                          <span className="text-xs text-red-500">
+                          <span className="col-span-3 text-xs text-red-500">
                             End time must be later than start time
                           </span>
                         )}
@@ -798,9 +799,10 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
             </div>
           </div>
 
-          <div className="pt-6 mt-6 flex justify-between border-t border-gray-200">
-            <Link to={cancelUrl}>
-              <Button type="button" variant="secondary" className="flex items-center">
+          {/* Phones: full-width buttons, Save on top */}
+          <div className="pt-6 mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between border-t border-gray-200">
+            <Link to={cancelUrl} className="w-full sm:w-auto">
+              <Button type="button" variant="secondary" className="flex items-center justify-center w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -811,7 +813,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
               type="submit" 
               variant="primary" 
               disabled={loading}
-              className={`flex items-center ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center w-full sm:w-auto ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <>

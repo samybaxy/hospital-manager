@@ -397,7 +397,7 @@ const DoctorDetails = () => {
             Doctor ID: {doctor.ID || '-'}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 md:mt-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 mt-3 md:mt-0">
           {canManageDoctors && (
             <Link to={`/doctors/${doctorId}/edit`} className="flex-1 sm:flex-none">
               <Button variant="primary" className="w-full sm:w-auto text-sm md:text-base px-3 py-2 md:px-4 md:py-2">

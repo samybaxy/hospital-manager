@@ -247,7 +247,7 @@ const Appointments = () => {
           {getValue() || 'Unknown Patient'}
         </div>
       ),
-      meta: { hideOnMobile: true, hideOnTablet: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 150,
     }] : []),
     ...(role !== 'doctor' ? [{
@@ -259,7 +259,7 @@ const Appointments = () => {
           {getValue() ? `Dr. ${getValue()}` : 'Unknown Doctor'}
         </div>
       ),
-      meta: { hideOnMobile: true, hideOnTablet: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 150,
     }] : []),
     {
@@ -300,13 +300,13 @@ const Appointments = () => {
             <Link 
               to={`/appointments/${appointment.ID}`} 
               state={{ returnTo: 'appointments', returnPath: '/appointments' }}
-              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              <span className="hidden sm:inline">Details</span>
+              <span>Details</span>
             </Link>
             
             {appointment.status === 'pending' && (
@@ -315,19 +315,19 @@ const Appointments = () => {
                   <button
                     onClick={() => role !== 'patient' ? api.put(`/appointments/${appointment.ID}`, { status: 'confirmed' }).then(fetchAppointments) : null}
                     disabled={role === 'patient'}
-                    className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    className={`inline-flex items-center px-2.5 py-1.5 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                       role === 'patient'
                         ? 'border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed'
                         : 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100 focus:ring-green-500'
                     }`}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="hidden sm:inline">Confirm</span>
+                    <span>Confirm</span>
                   </button>
                   {role === 'patient' && (
-                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                    <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
                       The doctor will need to confirm your appointment
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                     </div>
@@ -335,12 +335,12 @@ const Appointments = () => {
                 </div>
                 <button
                   onClick={() => handleCancelClick(appointment.ID)}
-                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <span className="hidden sm:inline">Cancel</span>
+                  <span>Cancel</span>
                 </button>
               </>
             )}
@@ -349,21 +349,21 @@ const Appointments = () => {
               <>
                 <button
                   onClick={() => api.put(`/appointments/${appointment.ID}`, { status: 'completed' }).then(fetchAppointments)}
-                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+                  className="inline-flex items-center px-2.5 py-1.5 border border-purple-300 text-xs font-medium rounded text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span className="hidden sm:inline">Mark Completed</span>
+                  <span>Mark Completed</span>
                 </button>
                 <button
                   onClick={() => handleCancelClick(appointment.ID)}
-                  className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <span className="hidden sm:inline">Cancel</span>
+                  <span>Cancel</span>
                 </button>
               </>
             )}
@@ -547,8 +547,8 @@ const renderCancellationConfirmation = () => {
   if (!cancellationState.showConfirmation) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-xl sm:rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90dvh] overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6">
         <h3 className="text-lg font-semibold text-red-700 mb-2">Cancel Appointment</h3>
         
         <p className="mb-4 text-gray-700">
@@ -562,7 +562,7 @@ const renderCancellationConfirmation = () => {
           <textarea
             id="cancel-reason"
             rows={3}
-            className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-base sm:text-sm focus:ring-blue-500 focus:border-blue-500"
             placeholder="Please provide a reason for cancelling this appointment"
             value={cancellationState.reason}
             onChange={handleReasonChange}
@@ -575,11 +575,12 @@ const renderCancellationConfirmation = () => {
           </div>
         )}
         
-        <div className="flex space-x-3 justify-end">
+        {/* Phones: full-width buttons, the destructive one last (furthest from the thumb's resting place) */}
+        <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
           <Button
             onClick={handleCancelDismiss}
             disabled={cancellationState.isLoading}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-800"
+            className="w-full sm:w-auto justify-center bg-gray-200 hover:bg-gray-300 text-gray-800"
           >
             Keep Appointment
           </Button>
@@ -587,7 +588,7 @@ const renderCancellationConfirmation = () => {
           <Button
             onClick={handleCancelConfirm}
             disabled={cancellationState.isLoading}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 text-white"
           >
             {cancellationState.isLoading ? (
               <>
@@ -645,10 +646,13 @@ const hasValidAppointmentData = () => {
               </Button>
             </Link>
             {role !== 'patient' && (
-              <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+              <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
                 Only patients can book appointments with doctors
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
               </div>
+            )}
+            {role !== 'patient' && (
+              <p className="[@media(hover:hover)]:hidden mt-1 text-xs opacity-80">Only patients can book appointments</p>
             )}
           </div>
         </div>
@@ -677,7 +681,7 @@ const hasValidAppointmentData = () => {
                   placeholder="Search by patient or doctor name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base sm:text-sm"
                 />
               </div>
               <Button type="submit" variant="secondary" className="whitespace-nowrap">
@@ -793,10 +797,13 @@ const hasValidAppointmentData = () => {
                 </Button>
               </Link>
               {role !== 'patient' && (
-                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
                   Only patients can book appointments with doctors
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
+              )}
+              {role !== 'patient' && (
+                <p className="[@media(hover:hover)]:hidden mt-1 text-xs opacity-80">Only patients can book appointments</p>
               )}
             </div>
           </div>

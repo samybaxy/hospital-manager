@@ -106,7 +106,7 @@ const Notifications = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Notifications</h1>
-      <p className="text-lg text-gray-600">Stay updated with latest hospital activities</p>
+      <p className="text-base sm:text-lg text-gray-600">Stay updated with latest hospital activities</p>
       
       {actionError && (
         <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3">{actionError}</div>

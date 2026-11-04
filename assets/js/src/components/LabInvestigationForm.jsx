@@ -413,6 +413,7 @@ const LabInvestigationForm = ({
                   <input
                     type={param.type === 'numeric' ? 'number' : 'text'}
                     step={param.type === 'numeric' ? '0.01' : undefined}
+                    inputMode={param.type === 'numeric' ? 'decimal' : undefined}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     value={currentValue}
                     onChange={(e) => updateTestResult(testCode, param.name, 'value', e.target.value)}
@@ -423,17 +424,17 @@ const LabInvestigationForm = ({
                       Reference: {param.reference_range.min} - {param.reference_range.max} {param.unit}
                     </p>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-[5.5rem_1fr] gap-2">
                     <input
                       type="text"
-                      className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                       value={currentFlag}
                       onChange={(e) => updateTestResult(testCode, param.name, 'flag', e.target.value)}
                       placeholder="Flag (H/L/N)"
                     />
                     <input
                       type="text"
-                      className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                      className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                       value={currentNotes}
                       onChange={(e) => updateTestResult(testCode, param.name, 'notes', e.target.value)}
                       placeholder="Notes"
@@ -479,17 +480,17 @@ const LabInvestigationForm = ({
                         Reference: {paramData.reference_range.min} - {paramData.reference_range.max} {paramData.unit}
                       </p>
                     )}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-[5.5rem_1fr] gap-2">
                       <input
                         type="text"
-                        className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                         value={paramData.flag || ''}
                         onChange={(e) => updateTestResult(testCode, paramName, 'flag', e.target.value)}
                         placeholder="Flag (H/L/N)"
                       />
                       <input
                         type="text"
-                        className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                        className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                         value={paramData.notes || ''}
                         onChange={(e) => updateTestResult(testCode, paramName, 'notes', e.target.value)}
                         placeholder="Notes"
@@ -541,17 +542,17 @@ const LabInvestigationForm = ({
                             Reference: {paramData.reference_range.min} - {paramData.reference_range.max} {paramData.unit}
                           </p>
                         )}
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-[5.5rem_1fr] gap-2">
                           <input
                             type="text"
-                            className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                            className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                             value={paramData.flag || ''}
                             onChange={(e) => updateTestResult(testCode, paramName, 'flag', e.target.value)}
                             placeholder="Flag (H/L/N)"
                           />
                           <input
                             type="text"
-                            className="px-3 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                            className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-base sm:text-sm"
                             value={paramData.notes || ''}
                             onChange={(e) => updateTestResult(testCode, paramName, 'notes', e.target.value)}
                             placeholder="Notes"
@@ -574,7 +575,7 @@ const LabInvestigationForm = ({
           <p className="text-sm text-gray-600 mb-3">Raw test results data (JSON format):</p>
           <textarea
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-primary-500 font-mono text-base sm:text-sm"
             value={typeof formData.test_results === 'string' ? formData.test_results : JSON.stringify(formData.test_results, null, 2)}
             onChange={(e) => {
               try {
@@ -632,6 +633,7 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
+              inputMode="numeric"
               className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.visitation_id ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -650,6 +652,7 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
+              inputMode="numeric"
               className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.patient_id ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -668,6 +671,7 @@ const LabInvestigationForm = ({
             </label>
             <input
               type="number"
+              inputMode="numeric"
               className={`w-full px-3 py-2 border rounded-md bg-gray-100 text-gray-600 cursor-not-allowed ${
                 errors.doctor_id ? 'border-red-300' : 'border-gray-300'
               }`}
@@ -684,6 +688,7 @@ const LabInvestigationForm = ({
             <label className="block text-sm font-medium text-gray-700 mb-1">Lab Technician ID</label>
             <input
               type="number"
+              inputMode="numeric"
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed"
               value={formData.lab_tech_id}
               onChange={(e) => handleInputChange('lab_tech_id', e.target.value)}
@@ -857,12 +862,13 @@ const LabInvestigationForm = ({
       </Card>
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Button
           type="button"
           variant="secondary"
           onClick={onCancel}
           disabled={loading}
+          className="w-full sm:w-auto justify-center"
         >
           Cancel
         </Button>
@@ -870,6 +876,7 @@ const LabInvestigationForm = ({
           type="submit"
           variant="primary"
           disabled={loading}
+          className="w-full sm:w-auto justify-center"
         >
           {loading ? 'Saving...' : (investigation ? 'Update Investigation' : 'Create Investigation')}
         </Button>

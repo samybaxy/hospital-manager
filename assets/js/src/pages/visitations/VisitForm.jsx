@@ -5,6 +5,24 @@ import Button from '../../components/Button';
 import { api } from '../../services/apiService';
 import { useUserAccess } from '../../hooks/useUserAccess';
 
+
+// Open the browser's date/time picker when the wrapper is tapped. showPicker()
+// is missing in older Safari and throws if the input isn't focusable yet, so
+// fall back to focusing the input (which opens the native picker on phones).
+const openNativePicker = (id) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  try {
+    if (typeof el.showPicker === 'function') {
+      el.showPicker();
+      return;
+    }
+  } catch (e) {
+    // fall through to focus()
+  }
+  el.focus();
+};
+
 const VisitForm = ({ 
   initialData = {}, 
   onSubmit, 
@@ -448,7 +466,7 @@ const VisitForm = ({
               <label htmlFor="date" className="block text-sm font-semibold text-gray-700 mb-2">
                 Visit Date <span className="text-red-500">*</span>
               </label>
-              <div className="relative" onClick={() => document.getElementById('date').showPicker()}>
+              <div className="relative" onClick={() => openNativePicker('date')}>
                 <input
                   type="date"
                   id="date"
@@ -466,7 +484,7 @@ const VisitForm = ({
               <label htmlFor="time" className="block text-sm font-semibold text-gray-700 mb-2">
                 Visit Time <span className="text-red-500">*</span>
               </label>
-              <div className="relative" onClick={() => document.getElementById('time').showPicker()}>
+              <div className="relative" onClick={() => openNativePicker('time')}>
                 <input
                   type="time"
                   id="time"
@@ -550,12 +568,14 @@ const VisitForm = ({
           </div>
 
           {/* Form Actions */}
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+          {/* Phones: full-width buttons, primary on top */}
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-6 border-t border-gray-200">
             <Button
               type="button"
               variant="secondary"
               onClick={() => navigate('/visitations')}
               disabled={loading}
+              className="w-full sm:w-auto justify-center"
             >
               Cancel
             </Button>
@@ -563,7 +583,7 @@ const VisitForm = ({
               type="submit"
               variant="primary"
               disabled={loading}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+              className="w-full sm:w-auto justify-center bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

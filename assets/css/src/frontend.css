@@ -5,237 +5,70 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== CORE RESET & FOUNDATION ===== */
-/* Clean slate for the hospital manager app */
-div.wp-site-blocks > main,
-.wp-block-group {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
+/* ===== FOUNDATION =====
+ * The app is rendered by the [hospital_manager] shortcode inside a WordPress
+ * (block) theme page. Rules about the theme are scoped with :has() to the page
+ * that contains the app, so the rest of the site keeps its layout.
+ *
+ * Things deliberately NOT done any more (they caused the mobile bugs):
+ *  - overflow-x:hidden on the app root: it made the root a scroll container, so
+ *    every position:sticky inside (header, sidebar) stopped sticking, and it hid
+ *    overflowing content instead of letting us see and fix it. We use clip.
+ *  - width:100vw: 100vw includes the scrollbar and ignores parent offsets, so it
+ *    made the app wider than the screen.
+ *  - blanket overrides of Tailwind's h-screen/min-h-screen: use h-dvh/min-h-dvh
+ *    in components instead (100vh is taller than the visible area on phones).
+ */
+
+/* No gap between the theme header and the app */
+:where(.wp-site-blocks > main, .wp-block-group, .wp-block-post-content, .entry-content):has(#hospital-manager-root) {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 
-#hospital-manager-root {
-  /* Reset all positioning and spacing */
-  position: static !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  transform: none !important;
-  
-  /* Full width, no constraints */
-  width: 100% !important;
-  max-width: none !important;
-  
-  /* Natural height, no overflow issues */
-  height: auto !important;
-  min-height: auto !important;
-  overflow: visible !important;
-  overflow-x: hidden !important;
-  
-  /* Ensure proper rendering context */
-  box-sizing: border-box !important;
-}
-
-/* Main app container */
-.hospital-manager-app {
-  /* Reset positioning */
-  position: relative !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  
-  /* Full width with proper box model */
-  width: 100% !important;
-  max-width: none !important;
-  box-sizing: border-box !important;
-  
-  /* Natural height flow */
-  height: auto !important;
-  min-height: auto !important;
-  overflow-x: hidden !important;
-}
-
-/* ===== RESPONSIVE CONTAINER SYSTEM ===== */
-.hospital-manager-container {
-  /* Base container with responsive padding */
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 auto !important;
-  box-sizing: border-box !important;
-  
-  /* Responsive padding system */
-  padding-left: 0.75rem !important; /* 12px */
-  padding-right: 0.75rem !important;
-}
-
-/* Tablet responsive */
-@media (min-width: 640px) {
-  .hospital-manager-container {
-    padding-left: 1rem !important; /* 16px */
-    padding-right: 1rem !important;
-  }
-}
-
-/* Desktop responsive */
-@media (min-width: 1024px) {
-  .hospital-manager-container {
-    padding-left: 1.5rem !important; /* 24px */
-    padding-right: 1.5rem !important;
-  }
-}
-
-/* Large desktop */
-@media (min-width: 1280px) {
-  .hospital-manager-container {
-    padding-left: 2rem !important; /* 32px */
-    padding-right: 2rem !important;
-  }
-}
-
-/* ===== LAYOUT FIXES ===== */
-/* Fix WordPress theme interference */
-body #hospital-manager-root,
-body.admin-bar #hospital-manager-root,
-.wp-site-blocks #hospital-manager-root,
-.site-content #hospital-manager-root,
-main #hospital-manager-root {
-  /* Override any theme positioning */
-  position: static !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  transform: none !important;
-  top: auto !important;
-  left: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  
-  /* Ensure full width */
-  width: 100% !important;
-  max-width: none !important;
-}
-
-/* Fix main content layout */
-main.flex-1 {
-  /* Natural flex behavior */
-  flex: 1 1 auto !important;
-  height: auto !important;
-  min-height: auto !important;
-  overflow: visible !important;
-}
-
-/* Sidebar responsive fixes */
-.sidebar-mobile-fix {
-  /* Mobile - full height with fallbacks for various browsers */
-  height: 100vh !important; /* Standard viewport height */
-  height: -webkit-fill-available !important; /* For iOS Safari */
-  height: -moz-available !important; /* For Firefox */
-  height: stretch !important; /* Future-proof standard */
-  max-height: 100vh !important;
-  position: fixed !important;
-  top: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important; /* Smooth scrolling on iOS */
-}
-
-@media (min-width: 768px) {
-  .sidebar-mobile-fix {
-    /* Desktop - natural height */
-    height: auto !important;
-    min-height: 100vh !important;
-    max-height: none !important;
-    position: sticky !important;
-  }
-}
-
-/* ===== MOBILE OPTIMIZATIONS ===== */
+/* Phones: let the app use the full width (the theme's side padding would
+   squeeze it to ~300px on a 360px phone) */
 @media (max-width: 767px) {
-  /* AGGRESSIVE WordPress theme override for mobile */
-  body,
-  .wp-site-blocks,
-  .wp-block-group,
-  .wp-block-group__inner-container,
-  .site-content,
-  .entry-content,
-  main,
-  .has-global-padding,
-  .wp-container-core-group-is-layout-1,
-  .wp-container-core-group-is-layout-2,
-  .wp-container-core-group-is-layout-3 {
+  :where(.wp-site-blocks, main, .wp-block-group, .wp-block-post-content, .entry-content, .has-global-padding):has(#hospital-manager-root) {
     padding-left: 0 !important;
     padding-right: 0 !important;
     margin-left: 0 !important;
     margin-right: 0 !important;
   }
-  
-  /* Force full width for hospital manager on mobile */
-  #hospital-manager-root,
-  .hospital-manager-app {
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow-x: hidden !important;
-    position: relative !important;
-    left: 0 !important;
-    right: 0 !important;
-  }
-  
-  /* Remove container padding on mobile for edge-to-edge layout */
-  .hospital-manager-container {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-  }
-  
-  /* Special mobile content spacing */
-  .mobile-content-padding {
-    padding-left: 1rem !important;
-    padding-right: 1rem !important;
-  }
-  
-  /* Mobile sidebar when open - additional fixes */
-  .mobile-sidebar-open {
-    height: 100% !important;
-    min-height: 100vh !important;
-    min-height: -webkit-fill-available !important;
-    min-height: -moz-available !important;
-    min-height: stretch !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  
-  /* Additional fix for iOS Safari - ensure viewport height is set properly */
-  html, body, #hospital-manager-root, .hospital-manager-app {
-    min-height: -webkit-fill-available !important;
-  }
-
-  /* Ensure any nested WordPress containers don't add padding */
-  #hospital-manager-root .wp-block-group,
-  #hospital-manager-root .wp-site-blocks,
-  #hospital-manager-root .site-content,
-  #hospital-manager-root .entry-content {
-    padding: 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
 }
 
-/* ===== UTILITY OVERRIDES ===== */
-/* Remove problematic height constraints */
-.min-h-screen {
-  min-height: auto !important;
-}
-
-div[class*="h-screen"] {
-  height: auto !important;
-}
-
-/* Fix router wrapper */
-.hospital-manager-app > div[data-reach-router-wrapper] {
-  height: auto !important;
-  min-height: auto !important;
+/* The shortcode wrapper: full content width, no padding of its own (the app's
+   header and main area set their own gutters) */
+.hospital-manager-container {
   width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+#hospital-manager-root,
+.hospital-manager-app {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* clip, not hidden: hides stray overflow without breaking position:sticky */
+  overflow-x: clip;
+}
+
+/* The WordPress admin bar (logged-in users) is fixed from 600px up; sticky and
+   fixed app bars sit below it. Below 600px it scrolls away with the page. */
+#hospital-manager-root {
+  --hm-top-offset: 0px;
+}
+@media (min-width: 600px) {
+  body.admin-bar #hospital-manager-root {
+    --hm-top-offset: var(--wp-admin--admin-bar--height, 0px);
+  }
 }
 
 /* ===== CUSTOM UTILITY CLASSES ===== */
@@ -256,11 +89,11 @@ div[class*="h-screen"] {
 /* ===== COMPONENT CLASSES ===== */
 @layer components {
   .hm-btn {
-    @apply px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors;
+    @apply min-h-11 sm:min-h-0 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors;
   }
   
   .hm-card {
-    @apply bg-white rounded-lg shadow-md p-6;
+    @apply bg-white rounded-lg shadow-md p-4 sm:p-6;
   }
   
   .hm-gradient-card {
@@ -268,7 +101,7 @@ div[class*="h-screen"] {
   }
   
   .hm-tab-button {
-    @apply py-4 px-6 border-b-3 font-medium text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0;
+    @apply py-3 px-4 sm:py-4 sm:px-6 min-h-11 border-b-3 font-medium text-sm whitespace-nowrap transition-all duration-200 flex-shrink-0;
   }
   
   .hm-tab-active {
@@ -280,10 +113,10 @@ div[class*="h-screen"] {
   }
   
   .hm-filter-input {
-    @apply w-full border border-gray-300 rounded-lg px-4 py-2.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200;
+    @apply w-full min-h-11 text-base sm:text-sm border border-gray-300 rounded-lg px-4 py-2.5 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200;
   }
   
   .hm-summary-card {
-    @apply text-center p-6 rounded-lg shadow-lg border hover:shadow-xl transition-all duration-300;
+    @apply text-center p-4 sm:p-6 rounded-lg shadow-lg border hover:shadow-xl transition-all duration-300;
   }
 }

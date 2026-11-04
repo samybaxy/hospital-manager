@@ -37,90 +37,9 @@ import AuditLogs from './pages/AuditLogs';
 import Notifications from './pages/Notifications';
 import Statistics from './pages/Statistics';
 
-// Clean responsive styles - no complex positioning hacks
-const appStyles = `
-  /* Clean foundation for hospital manager app */
-  #hospital-manager-root {
-    /* Reset all problematic positioning */
-    position: static !important;
-    margin: 0 !important;
-    padding: 1rem 0 !important;
-    transform: none !important;
-    z-index: 1 !important;
-    
-    /* Full width, proper box model */
-    width: 100% !important;
-    max-width: none !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-  }
-  
-  /* Clean app container */
-  .hospital-manager-app {
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-  }
-  
-  /* MOBILE: Aggressive WordPress override */
-  @media (max-width: 767px) {
-    /* Force the root to break out of any WordPress containers */
-    #hospital-manager-root {
-      position: relative !important;
-      width: 100vw !important;
-      max-width: 100vw !important;
-      left: 50% !important;
-      right: 50% !important;
-      margin-left: -50vw !important;
-      margin-right: -50vw !important;
-      padding: 0.5rem 0 !important;
-    }
-    
-    .hospital-manager-app {
-      width: 100vw !important;
-      max-width: 100vw !important;
-    }
-    
-    /* Override any parent WordPress block padding */
-    #hospital-manager-root .wp-block-group,
-    #hospital-manager-root .wp-site-blocks,
-    #hospital-manager-root .entry-content {
-      padding: 0 !important;
-      margin: 0 !important;
-    }
-  }
-  
-  /* Responsive padding system for larger screens */
-  @media (min-width: 768px) {
-    #hospital-manager-root {
-      padding: 1rem 0 !important;
-    }
-  }
-  
-  @media (min-width: 1024px) {
-    #hospital-manager-root {
-      padding: 1.5rem 0 !important;
-    }
-  }
-`;
-
-// Simple, clean style injection
-const injectStyles = () => {
-  if (typeof document !== 'undefined') {
-    const existingStyle = document.getElementById('hospital-manager-positioning');
-    if (existingStyle) {
-      existingStyle.remove();
-    }
-    
-    const styleElement = document.createElement('style');
-    styleElement.id = 'hospital-manager-positioning';
-    styleElement.textContent = appStyles;
-    document.head.appendChild(styleElement);
-  }
-};
+// (A runtime <style id="hospital-manager-positioning"> block used to be injected
+// here. It fought assets/css/src/frontend.css, used 100vw and overflow-x:hidden,
+// and lost to it anyway; all app-level layout CSS now lives in frontend.css.)
 
 // Simple scroll to top on route changes
 const ScrollToTop = () => {
@@ -291,11 +210,6 @@ const AppRoutes = () => {
 
 // Main App component with router
 const App = () => {
-  // Simple style injection on mount
-  useEffect(() => {
-    injectStyles();
-  }, []);
-
   return (
     <div className="hospital-manager-app">
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

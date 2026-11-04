@@ -343,7 +343,7 @@ const calendarStyles = `
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .react-calendar {
-      padding: 16px;
+      padding: 12px;
       border-radius: 20px;
     }
     
@@ -383,13 +383,16 @@ const calendarStyles = `
   
   @media (max-width: 480px) {
     .react-calendar {
-      padding: 12px;
+      padding: 8px;
     }
     
+    /* Day tiles stay 44px tall (thumb-sized) on small phones; they get
+       narrower than they are tall, so drop the square aspect ratio. */
     .react-calendar__tile {
-      min-height: 38px;
-      max-height: 38px;
-      font-size: 13px;
+      aspect-ratio: auto;
+      min-height: 44px;
+      max-height: 44px;
+      font-size: 14px;
       border-radius: 10px;
     }
     
@@ -399,16 +402,17 @@ const calendarStyles = `
     }
     
     .react-calendar__month-view__days {
-      gap: 3px;
+      gap: 2px;
     }
     
     .react-calendar__navigation {
-      height: 48px;
-      padding: 6px;
+      height: 52px;
+      padding: 4px;
     }
     
     .react-calendar__navigation button {
-      min-width: 36px;
+      min-width: 44px;
+      min-height: 44px;
       font-size: 13px;
       border-radius: 8px;
     }
@@ -1070,7 +1074,7 @@ const BookAppointment = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-6 px-4 md:px-6 lg:px-8">
       {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      <div className="hidden sm:block motion-reduce:hidden fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div className="absolute top-20 left-10 w-32 h-32 bg-purple-200 rounded-full opacity-20 hope-element"></div>
         <div className="absolute top-40 right-20 w-24 h-24 bg-blue-200 rounded-full opacity-25 hope-element" style={{animationDelay: '1s'}}></div>
         <div className="absolute bottom-40 left-1/4 w-40 h-40 bg-pink-200 rounded-full opacity-15 hope-element" style={{animationDelay: '2s'}}></div>

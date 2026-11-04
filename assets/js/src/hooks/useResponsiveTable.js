@@ -27,8 +27,10 @@ export const useResponsiveTable = ({
   });
 
   // Responsive breakpoint state
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
+  // Start from the real width so phones don't render every column first
+  const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1280;
+  const [isMobile, setIsMobile] = useState(initialWidth < 640);
+  const [isTablet, setIsTablet] = useState(initialWidth >= 640 && initialWidth < 1024);
 
   // Monitor screen size for responsive behavior
   useEffect(() => {

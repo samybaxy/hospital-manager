@@ -13,7 +13,7 @@ const formStyles = {
                text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500
                transition-all duration-200 ease-in-out`,
   label: 'block text-sm font-medium text-gray-700 mb-1',
-  section: 'px-6 py-6 bg-white rounded-md shadow-md sm:overflow-hidden mb-6 border border-gray-100',
+  section: 'px-4 py-5 sm:px-6 sm:py-6 bg-white rounded-md shadow-md sm:overflow-hidden mb-6 border border-gray-100',
   sectionTitle: 'text-lg font-medium text-gray-900 pb-3 border-b border-gray-200 mb-5 flex items-center',
   sectionIcon: 'mr-2 h-5 w-5 text-primary-500',
   fieldGroup: 'mb-4',
@@ -409,6 +409,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                   <div>
                     <input
                       type="number"
+                      inputMode="numeric"
                       name="age"
                       id="age"
                       value={formData.age}
@@ -496,6 +497,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                   <div>
                     <input
                       type="number"
+                      inputMode="decimal"
                       name="height"
                       id="height"
                       value={formData.height}
@@ -514,6 +516,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
                   <div>
                     <input
                       type="number"
+                      inputMode="decimal"
                       name="weight"
                       id="weight"
                       value={formData.weight}
@@ -774,9 +777,10 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
             </div>
           </div>
 
-          <div className="pt-6 mt-6 flex justify-between border-t border-gray-200">
-            <Link to={cancelUrl}>
-              <Button type="button" variant="secondary" className="flex items-center">
+          {/* Phones: full-width buttons, Save on top */}
+          <div className="pt-6 mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between border-t border-gray-200">
+            <Link to={cancelUrl} className="w-full sm:w-auto">
+              <Button type="button" variant="secondary" className="flex items-center justify-center w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -787,7 +791,7 @@ const PatientForm = ({ patient = {}, isEditing = false, cancelUrl = '/patients' 
               type="submit" 
               variant="primary" 
               disabled={loading}
-              className={`flex items-center ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
+              className={`flex items-center justify-center w-full sm:w-auto ${loading ? 'opacity-75 cursor-not-allowed' : ''}`}
             >
               {loading ? (
                 <>
