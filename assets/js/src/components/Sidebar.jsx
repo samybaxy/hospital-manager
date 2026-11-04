@@ -32,7 +32,7 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
       <Link 
         to={linkPath} 
         className={`
-          flex items-center px-3 py-2 text-base font-medium rounded-md group w-full
+          flex items-center min-h-11 px-3 py-2 text-base font-medium rounded-md group w-full
           ${isActive 
             ? 'bg-primary-900 text-white' 
             : 'text-primary-100 hover:bg-primary-700 hover:text-white'}
@@ -182,7 +182,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
       
       {/* Navigation Menu */}
       <nav className="mt-4 flex-1 flex flex-col">
-        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full flex-1 pb-20 md:pb-4`}>
+        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (
             <NavItem 

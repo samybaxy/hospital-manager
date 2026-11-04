@@ -163,13 +163,13 @@ const ViewVisitDetails = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-6 text-white">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold">Visit Details #{visit.ID}</h1>
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-4 sm:p-6 text-white">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold break-words">Visit Details #{visit.ID}</h1>
             <p className="text-indigo-100 mt-2">Complete information about this patient visit</p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
             {hasEditAccess && (
               <Button
                 variant="secondary"

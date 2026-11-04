@@ -276,14 +276,14 @@ const Dashboard = () => {
                           strokeLinecap="round" 
                           strokeLinejoin="round" 
                           strokeWidth={2} 
-                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" 
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" 
                         />
                       </svg>
                       Book Appointment
                     </div>
                   </Button>
                 </div>
-                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
                   <div className="flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -292,6 +292,9 @@ const Dashboard = () => {
                   </div>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
+                <p className="[@media(hover:hover)]:hidden mt-1 text-xs text-gray-500 text-center">
+                  {isPatient() ? 'Patient access only' : 'Appointment scheduling is disabled for administrators'}
+                </p>
               </div>
             )}
           </div>
@@ -351,7 +354,7 @@ const Dashboard = () => {
                   </div>
                 ))}
                 <div className="pt-3 text-right">
-                  <Link to="/appointments" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  <Link to="/appointments" className="inline-flex items-center min-h-11 text-blue-600 hover:text-blue-800 text-sm font-medium">
                     {isPatient() ? 'View my appointments' : 'View all appointments'} →
                   </Link>
                 </div>
@@ -397,14 +400,14 @@ const Dashboard = () => {
                               strokeLinecap="round" 
                               strokeLinejoin="round" 
                               strokeWidth={2} 
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" 
+                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" 
                             />
                           </svg>
                           Schedule Appointment
                         </div>
                       </Button>
                     </div>
-                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                    <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
                       <div className="flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -413,6 +416,7 @@ const Dashboard = () => {
                       </div>
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                     </div>
+                    <p className="[@media(hover:hover)]:hidden mt-1 text-xs text-gray-500 text-center">Appointment scheduling is disabled for administrators</p>
                   </div>
                 )}
               </div>

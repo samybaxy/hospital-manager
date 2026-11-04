@@ -257,7 +257,7 @@ const PatientDetails = () => {
             Patient patientId: {patient.ID || '-'}
           </p>
         </div>
-        <div className="flex gap-2 mt-2 md:mt-0">
+        <div className="flex flex-wrap gap-2 mt-3 md:mt-0">
           {hasAccess('edit_patients') && (
           <Link to={`/patients/${patientId}/edit`}>
             <Button variant="primary">
@@ -281,9 +281,9 @@ const PatientDetails = () => {
 
       {/* Tabs Navigation */}
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex">
+        <nav className="-mb-px flex overflow-x-auto scrollbar-hide" aria-label="Patient sections">
           <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
+            className={`shrink-0 min-h-11 py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'profile'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -293,7 +293,7 @@ const PatientDetails = () => {
             Profile
           </button>
           <button
-            className={`py-2 px-4 border-b-2 font-medium text-sm ${
+            className={`shrink-0 min-h-11 py-2 px-4 border-b-2 font-medium text-sm whitespace-nowrap ${
               activeTab === 'medical'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -307,43 +307,43 @@ const PatientDetails = () => {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <Card title="Personal Information">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Full Name</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.first_name} {patient.last_name}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Full Name</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.first_name} {patient.last_name}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Gender</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.gender || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Gender</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.gender || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Age</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.age ? `${patient.age} years` : '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Age</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.age ? `${patient.age} years` : '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Blood Group</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Blood Group</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.blood_group || patient.blood_group || '-'}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Height</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Height</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.height ? `${patient.bio_data.height} cm` : '-'}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Weight</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Weight</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.weight ? `${patient.bio_data.weight} kg` : '-'}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Marital Status</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Marital Status</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       patient.marital_status === 'Married' ? 'bg-green-100 text-green-800' : 
                       patient.marital_status === 'Divorced' ? 'bg-red-100 text-red-800' :
@@ -360,50 +360,50 @@ const PatientDetails = () => {
           </Card>
 
           <Card title="Contact Information">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Phone</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.phone || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Phone</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.phone || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Email</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.email || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Email</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.email || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Address</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.address || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Address</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.address || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">City</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.city || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">City</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.city || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">State</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.state || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">State</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.state || '-'}</td>
                 </tr>
               </tbody>
             </table>
           </Card>
 
           <Card title="Emergency Contact">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Name</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Name</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.emergency_contact?.name || patient.emergency_contact_name || '-'}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Relationship</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Relationship</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.emergency_contact?.relationship || patient.emergency_contact_relationship || '-'}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Phone</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Phone</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
                     {patient.bio_data?.emergency_contact?.phone || patient.emergency_contact_phone || '-'}
                   </td>
                 </tr>
@@ -412,11 +412,11 @@ const PatientDetails = () => {
           </Card>
 
           <Card title="Medical Information">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Allergies</td>
-                  <td className="px-4 py-2 text-sm">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Allergies</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm break-words">
                     {patient.bio_data?.allergies ? (
                       <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                         {patient.bio_data.allergies}
@@ -426,9 +426,9 @@ const PatientDetails = () => {
                     )}
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Chronic Conditions</td>
-                  <td className="px-4 py-2 text-sm">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Chronic Conditions</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm break-words">
                     {patient.bio_data?.chronic_conditions ? (
                       <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
                         {patient.bio_data.chronic_conditions}
@@ -443,11 +443,11 @@ const PatientDetails = () => {
           </Card>
 
           <Card title="Registration Information">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Status</td>
-                  <td className="px-4 py-2 text-sm">
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Status</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm break-words">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       patient.created_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
@@ -455,13 +455,13 @@ const PatientDetails = () => {
                     </span>
                   </td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Registration Date</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.created_at || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Registration Date</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.created_at || '-'}</td>
                 </tr>
-                <tr>
-                  <td className="px-4 py-2 text-sm font-medium text-gray-900 whitespace-nowrap">Last Visit</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{patient.last_visit_date || '-'}</td>
+                <tr className="block sm:table-row">
+                  <td className="block sm:table-cell px-4 pt-3 pb-0 sm:py-2 text-xs sm:text-sm font-medium text-gray-500 sm:text-gray-900 sm:whitespace-nowrap">Last Visit</td>
+                  <td className="block sm:table-cell px-4 pt-0.5 pb-3 sm:py-2 text-sm text-gray-700 break-words [overflow-wrap:anywhere]">{patient.last_visit_date || '-'}</td>
                 </tr>
               </tbody>
             </table>
@@ -482,11 +482,14 @@ const PatientDetails = () => {
               No medical history records found
             </div>
           ) : (
+            <>
+            {/* Five columns don't fit a phone: the table scrolls sideways inside its card */}
+            <p className="sm:hidden px-4 pb-2 text-xs text-gray-500">Swipe the table sideways to see all columns →</p>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
+              <table className="min-w-[640px] w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Diagnosis</th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Treatment</th>
@@ -496,7 +499,7 @@ const PatientDetails = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {visitations.map((visit) => (
                     <tr key={visit.ID} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                      <td className="sticky left-0 z-10 bg-white px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                         <div>{visit.date || '-'}</div>
                         <div className="text-gray-500 text-xs">{visit.time || ''}</div>
                       </td>
@@ -509,7 +512,7 @@ const PatientDetails = () => {
                             <div style={lineClampStyle}>{visit.medical_history}</div>
                             <button 
                               onClick={() => openPopup(visit.medical_history, visit.ID)}
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium mt-1"
+                              className="inline-flex items-center min-h-11 sm:min-h-0 text-blue-600 hover:text-blue-800 text-sm font-medium mt-1"
                             >
                               Show more
                             </button>
@@ -523,6 +526,7 @@ const PatientDetails = () => {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       )}
@@ -561,18 +565,18 @@ const PatientDetails = () => {
       {/* Medical History Popup */}
       {popupContent && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
+          className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-black bg-opacity-50" 
           style={popupOverlayStyle}
           onClick={handleOutsideClick}
         >
           <div 
             ref={popupRef}
-            className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-auto focus:outline-none"
+            className="bg-white sm:rounded-lg shadow-xl w-full sm:max-w-3xl sm:mx-4 h-dvh sm:h-auto sm:max-h-[85dvh] flex flex-col focus:outline-none"
             style={popupCardStyle}
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center justify-between gap-2 p-4 border-b shrink-0">
               <h3 className="text-lg font-medium text-gray-900">Medical History Details</h3>
               <div className="flex items-center space-x-2">
                 <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm flex items-center">
@@ -583,7 +587,8 @@ const PatientDetails = () => {
                 </div>
                 <button 
                   onClick={closePopup}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label="Close"
+                  className="inline-flex items-center justify-center size-11 -mr-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -591,8 +596,8 @@ const PatientDetails = () => {
                 </button>
               </div>
             </div>
-            <div className="p-6">
-              <div className="whitespace-pre-wrap text-gray-700">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="whitespace-pre-wrap break-words text-gray-700">
                 {popupContent.content}
               </div>
             </div>

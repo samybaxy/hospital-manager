@@ -471,7 +471,7 @@ const Inventory = () => {
           </span>
         );
       },
-      meta: { hideOnMobile: true, hideOnTablet: false },
+      meta: { hideOnMobile: false, hideOnTablet: false },
       size: 120,
     },
     {
@@ -514,7 +514,7 @@ const Inventory = () => {
           </div>
         );
       },
-      meta: { hideOnMobile: true, hideOnTablet: true },
+      meta: { hideOnMobile: false, hideOnTablet: true },
       size: 120,
     },
     // Cost column - only show if user has reports permission
@@ -540,7 +540,7 @@ const Inventory = () => {
       cell: ({ row }) => {
         const item = row.original;
         return (
-          <div className="flex space-x-2 justify-end">
+          <div className="flex flex-wrap gap-2 justify-end">
             <PermissionGate permission="edit">
               <Button
                 size="sm"
@@ -599,7 +599,7 @@ const Inventory = () => {
                   'bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300'}`}
               >
                 <span className="hidden sm:inline">{showReports ? '📊 Hide Reports' : '📊 Show Reports'}</span>
-                <span className="sm:hidden">{showReports ? '📊' : '📊'}</span>
+                <span className="sm:hidden">📊 Reports</span>
               </Button>
             </PermissionGate>
             <PermissionGate permission="export">
@@ -610,7 +610,7 @@ const Inventory = () => {
                 className="whitespace-nowrap bg-cyan-100 text-blue-800 hover:bg-cyan-200 border border-cyan-300 text-xs sm:text-sm"
               >
                 <span className="hidden sm:inline">📄 Export CSV</span>
-                <span className="sm:hidden">📄</span>
+                <span className="sm:hidden">📄 Export</span>
               </Button>
             </PermissionGate>
             <PermissionGate permission="create">
@@ -620,7 +620,7 @@ const Inventory = () => {
                 className="whitespace-nowrap bg-green-400 text-white hover:bg-green-500 border border-green-500 font-medium shadow-sm text-xs sm:text-sm"
               >
                 <span className="hidden sm:inline">➕ Add New Item</span>
-                <span className="sm:hidden">➕</span>
+                <span className="sm:hidden">➕ Add</span>
                 <span className="ml-2 text-xs opacity-75 hidden lg:inline">(Ctrl+N)</span>
               </Button>
             </PermissionGate>
@@ -723,12 +723,12 @@ const Inventory = () => {
           </PermissionGate>
         </nav>
 
-        {/* Mobile Tab Navigation - Icon Only */}
-        <nav className="md:hidden grid grid-cols-6 gap-0">
+        {/* Mobile tab navigation: labelled tabs; scrolls sideways if they don't fit */}
+        <nav className="md:hidden flex overflow-x-auto scrollbar-hide" aria-label="Inventory sections">
           <PermissionGate key="nav-inventory-mobile" permission="view">
             <button
               onClick={() => setActiveTab('inventory')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
                 activeTab === 'inventory'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -743,7 +743,7 @@ const Inventory = () => {
           <PermissionGate key="nav-alerts-mobile" permission="view">
             <button
               onClick={() => setActiveTab('alerts')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs relative transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs relative transition-all duration-200 ${
                 activeTab === 'alerts'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -765,7 +765,7 @@ const Inventory = () => {
           <PermissionGate key="nav-transactions-mobile" permission="view">
             <button
               onClick={() => setActiveTab('transactions')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
                 activeTab === 'transactions'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -780,7 +780,7 @@ const Inventory = () => {
           <PermissionGate key="nav-suppliers-mobile" permission="view">
             <button
               onClick={() => setActiveTab('suppliers')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
                 activeTab === 'suppliers'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -795,7 +795,7 @@ const Inventory = () => {
           <PermissionGate key="nav-reorders-mobile" permission="view">
             <button
               onClick={() => setActiveTab('reorders')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
                 activeTab === 'reorders'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -810,7 +810,7 @@ const Inventory = () => {
           <PermissionGate key="nav-reports-mobile" permission="reports">
             <button
               onClick={() => setActiveTab('reports')}
-              className={`py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
+              className={`flex-1 shrink-0 min-w-[4.75rem] min-h-11 py-3 px-2 border-b-3 font-medium text-xs transition-all duration-200 ${
                 activeTab === 'reports'
                   ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50'
@@ -961,7 +961,7 @@ const Inventory = () => {
                       onChange={(e) => handleFilterChange('low_stock', e.target.checked)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors"
                     />
-                    <label htmlFor="low_stock" className="ml-2 text-sm font-medium text-gray-700">
+                    <label htmlFor="low_stock" className="ml-2 inline-flex items-center min-h-11 text-sm font-medium text-gray-700">
                       🔴 Low Stock Only
                     </label>
                   </div>
@@ -973,7 +973,7 @@ const Inventory = () => {
                       onChange={(e) => handleFilterChange('expiring', e.target.checked)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors"
                     />
-                    <label htmlFor="expiring" className="ml-2 text-sm font-medium text-gray-700">
+                    <label htmlFor="expiring" className="ml-2 inline-flex items-center min-h-11 text-sm font-medium text-gray-700">
                       ⏰ Expiring Soon
                     </label>
                   </div>
@@ -988,7 +988,7 @@ const Inventory = () => {
                         setItemsPerPage(Number(e.target.value));
                         setCurrentPage(1); // Reset to first page when changing items per page
                       }}
-                      className="text-sm border border-gray-300 rounded-md py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      className="min-h-11 sm:min-h-9 text-base sm:text-sm border border-gray-300 rounded-md py-1 px-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value={5}>5</option>
                       <option value={10}>10</option>

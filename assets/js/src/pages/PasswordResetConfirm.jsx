@@ -70,8 +70,8 @@ const PasswordResetConfirm = () => {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl">
+    <div className="min-h-[70dvh] flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-6 sm:py-12 px-4">
+      <div className="max-w-md w-full p-5 sm:p-8 bg-white rounded-lg shadow-xl">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-primary-800">Reset Your Password</h2>
           <p className="text-gray-600 mt-2">Enter your new password below</p>
@@ -106,6 +106,7 @@ const PasswordResetConfirm = () => {
               <input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -122,6 +123,7 @@ const PasswordResetConfirm = () => {
               <input
                 id="confirm-password"
                 type="password"
+                autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

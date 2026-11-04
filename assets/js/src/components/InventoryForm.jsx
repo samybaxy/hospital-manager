@@ -179,6 +179,7 @@ const InventoryForm = ({
           </label>
           <input
             type="number"
+            inputMode="numeric"
             name="quantity"
             id="quantity"
             min="0"
@@ -222,6 +223,7 @@ const InventoryForm = ({
           </label>
           <input
             type="number"
+            inputMode="numeric"
             name="reorder_level"
             id="reorder_level"
             min="0"
@@ -280,6 +282,7 @@ const InventoryForm = ({
           </label>
           <input
             type="number"
+            inputMode="decimal"
             name="cost"
             id="cost"
             min="0"
@@ -337,12 +340,13 @@ const InventoryForm = ({
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-6 border-t">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end pt-6 border-t">
         <Button
           type="button"
           variant="secondary"
           onClick={onCancel}
           disabled={isSubmitting}
+          className="w-full sm:w-auto justify-center"
         >
           Cancel
         </Button>
@@ -350,6 +354,7 @@ const InventoryForm = ({
           type="submit"
           variant="primary"
           disabled={isSubmitting}
+          className="w-full sm:w-auto justify-center"
         >
           {isSubmitting ? 'Saving...' : (item ? 'Update Item' : 'Add Item')}
         </Button>

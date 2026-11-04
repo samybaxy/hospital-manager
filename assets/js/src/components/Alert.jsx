@@ -62,10 +62,10 @@ const Alert = ({
         </div>
         {onClose && (
           <div className="ml-auto pl-3">
-            <div className="-mx-1.5 -my-1.5">
+            <div className="-mr-2 -my-2.5">
               <button
                 type="button"
-                className="inline-flex rounded-md p-1.5 hover:bg-opacity-20 hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent focus:ring-current"
+                className="inline-flex items-center justify-center size-11 rounded-md hover:bg-opacity-20 hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent focus:ring-current"
                 onClick={onClose}
               >
                 <span className="sr-only">Dismiss</span>
