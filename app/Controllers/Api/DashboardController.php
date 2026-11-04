@@ -7,6 +7,7 @@ use HospitalManager\Models\Appointment;
 use HospitalManager\Models\MedicalReport;
 use HospitalManager\Models\Visitation;
 use HospitalManager\Models\Patient;
+use HospitalManager\Models\Doctor;
 use WP_REST_Controller;
 use WP_REST_Server;
 use WP_REST_Response;
@@ -29,7 +30,7 @@ class DashboardController extends WP_REST_Controller
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_dashboard_stats'],
-                'permission_callback' => [$this, 'check_permissions'],
+                'permission_callback' => [$this, 'check_stats_permissions'],
             ]
         ]);
     }
@@ -39,21 +40,53 @@ class DashboardController extends WP_REST_Controller
         return is_user_logged_in();
     }
 
+    /**
+     * Hospital-wide figures (counts, recent audit activity, everyone's upcoming
+     * appointments with patient names): clinical and front-desk staff only. Any
+     * signed-in user, patients included, used to get them.
+     */
+    public function check_stats_permissions()
+    {
+        if (!is_user_logged_in()) {
+            return new \WP_Error('rest_forbidden', 'You must be logged in to access this endpoint.', ['status' => 401]);
+        }
+        if (!\HospitalManager\Services\AccessPolicy::allowsAll(wp_get_current_user(), 'view_hospital_stats')) {
+            return new \WP_Error('rest_forbidden', 'You do not have permission to view hospital statistics.', ['status' => 403]);
+        }
+        return true;
+    }
+
     public function get_dashboard_data($request) 
     {
         $user = wp_get_current_user();
-        $role = $user->roles[0];
-        
-        switch ($role) {
-            case 'patient':
-                return $this->get_patient_dashboard($user->ID);
-            case 'doctor':
-                return $this->get_doctor_dashboard($user->ID);
-            case 'lab_tech':
-                return $this->get_lab_dashboard($user->ID);
-            default:
-                return new WP_REST_Response(['error' => 'Invalid role'], 403);
+        $roles = (array) $user->roles;
+
+        if (in_array('patient', $roles, true)) {
+            return $this->get_patient_dashboard($user->ID);
         }
+        if (in_array('doctor', $roles, true)) {
+            return $this->get_doctor_dashboard($user->ID);
+        }
+        if (in_array('lab_tech', $roles, true)) {
+            return $this->get_lab_dashboard($user->ID);
+        }
+
+        // Every other role used to get 403 "Invalid role" (administrator, desk
+        // officer, nurse, staff, inventory and pharmacy).
+        if (\HospitalManager\Services\AccessPolicy::allowsAll($user, 'view_hospital_stats')) {
+            return new WP_REST_Response(array_merge(
+                ['role' => $roles[0] ?? ''],
+                DashboardService::getDashboardStats()
+            ), 200);
+        }
+        if (array_intersect($roles, ['inventory_manager', 'pharmacy_staff'])) {
+            return new WP_REST_Response([
+                'role' => $roles[0],
+                'inventory' => DashboardService::getInventorySummary(),
+            ], 200);
+        }
+
+        return new WP_REST_Response(['role' => $roles[0] ?? ''], 200);
     }
 
     /**
@@ -64,15 +97,15 @@ class DashboardController extends WP_REST_Controller
      */
     private function get_patient_dashboard($user_id) 
     {
-        $patients = Patient::findWhere(['user_id' => $user_id]);
-        $patient = !empty($patients) ? $patients[0] : null;
-        
+        // hm_patients.ID (not the WP user ID) is what visitations/labs/appointments reference
+        $patient = Patient::findByUserId($user_id);
+
         if (!$patient) {
             return new WP_REST_Response(['error' => 'Patient not found'], 404);
         }
 
-        // Get recent visitations
-        $visitations = Visitation::forPatient($patient->ID);
+        // Get recent visitations (already ordered newest first)
+        $visitations = Visitation::getForPatient($patient->ID);
 
         // Get pending lab tests
         $lab_tests = LabInvestigation::getPendingForPatient($patient->ID);
@@ -81,10 +114,10 @@ class DashboardController extends WP_REST_Controller
         $appointments = Appointment::getUpcomingForPatient($patient->ID);
 
         return new WP_REST_Response([
-            'patient' => $patient,
-            'recent_visitations' => array_slice($visitations, 0, 5),
-            'pending_lab_tests' => $lab_tests,
-            'upcoming_appointments' => $appointments,
+            'patient' => $this->model_to_array($patient),
+            'recent_visitations' => $this->models_to_array(array_slice($visitations, 0, 5)),
+            'pending_lab_tests' => $this->models_to_array($lab_tests),
+            'upcoming_appointments' => $this->models_to_array($appointments),
         ]);
     }
 
@@ -96,12 +129,21 @@ class DashboardController extends WP_REST_Controller
      */
     private function get_doctor_dashboard($user_id) 
     {
-        $todays_appointments = Appointment::getTodaysForDoctor($user_id);
+        // Appointments reference hm_doctors.ID, so resolve the doctor record first.
+        $doctor = Doctor::findByUserId($user_id);
+
+        if (!$doctor) {
+            return new WP_REST_Response(['error' => 'Doctor record not found for this user'], 404);
+        }
+
+        $todays_appointments = Appointment::getTodaysForDoctor($doctor->ID);
+        // hm_medical_reports.doctor_id stores the doctor's WP user ID (see MedicalReport::doctor()).
         $pending_reports = MedicalReport::getPendingForDoctor($user_id);
 
         return new WP_REST_Response([
-            'todays_appointments' => $todays_appointments,
-            'pending_reports' => $pending_reports,
+            'doctor_id' => (int) $doctor->ID,
+            'todays_appointments' => $this->models_to_array($todays_appointments),
+            'pending_reports' => $this->models_to_array($pending_reports),
             'total_patients_today' => count($todays_appointments)
         ], 200);
     }
@@ -118,9 +160,29 @@ class DashboardController extends WP_REST_Controller
         $completed_tests = LabInvestigation::getCompletedCountForTechToday($user_id);
 
         return new WP_REST_Response([
-            'pending_tests' => $pending_tests,
+            'pending_tests' => $this->models_to_array($pending_tests),
             'tests_completed_today' => $completed_tests
         ], 200);
+    }
+
+    /**
+     * Models keep their data in protected attributes, so they must be converted
+     * explicitly or json_encode() emits "{}".
+     */
+    private function model_to_array($model)
+    {
+        if (is_object($model) && method_exists($model, 'toArray')) {
+            return $model->toArray();
+        }
+        if (is_object($model) && method_exists($model, 'getAttributes')) {
+            return $model->getAttributes();
+        }
+        return $model;
+    }
+
+    private function models_to_array($models)
+    {
+        return array_values(array_map([$this, 'model_to_array'], (array) $models));
     }
 
     /**

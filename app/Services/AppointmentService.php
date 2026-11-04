@@ -80,10 +80,10 @@ class AppointmentService extends BaseService
                 $countQuery .= " AND a.patient_id = %d";
                 $values[] = $patient_id;
                 $count_values[] = $patient_id;
-                error_log('AppointmentService::getAppointments - Role restriction: patient can only see own appointments for user ID: ' . $user->ID . ', patient ID: ' . $patient_id);
+                \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Role restriction: patient can only see own appointments for user ID: ' . $user->ID . ', patient ID: ' . $patient_id);
             } else {
                 // If no patient record found, return empty results
-                error_log('AppointmentService::getAppointments - No patient record found for user ID: ' . $user->ID);
+                \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - No patient record found for user ID: ' . $user->ID);
                 return [
                     'appointments' => (object)[
                         'items' => [],
@@ -115,7 +115,7 @@ class AppointmentService extends BaseService
                     $countQuery .= " AND a.doctor_id = %d";
                     $values[] = $doctor_id;
                     $count_values[] = $doctor_id;
-                    error_log('AppointmentService::getAppointments - Role restriction: doctor can only see own appointments');
+                    \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Role restriction: doctor can only see own appointments');
                 }
             }
         }
@@ -131,7 +131,7 @@ class AppointmentService extends BaseService
             $count_values[] = $search;
             $count_values[] = $search;
             $count_values[] = $search;
-            error_log('AppointmentService::getAppointments - Filter by search: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Filter by search', $params);
         }
         
         // Filter by doctor if specified
@@ -140,7 +140,7 @@ class AppointmentService extends BaseService
             $countQuery .= " AND a.doctor_id = %d";
             $values[] = intval($params['doctor_id']);
             $count_values[] = intval($params['doctor_id']);
-            error_log('AppointmentService::getAppointments - Filter by doctor: ' . $params['doctor_id']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by doctor: ' . $params['doctor_id']);
         }
         
         // Filter by patient if specified
@@ -149,7 +149,7 @@ class AppointmentService extends BaseService
             $countQuery .= " AND a.patient_id = %d";
             $values[] = intval($params['patient_id']);
             $count_values[] = intval($params['patient_id']);
-            error_log('AppointmentService::getAppointments - Filter by patient: ' . $params['patient_id']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by patient: ' . $params['patient_id']);
         }
         
         // Filter by status if specified
@@ -158,7 +158,7 @@ class AppointmentService extends BaseService
             $countQuery .= " AND a.status = %s";
             $values[] = sanitize_text_field($params['status']);
             $count_values[] = sanitize_text_field($params['status']);
-            error_log('AppointmentService::getAppointments - Filter by status: ' . $params['status']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by status: ' . $params['status']);
         }
         
         // Handle upcoming filter
@@ -168,7 +168,7 @@ class AppointmentService extends BaseService
             $countQuery .= " AND (a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
             $values[] = $today;
             $count_values[] = $today;
-            error_log('AppointmentService::getAppointments - Filter by upcoming appointments');
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by upcoming appointments');
         }
         
         // Handle date range filtering
@@ -187,9 +187,9 @@ class AppointmentService extends BaseService
         }
         
         // Get total count for pagination
-        $prepared_count = $wpdb->prepare($countQuery, $count_values);
+        $prepared_count = self::prepareIf($countQuery, $count_values);
         $total = (int)$wpdb->get_var($prepared_count);
-        error_log('AppointmentService::getAppointments - Total count: ' . $total . ' for user: ' . $user->ID);
+        \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Total count: ' . $total . ' for user: ' . $user->ID);
         
         // Apply sorting - default to DESC for dates
         $sortField = !empty($params['sort_by']) ? $params['sort_by'] : 'appointment_date';
@@ -226,16 +226,13 @@ class AppointmentService extends BaseService
         
         // Execute query
         $prepared_query = $wpdb->prepare($query, $values);
-        error_log('AppointmentService::getAppointments - Final Query: ' . $prepared_query);
-        error_log('AppointmentService::getAppointments - Count Query: ' . $wpdb->prepare($countQuery, $count_values));
+        \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Final Query', $prepared_query);
+        if (\HospitalManager\Helpers\DebugLog::enabled()) {
+            \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Count Query', self::prepareIf($countQuery, $count_values));
+        }
         
         $items = $wpdb->get_results($prepared_query);
-        error_log('Query returned ' . count($items) . ' appointments out of total ' . $total . ' for page ' . $page . ' (perPage: ' . $perPage . ')');
-        
-        // Debug: Log the actual items returned
-        foreach ($items as $index => $item) {
-            error_log('Item ' . $index . ': patient_id=' . $item->patient_id . ', patient_name=' . ($item->patient_name ?? 'NULL'));
-        }
+        \HospitalManager\Helpers\DebugLog::line('Query returned ' . count($items) . ' appointments out of total ' . $total . ' for page ' . $page . ' (perPage: ' . $perPage . ')');
         
         // Process results
         $appointments = [];
@@ -272,7 +269,7 @@ class AppointmentService extends BaseService
         if (!empty($params['status']) && $params['status'] !== 'all') {
             $last_page = $total > 0 ? ceil($total / $perPage) : 1;
             
-            error_log('Adjusted pagination after status filtering: total=' . $total . 
+            \HospitalManager\Helpers\DebugLog::line('Adjusted pagination after status filtering: total=' . $total . 
                 ', lastPage=' . $last_page);
         }
         
@@ -462,10 +459,8 @@ class AppointmentService extends BaseService
      */
     public static function isSlotAvailable($doctor_id, $date, $time)
     {
-        $cache_params = ['doctor_id' => $doctor_id, 'date' => $date, 'time' => $time];
-        return self::executeCached('isSlotAvailable', $cache_params, function() use ($doctor_id, $date, $time) {
-            return self::isSlotAvailableUncached($doctor_id, $date, $time);
-        }, 300); // Cache for 5 minutes (frequently changing)
+        // Never cached: a booking must see the slots taken a moment ago.
+        return self::isSlotAvailableUncached($doctor_id, $date, $time);
     }
 
     /**

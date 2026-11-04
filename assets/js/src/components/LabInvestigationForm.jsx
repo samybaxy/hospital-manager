@@ -48,6 +48,7 @@ const LabInvestigationForm = ({
   const [dirtyTestFields, setDirtyTestFields] = useState({}); // Track which test result fields have been modified
   const [errors, setErrors] = useState({});
   const [loadingData, setLoadingData] = useState(false);
+  const [loadDataError, setLoadDataError] = useState(null);
 
   // Initialize form data when investigation prop changes
   useEffect(() => {
@@ -116,6 +117,7 @@ const LabInvestigationForm = ({
 
   const loadLabData = async () => {
     setLoadingData(true);
+    setLoadDataError(null);
     try {
       const [categoriesResponse, testsResponse] = await Promise.all([
         laboratoryService.getLabCategories(),
@@ -153,141 +155,10 @@ const LabInvestigationForm = ({
       }
     } catch (error) {
       console.error('Error loading lab data:', error);
-      // For now, use sample data
-      const sampleCategories = [
-        { ID: 1, name: 'Hematology', description: 'Blood-related tests' },
-        { ID: 2, name: 'Chemistry', description: 'Blood chemistry tests' },
-        { ID: 3, name: 'Microbiology', description: 'Infection and culture tests' },
-        { ID: 4, name: 'Immunology', description: 'Immune system tests' }
-      ];
-      
-      const sampleTestDefinitions = [
-        {
-          ID: 1,
-          category_id: 1,
-          code: 'ESR',
-          name: 'Erythrocyte Sedimentation Rate',
-          sample_type: 'Blood',
-          test_parameters: {
-            parameters: [
-              {
-                name: 'ESR',
-                unit: 'mm/hr',
-                reference_range: { min: 0, max: 15 },
-                type: 'numeric'
-              }
-            ]
-          }
-        },
-        {
-          ID: 2,
-          category_id: 1,
-          code: 'CBC',
-          name: 'Complete Blood Count',
-          sample_type: 'Blood',
-          test_parameters: {
-            parameters: [
-              {
-                name: 'Hemoglobin',
-                unit: 'g/dL',
-                reference_range: { min: 12.0, max: 16.0 },
-                type: 'numeric'
-              },
-              {
-                name: 'White Blood Cells',
-                unit: '×10³/μL',
-                reference_range: { min: 4.0, max: 11.0 },
-                type: 'numeric'
-              },
-              {
-                name: 'Platelets',
-                unit: '×10³/μL',
-                reference_range: { min: 150, max: 450 },
-                type: 'numeric'
-              }
-            ]
-          }
-        },
-        {
-          ID: 3,
-          category_id: 1,
-          code: 'FERRITIN',
-          name: 'Ferritin',
-          sample_type: 'Blood',
-          test_parameters: {
-            parameters: [
-              {
-                name: 'Ferritin',
-                unit: 'ng/mL',
-                reference_range: { min: 15, max: 150 },
-                type: 'numeric'
-              }
-            ]
-          }
-        },
-        {
-          ID: 4,
-          category_id: 1,
-          code: 'B12',
-          name: 'Vitamin B12',
-          sample_type: 'Blood',
-          test_parameters: {
-            parameters: [
-              {
-                name: 'Vitamin B12',
-                unit: 'pg/mL',
-                reference_range: { min: 200, max: 900 },
-                type: 'numeric'
-              }
-            ]
-          }
-        },
-        {
-          ID: 5,
-          category_id: 2,
-          code: 'GLUCOSE',
-          name: 'Blood Glucose',
-          sample_type: 'Blood',
-          test_parameters: {
-            parameters: [
-              {
-                name: 'Glucose',
-                unit: 'mg/dL',
-                reference_range: { min: 70, max: 100 },
-                type: 'numeric'
-              }
-            ]
-          }
-        }
-      ];
-      
-      setCategories(sampleCategories);
-      setTestDefinitions(sampleTestDefinitions);
-      
-      // If we're in edit mode and have an investigation, try to find the category from sample data
-      if (investigation && investigation.test_type) {
-        const matchingTest = sampleTestDefinitions.find(test => 
-          test.name === investigation.test_type || 
-          test.code === investigation.test_type
-        );
-        
-        if (matchingTest && matchingTest.category_id) {
-          setSelectedCategory(matchingTest.category_id.toString());
-          
-          // Also update the selected test with the full test definition
-          const testId = `existing_${Date.now()}`;
-          setFormData(prev => ({
-            ...prev,
-            selected_tests: [{
-              ...matchingTest,
-              ID: testId
-            }]
-          }));
-          
-          // Activate the test form
-          setActiveTestForms({ [testId]: true });
-        }
-      }
+      // No made-up tests: an order must reference real test definitions.
+      setCategories([]);
+      setTestDefinitions([]);
+      setLoadDataError('Could not load the lab test catalogue. Please refresh the page and try again.');
     } finally {
       setLoadingData(false);
     }
@@ -737,138 +608,20 @@ const LabInvestigationForm = ({
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
           <span className="ml-3 text-gray-600">Loading form data...</span>
         </div>
-        {/* Temporary bypass for testing */}
-        <div className="text-center">
-          <button 
-            type="button"
-            onClick={() => {
-              console.log('Bypassing loading - setting sample data manually');
-              setLoadingData(false);
-              // Ensure sample data is set when bypassing
-              const sampleCategories = [
-                { ID: 1, name: 'Hematology', description: 'Blood-related tests' },
-                { ID: 2, name: 'Chemistry', description: 'Blood chemistry tests' },
-                { ID: 3, name: 'Microbiology', description: 'Infection and culture tests' },
-                { ID: 4, name: 'Immunology', description: 'Immune system tests' }
-              ];
-              
-              const sampleTestDefinitions = [
-                {
-                  ID: 1,
-                  category_id: 1,
-                  code: 'ESR',
-                  name: 'Erythrocyte Sedimentation Rate',
-                  sample_type: 'Blood',
-                  test_parameters: {
-                    parameters: [
-                      {
-                        name: 'ESR',
-                        unit: 'mm/hr',
-                        reference_range: { min: 0, max: 15 },
-                        type: 'numeric'
-                      }
-                    ]
-                  }
-                },
-                {
-                  ID: 2,
-                  category_id: 1,
-                  code: 'CBC',
-                  name: 'Complete Blood Count',
-                  sample_type: 'Blood',
-                  test_parameters: {
-                    parameters: [
-                      {
-                        name: 'Hemoglobin',
-                        unit: 'g/dL',
-                        reference_range: { min: 12.0, max: 16.0 },
-                        type: 'numeric'
-                      },
-                      {
-                        name: 'White Blood Cells',
-                        unit: '×10³/μL',
-                        reference_range: { min: 4.0, max: 11.0 },
-                        type: 'numeric'
-                      },
-                      {
-                        name: 'Platelets',
-                        unit: '×10³/μL',
-                        reference_range: { min: 150, max: 450 },
-                        type: 'numeric'
-                      }
-                    ]
-                  }
-                },
-                {
-                  ID: 3,
-                  category_id: 1,
-                  code: 'FERRITIN',
-                  name: 'Ferritin',
-                  sample_type: 'Blood',
-                  test_parameters: {
-                    parameters: [
-                      {
-                        name: 'Ferritin',
-                        unit: 'ng/mL',
-                        reference_range: { min: 15, max: 150 },
-                        type: 'numeric'
-                      }
-                    ]
-                  }
-                },
-                {
-                  ID: 4,
-                  category_id: 1,
-                  code: 'B12',
-                  name: 'Vitamin B12',
-                  sample_type: 'Blood',
-                  test_parameters: {
-                    parameters: [
-                      {
-                        name: 'Vitamin B12',
-                        unit: 'pg/mL',
-                        reference_range: { min: 200, max: 900 },
-                        type: 'numeric'
-                      }
-                    ]
-                  }
-                },
-                {
-                  ID: 5,
-                  category_id: 2,
-                  code: 'GLUCOSE',
-                  name: 'Blood Glucose',
-                  sample_type: 'Blood',
-                  test_parameters: {
-                    parameters: [
-                      {
-                        name: 'Glucose',
-                        unit: 'mg/dL',
-                        reference_range: { min: 70, max: 100 },
-                        type: 'numeric'
-                      }
-                    ]
-                  }
-                }
-              ];
-              
-              console.log('Setting bypass categories:', sampleCategories);
-              console.log('Setting bypass test definitions:', sampleTestDefinitions);
-              
-              setCategories(sampleCategories);
-              setTestDefinitions(sampleTestDefinitions);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-          >
-            Skip Loading (Debug)
-          </button>
-        </div>
       </div>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {loadDataError && (
+        <div className="p-4 bg-red-50 text-red-700 rounded-md border border-red-200 flex items-center justify-between">
+          <span>{loadDataError}</span>
+          <button type="button" onClick={loadLabData} className="ml-4 px-3 py-1 text-sm rounded border border-red-300 hover:bg-red-100">
+            Retry
+          </button>
+        </div>
+      )}
       {/* Basic Investigation Information */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Investigation Details</h3>

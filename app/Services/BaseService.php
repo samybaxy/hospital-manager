@@ -93,8 +93,72 @@ abstract class BaseService
      */
     protected static function getCacheKey($service_class, $method, $params = [])
     {
-        $params_hash = md5(serialize($params));
-        return "hospital_manager_service_{$service_class}_{$method}_{$params_hash}";
+        // Results depend on who asks (patients and doctors get their own records
+        // only), so the user is part of the key. Without it, a patient sending the
+        // same query string as an admin was served the admin's full list.
+        $user = function_exists('wp_get_current_user') ? wp_get_current_user() : null;
+        $who = $user && $user->exists() ? $user->ID . ':' . implode(',', (array) $user->roles) : '0';
+
+        $params_hash = md5(serialize([$params, $who]));
+        $generation = self::dataGeneration();
+        return "hospital_manager_service_{$service_class}_{$method}_g{$generation}_{$params_hash}";
+    }
+
+    /** Option holding the data generation (see watchWrites()). */
+    const DATA_GENERATION_OPTION = 'hospital_manager_data_generation';
+
+    /** Set when this request wrote to a hospital table and the generation isn't bumped yet. */
+    private static $data_dirty = false;
+
+    /**
+     * Any INSERT/UPDATE/DELETE on a hospital table (hm_*) makes every cached
+     * service result stale: the generation in each cache key changes, so the old
+     * entries are never read again (they expire on their own). This covers writes
+     * made through models and raw $wpdb calls alike, which the per-method
+     * invalidation never did (it had no callers), e.g. a just-booked slot still
+     * read as free.
+     */
+    public static function watchWrites()
+    {
+        static $hooked = false;
+        if ($hooked) {
+            return;
+        }
+        $hooked = true;
+
+        add_filter('query', function ($query) {
+            global $wpdb;
+            if (!self::$data_dirty && preg_match(
+                '/^\s*(INSERT|UPDATE|DELETE|REPLACE|TRUNCATE)\b[^;]*?\b`?' . preg_quote($wpdb->prefix, '/') . 'hm_/i',
+                $query
+            )) {
+                // Don't run a query from inside the query filter; bump before the next read.
+                self::$data_dirty = true;
+            }
+            return $query;
+        });
+        add_action('shutdown', [self::class, 'flushDataGeneration']);
+    }
+
+    /** Bump the generation if this request changed hospital data. */
+    public static function flushDataGeneration()
+    {
+        if (self::$data_dirty) {
+            self::$data_dirty = false;
+            update_option(self::DATA_GENERATION_OPTION, (int) get_option(self::DATA_GENERATION_OPTION, 1) + 1, false);
+        }
+    }
+
+    /** Current data generation (for model caches). */
+    public static function currentDataGeneration()
+    {
+        return self::dataGeneration();
+    }
+
+    protected static function dataGeneration()
+    {
+        self::flushDataGeneration();
+        return (int) get_option(self::DATA_GENERATION_OPTION, 1);
     }
 
     /**
@@ -295,6 +359,21 @@ abstract class BaseService
     }
 
     /**
+     * $wpdb->prepare() only when there are values to bind. Unfiltered list/count
+     * queries have no placeholders, and prepare() without one triggers a
+     * _doing_it_wrong notice.
+     *
+     * @param string $query
+     * @param array  $values
+     * @return string
+     */
+    protected static function prepareIf($query, array $values)
+    {
+        global $wpdb;
+        return $values ? $wpdb->prepare($query, $values) : $query;
+    }
+
+    /**
      * Log error with consistent format
      * 
      * @param string $service_name Name of the service
@@ -304,11 +383,12 @@ abstract class BaseService
      */
     protected static function logError($service_name, $method_name, $message, $context = null)
     {
-        $log_message = "{$service_name}::{$method_name} - {$message}";
+        // The message is always logged; context (often a prepared query containing
+        // search terms / patient data) only when debug payload logging is enabled.
+        error_log("{$service_name}::{$method_name} - {$message}");
         if ($context !== null) {
-            $log_message .= ' | Context: ' . print_r($context, true);
+            \HospitalManager\Helpers\DebugLog::payload("{$service_name}::{$method_name} - Context", $context);
         }
-        error_log($log_message);
     }
 
     /**

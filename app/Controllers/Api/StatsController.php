@@ -30,8 +30,8 @@ class StatsController extends BaseController
         $stats = [
             'totalPatients' => Patient::count(),
             'activeDoctors' => count(get_users(['role' => 'doctor'])),
-            'todayVisitations' => Visitation::where('date', date('Y-m-d'))->count(),
-            'pendingLabTests' => LabInvestigation::where('status', 'pending')->count(),
+            'todayVisitations' => $this->count_todays_visitations(),
+            'pendingLabTests' => $this->count_pending_lab_tests(),
             
             // Get visitation trends for the last 30 days
             // 'visitationsTrend' => Stats::getVisitationTrend(),
@@ -44,6 +44,30 @@ class StatsController extends BaseController
         ];
 
         return new WP_REST_Response($stats);
+    }
+
+    /**
+     * Uncached on purpose: BaseModel::count() caches for an hour, which is wrong for "today".
+     */
+    private function count_todays_visitations()
+    {
+        global $wpdb;
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}hm_visitations WHERE date = %s",
+            current_time('Y-m-d')
+        ));
+    }
+
+    /**
+     * "Pending" = not yet resulted. hm_lab_investigations.status is an ENUM with no 'pending' value.
+     */
+    private function count_pending_lab_tests()
+    {
+        global $wpdb;
+        return (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}hm_lab_investigations
+             WHERE status IN ('requested', 'sample_collected', 'in_progress')"
+        );
     }
 
     private function get_visitation_trend()

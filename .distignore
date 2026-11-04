@@ -1,0 +1,39 @@
+# Files left out of the release zip (bin/build-release.sh).
+# Development tooling, tests, sources and data-changing scripts must not ship:
+# the reset/seed scripts wipe or overwrite hospital data.
+/.git
+/.github
+/.circleci
+/.gitignore
+/.distignore
+/.babelrc
+/.npmrc
+/.env
+/.env.*
+/.phpcs.xml.dist
+/.phpunit.result.cache
+/phpunit.xml
+/phpunit.xml.dist
+/bin
+/tests
+/node_modules
+/release
+/logs
+/debug.log
+/build.log
+/dev.sh
+/database/seeders
+/database/seeders.php
+/database/run-seeders.php
+/database/reset-data.php
+/database/bootstrap-wp.php
+/assets/js/src
+/vite.config.mjs
+/tailwind.config.js
+/postcss.config.js
+/package.json
+/yarn.lock
+/package-lock.json
+/API_ENDPOINTS.md
+/PROJECT-OVERVIEW.md
+*.map

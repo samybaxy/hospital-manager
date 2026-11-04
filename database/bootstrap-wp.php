@@ -1,4 +1,9 @@
 <?php
+// Command-line only: this script changes or wipes data and must never run from a web request.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 /**
  * WordPress Bootstrap Finder
  * 

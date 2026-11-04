@@ -14,7 +14,7 @@ const EditVisit = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  const { hasAccess, role } = useUserAccess();
+  const { hasAccess, role, canEditVisit: canEditVisitRecord } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -90,21 +90,11 @@ const EditVisit = () => {
 
   // Check if user can edit this visit
   const canEditVisit = (visitData) => {
-    if (!hasAccess('visitations') || !visitData) return false;
-    
-    // Admins can edit any visit
-    if (role === 'administrator') return true;
-    
-    // Doctors can edit visits they conducted
-    if (role === 'doctor' && visitData.doctor_id === user?.ID) return true;
-    
-    // Desk officers can edit any visit
-    if (role === 'developer') return true;
-    
-    // Nurses can edit any visit
-    if (role === 'hospital_nurse') return true;
-    
-    return false;
+    // edit_visitation comes from GET /access, derived from the API's AccessPolicy.
+    // (A doctor check here compared visit.doctor_id, a doctor record ID, with the
+    // WordPress user ID, so doctors were almost never allowed.)
+    // Doctors: only visits where they are the visit's doctor (enforced by the API too)
+    return canEditVisitRecord(visitData);
   };
 
   // Handle form submission

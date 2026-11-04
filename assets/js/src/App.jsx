@@ -6,8 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PatientDetailsProtectedRoute from './components/PatientDetailsProtectedRoute';
 import Unauthorized from './pages/Unauthorized';
 
-// Import development utilities
-import './utils/devConsole';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Import all page components
 import Dashboard from './pages/Dashboard';
@@ -23,12 +22,10 @@ import DoctorDetails from './pages/doctors/DoctorDetails';
 import Appointments from './pages/appointments/Appointments';
 import AppointmentView from './pages/appointments/AppointmentView';
 import BookAppointment from './pages/appointments/BookAppointment';
-import Billing from './pages/Billing';
 import Inventory from './pages/Inventory';
-import Reports from './pages/Reports';
-import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
+import PasswordResetConfirm from './pages/PasswordResetConfirm';
 // Import new pages based on API controllers
 import LabInvestigations from './pages/LabInvestigations';
 import Visitations from './pages/visitations/Visitations';
@@ -142,34 +139,12 @@ const ScrollToTop = () => {
 
 // Main content component with routes
 const AppRoutes = () => {
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Example of accessing WordPress data passed via wp_localize_script
-    const { apiUrl, nonce } = window.hospitalManagerData || {};
-    
-    // Simulate loading data from API
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, []);
-  
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-      </div>
-    );
-  }
+  const location = useLocation();
 
   return (
     <div>
+      <ErrorBoundary resetKey={location.pathname}>
       <Routes>
-        {/* Public route for login and unauthorized */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
         
         {/* Protected routes that require authentication */}
         <Route path="/" element={
@@ -245,11 +220,6 @@ const AppRoutes = () => {
             <AppointmentView />
           </ProtectedRoute>
         } />
-        <Route path="/billing" element={
-          <ProtectedRoute routeName="billing">
-            <Billing />
-          </ProtectedRoute>
-        } />
         <Route path="/inventory" element={
           <ProtectedRoute routeName="inventory">
             <Inventory />
@@ -258,16 +228,6 @@ const AppRoutes = () => {
         <Route path="/inventory/new" element={
           <ProtectedRoute routeName="inventory">
             <Inventory />
-          </ProtectedRoute>
-        } />
-        <Route path="/reports" element={
-          <ProtectedRoute routeName="reports">
-            <Reports />
-          </ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute routeName="settings">
-            <Settings />
           </ProtectedRoute>
         } />
         <Route path="/lab-investigations" element={
@@ -321,8 +281,10 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Billing, Reports and Settings are not built yet; they fall through to NotFound. */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </ErrorBoundary>
     </div>
   );
 };
@@ -342,6 +304,9 @@ const App = () => {
           <Routes>
             {/* Login route outside of Layout */}
             <Route path="/login" element={<Login />} />
+
+            {/* Public: target of the emailed reset link (#/reset-password?token=...) */}
+            <Route path="/reset-password" element={<PasswordResetConfirm />} />
             
             {/* Add an unauthorized page route */}
             <Route path="/unauthorized" element={<Unauthorized />} />

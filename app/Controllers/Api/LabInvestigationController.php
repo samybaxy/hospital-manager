@@ -308,7 +308,7 @@ class LabInvestigationController extends BaseController
             }
 
             // Use the service to format the investigation with relations
-            $formatted_investigation = LabInvestigationService::formatInvestigationWithRelations($investigation);
+            $formatted_investigation = LabInvestigationService::getInvestigationWithDetails($investigation->ID);
             
             return new WP_REST_Response($formatted_investigation, 200);
             
@@ -449,7 +449,7 @@ class LabInvestigationController extends BaseController
             return new WP_REST_Response([
                 'success' => true,
                 'message' => 'Investigation updated successfully',
-                'data' => $investigation->attributes
+                'data' => $investigation->getAttributes()
             ], 200);
             
         } catch (\Exception $e) {
@@ -477,16 +477,16 @@ class LabInvestigationController extends BaseController
             $flags = $request->get_param('flags');
             $lab_notes = $request->get_param('lab_notes');
             
-            $success = $investigation->updateResults($test_results, $flags, $lab_notes);
+            // One call saves the results (+ abnormal/critical flags), notifies the
+            // patient and requesting doctor, and writes the audit entry. (Calling
+            // notifyResultsReady() after saving used to re-save null results.)
+            $success = LabResultService::updateLabResults($investigation->ID, $test_results, $flags, $lab_notes);
             
             if (!$success) {
                 return new WP_REST_Response(['error' => 'Failed to update results'], 500);
             }
             
-            // Trigger notifications
-            LabResultService::notifyResultsReady($investigation->attributes['ID']);
-            
-            return new WP_REST_Response($investigation->attributes, 200);
+            return new WP_REST_Response(LabInvestigation::find($investigation->ID)->getAttributes(), 200);
             
         } catch (\Exception $e) {
             return new WP_REST_Response([
@@ -510,13 +510,19 @@ class LabInvestigationController extends BaseController
             }
 
             $status = $request->get_param('status');
-            $success = $investigation->updateStatus($status);
+            $allowed = ['requested', 'sample_collected', 'in_progress', 'completed', 'verified', 'cancelled'];
+            if (!in_array($status, $allowed, true)) {
+                return new WP_REST_Response(['error' => 'Invalid status. Allowed: ' . implode(', ', $allowed)], 400);
+            }
+
+            // Via the service so the change is audited (old -> new status)
+            $success = LabResultService::updateStatus($investigation->ID, $status);
             
             if (!$success) {
                 return new WP_REST_Response(['error' => 'Failed to update status'], 500);
             }
             
-            return new WP_REST_Response($investigation->attributes, 200);
+            return new WP_REST_Response(LabInvestigation::find($investigation->ID)->getAttributes(), 200);
             
         } catch (\Exception $e) {
             return new WP_REST_Response([
@@ -558,12 +564,19 @@ class LabInvestigationController extends BaseController
     public function get_pending_investigations(WP_REST_Request $request)
     {
         try {
-            $lab_tech_id = $request->get_param('lab_tech_id');
-            $limit = $request->get_param('limit') ?: 20;
-            
-            $investigations = LabInvestigation::getPendingForTech($lab_tech_id, $limit);
-            
-            return new WP_REST_Response($investigations, 200);
+            // Patients may only see their own pending tests (previously this returned
+            // every patient's pending labs, with names, to any patient).
+            if ($this->current_user_is_patient()) {
+                $patient_id = $this->get_current_user_patient_id();
+                $investigations = $patient_id ? LabInvestigation::getPendingForPatient($patient_id) : [];
+            } else {
+                $lab_tech_id = $request->get_param('lab_tech_id');
+                $limit = $request->get_param('limit') ?: 20;
+                $investigations = LabInvestigation::getPendingForTech($lab_tech_id, $limit);
+            }
+
+            // Models serialise to "{}" unless converted
+            return new WP_REST_Response(\HospitalManager\Services\ApiService::serializeModels($investigations), 200);
             
         } catch (\Exception $e) {
             return new WP_REST_Response([

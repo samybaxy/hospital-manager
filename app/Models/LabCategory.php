@@ -128,7 +128,7 @@ class LabCategory extends BaseModel
                 $table,
                 $filtered_attributes,
                 array_map(function($value) {
-                    return is_numeric($value) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($value);
                 }, $filtered_attributes)
             );
             

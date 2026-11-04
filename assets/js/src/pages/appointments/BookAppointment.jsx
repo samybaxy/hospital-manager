@@ -749,7 +749,7 @@ const BookAppointment = () => {
         doctor_id: parseInt(doctorId, 10),
         patient_id: parseInt(patientId, 10),
         appointment_date: formattedDate,
-        appointment_time: selectedTime,
+        appointment_time: String(selectedTime).slice(0, 5), // server expects HH:MM
         reason,
         notes,
         status: 'pending'

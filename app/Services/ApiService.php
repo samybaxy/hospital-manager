@@ -111,22 +111,35 @@ class ApiService extends BaseService
      */
     public static function init()
     {
-        // Set CORS headers
-        add_action('rest_api_init', function() {
-            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-            add_filter('rest_pre_serve_request', function($value) {
-                header('Access-Control-Allow-Origin: ' . get_http_origin());
-                header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-                header('Access-Control-Allow-Credentials: true');
-                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-                
-                if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                    exit(0);
-                }
-                
-                return $value;
-            });
-        }, 15);
+        // CORS for this plugin's routes: only the site's own origin. This used to
+        // replace WordPress' CORS handling for *every* REST route with one that
+        // echoed any Origin back with Allow-Credentials. Core's handling stays in
+        // place; for hospital-manager/v1 we remove its headers for other origins.
+        add_filter('rest_pre_serve_request', function($served, $result, $request) {
+            if (strpos((string) $request->get_route(), '/hospital-manager/v1') !== 0) {
+                return $served;
+            }
+            $origin = get_http_origin();
+            if ($origin && !self::isSameSiteOrigin($origin) && !headers_sent()) {
+                header_remove('Access-Control-Allow-Origin');
+                header_remove('Access-Control-Allow-Credentials');
+            }
+            return $served;
+        }, 20, 3);
+    }
+
+    /** Whether $origin is this site (home or site URL, same scheme, host and port). */
+    public static function isSameSiteOrigin($origin)
+    {
+        $norm = function ($url) {
+            $p = wp_parse_url($url);
+            if (empty($p['host'])) {
+                return null;
+            }
+            return strtolower(($p['scheme'] ?? 'http') . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : ''));
+        };
+        $origin = $norm($origin);
+        return $origin !== null && in_array($origin, [$norm(home_url()), $norm(site_url())], true);
     }
 
     /**
@@ -143,12 +156,32 @@ class ApiService extends BaseService
         return [
             'success' => $success,
             'message' => $message,
-            'data' => $data,
+            'data' => self::serializeModels($data),
             'status' => $status,
             'version' => self::$version,
         ];
     }
     
+    /**
+     * Convert models (and arrays of models, at any depth) to plain arrays.
+     *
+     * Models keep their columns in protected attributes, so json_encode() on a model
+     * yields "{}". Uses the model's own toArray() when it defines one.
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    public static function serializeModels($data)
+    {
+        if ($data instanceof \HospitalManager\Models\BaseModel) {
+            return method_exists($data, 'toArray') ? $data->toArray() : $data->getAttributes();
+        }
+        if (is_array($data)) {
+            return array_map([self::class, 'serializeModels'], $data);
+        }
+        return $data;
+    }
+
     /**
      * Format error response
      *

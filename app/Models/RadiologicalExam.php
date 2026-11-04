@@ -77,7 +77,7 @@ class RadiologicalExam extends BaseModel
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 
@@ -143,7 +143,7 @@ class RadiologicalExam extends BaseModel
                 $data,
                 ['ID' => $this->attributes['ID']],
                 array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($field);
                 }, $data),
                 ['%d']
             );
@@ -155,7 +155,7 @@ class RadiologicalExam extends BaseModel
                 $table,
                 $data,
                 array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($field);
                 }, $data)
             );
             

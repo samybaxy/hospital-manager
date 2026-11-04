@@ -67,6 +67,51 @@ abstract class BaseModel extends PostModel
     }
     
     /**
+     * $wpdb placeholder for a value, based on its PHP type — never on whether a
+     * string *looks* numeric. Choosing '%d' for is_numeric() strings turned
+     * "08012345678" into 8012345678 (every Nigerian phone number), "000123" into 123
+     * and "55.64" into 55. Numeric strings are sent as '%s'; MySQL converts them for
+     * INT/DECIMAL columns itself. (NULL values are written as NULL by $wpdb.)
+     *
+     * @param mixed $value
+     * @return string '%d' | '%f' | '%s'
+     */
+    public static function sqlFormat($value)
+    {
+        if (is_int($value) || is_bool($value)) {
+            return '%d';
+        }
+        if (is_float($value)) {
+            return '%f';
+        }
+        return '%s';
+    }
+
+    /**
+     * Find a record by primary key.
+     *
+     * Overrides WPMVC's FindTrait::find(), which does `new self($id)`. Inside a trait
+     * `self` is the class that *uses* the trait — here the abstract BaseModel — so any
+     * subclass that doesn't re-declare the trait (all Inventory* models) fatalled with
+     * "Cannot instantiate abstract class". `new static()` + load() works for every
+     * subclass, including ones whose constructors only accept an attributes array.
+     *
+     * @param int $id Record ID
+     * @return static|null
+     */
+    public static function find($id = 0)
+    {
+        if (empty($id)) {
+            return null;
+        }
+
+        $model = new static();
+        $model->load($id);
+
+        return $model->has_trace() ? $model : null;
+    }
+
+    /**
      * Check if the model has a valid trace (exists in database)
      * This is used by the FindTrait to determine if the model exists
      * 
@@ -111,6 +156,29 @@ abstract class BaseModel extends PostModel
     /**
      * Override PostModel's load_attributes to prevent issues with load_meta for custom tables
      */
+    /**
+     * Raw column => value map for this record (custom-table models keep data in
+     * protected $attributes, so json_encode() on the model itself yields "{}").
+     *
+     * @return array
+     */
+    public function getAttributes()
+    {
+        return is_array($this->attributes) ? $this->attributes : [];
+    }
+
+    /**
+     * Array form for API responses. Controllers call ->toArray() on models; models
+     * that didn't define it (Appointment, Visitation, ...) fatalled with "undefined
+     * method". Subclasses (Patient, Doctor) override this to add formatting.
+     *
+     * @return array
+     */
+    public function toArray()
+    {
+        return $this->getAttributes();
+    }
+
     public function load_attributes( $attributes )
     {
         if ( !empty( $attributes ) ) {
@@ -133,9 +201,30 @@ abstract class BaseModel extends PostModel
      */
     protected static function getCacheKey($method, $params = [])
     {
-        $model_name = strtolower(basename(str_replace('\\', '/', get_called_class())));
+        $model_name = static::cacheModelName();
         $params_hash = md5(serialize($params));
-        return static::$cache_group . '_' . $model_name . '_' . $method . '_' . $params_hash;
+        // The generation makes "clear every cache for this model" a single counter
+        // bump that works with any cache backend (see clearModelCache()).
+        $generation = static::cacheGeneration($model_name);
+        // Plus the global data generation, bumped by any write to a hospital table
+        // (BaseService::watchWrites()). Many models write with raw $wpdb calls that
+        // never reached invalidateCache(), so cached reads went stale.
+        $data_generation = \HospitalManager\Services\BaseService::currentDataGeneration();
+        return static::$cache_group . '_' . $model_name . '_g' . $generation . '.' . $data_generation . '_' . $method . '_' . $params_hash;
+    }
+
+    protected static function cacheModelName()
+    {
+        return strtolower(basename(str_replace('\\', '/', get_called_class())));
+    }
+
+    /**
+     * Current cache generation for a model (stored as a non-autoloaded option, so it
+     * is read/written through WordPress' cache API and stays coherent).
+     */
+    protected static function cacheGeneration($model_name)
+    {
+        return (int) get_option(static::$cache_group . '_cache_gen_' . $model_name, 1);
     }
 
     /**
@@ -183,7 +272,16 @@ abstract class BaseModel extends PostModel
     protected static function clearModelCache($model_name)
     {
         global $wpdb;
-        // Delete transients matching our pattern
+
+        // Invalidate: bump the generation so every existing key for this model is
+        // orphaned. Deleting rows with raw SQL (below) is not enough on its own: it
+        // bypasses the object cache, so within a request — and on sites with a
+        // persistent object cache, where transients never touch wp_options — stale
+        // values kept being served (e.g. Patient::count() after creating patients).
+        $option = static::$cache_group . '_cache_gen_' . $model_name;
+        update_option($option, static::cacheGeneration($model_name) + 1, false);
+
+        // Housekeeping: drop orphaned rows from wp_options (no-op with an object cache)
         $wpdb->query($wpdb->prepare(
             "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
             '_transient_' . static::$cache_group . '_' . $model_name . '_%'
@@ -283,7 +381,8 @@ abstract class BaseModel extends PostModel
         $cached = static::getFromCache($cache_key);
         
         if ($cached !== false) {
-            return $cached;
+            // Scalars come back from wp_options as strings ("101")
+            return (int) $cached;
         }
 
         global $wpdb;
@@ -378,7 +477,7 @@ abstract class BaseModel extends PostModel
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 
@@ -397,6 +496,121 @@ abstract class BaseModel extends PostModel
     /**
      * Enhanced update with cache invalidation
      */
+    /**
+     * Insert or update this record in the model's own table.
+     *
+     * Without this, models that don't define save() (Visitation, LabInvestigation, ...)
+     * fell through to WPMVC's PostModel::save(), which targets wp_posts: their edits
+     * were silently discarded.
+     *
+     * Only real table columns are written, so attributes added by joins (doctor_name,
+     * patient_name, ...) are ignored. Arrays/objects are stored as JSON.
+     *
+     * @return bool
+     */
+    public function save()
+    {
+        global $wpdb;
+        $table = $this->getTable();
+        if (empty($table)) {
+            return false;
+        }
+
+        $columns = static::tableColumns($table);
+        $data = [];
+        foreach ($this->getAttributes() as $key => $value) {
+            if ($key === $this->primaryKey || !in_array($key, $columns, true)) {
+                continue;
+            }
+            $data[$key] = (is_array($value) || is_object($value)) ? wp_json_encode($value) : $value;
+        }
+
+        $now = current_time('mysql');
+        if (in_array('updated_at', $columns, true)) {
+            $data['updated_at'] = $now;
+        }
+
+        $formats = array_map([self::class, 'sqlFormat'], $data);
+        $id = $this->attributes[$this->primaryKey] ?? null;
+
+        if (!empty($id)) {
+            $result = $wpdb->update($table, $data, [$this->primaryKey => $id], $formats, ['%d']);
+            $ok = $result !== false;
+        } else {
+            if (in_array('created_at', $columns, true) && empty($data['created_at'])) {
+                $data['created_at'] = $now;
+                $formats['created_at'] = '%s';
+            }
+            $ok = (bool) $wpdb->insert($table, $data, $formats);
+            if ($ok) {
+                $this->attributes[$this->primaryKey] = $wpdb->insert_id;
+            }
+        }
+
+        if ($ok) {
+            foreach ($data as $key => $value) {
+                $this->attributes[$key] = $value;
+            }
+            static::invalidateCache();
+            static::invalidateCache('findCached', [$this->attributes[$this->primaryKey]]);
+        }
+
+        return $ok;
+    }
+
+    /**
+     * Update a record by ID. Only real table columns are written (see save()).
+     * Controllers call this (e.g. PUT /visitations/{id}); models without it fatalled.
+     *
+     * @param int   $id
+     * @param array $data
+     * @return static|false The updated model, or false if not found / not saved
+     */
+    public static function updateById($id, $data)
+    {
+        $model = static::find($id);
+        if (!$model) {
+            return false;
+        }
+
+        $primary = $model->primaryKey;
+        foreach ((array) $data as $key => $value) {
+            if ($key !== $primary) {
+                $model->attributes[$key] = $value;
+            }
+        }
+
+        return $model->save() ? $model : false;
+    }
+
+    /**
+     * Delete a record by ID.
+     *
+     * @param int $id
+     * @return bool False if the record doesn't exist or couldn't be deleted
+     */
+    public static function deleteById($id)
+    {
+        $model = static::find($id);
+        return $model ? (bool) $model->delete() : false;
+    }
+
+    /**
+     * Column names of a table (cached per request).
+     *
+     * @param string $table
+     * @return string[]
+     */
+    protected static function tableColumns($table)
+    {
+        static $columns = [];
+        if (!isset($columns[$table])) {
+            global $wpdb;
+            $columns[$table] = $wpdb->get_col("SHOW COLUMNS FROM `{$table}`") ?: [];
+        }
+        return $columns[$table];
+    }
+
     public function update(array $attributes)
     {
         global $wpdb;
@@ -414,7 +628,7 @@ abstract class BaseModel extends PostModel
             $attributes,
             ['ID' => $this->attributes['ID']],
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes),
             ['%d']
         );

@@ -2,110 +2,79 @@
 
 namespace HospitalManager\Database\Seeders;
 
+/**
+ * Seeds hm_medical_reports from existing visitations.
+ *
+ * Columns: patient_id (hm_patients.ID), doctor_id (doctor's WP user ID — this is what
+ * DashboardController / MedicalReport::getPendingForDoctor() query by), visitation_id,
+ * report_content, status ('pending' | 'completed').
+ */
 class MedicalReportSeeder extends Seeder
 {
-    /**
-     * Run the seeder
-     */
     public function run()
     {
-        $this->log('Creating medical reports...');
-        
         global $wpdb;
-        
-        // Get patient and doctor IDs
-        $patients_table = $wpdb->prefix . 'hm_patients';
-        $patient_ids = $wpdb->get_col("SELECT ID FROM {$patients_table} LIMIT 20");
-        
-        $doctors_table = $wpdb->prefix . 'hm_doctors';
-        $doctor_ids = $wpdb->get_col("SELECT ID FROM {$doctors_table} LIMIT 10");
-        
-        if (empty($patient_ids) || empty($doctor_ids)) {
-            $this->log('No patients or doctors found. Cannot create medical reports.');
-            return;
+
+        $this->log('Creating medical reports...');
+
+        $visitations = $wpdb->get_results(
+            "SELECT v.*, d.user_id AS doctor_user_id
+             FROM {$wpdb->prefix}hm_visitations v
+             JOIN {$wpdb->prefix}hm_doctors d ON d.ID = v.doctor_id"
+        );
+
+        if (empty($visitations)) {
+            $this->log('No visitations found. Run VisitationSeeder first.', 'warning');
+            return false;
         }
-        
-        $table = $wpdb->prefix . 'hm_medical_reports';
+
         $count = 0;
-        $total = 30;
-        
-        $report_types = [
-            'General Checkup',
-            'Follow-up Examination',
-            'Specialist Consultation',
-            'Diagnostic Report',
-            'Treatment Summary',
-            'Pre-operative Assessment',
-            'Post-operative Report',
-            'Emergency Consultation'
-        ];
-        
-        $diagnoses = [
-            'Normal health status',
-            'Hypertension - controlled',
-            'Diabetes Type 2 - managed',
-            'Upper respiratory infection',
-            'Gastroenteritis - acute',
-            'Allergic rhinitis',
-            'Lower back pain - chronic',
-            'Anxiety disorder - mild',
-            'Vitamin D deficiency',
-            'Iron deficiency anemia'
-        ];
-        
-        $treatments = [
-            'Lifestyle modification and regular monitoring',
-            'Medication prescribed as per protocol',
-            'Physical therapy recommended',
-            'Follow-up in 2 weeks',
-            'Dietary changes advised',
-            'Exercise routine prescribed',
-            'Symptomatic treatment provided',
-            'Specialist referral made',
-            'Lab tests ordered for monitoring',
-            'Patient education provided'
-        ];
-        
-        for ($i = 0; $i < $total; $i++) {
-            $patient_id = $patient_ids[array_rand($patient_ids)];
-            $doctor_id = $doctor_ids[array_rand($doctor_ids)];
-            $report_type = $report_types[array_rand($report_types)];
-            $diagnosis = $diagnoses[array_rand($diagnoses)];
-            $treatment = $treatments[array_rand($treatments)];
-            
-            $days_ago = mt_rand(1, 90);
-            $report_date = date('Y-m-d', strtotime("-{$days_ago} days"));
-            $created_at = date('Y-m-d H:i:s', strtotime("-{$days_ago} days"));
-            
-            // Generate additional findings and recommendations
-            $findings = "Patient presented with symptoms consistent with {$diagnosis}. ";
-            $findings .= "Physical examination and assessment completed. ";
-            $findings .= "Vital signs within normal limits. ";
-            
-            $recommendations = "{$treatment}. ";
-            $recommendations .= "Patient advised to maintain regular follow-up appointments. ";
-            $recommendations .= "Emergency contact information provided. ";
-            
-            $data = [
-                'patient_id' => $patient_id,
-                'doctor_id' => $doctor_id,
-                'report_type' => $report_type,
-                'report_date' => $report_date,
-                'diagnosis' => $diagnosis,
-                'findings' => $findings,
-                'treatment_plan' => $treatment,
-                'recommendations' => $recommendations,
-                'status' => mt_rand(0, 100) <= 85 ? 'completed' : 'pending', // 85% completed
-                'created_at' => $created_at,
-                'updated_at' => $created_at
-            ];
-            
-            $result = $wpdb->insert($table, $data);
-            if ($result) {
+        // Every visit gets a report so each patient's history is complete. Reports for
+        // visits in the last 3 days may still be awaiting sign-off.
+        $recent_cutoff = date('Y-m-d', strtotime('-3 days'));
+        foreach ($visitations as $visitation) {
+            $is_recent = $visitation->date >= $recent_cutoff;
+            $status = ($is_recent && mt_rand(0, 1)) ? 'pending' : 'completed';
+            if (self::createForVisitation($visitation, $status)) {
                 $count++;
             }
         }
-        
+
         $this->log("Created {$count} medical reports", 'success');
+        return true;
+    }
+
+    public static function createForVisitation($visitation, $status = 'completed')
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_medical_reports';
+
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE visitation_id = %d",
+            $visitation->ID
+        ));
+        if ($exists) {
+            return false;
+        }
+
+        $content = "MEDICAL REPORT\n\n"
+            . "Visit date: {$visitation->date} {$visitation->time}\n"
+            . "Presenting complaint: " . ($visitation->complaint ?: 'Routine review') . "\n\n"
+            . "Findings: Physical examination and assessment completed. Vital signs recorded.\n"
+            . "Diagnosis: " . ($visitation->diagnosis ?: 'Under evaluation') . "\n"
+            . "Treatment plan: " . ($visitation->treatment ?: 'Observation') . "\n\n"
+            . "Recommendations: Patient advised to adhere to the treatment plan and attend scheduled follow-up appointments.";
+
+        $created_at = date('Y-m-d H:i:s', strtotime("{$visitation->date} {$visitation->time} +2 hours"));
+
+        return $wpdb->insert($table, [
+            'patient_id' => $visitation->patient_id,
+            'doctor_id' => $visitation->doctor_user_id,
+            'visitation_id' => $visitation->ID,
+            'report_content' => $content,
+            'status' => $status,
+            'created_at' => $created_at,
+            'updated_at' => $created_at,
+        ]);
     }
 }

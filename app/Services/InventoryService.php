@@ -15,41 +15,70 @@ class InventoryService extends BaseService
     public static function recordTransaction($data)
     {
         $wpdb = self::getWpdb();
-        
-        // Get the current inventory item
-        $item = Inventory::findOne($data['item_id']);
-        if (!$item) {
-            throw new \Exception('Inventory item not found');
+
+        $types = ['stock_in', 'stock_out', 'adjustment', 'transfer', 'expired', 'damaged', 'returned'];
+        if (!in_array($data['type'] ?? null, $types, true)) {
+            throw new \Exception('Transaction type must be one of: ' . implode(', ', $types), 400);
         }
-        
-        $previous_quantity = $item->quantity;
-        $quantity_change = intval($data['quantity']);
-        
-        // Calculate new quantity based on transaction type
+        $quantity_change = intval($data['quantity'] ?? 0);
+        if ($quantity_change < 0 || ($quantity_change === 0 && $data['type'] !== 'adjustment')) {
+            throw new \Exception('Quantity must be a positive number', 400);
+        }
+
+        $table = $wpdb->prefix . 'hm_inventory';
+        $previous_quantity = $wpdb->get_var($wpdb->prepare("SELECT quantity FROM {$table} WHERE ID = %d", $data['item_id']));
+        if ($previous_quantity === null) {
+            throw new \Exception('Inventory item not found', 404);
+        }
+        $previous_quantity = (int) $previous_quantity;
+
+        // Change the stock with one atomic UPDATE, so two concurrent changes can't
+        // both start from the same quantity and overwrite each other. (No explicit
+        // transaction: it would commit any transaction the caller has open.)
+        $delta = 0; // signed change to the stock level
         switch ($data['type']) {
             case 'stock_in':
             case 'returned':
-                $new_quantity = $previous_quantity + $quantity_change;
+                $delta = $quantity_change;
+                $changed = $wpdb->query($wpdb->prepare(
+                    "UPDATE {$table} SET quantity = quantity + %d WHERE ID = %d",
+                    $quantity_change, $data['item_id']
+                ));
                 break;
             case 'stock_out':
             case 'expired':
             case 'damaged':
-                $new_quantity = $previous_quantity - $quantity_change;
+                // Taking out more than is in stock is an error (it used to be
+                // silently clamped to 0)
+                $changed = $wpdb->query($wpdb->prepare(
+                    "UPDATE {$table} SET quantity = quantity - %d WHERE ID = %d AND quantity >= %d",
+                    $quantity_change, $data['item_id'], $quantity_change
+                ));
+                if (!$changed) {
+                    $in_stock = (int) $wpdb->get_var($wpdb->prepare("SELECT quantity FROM {$table} WHERE ID = %d", $data['item_id']));
+                    throw new \Exception("Only {$in_stock} in stock; cannot remove {$quantity_change}", 400);
+                }
+                $delta = -$quantity_change; // quantity_changed stays positive, as before
                 break;
             case 'adjustment':
-                $new_quantity = $quantity_change; // Direct set
-                $quantity_change = $new_quantity - $previous_quantity;
+                // Direct set; the change is relative to the quantity before
+                $changed = $wpdb->query($wpdb->prepare(
+                    "UPDATE {$table} SET quantity = %d WHERE ID = %d",
+                    $quantity_change, $data['item_id']
+                ));
+                $delta = $quantity_change - $previous_quantity;
+                $quantity_change = $delta;
                 break;
-            default:
-                $new_quantity = $previous_quantity;
+            default: // transfer: quantity unchanged here
+                $changed = true;
                 break;
         }
-        
-        // Ensure quantity doesn't go negative
-        if ($new_quantity < 0) {
-            $new_quantity = 0;
+        if ($changed === false) {
+            throw new \Exception('Failed to update stock');
         }
-        
+        $new_quantity = (int) $wpdb->get_var($wpdb->prepare("SELECT quantity FROM {$table} WHERE ID = %d", $data['item_id']));
+        $previous_quantity = $new_quantity - $delta;
+
         // Create transaction record
         $transaction_data = [
             'inventory_id' => $data['item_id'],
@@ -73,13 +102,16 @@ class InventoryService extends BaseService
         if ($result === false) {
             throw new \Exception('Failed to create transaction');
         }
-        
-        // Update inventory quantity
-        Inventory::updateItem($data['item_id'], ['quantity' => $new_quantity]);
-        
+        // Read the ID now: later queries overwrite $wpdb->insert_id
+        $transaction_id = (int) $wpdb->insert_id;
+
+        // Quantity is already updated; refresh the item's status (In Stock /
+        // Low Stock / Out of Stock) and caches
+        Inventory::updateItem($data['item_id'], []);
+
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}hm_inventory_transactions WHERE ID = %d",
-            $wpdb->insert_id
+            $transaction_id
         ));
     }
     
@@ -93,6 +125,7 @@ class InventoryService extends BaseService
     public static function acknowledgeAlert($alert_id, $user_id)
     {
         $wpdb = self::getWpdb();
+        self::activeAlertOrFail($alert_id);
         
         return $wpdb->update(
             $wpdb->prefix . 'hm_inventory_alerts',
@@ -117,6 +150,7 @@ class InventoryService extends BaseService
     public static function resolveAlert($alert_id, $user_id)
     {
         global $wpdb;
+        self::activeAlertOrFail($alert_id);
         
         return $wpdb->update(
             $wpdb->prefix . 'hm_inventory_alerts',
@@ -133,6 +167,37 @@ class InventoryService extends BaseService
     }
     
     /**
+     * The alert, or an exception: 404 when it doesn't exist (this used to report
+     * success), 409 when it's already resolved.
+     */
+    private static function activeAlertOrFail($alert_id)
+    {
+        global $wpdb;
+        $alert = $wpdb->get_row($wpdb->prepare(
+            "SELECT ID, is_active FROM {$wpdb->prefix}hm_inventory_alerts WHERE ID = %d",
+            $alert_id
+        ));
+        if (!$alert) {
+            throw new \Exception('Alert not found', 404);
+        }
+        if (!(int) $alert->is_active) {
+            throw new \Exception('Alert is already resolved', 409);
+        }
+        return $alert;
+    }
+
+    /** Whether an item already has an active alert of this type. */
+    private static function hasActiveAlert($inventory_id, $alert_type)
+    {
+        global $wpdb;
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}hm_inventory_alerts
+             WHERE inventory_id = %d AND alert_type = %s AND is_active = 1",
+            $inventory_id, $alert_type
+        ));
+    }
+
+    /**
      * Generate automatic alerts
      *
      * @return array
@@ -143,12 +208,17 @@ class InventoryService extends BaseService
         
         $alerts_created = [];
         
-        // Get items that need alerts
-        $items = Inventory::getFiltered([]);
+        // Current stock straight from the table (the cached list could be stale)
+        $items = $wpdb->get_results(
+            "SELECT ID, item_name, quantity, reorder_level FROM {$wpdb->prefix}hm_inventory"
+        );
         
         foreach ($items as $item) {
             // Low stock alert
-            if ($item->quantity <= $item->reorder_level && $item->quantity > 0) {
+            // Skip items that already have an open alert of the same type (every
+            // run used to add another copy)
+            if ($item->quantity <= $item->reorder_level && $item->quantity > 0
+                && !self::hasActiveAlert($item->ID, 'low_stock')) {
                 $alert_data = [
                     'inventory_id' => $item->ID,
                     'alert_type' => 'low_stock',
@@ -166,7 +236,7 @@ class InventoryService extends BaseService
             }
             
             // Out of stock alert
-            if ($item->quantity <= 0) {
+            if ($item->quantity <= 0 && !self::hasActiveAlert($item->ID, 'out_of_stock')) {
                 $alert_data = [
                     'inventory_id' => $item->ID,
                     'alert_type' => 'out_of_stock',
@@ -197,6 +267,10 @@ class InventoryService extends BaseService
     public static function approveReorder($reorder_id, $user_id)
     {
         global $wpdb;
+        $reorder = self::reorderOrFail($reorder_id);
+        if ($reorder->status !== 'pending') {
+            throw new \Exception("Only pending reorders can be approved (this one is {$reorder->status})", 409);
+        }
         
         return $wpdb->update(
             $wpdb->prefix . 'hm_inventory_reorders',
@@ -225,17 +299,28 @@ class InventoryService extends BaseService
     {
         global $wpdb;
         
-        // Get reorder details
-        $reorder = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}hm_inventory_reorders WHERE ID = %d",
-            $reorder_id
-        ));
-        
-        if (!$reorder) {
-            return false;
+        $reorder = self::reorderOrFail($reorder_id);
+        // Completing adds the stock, so it may happen once, and only after approval
+        // (a received or cancelled reorder used to add its stock again each time).
+        if (!in_array($reorder->status, ['approved', 'ordered'], true)) {
+            throw new \Exception("Only approved or ordered reorders can be received (this one is {$reorder->status})", 409);
         }
-        
-        // Update reorder status
+        $received_quantity = intval($received_quantity);
+        if ($received_quantity <= 0) {
+            throw new \Exception('Received quantity must be a positive number', 400);
+        }
+
+        // Claim the reorder atomically: only one request can move it to "received"
+        $claimed = $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->prefix}hm_inventory_reorders SET status = 'received', updated_at = %s
+             WHERE ID = %d AND status IN ('approved', 'ordered')",
+            current_time('mysql'), $reorder_id
+        ));
+        if (!$claimed) {
+            throw new \Exception('This reorder was already received', 409);
+        }
+
+        // Update reorder notes
         $wpdb->update(
             $wpdb->prefix . 'hm_inventory_reorders',
             [
@@ -258,7 +343,31 @@ class InventoryService extends BaseService
             'user_id' => $user_id
         ];
         
-        return self::recordTransaction($transaction_data) !== false;
+        try {
+            return self::recordTransaction($transaction_data) !== false;
+        } catch (\Exception $e) {
+            // Stock wasn't added: put the reorder back so it can be received again
+            $wpdb->update(
+                $wpdb->prefix . 'hm_inventory_reorders',
+                ['status' => $reorder->status, 'updated_at' => current_time('mysql')],
+                ['ID' => $reorder_id]
+            );
+            throw $e;
+        }
+    }
+
+    /** The reorder row, or a 404 exception. */
+    private static function reorderOrFail($reorder_id)
+    {
+        global $wpdb;
+        $reorder = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}hm_inventory_reorders WHERE ID = %d",
+            $reorder_id
+        ));
+        if (!$reorder) {
+            throw new \Exception('Reorder not found', 404);
+        }
+        return $reorder;
     }
     
     /**
@@ -334,7 +443,8 @@ class InventoryService extends BaseService
                 'quantity' => $item->quantity,
                 'current_quantity' => $item->quantity,
                 'reorder_level' => $item->reorder_level,
-                'max_stock_level' => $item->max_stock_level,
+                // hm_inventory has no max_stock_level column (only hm_inventory_reorders does)
+                'max_stock_level' => $item->max_stock_level ?? null,
                 'suggested_quantity' => $suggested_quantity,
                 'priority' => $item->quantity <= 0 ? 'urgent' : ($item->quantity <= $item->reorder_level * 0.5 ? 'high' : 'medium')
             ];

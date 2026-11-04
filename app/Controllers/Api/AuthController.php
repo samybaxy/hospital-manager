@@ -23,12 +23,14 @@ class AuthController extends BaseController
         ]);
         
         // Debug endpoint to help troubleshoot authentication issues
+        // Administrators only: it shows cookie names, header details and capabilities
+        // (it used to answer anyone, signed in or not).
         register_rest_route($this->namespace, '/auth/debug', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'debug_auth'],
                 'permission_callback' => function() {
-                    return true;
+                    return current_user_can('manage_options');
                 }
             ]
         ]);
@@ -114,29 +116,9 @@ class AuthController extends BaseController
 
     public function get_current_user()
     {
-        // Get headers for diagnostics
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
-        
-        // Check for nonce
-        $nonce = isset($headers['X-WP-Nonce']) ? $headers['X-WP-Nonce'] : '';
-        $nonce_valid = $nonce ? wp_verify_nonce($nonce, 'wp_rest') : false;
-        
-        // First check standard WordPress authentication
+        // (Request/cookie diagnostics used to be returned here as debug_info, to
+        // anyone. They are available to administrators from /auth/debug.)
         $user = wp_get_current_user();
-        
-        // Get debug information
-        $auth_debug = [
-            'headers_received' => [
-                'has_nonce' => !empty($nonce),
-                'nonce_valid' => $nonce_valid,
-                'origin' => isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : 'not_set',
-                'referer' => isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : 'not_set',
-            ],
-            'cookies' => [
-                'has_wordpress_logged_in' => isset($_COOKIE[LOGGED_IN_COOKIE]),
-                'has_custom_auth' => isset($_COOKIE['hospital_manager_auth']),
-            ],
-        ];
         
         // Generate a fresh nonce
         $new_nonce = wp_create_nonce('wp_rest');
@@ -152,7 +134,6 @@ class AuthController extends BaseController
                 ],
                 'role' => $this->get_primary_role($user),
                 'auth_method' => 'wordpress_session',
-                'debug_info' => $auth_debug,
                 'fresh_nonce' => $new_nonce
             ]);
             
@@ -162,70 +143,17 @@ class AuthController extends BaseController
             return $response;
         } 
         
-        // If not authenticated by standard WordPress session, check for our custom cookie
-        if (isset($_COOKIE['hospital_manager_auth']) && $_COOKIE['hospital_manager_auth'] === 'authenticated') {
-            // This is a fallback method - we don't know which user, but they're authenticated
-            // In a real-world scenario, you'd store a user identifier in the cookie or use JWT
-            $response = new WP_REST_Response([
-                'authenticated' => true,
-                'user' => [
-                    'ID' => 0,
-                    'name' => 'Guest User',
-                    'email' => ''
-                ],
-                'role' => 'guest',
-                'auth_method' => 'custom_cookie',
-                'debug_info' => $auth_debug,
-                'fresh_nonce' => $new_nonce
-            ]);
-            
-            // Set the nonce header
-            $response->header('X-WP-Nonce', $new_nonce);
-            
-            return $response;
-        }
-        
-        // For development environments, allow requests from expected origins with proper verification
-        if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
-            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-            $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-            
-            // If request comes from our own site AND has valid nonce
-            if ((strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) && $nonce_valid) {
-                // Get an actual admin user for development mode, or create a development user
-                $admin_user = get_users(['role' => 'administrator', 'number' => 1]);
-                $dev_user_id = !empty($admin_user) ? $admin_user[0]->ID : 1;
-                $dev_user_name = !empty($admin_user) ? $admin_user[0]->display_name : 'Development Admin';
-                $dev_user_email = !empty($admin_user) ? $admin_user[0]->user_email : 'dev@localhost';
-                
-                // Set the current user for WordPress session compatibility
-                wp_set_current_user($dev_user_id);
-                
-                $response = new WP_REST_Response([
-                    'authenticated' => true,
-                    'user' => [
-                        'ID' => $dev_user_id,
-                        'name' => $dev_user_name,
-                        'email' => $dev_user_email
-                    ],
-                    'role' => 'administrator', // Fixed: Set as administrator for development
-                    'auth_method' => 'development',
-                    'debug_info' => $auth_debug,
-                    'fresh_nonce' => $new_nonce
-                ]);
-                
-                // Set the nonce header
-                $response->header('X-WP-Nonce', $new_nonce);
-                
-                return $response;
-            }
-        }
+        // Removed two fallbacks that reported unauthenticated requests as signed in:
+        //  - a cookie with the literal value hospital_manager_auth=authenticated
+        //    ("Guest User"; anyone can set a cookie), and
+        //  - on WP_DEBUG local sites, a valid nonce plus a site Origin/Referer, which
+        //    signed the request in as the first administrator. Logged-out nonces are
+        //    printed on the public app page and those headers are easily forged.
         
         // Return a 200 status for unauthenticated users with appropriate data
         $response = new WP_REST_Response([
             'authenticated' => false,
             'message' => 'Not authenticated',
-            'debug_info' => $auth_debug,
             'fresh_nonce' => $new_nonce
         ], 200); // Return 200 instead of 401
         
@@ -508,7 +436,9 @@ class AuthController extends BaseController
             }
             
             // Bypass login redirects for this session specifically
-            define('DOING_AJAX', true); // This will prevent WordPress from redirecting
+            if (!defined('DOING_AJAX')) {
+                define('DOING_AJAX', true); // This will prevent WordPress from redirecting
+            }
             add_filter('wp_redirect', function($location, $status) {
                 // Only block wp-login.php redirects
                 if (strpos($location, 'wp-login.php') !== false) {
@@ -603,7 +533,7 @@ class AuthController extends BaseController
             ];
     
             // Log if credentials are present
-            error_log('Hospital Manager: Login credentials received - username: ' . (!empty($creds['user_login']) ? 'present' : 'missing') . 
+            \HospitalManager\Helpers\DebugLog::line('Hospital Manager: Login credentials received - username: ' . (!empty($creds['user_login']) ? 'present' : 'missing') . 
                       ', password: ' . (!empty($creds['user_password']) ? 'present' : 'missing'));
     
             // Force secure cookies if site is using HTTPS
@@ -625,6 +555,14 @@ class AuthController extends BaseController
                 error_log('Hospital Manager: Prevented redirect for failed login: ' . $username);
             }, 0); // High priority
             
+            // Nonces are tied to the login session (wp_get_session_token() reads the
+            // logged-in cookie). The cookie set by wp_signon() isn't in $_COOKIE for
+            // the rest of this request, so without this the nonce returned below
+            // belongs to "no session" and is rejected by the very next request.
+            add_action('set_logged_in_cookie', function($logged_in_cookie) {
+                $_COOKIE[LOGGED_IN_COOKIE] = $logged_in_cookie;
+            });
+
             // Attempt to sign on the user
             $user = wp_signon($creds, is_ssl());
             error_log('Hospital Manager: wp_signon result: ' . (is_wp_error($user) ? 'Error: ' . $user->get_error_message() : 'Success for user ID: ' . $user->ID));
@@ -638,15 +576,15 @@ class AuthController extends BaseController
                 $error_code = $user->get_error_code();
                 
                 // Customize error messages for a better user experience
-                $user_friendly_message = 'Invalid email or password. Please try again.';
+                $user_friendly_message = 'Invalid username/email or password. Please try again.';
                 
                 // Customize messages based on specific error codes
                 if ($error_code === 'incorrect_password') {
                     $user_friendly_message = 'The password you entered is incorrect. Please try again.';
                 } else if ($error_code === 'invalid_username' || $error_code === 'invalid_email') {
-                    $user_friendly_message = 'We couldn\'t find an account with that email address. Please check and try again.';
+                    $user_friendly_message = 'We couldn\'t find an account with that username or email address. Please check and try again.';
                 } else if ($error_code === 'empty_username' || $error_code === 'empty_password') {
-                    $user_friendly_message = 'Please enter both email address and password.';
+                    $user_friendly_message = 'Please enter both your username or email and your password.';
                 }
                 
                 // Ensure we strip any HTML from the message
@@ -777,7 +715,7 @@ class AuthController extends BaseController
             
             try {
                 $token = $this->generate_jwt_token($token_data);
-                error_log('Hospital Manager: JWT token generated successfully');
+                \HospitalManager\Helpers\DebugLog::line('Hospital Manager: JWT token generated successfully');
             } catch (\Exception $e) {
                 error_log('Hospital Manager: JWT token generation failed: ' . $e->getMessage());
                 // Provide a fallback token if JWT generation fails
@@ -785,7 +723,7 @@ class AuthController extends BaseController
                     'user_id' => $user->ID,
                     'expires' => $expire
                 ]));
-                error_log('Hospital Manager: Using fallback token');
+                \HospitalManager\Helpers\DebugLog::line('Hospital Manager: Using fallback token');
             }
             
             // Prepare response data for the client
@@ -809,7 +747,7 @@ class AuthController extends BaseController
             $response->header('Access-Control-Allow-Credentials', 'true');
             $response->header('Cache-Control', 'no-cache, no-store, must-revalidate');
             
-            error_log('Hospital Manager: Login successful for user: ' . $user->user_login);
+            \HospitalManager\Helpers\DebugLog::line('Hospital Manager: Login successful for user: ' . $user->user_login);
             return $response;
         
         } catch (\Exception $e) {
@@ -922,15 +860,18 @@ class AuthController extends BaseController
         // Generate a secure reset token
         $reset_key = wp_generate_password(32, false);
         
-        // Store token with an expiration time (24 hours)
+        // Store only a hash of the token (24 hour expiry): the plain token exists
+        // only in the emailed link, so a leaked database can't be used to reset.
         $expiration = time() + (24 * HOUR_IN_SECONDS);
         update_user_meta($user_id, 'hospital_manager_password_reset_token', [
-            'token' => $reset_key,
+            'token' => self::hash_reset_token($reset_key),
             'expiration' => $expiration
         ]);
         
-        // Generate reset URL with the token
-        $reset_url = site_url('/reset-password?token=' . $reset_key);
+        // The React app uses a HashRouter on the page holding [hospital_manager],
+        // so the link must be <app page>#/reset-password?token=... (the old
+        // site_url('/reset-password?...') link was a 404).
+        $reset_url = $this->app_url() . '#/reset-password?token=' . rawurlencode($reset_key);
         
         // Prepare and send email
         $subject = sprintf('[%s] Password Reset Request', get_bloginfo('name'));
@@ -995,6 +936,16 @@ Regards,
                 ['status' => 403]
             );
         }
+
+        // Same minimum as POST /auth/login, which refuses shorter passwords
+        // outright; accepting one here would lock the user out.
+        if (strlen($password) < 8) {
+            return new WP_Error(
+                'password_too_short',
+                'Password must be at least 8 characters long',
+                ['status' => 400]
+            );
+        }
         
         // Find user with this reset token
         $user_id = $this->find_user_by_reset_token($token);
@@ -1012,6 +963,10 @@ Regards,
         
         // Delete the used token
         delete_user_meta($user_id, 'hospital_manager_password_reset_token');
+
+        // Sign the account out everywhere: whoever prompted the reset may hold a
+        // session.
+        self::end_all_sessions($user_id);
         
         // Generate a fresh nonce for subsequent API calls
         $new_nonce = wp_create_nonce('wp_rest');
@@ -1119,40 +1074,95 @@ Regards,
      */
     private function find_user_by_reset_token($token) 
     {
-        if (empty($token)) {
+        // Tokens are wp_generate_password(32, false): letters and digits only.
+        // Anything else (including LIKE wildcards) can never be a valid token.
+        if (!is_string($token) || !preg_match('/^[A-Za-z0-9]{20,64}$/', $token)) {
             return false;
         }
         
         global $wpdb;
         
-        // Find user with this token in their meta
-        $user_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT user_id FROM {$wpdb->usermeta} 
+        // Tokens are stored hashed. Match the whole serialized hash, not a
+        // substring of the meta: the old LIKE '%<token>%' matched fragments such
+        // as "token" or a single character, and then deleted that user's pending
+        // reset, so anyone could cancel other users' resets.
+        $hash = self::hash_reset_token($token);
+        $needle = 's:5:"token";s:' . strlen($hash) . ':"' . $hash . '";';
+        $user_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT user_id FROM {$wpdb->usermeta}
             WHERE meta_key = 'hospital_manager_password_reset_token'
             AND meta_value LIKE %s",
-            '%' . $wpdb->esc_like($token) . '%'
+            '%' . $wpdb->esc_like($needle) . '%'
         ));
         
-        if (!$user_id) {
-            return false;
-        }
-        
-        // Get token data from meta
-        $token_data = get_user_meta($user_id, 'hospital_manager_password_reset_token', true);
-        
-        // Verify token hasn't expired
-        if (!is_array($token_data) || 
-            !isset($token_data['token']) || 
-            !isset($token_data['expiration']) ||
-            $token_data['token'] !== $token ||
-            $token_data['expiration'] < time()) {
+        foreach ($user_ids as $user_id) {
+            $token_data = get_user_meta($user_id, 'hospital_manager_password_reset_token', true);
             
-            // Token expired or invalid, clean up
-            delete_user_meta($user_id, 'hospital_manager_password_reset_token');
-            return false;
+            if (!is_array($token_data) || !isset($token_data['token'], $token_data['expiration'])
+                || !hash_equals((string) $token_data['token'], $hash)) {
+                continue;
+            }
+            
+            if ((int) $token_data['expiration'] < time()) {
+                // This user's own token has expired: clean it up.
+                delete_user_meta($user_id, 'hospital_manager_password_reset_token');
+                return false;
+            }
+            
+            return (int) $user_id;
         }
         
-        return $user_id;
+        return false;
+    }
+
+    /**
+     * Reset tokens are stored as this hash; the plain token is only in the email.
+     */
+    private static function hash_reset_token($token)
+    {
+        return hash_hmac('sha256', $token, wp_salt('auth'));
+    }
+
+    /**
+     * End every way this user can be signed in:
+     *  - WordPress login cookies (session tokens),
+     *  - the plugin's hospital_manager_auth cookie (token kept in user meta),
+     *  - JWTs from /auth/login and /auth/refresh: they are stateless, so each
+     *    carries the user's token generation ("tgen") and bumping it here makes
+     *    validate_token() reject every earlier token, including for /auth/refresh.
+     */
+    public static function end_all_sessions($user_id)
+    {
+        $user_id = (int) $user_id;
+        if ($user_id <= 0) {
+            return;
+        }
+
+        \WP_Session_Tokens::get_instance($user_id)->destroy_all();
+        delete_user_meta($user_id, 'hospital_manager_auth_token');
+        update_user_meta($user_id, 'hospital_manager_token_generation', self::token_generation($user_id) + 1);
+    }
+
+    private static function token_generation($user_id)
+    {
+        return (int) get_user_meta((int) $user_id, 'hospital_manager_token_generation', true);
+    }
+
+    /**
+     * URL of the page that renders the app ([hospital_manager] shortcode).
+     */
+    private function app_url()
+    {
+        global $wpdb;
+        $page_id = $wpdb->get_var(
+            "SELECT ID FROM {$wpdb->posts}
+            WHERE post_type = 'page' AND post_status = 'publish'
+            AND post_content LIKE '%[hospital_manager%'
+            ORDER BY ID ASC LIMIT 1"
+        );
+        $url = $page_id ? get_permalink($page_id) : home_url('/hospital-manager/');
+        
+        return apply_filters('hospital_manager_app_url', $url);
     }
     
     /**
@@ -1164,6 +1174,8 @@ Regards,
             // Add additional security claims
             $enhanced_data = array_merge($data, [
                 'jti' => wp_generate_password(16, false), // Unique token ID
+                // Token generation: end_all_sessions() bumps it to revoke earlier tokens
+                'tgen' => isset($data['user']['ID']) ? self::token_generation($data['user']['ID']) : 0,
                 'aud' => home_url(), // Intended audience
                 'nbf' => time(), // Not before timestamp
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
@@ -1287,6 +1299,12 @@ Regards,
         $user = get_user_by('ID', $user_id);
         if (!$user) {
             error_log('Hospital Manager: JWT user not found: ' . $user_id);
+            return false;
+        }
+
+        // Revoked by end_all_sessions() (e.g. after a password reset)
+        if ((int) ($payload['tgen'] ?? 0) !== self::token_generation($user_id)) {
+            error_log('Hospital Manager: JWT revoked (token generation changed) for user ' . $user_id);
             return false;
         }
         

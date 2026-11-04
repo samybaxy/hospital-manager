@@ -41,6 +41,35 @@ class Doctor extends BaseModel
     }
 
     /**
+     * Find the doctor record linked to a WordPress user.
+     *
+     * hm_doctors.ID is the doctor record ID used by appointments, visitations and
+     * lab investigations; hm_doctors.user_id is the WordPress user ID used for
+     * login, chats, notifications and medical reports. Always translate a logged-in
+     * user ID through this method before querying doctor-scoped tables.
+     *
+     * Not cached: a cached miss would hide a doctor record created moments later.
+     *
+     * @param int $user_id WordPress user ID
+     * @return Doctor|null
+     */
+    public static function findByUserId($user_id)
+    {
+        if (empty($user_id)) {
+            return null;
+        }
+
+        global $wpdb;
+        $table = (new static)->getTable();
+        $row = $wpdb->get_row(
+            $wpdb->prepare("SELECT * FROM {$table} WHERE user_id = %d LIMIT 1", $user_id),
+            ARRAY_A
+        );
+
+        return $row ? new static($row) : null;
+    }
+
+    /**
      * Find doctors by specialty with caching
      */
     public static function findBySpecialty($specialty)
@@ -275,38 +304,16 @@ class Doctor extends BaseModel
      */
     public function save()
     {
-        global $wpdb;
-        
-        $table = $wpdb->prefix . $this->tableName;
-        
-        if (isset($this->attributes['ID']) && intval($this->attributes['ID']) > 0) {
-            // Prepare the update data
-            $update_data = [];
-            
-            foreach ($this->fillable as $field) {
-                if (isset($this->attributes[$field])) {
-                    $update_data[$field] = $this->attributes[$field];
-                }
-            }
-            
-            $update_data['updated_at'] = current_time('mysql');
-            
-            $result = $wpdb->update(
-                $table,
-                $update_data,
-                ['ID' => $this->attributes['ID']],
-                null,
-                ['%d']
-            );
-            
-            if ($result !== false) {
-                $this->invalidateDoctorCaches();
-            }
-            
-            return $result !== false;
+        // Insert or update via BaseModel::save() (real columns only). This used to
+        // handle updates only and returned false for new doctors, so
+        // POST /doctors always failed with "Failed to save doctor to database".
+        $result = parent::save();
+
+        if ($result) {
+            $this->invalidateDoctorCaches();
         }
-        
-        return false;
+
+        return $result;
     }
 
     /**

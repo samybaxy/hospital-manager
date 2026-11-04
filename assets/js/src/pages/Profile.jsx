@@ -5,6 +5,8 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import StatusMessage from '../components/StatusMessage';
+import { api } from '../services/apiService';
+import authService from '../services/authService';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -44,23 +46,16 @@ const Profile = () => {
     
     setProfileLoading(true);
     try {
-      const response = await fetch('/wp-json/hospital-manager/v1/profile', {
-        headers: {
-          'X-WP-Nonce': window.hospitalManager?.nonce || '',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setProfileData(data.data);
-          setFormData({
-            first_name: data.data.first_name || '',
-            last_name: data.data.last_name || '',
-            email: data.data.email || '',
-            phone: data.data.phone || ''
-          });
-        }
+      const response = await api.get('/profile');
+      const data = response.data || {};
+      if (data.success && data.data) {
+        setProfileData(data.data);
+        setFormData({
+          first_name: data.data.first_name || '',
+          last_name: data.data.last_name || '',
+          email: data.data.email || '',
+          phone: data.data.phone || ''
+        });
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -113,22 +108,14 @@ const Profile = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('/wp-json/hospital-manager/v1/profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-WP-Nonce': window.hospitalManager?.nonce || '',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
+      const response = await api.post('/profile', formData);
+      const data = response.data || {};
+
+      if (data.success) {
         setIsEditing(false);
         setProfileData(data.data);
         showStatusMessage('Profile updated successfully!', 'success');
-        
+
         // Update user context if available
         if (updateUser) {
           updateUser(data.data);
@@ -138,7 +125,7 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      showStatusMessage('Failed to update profile. Please try again.', 'error');
+      showStatusMessage(error.response?.data?.message || 'Failed to update profile. Please try again.', 'error');
     } finally {
       setLoading(false);
     }

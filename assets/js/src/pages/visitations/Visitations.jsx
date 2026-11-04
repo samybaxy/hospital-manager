@@ -27,7 +27,7 @@ const Visitations = () => {
   // Use a ref to track if this is the first render
   const isFirstRender = useRef(true);
   
-  const { hasAccess, role } = useUserAccess();
+  const { hasAccess, role, canEditVisit: canEditVisitRecord } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -256,7 +256,7 @@ const Visitations = () => {
   
   // Handle delete visit (admin only)
   const handleDeleteVisit = async (visitID) => {
-    if (!hasAccess('visitations') || role !== 'administrator') {
+    if (!hasAccess('delete_visitation')) {
       alert('You do not have permission to delete visits');
       return;
     }
@@ -325,30 +325,15 @@ const Visitations = () => {
   };
   
   // Check if user can edit this specific visit
-  const canEditVisit = (visit) => {
-    if (!hasAccess('visitations')) return false;
-    
-    // Admins can edit any visit
-    if (role === 'administrator') return true;
-    
-    // Doctors can edit visits they conducted
-    if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
-    
-    // Desk officers can edit any visit
-    if (role === 'developer') return true;
-    
-    return false;
-  };
-  
-  // Check if user can delete this specific visit
-  const canDeleteVisit = () => {
-    return hasAccess('visitations') && role === 'administrator';
-  };
+  // These flags come from GET /access, derived from the API's AccessPolicy, so
+  // buttons only appear when the request will be allowed.
+  // Doctors: only visits where they are the visit's doctor (enforced by the API too)
+  const canEditVisit = (visit) => canEditVisitRecord(visit);
 
-  // Check if user can add lab investigations
-  const canAddLabInvestigation = () => {
-    return role === 'lab_tech' || role === 'administrator';
-  };
+  const canDeleteVisit = () => hasAccess('delete_visitation');
+
+  // Requesting a lab test (POST /lab-investigations): administrators and doctors
+  const canAddLabInvestigation = () => hasAccess('request_lab_investigations');
 
   // Handle redirecting to lab investigations page with visit data
   const handleAddLabInvestigation = (visitation) => {
@@ -575,7 +560,7 @@ const Visitations = () => {
               }
             </p>
           </div>
-          {hasAccess('visitations', 'create') && (
+          {hasAccess('add_visitation') && (
             <Button 
               variant="secondary" 
               className="mt-4 md:mt-0 bg-white hover:bg-gray-100 text-blue-700 px-2 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base"
@@ -801,7 +786,7 @@ const Visitations = () => {
                 'No visits match your search criteria. Try a different search term.' : 
                 'There are no visit records in the system yet.'}
             </p>
-            {hasAccess('visitations', 'create') && (
+            {hasAccess('add_visitation') && (
               <Button
                 variant="primary"
                 className="mt-4 inline-flex items-center px-3 py-2 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"

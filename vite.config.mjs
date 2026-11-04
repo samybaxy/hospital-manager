@@ -4,8 +4,22 @@ import { resolve } from 'path';
 import fs from 'fs';
 import path from 'path';
 
+// Remove leftovers of earlier builds (old chunks, source maps). The folder is
+// shared with nothing else, but we don't empty it wholesale in case a deploy
+// adds files there; only build output we recognise is removed.
+const cleanStaleOutputPlugin = (outDir) => ({
+  name: 'clean-stale-output',
+  buildStart: () => {
+    const dir = path.resolve(__dirname, outDir);
+    if (!fs.existsSync(dir)) return;
+    fs.readdirSync(dir)
+      .filter((file) => /\.(js|map|css)$/.test(file))
+      .forEach((file) => fs.unlinkSync(path.join(dir, file)));
+  },
+});
+
 // Custom plugin to move CSS files after build
-const moveCssPlugin = () => {
+const moveCssPlugin = (outDir) => {
   return {
     name: 'move-css-plugin',
     closeBundle: () => {
@@ -16,7 +30,8 @@ const moveCssPlugin = () => {
       }
 
       // Check for CSS files in the JS dist directory
-      const jsDistDir = path.resolve(__dirname, 'assets/js/dist');
+      const jsDistDir = path.resolve(__dirname, outDir);
+      if (!fs.existsSync(jsDistDir)) return;
       const cssFiles = fs.readdirSync(jsDistDir).filter(file => file.endsWith('.css'));
 
       // Move any CSS files to the CSS dist directory
@@ -38,21 +53,25 @@ const moveCssPlugin = () => {
 
 export default defineConfig(({ mode }) => {
   // Read from .env files
-  const isDev = mode === 'development' || process.env.NODE_ENV === 'development';
-  
-  // Log environment for debugging during build
+  // Production unless run with --mode development (yarn build:dev / watch).
+  const isDev = mode === 'development';
+  const outDir = process.env.HM_OUT_DIR || 'assets/js/dist';
+
   console.log(`Building in ${isDev ? 'development' : 'production'} mode`);
-  
+
   return {
     plugins: [
       react(),
-      moveCssPlugin()
+      cleanStaleOutputPlugin(outDir),
+      moveCssPlugin(outDir)
     ],
+    // Strip console.* and debugger from production bundles (some logged patient data).
+    esbuild: isDev ? {} : { drop: ['console', 'debugger'] },
     base: '',
     build: {
-        outDir: 'assets/js/dist',
-        emptyOutDir: false, // Don't empty out dir as we only want to update JS files here
-        sourcemap: isDev ? true : false, // Enable sourcemaps in development mode,
+        outDir,
+        emptyOutDir: false, // stale files are removed by cleanStaleOutputPlugin
+        sourcemap: isDev, // never ship source maps in production
         sourcemapExcludeSources: true, // Don't include source code in maps
         minify: isDev ? false : true, // Don't minify in development mode
         rollupOptions: {

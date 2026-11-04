@@ -2,10 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUserAccess } from '../hooks/useUserAccess';
-import AccessDebug from './AccessDebug';
 import Sidebar from './Sidebar';
-import DevModeToggle from './DevModeToggle';
-import DevModeStatus from './DevModeStatus';
 
 // Separate loading component to avoid conditional hook calls
 const LoadingSpinner = ({ message = "Loading..." }) => (
@@ -75,9 +72,6 @@ const Layout = ({ children }) => {
     
     console.log('Starting logout process...');
     
-    // Preserve dev mode setting before clearing storage
-    const devMode = localStorage.getItem('hospital_manager_dev_mode');
-    
     try {
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
@@ -91,15 +85,9 @@ const Layout = ({ children }) => {
     
     console.log('Clearing local state and redirecting to homepage...');
     
-    // Clear all application state except dev mode setting
+    // Clear all application state
     localStorage.clear();
     sessionStorage.clear();
-    
-    // Restore dev mode setting if it existed
-    if (devMode !== null) {
-      localStorage.setItem('hospital_manager_dev_mode', devMode);
-      console.log('Preserved dev mode setting:', devMode);
-    }
     
     // Always redirect to homepage (never wp-login.php)
     const homeUrl = window.location.origin + '/';
@@ -212,9 +200,7 @@ const Layout = ({ children }) => {
                     </span>
                   </div>
                 </div>
-                
-                {/* Development Mode Status */}
-                <DevModeStatus />
+
               </div>
 
               {/* Empty space to replace search bar */}
@@ -262,13 +248,6 @@ const Layout = ({ children }) => {
                       >
                         Your Profile
                       </Link>
-                      <Link 
-                        to="/settings" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Settings
-                      </Link>
                       <button 
                         onClick={handleSignOut} 
                         className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -290,12 +269,7 @@ const Layout = ({ children }) => {
           </div>
         </main>
       </div>
-      
-      {/* Debug component for administrators only */}
-      {isAdministrator() && <AccessDebug />}
-      
-      {/* Development mode toggle - visible to admins and developers */}
-      <DevModeToggle />
+
     </div>
   );
 };

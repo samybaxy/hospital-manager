@@ -554,13 +554,23 @@ class RoleService extends BaseService
     }
 
     /**
+     * The roles hold inventory_view, inventory_create, ... (INVENTORY_PERMISSIONS).
+     * These checks used to ask for manage_inventory / view_inventory, which no role
+     * has, so only WordPress administrators (manage_options) could use inventory.
+     */
+    private static function hasInventoryCap($capability)
+    {
+        return current_user_can($capability) || current_user_can('manage_options');
+    }
+
+    /**
      * Check if user can view inventory
      *
      * @return bool
      */
     public static function canViewInventory()
     {
-        return current_user_can('manage_inventory') || current_user_can('view_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_view');
     }
 
     /**
@@ -570,7 +580,7 @@ class RoleService extends BaseService
      */
     public static function canCreateInventory()
     {
-        return current_user_can('manage_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_create');
     }
 
     /**
@@ -580,7 +590,7 @@ class RoleService extends BaseService
      */
     public static function canEditInventory()
     {
-        return current_user_can('manage_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_edit');
     }
 
     /**
@@ -590,7 +600,7 @@ class RoleService extends BaseService
      */
     public static function canDeleteInventory()
     {
-        return current_user_can('manage_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_delete');
     }
 
     /**
@@ -600,7 +610,7 @@ class RoleService extends BaseService
      */
     public static function canViewCriticalItems()
     {
-        return current_user_can('manage_inventory') || current_user_can('view_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_critical_items');
     }
 
     /**
@@ -610,7 +620,7 @@ class RoleService extends BaseService
      */
     public static function canViewReports()
     {
-        return current_user_can('manage_inventory') || current_user_can('view_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_reports');
     }
 
     /**
@@ -620,7 +630,7 @@ class RoleService extends BaseService
      */
     public static function canPerformBulkOperations()
     {
-        return current_user_can('manage_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_bulk_operations');
     }
 
     /**
@@ -630,7 +640,7 @@ class RoleService extends BaseService
      */
     public static function canExportInventory()
     {
-        return current_user_can('manage_inventory') || current_user_can('view_inventory') || current_user_can('manage_options');
+        return self::hasInventoryCap('inventory_export');
     }
 
     /**

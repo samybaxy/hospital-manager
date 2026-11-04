@@ -58,6 +58,8 @@ export const useUserAccess = () => {
     refreshAccess: () => userAccessService.fetchAccessData(),
     // Add capability-specific methods
     canCreatePatients: () => userAccessService.canCreatePatients(),
+    canEditVisit: (visit) => userAccessService.canEditVisit(visit),
+    getLockedVisitDoctorId: () => userAccessService.getLockedVisitDoctorId(),
     canEditPatients: () => userAccessService.canEditPatients(),
     canScheduleAppointments: () => userAccessService.canScheduleAppointments()
   };

@@ -53,6 +53,8 @@ class DoctorService extends BaseService
      */
     public static function getDoctorPatients($doctor_id, $page = 1, $per_page = 20)
     {
+        $page = max(1, (int) $page);
+        $per_page = min(100, max(1, (int) $per_page)); // per_page=0 used to divide by zero (500)
         return self::executeCached('getDoctorPatients', [
             'doctor_id' => $doctor_id,
             'page' => $page,
@@ -115,8 +117,8 @@ class DoctorService extends BaseService
         return self::executeCached('searchDoctors', $params, function() use ($params) {
             // Extract parameters with defaults
             $search = $params['search'] ?? '';
-            $per_page = (int) ($params['per_page'] ?? 10);
-            $page = (int) ($params['page'] ?? 1);
+            $per_page = min(100, max(1, (int) ($params['per_page'] ?? 10)));
+            $page = max(1, (int) ($params['page'] ?? 1));
             $orderby = $params['orderby'] ?? 'last_name';
             $order = $params['order'] ?? 'asc';
             $specialty = $params['specialty'] ?? '';

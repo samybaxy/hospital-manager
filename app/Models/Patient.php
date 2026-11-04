@@ -154,10 +154,12 @@ class Patient extends BaseModel
         $appointments_table = $wpdb->prefix . 'hm_appointments';
         
         $query = $wpdb->prepare(
+            // a.doctor_id is hm_doctors.ID, not a WP user ID — go through hm_doctors
             "SELECT a.*, 
-            CONCAT(u.display_name) as doctor_name
+            COALESCE(u.display_name, CONCAT(d.first_name, ' ', d.last_name)) as doctor_name
             FROM {$appointments_table} a
-            LEFT JOIN {$wpdb->users} u ON a.doctor_id = u.ID
+            LEFT JOIN {$wpdb->prefix}hm_doctors d ON d.ID = a.doctor_id
+            LEFT JOIN {$wpdb->users} u ON u.ID = d.user_id
             WHERE a.patient_id = %d
             ORDER BY a.appointment_date DESC, a.appointment_time DESC",
             $this->ID
@@ -191,10 +193,12 @@ class Patient extends BaseModel
         $visitations_table = $wpdb->prefix . 'hm_visitations';
         
         $query = $wpdb->prepare(
+            // v.doctor_id is hm_doctors.ID, not a WP user ID — go through hm_doctors
             "SELECT v.*, 
-            CONCAT(u.display_name) as doctor
+            COALESCE(u.display_name, CONCAT(d.first_name, ' ', d.last_name)) as doctor
             FROM {$visitations_table} v
-            LEFT JOIN {$wpdb->users} u ON v.doctor_id = u.ID
+            LEFT JOIN {$wpdb->prefix}hm_doctors d ON d.ID = v.doctor_id
+            LEFT JOIN {$wpdb->users} u ON u.ID = d.user_id
             WHERE v.patient_id = %d
             ORDER BY v.date DESC, v.time DESC",
             $this->ID
@@ -340,7 +344,7 @@ class Patient extends BaseModel
         if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
             $formats = array_map(function($value) {
-                return is_numeric($value) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($value);
             }, array_values($data));
             
             $result = $wpdb->update(
@@ -360,7 +364,7 @@ class Patient extends BaseModel
         } else {
             // This is an insert
             $formats = array_map(function($value) {
-                return is_numeric($value) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($value);
             }, array_values($data));
             
             $result = $wpdb->insert(
@@ -392,13 +396,12 @@ class Patient extends BaseModel
             return false;
         }
         
-        // Handle phone number formatting for non-test environments
+        // Restore the trunk "0" on 10-digit local numbers (e.g. 8012345678 -> 08012345678).
+        // Previously skipped under PHPUnit, so this path was never tested.
         if (isset($attributes['phone']) && !empty($attributes['phone'])) {
-            if (!defined('RUNNING_PHPUNIT_TESTS')) {
-                $phone = (string)$attributes['phone'];
-                if (substr($phone, 0, 1) !== '0' && strlen($phone) === 10) {
-                    $attributes['phone'] = '0' . $phone;
-                }
+            $phone = (string)$attributes['phone'];
+            if (ctype_digit($phone) && substr($phone, 0, 1) !== '0' && strlen($phone) === 10) {
+                $attributes['phone'] = '0' . $phone;
             }
         }
         

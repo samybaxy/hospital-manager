@@ -9,8 +9,7 @@
         "10quality/wpmvc-commands": "^1.0",
         "10quality/wpmvc-mvc": "^2.0",
         "composer/installers": "^2.0",
-        "vlucas/phpdotenv": "^5.6",
-        "fakerphp/faker": "^1.20"
+        "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
         "psr-4": {
@@ -24,8 +23,11 @@
         }
     },
     "scripts": {
+        "test": "bin/test.sh",
         "seed": "php database/seeders.php all",
         "seed:roles": "php database/seeders.php roles",
+        "seed:demo-data": "php database/seeders.php demo-data",
+        "seed:clinical": "php database/seeders.php clinical",
         "seed:users": "php database/seeders.php users",
         "seed:hmos": "php database/seeders.php hmos",
         "seed:patients": "php database/seeders.php patients",
@@ -35,7 +37,7 @@
         "seed:lab-investigations": "php database/seeders.php lab-investigations",
         "seed:radiological-exams": "php database/seeders.php radiological-exams",
         "seed:medical-reports": "php database/seeders.php medical-reports",
-        "seed:notifications": "php database/seeders.php notifications", 
+        "seed:notifications": "php database/seeders.php notifications",
         "seed:chats": "php database/seeders.php chats",
         "seed:audit-logs": "php database/seeders.php audit-logs",
         "seed:reset": "php database/seeders.php reset",
@@ -52,6 +54,7 @@
         "phpunit/phpunit": "^9.5",
         "yoast/phpunit-polyfills": "^2.0",
         "mockery/mockery": "^1.6",
-        "brain/monkey": "^2.0"
+        "brain/monkey": "^2.0",
+        "fakerphp/faker": "^1.20"
     }
 }

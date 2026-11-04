@@ -125,7 +125,7 @@ class Chat extends BaseModel
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 

@@ -72,9 +72,26 @@ class PatientService extends BaseService
             throw new Exception("A patient with this name and phone number already exists");
         }
 
-        // Create wp_user entry: use var for debugging purposes
-        $user_id = Patient::createWpUser($data);
-        
+        // A portal login is only created when an email is given (the form treats email
+        // as optional, e.g. walk-in patients). user_id = 0 means "no portal account";
+        // the column is NOT NULL, and passing createWpUser()'s null/error string
+        // straight through used to fail the insert with a raw SQL error.
+        $user_id = 0;
+        if (!empty($data['email'])) {
+            if (!is_email($data['email'])) {
+                throw new Exception('Invalid email address');
+            }
+            if (email_exists($data['email'])) {
+                throw new Exception('A user with this email address already exists');
+            }
+
+            $created = Patient::createWpUser($data);
+            if (!is_int($created) || $created <= 0) {
+                throw new Exception('Could not create a login for this patient' . (is_string($created) ? ': ' . $created : ''));
+            }
+            $user_id = $created;
+        }
+
         // Unset email field before creating the patient
         unset($data['email']);
 
@@ -198,7 +215,7 @@ class PatientService extends BaseService
             
             // Optimized count query
             $count_query = "SELECT COUNT(*) FROM {$table} WHERE {$where_clause}";
-            $total = (int)$wpdb->get_var($wpdb->prepare($count_query, $values));
+            $total = (int)$wpdb->get_var(self::prepareIf($count_query, $values));
             
             // Build main query
             $query = "SELECT * FROM {$table} WHERE {$where_clause}";
@@ -379,7 +396,7 @@ class PatientService extends BaseService
             $values[] = $search;
             $values[] = $search;
             $values[] = $search;
-            error_log('PatientService::getPatients - Filter by search: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('PatientService::getPatients - Filter by search', $params);
         }
         
         // Filter by gender if specified
@@ -387,13 +404,13 @@ class PatientService extends BaseService
             $query .= " AND p.gender = %s";
             $countQuery .= " AND p.gender = %s";
             $values[] = $params['gender'];
-            error_log('PatientService::getPatients - Filter by gender: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('PatientService::getPatients - Filter by gender', $params);
         }
         
         // Filter by HMO if specified
         if (!empty($params['hmo_id'])) {
             $hmo_id = (int)$params['hmo_id'];
-            error_log('Filtering patients by HMO ID: ' . $hmo_id . ' (type: ' . gettype($hmo_id) . ')');
+            \HospitalManager\Helpers\DebugLog::line('Filtering patients by HMO ID: ' . $hmo_id . ' (type: ' . gettype($hmo_id) . ')');
             
             // Handle numeric comparison and NULL values properly
             $query .= " AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d";
@@ -411,7 +428,7 @@ class PatientService extends BaseService
         
         // Get total count for pagination
         $count_values = $values; // Copy values for count query
-        $prepared_count = $wpdb->prepare($countQuery, $count_values);
+        $prepared_count = self::prepareIf($countQuery, $count_values);
         $total = (int)$wpdb->get_var($prepared_count);
         
         // Apply sorting
@@ -447,7 +464,7 @@ class PatientService extends BaseService
         $prepared_query = $wpdb->prepare($query, $values);
         
         $items = $wpdb->get_results($prepared_query);            // Log the number of results returned
-        error_log('Query returned ' . count($items) . ' patients');
+        \HospitalManager\Helpers\DebugLog::line('Query returned ' . count($items) . ' patients');
         
         // Process results
         $patients = [];
@@ -479,7 +496,7 @@ class PatientService extends BaseService
         if (!empty($params['hmo_id'])) {
             $last_page = $total > 0 ? ceil($total / $perPage) : 1;
             
-            error_log('Adjusted pagination after HMO filtering: total=' . $total . 
+            \HospitalManager\Helpers\DebugLog::line('Adjusted pagination after HMO filtering: total=' . $total . 
                 ', lastPage=' . $last_page);
         }
         

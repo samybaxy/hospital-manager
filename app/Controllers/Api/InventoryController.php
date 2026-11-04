@@ -568,7 +568,9 @@ class InventoryController extends InventoryBaseController
     {
         return $this->createResponse(
             function() use ($request) {
-                $days = intval($request->get_param('days'));
+                // No ?days= used to mean 0 (only items expiring today)
+                $days = $request->get_param('days');
+                $days = ($days === null || $days === '') ? 30 : max(1, intval($days));
                 return Inventory::getExpiringSoon($days);
             },
             'Expiring inventory items retrieved successfully',
@@ -669,29 +671,60 @@ class InventoryController extends InventoryBaseController
                 );
             }
 
-            $results = [];
+            if ($action === 'delete' && !RoleService::canDeleteInventory()) {
+                return new WP_Error('rest_forbidden', 'You do not have permission to delete inventory items.', ['status' => 403]);
+            }
+            $statuses = ['In Stock', 'Low Stock', 'Out of Stock', 'Expired', 'Discontinued'];
 
+            // Each item: {id, status?, location?}. Results say what happened to each
+            // one (this handler used to do nothing and still report success).
+            $results = [];
             foreach ($items as $item_data) {
-                $id = intval($item_data['id']);
-                
+                $id = intval($item_data['id'] ?? $item_data['ID'] ?? 0);
+                $entry = ['id' => $id, 'success' => false];
+
+                if (!$id || !Inventory::findOne($id)) {
+                    $entry['error'] = 'Item not found';
+                    $results[] = $entry;
+                    continue;
+                }
+
                 switch ($action) {
                     case 'update_status':
-                        break;
-                    case 'delete':
+                        $status = sanitize_text_field($item_data['status'] ?? $request->get_param('status') ?? '');
+                        if (!in_array($status, $statuses, true)) {
+                            $entry['error'] = 'Status must be one of: ' . implode(', ', $statuses);
+                            break;
+                        }
+                        $entry['success'] = (bool) Inventory::updateItem($id, ['status' => $status]);
                         break;
                     case 'update_location':
+                        $location = sanitize_text_field($item_data['location'] ?? $request->get_param('location') ?? '');
+                        if ($location === '') {
+                            $entry['error'] = 'Location is required';
+                            break;
+                        }
+                        $entry['success'] = (bool) Inventory::updateItem($id, ['location' => $location]);
+                        break;
+                    case 'delete':
+                        $entry['success'] = (bool) Inventory::deleteItem($id);
+                        break;
+                    default:
+                        return new WP_Error('invalid_action', 'Action must be update_status, update_location or delete', ['status' => 400]);
                 }
+                $results[] = $entry;
             }
 
             return new WP_REST_Response(
-                ApiService::formatResponse($results, 'Bulk operation completed'),
+                ApiService::formatResponse($results, count(array_filter(array_column($results, 'success'))) . ' of ' . count($results) . ' items updated'),
                 200
             );
 
         } catch (\Exception $e) {
+            error_log('Hospital Manager: bulk inventory operation failed: ' . $e->getMessage());
             return new WP_Error(
                 'bulk_operation_error',
-                'Failed to perform bulk operation: ' . $e->getMessage(),
+                'Failed to perform bulk operation.',
                 ['status' => 500]
             );
         }

@@ -5,8 +5,19 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/apiService';
 import { useUserAccess } from '../hooks/useUserAccess';
 
+const EMPTY_INVENTORY = {
+  total_items: 0,
+  critical_items: 0,
+  expiring_soon: 0,
+  expired_items: 0,
+  out_of_stock: 0,
+  total_value: 0,
+};
+
 const Dashboard = () => {
   const { 
+    role,
+    error: accessError,
     isPatient, 
     hasAccess, 
     canCreatePatients, 
@@ -37,69 +48,66 @@ const Dashboard = () => {
   const appointmentsRef = useRef(null);
   const cardsContainerRef = useRef(null);
   
+  const patientView = isPatient();
+
   useEffect(() => {
+    // Wait for the role, so patients never ask for the staff figures.
+    if (!role) {
+      if (accessError) {
+        setError('Could not load your permissions. Please refresh the page.');
+        setLoading(false);
+      }
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/dashboard/stats');
-        
-        if (response.data) {
-          setStats({
-            patients: response.data.patients_count || 0,
-            doctors: response.data.doctors_count || 0,
-            appointments: response.data.appointments_count || 0,
-            departments: response.data.departments_count || 0,
-            inventory_summary: response.data.inventory_summary || {
-              total_items: 0,
-              critical_items: 0,
-              expiring_soon: 0,
-              expired_items: 0,
-              out_of_stock: 0,
-              total_value: 0
-            }
-          });
-          
-          // Set upcoming appointments if available
-          if (response.data.upcoming_appointments) {
-            setUpcomingAppointments(response.data.upcoming_appointments);
-          }
+        setError(null);
+
+        // Patients get their own summary; hospital-wide figures are for staff.
+        if (patientView) {
+          const response = await api.get('/dashboard');
+          const data = response.data || {};
+          setStats((prev) => ({
+            ...prev,
+            appointments: (data.upcoming_appointments || []).length,
+            visitations: (data.recent_visitations || []).length,
+            pending_labs: (data.pending_lab_tests || []).length,
+          }));
+          setUpcomingAppointments(data.upcoming_appointments || []);
+          return;
         }
+
+        const response = await api.get('/dashboard/stats');
+        const data = response.data || {};
+        setStats({
+          patients: data.patients_count || 0,
+          doctors: data.doctors_count || 0,
+          appointments: data.appointments_count || 0,
+          departments: data.departments_count || 0,
+          inventory_summary: data.inventory_summary || EMPTY_INVENTORY,
+        });
+        setUpcomingAppointments(data.upcoming_appointments || []);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        
-        // Provide more helpful error message depending on the error
-        if (err.response && err.response.status === 404) {
-          setError('Dashboard API endpoint not found. Please ensure the backend API is properly set up.');
-        } else if (err.response && err.response.status === 401) {
-          setError('Authentication required. Please log in again.');
-        } else if (err.message === 'Network Error') {
+        const status = err.response && err.response.status;
+        if (status === 403) {
+          setError('Dashboard figures are not available for your role.');
+        } else if (status === 404) {
+          setError((err.response.data && err.response.data.error) || 'No dashboard data was found for your account.');
+        } else if (!err.response) {
           setError('Network error. Please check your connection and try again.');
         } else {
           setError('Failed to load dashboard data. Please try again later.');
         }
-        
-        // Set empty data for demonstration purposes
-        setStats({
-          patients: 12,
-          doctors: 5,
-          appointments: 24,
-          departments: 8,
-          inventory_summary: {
-            total_items: 250,
-            critical_items: 15,
-            expiring_soon: 8,
-            expired_items: 3,
-            out_of_stock: 5,
-            total_value: 45000
-          }
-        });
+        // Leave the figures at zero: never show made-up numbers.
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchDashboardData();
-  }, []);
+  }, [role, patientView, accessError]);
 
   // Monitor container width to determine stacking
   useEffect(() => {
@@ -161,6 +169,22 @@ const Dashboard = () => {
           ) : (
             <div className="bg-primary-50 p-4 rounded-md border border-primary-200">
               <h2 className="font-semibold text-primary-900">Quick Stats</h2>
+              {patientView ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.appointments}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Upcoming appointments</span>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.visitations || 0}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Recent visits</span>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.pending_labs || 0}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Pending lab tests</span>
+                </div>
+              </div>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
                 <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
                   <span className="block text-xl sm:text-2xl font-bold truncate">{stats.patients}</span>
@@ -179,6 +203,7 @@ const Dashboard = () => {
                   <span className="text-xs sm:text-sm text-gray-500 truncate">Departments</span>
                 </div>
               </div>
+              )}
             </div>
           )}
           

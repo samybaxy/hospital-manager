@@ -45,6 +45,43 @@ class AppointmentSeeder extends Seeder
             'Health screening'
         ];
         
+        // Clear the legacy hand-off cache: it outlived truncates and fed stale
+        // appointment IDs to VisitationSeeder (which now reads the table directly).
+        delete_transient('hm_appointments_for_visitations');
+
+        // Coverage pass: every patient gets a completed past appointment (so they
+        // have a visit, medication, labs and a report downstream) and most get an
+        // upcoming one, so no patient's screens are empty.
+        foreach ($patient_ids as $patient_id) {
+            $days_ago = mt_rand(3, 120);
+            if ($this->insertAppointment(
+                $appointments_table,
+                $patient_id,
+                $doctor_ids[array_rand($doctor_ids)],
+                date('Y-m-d', strtotime("-{$days_ago} days")),
+                $this->randomSlot(),
+                'completed',
+                $reasons[array_rand($reasons)]
+            )) {
+                $count++;
+            }
+
+            if (mt_rand(1, 100) <= 75) {
+                $days_ahead = mt_rand(1, 30);
+                if ($this->insertAppointment(
+                    $appointments_table,
+                    $patient_id,
+                    $doctor_ids[array_rand($doctor_ids)],
+                    date('Y-m-d', strtotime("+{$days_ahead} days")),
+                    $this->randomSlot(),
+                    mt_rand(0, 1) ? 'pending' : 'confirmed',
+                    $reasons[array_rand($reasons)]
+                )) {
+                    $count++;
+                }
+            }
+        }
+
         for ($i = 0; $i < $target; $i++) {
             $patient_id = $patient_ids[array_rand($patient_ids)];
             $doctor_id = $doctor_ids[array_rand($doctor_ids)];
@@ -94,53 +131,11 @@ class AppointmentSeeder extends Seeder
             // Select status based on weights
             $status = $this->weightedRandomSelection($status_weights);
             
-            $hour = mt_rand(8, 16); // 8 AM to 4 PM
-            $minute = mt_rand(0, 3) * 15; // 0, 15, 30, 45 minutes
-            $appointment_time = sprintf('%02d:%02d:00', $hour, $minute);
+            $appointment_time = $this->randomSlot();
             $reason = $reasons[array_rand($reasons)];
             
-            // Check for duplicates
-            $exists = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$appointments_table} 
-                 WHERE patient_id = %d AND doctor_id = %d AND appointment_date = %s AND appointment_time = %s",
-                $patient_id, $doctor_id, $appointment_date, $appointment_time
-            ));
-            
-            if ($exists) {
-                continue;
-            }
-            
-            // Insert appointment
-            $result = $wpdb->insert(
-                $appointments_table,
-                [
-                    'patient_id' => $patient_id,
-                    'doctor_id' => $doctor_id,
-                    'appointment_date' => $appointment_date,
-                    'appointment_time' => $appointment_time,
-                    'reason' => $reason,
-                    'status' => $status,
-                    'notes' => $status === 'cancelled' ? 'Patient cancelled due to emergency' : null,
-                    'created_at' => date('Y-m-d H:i:s', strtotime($appointment_date . ' -' . mt_rand(1, 30) . ' days')),
-                    'updated_at' => date('Y-m-d H:i:s', strtotime($appointment_date)),
-                ],
-                [
-                    '%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s'
-                ]
-            );
-            
-            if ($result) {
+            if ($this->insertAppointment($appointments_table, $patient_id, $doctor_id, $appointment_date, $appointment_time, $status, $reason)) {
                 $count++;
-                // Store appointment info for visitation seeder
-                $this->storeAppointmentForVisitation([
-                    'appointment_id' => $wpdb->insert_id,
-                    'patient_id' => $patient_id,
-                    'doctor_id' => $doctor_id,
-                    'date' => $appointment_date,
-                    'time' => $appointment_time,
-                    'status' => $status,
-                    'reason' => $reason
-                ]);
             }
         }
         
@@ -167,13 +162,49 @@ class AppointmentSeeder extends Seeder
     }
     
     /**
-     * Store appointment data for use by VisitationSeeder
+     * Random 15-minute slot between 08:00 and 16:45
      */
-    private function storeAppointmentForVisitation($appointment_data)
+    private function randomSlot()
     {
-        // Store in WordPress transient for use by VisitationSeeder
-        $existing = get_transient('hm_appointments_for_visitations') ?: [];
-        $existing[] = $appointment_data;
-        set_transient('hm_appointments_for_visitations', $existing, HOUR_IN_SECONDS);
+        return sprintf('%02d:%02d:00', mt_rand(8, 16), mt_rand(0, 3) * 15);
+    }
+
+    /**
+     * Insert one appointment unless the same patient/doctor/slot already exists.
+     *
+     * @return bool
+     */
+    private function insertAppointment($table, $patient_id, $doctor_id, $date, $time, $status, $reason)
+    {
+        global $wpdb;
+
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table}
+             WHERE patient_id = %d AND doctor_id = %d AND appointment_date = %s AND appointment_time = %s",
+            $patient_id, $doctor_id, $date, $time
+        ));
+        if ($exists) {
+            return false;
+        }
+
+        return (bool) $wpdb->insert(
+            $table,
+            [
+                'patient_id' => $patient_id,
+                'doctor_id' => $doctor_id,
+                'appointment_date' => $date,
+                'appointment_time' => $time,
+                'reason' => $reason,
+                'status' => $status,
+                'notes' => $status === 'cancelled' ? 'Patient cancelled due to emergency' : null,
+                // Booked 1-30 days before the slot, but never in the future
+                'created_at' => date('Y-m-d H:i:s', min(
+                    strtotime($date . ' -' . mt_rand(1, 30) . ' days'),
+                    current_time('timestamp') - mt_rand(HOUR_IN_SECONDS, 10 * DAY_IN_SECONDS)
+                )),
+                'updated_at' => date('Y-m-d H:i:s', strtotime($date)),
+            ],
+            ['%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+        );
     }
 }

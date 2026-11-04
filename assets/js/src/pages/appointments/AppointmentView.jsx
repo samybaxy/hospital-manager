@@ -52,26 +52,9 @@ const AppointmentView = () => {
       
       try {
         setIsLoading(true);
-        console.log('Fetching appointment with ID:', appointmentId, 'Type:', typeof appointmentId);
-        
-        // First try to get the appointment directly
-        let response;
-        try {
-          response = await api.get(`/appointments/${appointmentId}`);
-        } catch (directError) {
-          console.log('Direct fetch failed, trying to find in appointments list:', directError);
-          
-          // If direct fetch fails, try to get from appointments list
-          const listResponse = await api.get('/appointments');
-          const appointments = listResponse.data?.data || listResponse.data || [];
-          const foundAppointment = appointments.find(app => app.ID == appointmentId);
-          
-          if (foundAppointment) {
-            response = { data: foundAppointment };
-          } else {
-            throw directError; // Throw the original error if not found in list either
-          }
-        }
+        // (A fallback used to search GET /appointments when this failed; it read
+        // the wrong shape and threw, and it would hide a 403/404 from the user.)
+        const response = await api.get(`/appointments/${appointmentId}`);
         
         // Handle different API response formats
         const appointmentData = response.data;
@@ -153,7 +136,7 @@ const AppointmentView = () => {
       }, 2000);
     } catch (err) {
       console.error('Error cancelling appointment:', err);
-      setError('Failed to cancel appointment. Please try again.');
+      setError(err.response?.data?.message || 'Failed to cancel appointment. Please try again.');
     } finally {
       setIsLoading(false);
     }

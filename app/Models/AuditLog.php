@@ -50,7 +50,7 @@ class AuditLog extends BaseModel
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 
@@ -62,6 +62,37 @@ class AuditLog extends BaseModel
         $attributes['ID'] = $wpdb->insert_id;
 
         return new static($attributes);
+    }
+
+    /**
+     * A patient's full audit trail: entries on the patient record itself plus entries
+     * on related records (appointments, visits, labs, radiology, reports) that carry
+     * details.patient_id — the convention AuditLogger callers such as LabResultService use.
+     *
+     * @param int $patient_id hm_patients.ID
+     * @param int $limit
+     * @return static[] Newest first
+     */
+    public static function getForPatient($patient_id, $limit = 200)
+    {
+        global $wpdb;
+        $table = (new static())->getTable();
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table}
+             WHERE (entity_type = 'patient' AND entity_id = %d)
+                OR (JSON_VALID(details)
+                    AND CAST(JSON_UNQUOTE(JSON_EXTRACT(details, '$.patient_id')) AS UNSIGNED) = %d)
+             ORDER BY created_at DESC, ID DESC
+             LIMIT %d",
+            $patient_id,
+            $patient_id,
+            $limit
+        ), ARRAY_A);
+
+        return array_map(function ($row) {
+            return new static($row);
+        }, $rows ?: []);
     }
 
     public static function where($column, $value)

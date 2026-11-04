@@ -1,4 +1,9 @@
 <?php
+// Command-line only: this script changes or wipes data and must never run from a web request.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 /**
  * Fixed Hospital Manager Seeders Runner
  * This script properly handles dependencies between seeders and ensures roles exist
@@ -40,9 +45,10 @@ $ordered_seeders = [
     'LabTestDefinitionSeeder', // Creates lab test definitions
     'LabInvestigationSeeder', // Creates lab tests
     'RadiologicalExamSeeder', // Creates radiology exams
+    'MedicalReportSeeder', // Creates reports (before chats/notifications, which reference them)
+    'ChatSeeder',          // Creates chats between patients and doctors they've seen
     'NotificationSeeder',  // Creates notifications
-    'ChatSeeder',          // Creates chats
-    'MedicalReportSeeder', // Creates reports
+    'DemoDataSeeder',      // Links demo accounts with sample data
     'AuditLogSeeder'       // Creates audit logs (should be last)
 ];
 

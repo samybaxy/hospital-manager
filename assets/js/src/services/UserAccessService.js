@@ -51,7 +51,9 @@ class UserAccessService {
       if (response.data && response.data.success) {
         this.accessData = {
           role: response.data.data.role,
-          permissions: response.data.data.access || {}
+          permissions: response.data.data.access || {},
+          // hm_doctors.ID of this user (visits store this, not the WordPress user ID)
+          doctorId: response.data.data.doctor_id ?? null
         };
       } else {
         throw new Error('Invalid response format from access API');
@@ -286,6 +288,40 @@ class UserAccessService {
    */
   canEditPatients() {
     return this.hasAccess('edit_patients');
+  }
+
+  /**
+   * hm_doctors.ID of the current user (null if not a doctor)
+   * @returns {number|null}
+   */
+  getDoctorId() {
+    return this.accessData?.doctorId ?? null;
+  }
+
+  /**
+   * Doctor to lock new visits to: doctors record visits under themselves
+   * (enforced by the API). Null when the user may choose any doctor.
+   * @returns {number|null}
+   */
+  getLockedVisitDoctorId() {
+    return this.hasAccess('add_own_visits_only') ? this.getDoctorId() : null;
+  }
+
+  /**
+   * Check if user can edit a specific visit. Mirrors the API (AccessPolicy):
+   * doctors may only edit visits where they are the visit's doctor.
+   * @param {Object} visit - Visit with doctor_id
+   * @returns {boolean}
+   */
+  canEditVisit(visit) {
+    if (!visit || !this.hasAccess('edit_visitation')) {
+      return false;
+    }
+    if (!this.hasAccess('edit_own_visits_only')) {
+      return true;
+    }
+    const doctorId = this.accessData?.doctorId;
+    return doctorId != null && Number(visit.doctor_id) === Number(doctorId);
   }
 
   /**
