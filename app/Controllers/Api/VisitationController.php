@@ -78,6 +78,13 @@ class VisitationController extends BaseController
     {
         try {
             $params = $request->get_params();
+
+            // Doctors (without a nurse/admin role) record visits under themselves.
+            // AccessPolicy already refused any other doctor_id; fill in an empty one.
+            $user = wp_get_current_user();
+            if (\HospitalManager\Services\AccessPolicy::doctorOwnOnly($user, 'add_visitation')) {
+                $params['doctor_id'] = \HospitalManager\Services\AccessPolicy::doctorRecordId($user->ID);
+            }
             
             // Validate required fields
             if (empty($params['patient_id']) || empty($params['doctor_id']) || 

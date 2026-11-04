@@ -16,7 +16,7 @@ class AuditController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_logs'],
                 'permission_callback' => function() {
-                    return current_user_can('view_audit_log');
+                    return self::can_view_audit_log();
                 }
             ]
         ]);
@@ -26,30 +26,32 @@ class AuditController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_patient_logs'],
                 'permission_callback' => function() {
-                    return current_user_can('view_audit_log') || current_user_can('doctor');
+                    return self::can_view_audit_log() || current_user_can('doctor');
                 }
             ]
         ]);
     }
 
+    /**
+     * RoleService grants 'access_audit_log' (administrators). 'view_audit_log' was the
+     * old name this controller checked — no role is given it, so the endpoint was
+     * forbidden for everyone. Accept both for backward compatibility.
+     */
+    private static function can_view_audit_log()
+    {
+        return current_user_can('access_audit_log') || current_user_can('view_audit_log');
+    }
+
     public function get_logs($request)
     {
-        $page = $request->get_param('page') ?? 1;
-        $per_page = $request->get_param('per_page') ?? 20;
-        
+        $page = max(1, (int) ($request->get_param('page') ?? 1));
+        $per_page = max(1, min(100, (int) ($request->get_param('per_page') ?? 20)));
+
         $logs = AuditLog::orderBy('created_at', 'DESC')
             ->paginate($per_page, ['*'], 'page', $page);
 
-        if ($logs && isset($logs->each)) {
-            $logs->each(function($log) {
-                $user = get_userdata($log->user_id);
-                $log->user_name = $user ? $user->display_name : 'Unknown User';
-                $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
-            });
-        }
-
         return new WP_REST_Response([
-            'data' => $logs->items,
+            'data' => array_map([$this, 'format_log'], $logs->items),
             'meta' => [
                 'current_page' => $logs->currentPage,
                 'last_page' => $logs->lastPage,
@@ -61,21 +63,42 @@ class AuditController extends BaseController
 
     public function get_patient_logs($request)
     {
-        $patient_id = $request->get_param('ID');
-        
-        $logs = AuditLog::where('entity_type', 'patient')
-            ->where('entity_id', $patient_id)
-            ->orderBy('created_at', 'DESC')
-            ->get();
+        $patient_id = (int) $request->get_param('ID');
 
-        if ($logs && isset($logs->each)) {
-            $logs->each(function($log) {
-                $user = get_userdata($log->user_id);
-                $log->user_name = $user ? $user->display_name : 'Unknown User';
-                $log->user_role = $user ? implode(', ', $user->roles) : 'Unknown Role';
-            });
+        // Patient record entries + related records (labs, radiology, visits, ...)
+        $logs = AuditLog::getForPatient($patient_id);
+
+        return new WP_REST_Response(array_map([$this, 'format_log'], $logs));
+    }
+
+    /**
+     * Flatten an AuditLog model to an array with the acting user's name/role.
+     *
+     * (The query builder returns `each` as a closure *property*; calling
+     * $logs->each(...) is a method call and fatalled. Models also serialise to "{}".)
+     */
+    private function format_log($log)
+    {
+        $data = $log->getAttributes();
+
+        foreach (['changes', 'details'] as $json_field) {
+            if (isset($data[$json_field]) && is_string($data[$json_field])) {
+                $decoded = json_decode($data[$json_field], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data[$json_field] = $decoded;
+                }
+            }
         }
 
-        return new WP_REST_Response($logs->items);
+        // Fields the Audit Logs page renders (AuditLogs.jsx reads log.timestamp and
+        // log.ip_address); the table stores these as created_at and details.ip_address.
+        $data['timestamp'] = $data['created_at'] ?? null;
+        $data['ip_address'] = is_array($data['details'] ?? null) ? ($data['details']['ip_address'] ?? null) : null;
+
+        $user = !empty($data['user_id']) ? get_userdata($data['user_id']) : false;
+        $data['user_name'] = $user ? $user->display_name : 'Unknown User';
+        $data['user_role'] = $user ? implode(', ', $user->roles) : 'Unknown Role';
+
+        return $data;
     }
 }

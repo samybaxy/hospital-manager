@@ -294,7 +294,7 @@ class TestCase extends \WP_UnitTestCase
             'first_name' => 'Test',
             'last_name' => 'Doctor',
             'phone' => '08012345679',
-            'photo' => null,
+            'specialty' => 'General Practice',
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
         ];
@@ -344,7 +344,7 @@ class TestCase extends \WP_UnitTestCase
         
         try {
             // Log the data being used for appointment creation
-            error_log('Creating test appointment with data: ' . print_r($data, true));
+            // (no data dump: the PHP error log may be shared with the site)
             
             // Create the appointment
             $appointment = \HospitalManager\Models\Appointment::create($data);
@@ -487,7 +487,7 @@ class TestCase extends \WP_UnitTestCase
                 $table,
                 $data,
                 array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($field);
                 }, $data)
             );
             
@@ -521,8 +521,9 @@ class TestCase extends \WP_UnitTestCase
             'doctor_id' => isset($overrides['doctor_id']) ? $overrides['doctor_id'] : 0,
             'lab_tech_id' => isset($overrides['lab_tech_id']) ? $overrides['lab_tech_id'] : 0,
             'test_type' => 'Blood Test',
-            'status' => 'pending',
-            'notes' => 'Test lab investigation',
+            // hm_lab_investigations.status is an ENUM: requested|sample_collected|in_progress|completed|verified|cancelled
+            'status' => 'requested',
+            'request_notes' => 'Test lab investigation',
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
         ];
@@ -538,7 +539,7 @@ class TestCase extends \WP_UnitTestCase
                 $table,
                 $data,
                 array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($field);
                 }, $data)
             );
             
@@ -615,7 +616,7 @@ class TestCase extends \WP_UnitTestCase
                 $table,
                 $data,
                 array_map(function($field) {
-                    return is_numeric($field) ? '%d' : '%s';
+                    return \HospitalManager\Models\BaseModel::sqlFormat($field);
                 }, $data)
             );
             

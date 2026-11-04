@@ -5,7 +5,7 @@ namespace HospitalManager\Services;
 use HospitalManager\Models\Notification;
 use WP_Error;
 
-class NotificationService
+class NotificationService extends BaseService
 {
     /**
      * Create a new notification
@@ -21,7 +21,7 @@ class NotificationService
     public static function create($user_id, $type, $title, $message, $meta = [])
     {
         if (empty($user_id) || !is_numeric($user_id)) {
-            error_log("NotificationService::create - Invalid user ID: " . print_r($user_id, true));
+            self::logError('NotificationService', 'create', 'Invalid user ID', $user_id);
             return new WP_Error('invalid_user_id', 'Invalid user ID');
         }
 
@@ -29,49 +29,43 @@ class NotificationService
             // Verify user exists
             $user = get_user_by('ID', $user_id);
             if (!$user) {
-                error_log("NotificationService::create - User not found: $user_id");
+                self::logError('NotificationService', 'create', "User not found: $user_id");
                 return new WP_Error('user_not_found', 'User not found');
             }
 
-            // Create notification post
-            $notification_data = [
-                'post_type' => 'hm_notification',
-                'post_title' => $title,
-                'post_content' => $message,
-                'post_status' => 'publish',
-                'post_author' => $user_id,
-                'meta_input' => array_merge([
-                    'type' => $type,
-                    'is_read' => false,
-                    'user_id' => $user_id,
-                ], $meta)
-            ];
-
-            // Insert the post directly using WordPress function
-            $post_id = wp_insert_post($notification_data, true);
-            
-            // Check if post was created successfully
-            if (is_wp_error($post_id)) {
-                error_log("NotificationService::create - Error creating notification: " . $post_id->get_error_message());
-                return $post_id; // Return the WP_Error
+            // Store in hm_notifications — the table every reader uses (list, unread
+            // count, mark-as-read, delete). This used to wp_insert_post() an
+            // 'hm_notification' post instead, so app-generated notifications (lab
+            // results, lab assignments, ...) never appeared for anyone.
+            global $wpdb;
+            $reference_id = null;
+            foreach (['reference_id', 'lab_result_id', 'lab_id', 'appointment_id', 'visitation_id', 'report_id', 'chat_id'] as $key) {
+                if (!empty($meta[$key]) && is_numeric($meta[$key])) {
+                    $reference_id = (int) $meta[$key];
+                    break;
+                }
             }
 
-            // Return created notification using our model
-            $notification = new Notification([
-                'ID' => $post_id,
-                'post_title' => $title,
-                'post_content' => $message,
-                'post_type' => 'hm_notification',
-                'post_status' => 'publish',
-                'post_author' => $user_id,
-            ]);
+            $row = [
+                'user_id' => (int) $user_id,
+                'type' => sanitize_key($type),
+                'title' => $title,
+                'message' => $message,
+                'reference_id' => $reference_id,
+                'read' => 0,
+                'created_at' => current_time('mysql'),
+            ];
 
-            error_log("NotificationService::create - Successfully created notification ID: $post_id for user: $user_id");
-            return $notification;
+            if ($wpdb->insert($wpdb->prefix . 'hm_notifications', $row) === false) {
+                self::logError('NotificationService', 'create', 'Error creating notification: ' . $wpdb->last_error);
+                return new WP_Error('notification_error', 'Failed to create notification');
+            }
+
+            $row['ID'] = $wpdb->insert_id;
+            return new Notification($row);
             
         } catch (\Exception $e) {
-            error_log("NotificationService::create - Exception: " . $e->getMessage());
-            error_log("NotificationService::create - Trace: " . $e->getTraceAsString());
+            self::logError('NotificationService', 'create', 'Exception: ' . $e->getMessage(), $e->getTraceAsString());
             return new WP_Error('notification_error', 'Failed to create notification: ' . $e->getMessage());
         }
     }
@@ -94,6 +88,20 @@ class NotificationService
     }
 
     /**
+     * Mark all of a user's notifications as read.
+     *
+     * @return int|false Number of notifications updated
+     */
+    public static function markAllAsRead($userId)
+    {
+        global $wpdb;
+        return $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->prefix}hm_notifications SET `read` = 1 WHERE user_id = %d AND `read` = 0",
+            $userId
+        ));
+    }
+
+    /**
      * Get unread notifications for a user
      *
      * @param int $userId User ID
@@ -104,12 +112,14 @@ class NotificationService
     public static function getUnreadNotifications($userId, $page = 1, $limit = 20)
     {
         global $wpdb;
+        $page = max(1, (int) $page);
+        $limit = min(100, max(1, (int) $limit)); // per_page=0 used to divide by zero (500)
         $offset = ($page - 1) * $limit;
         
         $notifications = $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT * FROM {$wpdb->prefix}hm_notifications 
-                WHERE user_id = %d AND read = 0 
+                WHERE user_id = %d AND `read` = 0 
                 ORDER BY created_at DESC 
                 LIMIT %d OFFSET %d",
                 $userId,
@@ -121,7 +131,7 @@ class NotificationService
         $total = $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->prefix}hm_notifications 
-                WHERE user_id = %d AND read = 0",
+                WHERE user_id = %d AND `read` = 0",
                 $userId
             )
         );
@@ -148,6 +158,8 @@ class NotificationService
     public static function getUserNotifications($userId, $page = 1, $limit = 20)
     {
         global $wpdb;
+        $page = max(1, (int) $page);
+        $limit = min(100, max(1, (int) $limit)); // per_page=0 used to divide by zero (500)
         $offset = ($page - 1) * $limit;
         
         $notifications = $wpdb->get_results(
@@ -217,7 +229,7 @@ class NotificationService
         $count = $wpdb->get_var(
             $wpdb->prepare(
                 "SELECT COUNT(*) FROM {$wpdb->prefix}hm_notifications 
-                WHERE user_id = %d AND read = 0",
+                WHERE user_id = %d AND `read` = 0",
                 $userId
             )
         );

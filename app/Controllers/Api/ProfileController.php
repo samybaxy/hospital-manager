@@ -60,7 +60,8 @@ class ProfileController extends BaseController
 
             // Check if user is a patient
             if (in_array('patient', $user->roles)) {
-                $patients = Patient::query()->where('user_id', $user_id)->get();
+                $patient_record = Patient::findByUserId($user_id);
+                $patients = $patient_record ? [$patient_record] : [];
                 
                 if (!empty($patients)) {
                     $patient = $patients[0];
@@ -100,7 +101,8 @@ class ProfileController extends BaseController
             
             // Check if user is a doctor
             if (in_array('doctor', $user->roles)) {
-                $doctors = Doctor::where('user_id', $user_id);
+                $doctor_record = Doctor::findByUserId($user_id);
+                $doctors = $doctor_record ? [$doctor_record] : [];
                 
                 if (!empty($doctors)) {
                     $doctor = $doctors[0];
@@ -177,7 +179,8 @@ class ProfileController extends BaseController
 
             // Check if user is a patient
             if (in_array('patient', $user->roles)) {
-                $patients = Patient::query()->where('user_id', $user_id)->get();
+                $patient_record = Patient::findByUserId($user_id);
+                $patients = $patient_record ? [$patient_record] : [];
                 
                 if (!empty($patients)) {
                     $patient = $patients[0];
@@ -241,7 +244,8 @@ class ProfileController extends BaseController
             
             // Check if user is a doctor
             if (in_array('doctor', $user->roles)) {
-                $doctors = Doctor::where('user_id', $user_id);
+                $doctor_record = Doctor::findByUserId($user_id);
+                $doctors = $doctor_record ? [$doctor_record] : [];
                 
                 if (!empty($doctors)) {
                     $doctor = $doctors[0];

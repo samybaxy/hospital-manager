@@ -10,6 +10,8 @@ use HospitalManager\Models\Appointment;
 use HospitalManager\Models\Patient;
 use HospitalManager\Services\NotificationService;
 use HospitalManager\Services\AppointmentService;
+use HospitalManager\Services\AccessPolicy;
+use HospitalManager\Models\Doctor;
 
 class AppointmentController extends BaseController
 {
@@ -20,26 +22,8 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_appointments'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('view_appointments');
                 }
-            ]
-        ]);
-
-        register_rest_route($this->namespace, '/appointments/book/(?P<ID>\d+)', [
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_booking_data'],
-                'permission_callback' => function() {
-                    return is_user_logged_in();
-                },
-                'args' => [
-                    'ID' => [
-                        'validate_callback' => function($param, $request, $key) {
-                            return is_numeric($param);
-                        },
-                        'sanitize_callback' => 'absint'
-                    ]
-                ]
             ]
         ]);
 
@@ -48,7 +32,7 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'create_appointment'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('schedule_appointments');
                 }
             ]
         ]);
@@ -58,7 +42,7 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_availability'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('');
                 }
             ]
         ]);
@@ -68,7 +52,7 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_appointment_stats'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('view_appointments');
                 }
             ]
         ]);
@@ -79,7 +63,7 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_appointment'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('view_appointments');
                 },
                 'args' => [
                     'ID' => [
@@ -94,7 +78,7 @@ class AppointmentController extends BaseController
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'update_appointment'],
                 'permission_callback' => function() {
-                    return is_user_logged_in();
+                    return self::can('view_appointments');
                 },
                 'args' => [
                     'ID' => [
@@ -108,6 +92,56 @@ class AppointmentController extends BaseController
         ]);
     }
 
+    /** Statuses an appointment may have. */
+    const STATUSES = ['pending', 'confirmed', 'completed', 'cancelled', 'rescheduled', 'no_show'];
+
+    /**
+     * Route-level check: signed in, and the role may use $capability at all
+     * (fully or for their own appointments). '' = any signed-in user.
+     */
+    public static function can($capability)
+    {
+        $user = wp_get_current_user();
+        if (!$user || !$user->exists()) {
+            return new WP_Error('rest_forbidden', 'You must be logged in to access this endpoint.', ['status' => 401]);
+        }
+        if ($capability === ''
+            || AccessPolicy::allowsAll($user, $capability)
+            || AccessPolicy::allowsOwnPatient($user, $capability)
+            || AccessPolicy::allowsOwnDoctor($user, $capability)) {
+            return true;
+        }
+        return new WP_Error('rest_forbidden', 'You do not have permission to access this resource.', ['status' => 403]);
+    }
+
+    /**
+     * Whether the current user may see/act on $appointment for $capability:
+     * full access, or it's their own (patient: patient_id; doctor: doctor_id).
+     */
+    private function ownsOrMay($appointment, $capability)
+    {
+        $user = wp_get_current_user();
+        if (AccessPolicy::allowsAll($user, $capability)) {
+            return true;
+        }
+        $patient_id = is_array($appointment) ? ($appointment['patient_id'] ?? null) : ($appointment->patient_id ?? null);
+        $doctor_id = is_array($appointment) ? ($appointment['doctor_id'] ?? null) : ($appointment->doctor_id ?? null);
+        if (AccessPolicy::allowsOwnPatient($user, $capability)) {
+            $own = AccessPolicy::patientRecordId($user->ID);
+            return $own && (int) $patient_id === $own;
+        }
+        if (AccessPolicy::allowsOwnDoctor($user, $capability)) {
+            $own = AccessPolicy::doctorRecordId($user->ID);
+            return $own && (int) $doctor_id === $own;
+        }
+        return false;
+    }
+
+    private function forbidden()
+    {
+        return new WP_Error('rest_forbidden', 'You do not have permission to access this appointment.', ['status' => 403]);
+    }
+
     /**
      * Get appointments with enhanced filtering and error handling - Updated implementation
      */
@@ -116,6 +150,13 @@ class AppointmentController extends BaseController
         try {
             // Extract parameters from request
             $params = $request->get_params();
+
+            // Doctors without full access see only their own appointments
+            // (patients are limited to their own inside the service).
+            $user = wp_get_current_user();
+            if (!AccessPolicy::allowsAll($user, 'view_appointments') && AccessPolicy::allowsOwnDoctor($user, 'view_appointments')) {
+                $params['doctor_id'] = AccessPolicy::doctorRecordId($user->ID) ?: -1;
+            }
             
             // Use the service to handle all business logic
             $result = AppointmentService::getAppointments($params);
@@ -125,40 +166,8 @@ class AppointmentController extends BaseController
                 'Appointments retrieved successfully'
             );
         } catch (\Exception $e) {
-            return $this->error_response(
-                'Error retrieving appointments: ' . $e->getMessage(), 
-                500
-            );
-        }
-    }
-
-    /**
-     * Get booking data for appointment booking form
-     */
-    public function get_booking_data($request)
-    {
-        $doctor_id = $request->get_param('ID');
-        
-        if (!$doctor_id) {
-            return new WP_Error(
-                'missing_doctor_id',
-                'Doctor ID is required',
-                ['status' => 400]
-            );
-        }
-        
-        try {
-            $booking_data = AppointmentService::getBookingData($doctor_id);
-            
-            return new WP_REST_Response($booking_data, 200);
-            
-        } catch (\Exception $e) {
-            error_log('Error getting booking data: ' . $e->getMessage());
-            return new WP_Error(
-                'booking_data_error',
-                'Failed to retrieve booking data: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            error_log('Hospital Manager: error retrieving appointments: ' . $e->getMessage());
+            return $this->error_response('Error retrieving appointments.', 500);
         }
     }
 
@@ -175,6 +184,11 @@ class AppointmentController extends BaseController
         // Determine the patient ID to use
         $patient_id = null;
         $user_id = null;
+
+        // Patients book for themselves only, whatever patient_id says.
+        if (!AccessPolicy::allowsAll(wp_get_current_user(), 'schedule_appointments')) {
+            $requested_patient_id = null;
+        }
 
         if ($requested_patient_id) {
             // Admin/Doctor is creating appointment for a specific patient
@@ -222,6 +236,22 @@ class AppointmentController extends BaseController
             );
         }
         
+        // The doctor must exist and be active (doctor_id is the hm_doctors record ID)
+        $doctor = Doctor::find((int) $doctor_id);
+        if (!$doctor || (isset($doctor->status) && $doctor->status !== '' && $doctor->status !== 'active')) {
+            return new WP_Error('doctor_not_found', 'Doctor not found or not accepting appointments', ['status' => 400]);
+        }
+        $doctor_id = (int) $doctor->ID;
+
+        // Date as YYYY-MM-DD and time as HH:MM[:SS]
+        $parsed_date = \DateTime::createFromFormat('!Y-m-d', (string) $date);
+        if (!$parsed_date || $parsed_date->format('Y-m-d') !== $date) {
+            return new WP_Error('invalid_date', 'Date must be in YYYY-MM-DD format', ['status' => 400]);
+        }
+        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', (string) $time)) {
+            return new WP_Error('invalid_time', 'Time must be in HH:MM format', ['status' => 400]);
+        }
+
         // Validate that the appointment date is in the future
         $appointment_date = strtotime("$date");
         $current_datetime = current_time('timestamp'); // Use current_time instead of current_datetime for better compatibility
@@ -258,9 +288,12 @@ class AppointmentController extends BaseController
             $appointment = Appointment::create($appointment_data);
             
             // Create notification for the appointment
+            // createAppointmentNotification() expects the patient *record* ID (it looks
+            // the name up in hm_patients). Passing the WP user ID showed "A patient", or
+            // another patient's name when a record happened to have that ID.
             Appointment::createAppointmentNotification(
                 $appointment->ID,
-                $user_id, // Use the WordPress user ID for notifications
+                $patient_id,
                 $doctor_id,
                 $date,
                 $time
@@ -281,11 +314,10 @@ class AppointmentController extends BaseController
                 ]
             ], 201);
         } catch (\Exception $e) {
-            error_log('Appointment creation error: ' . $e->getMessage());
-            error_log('Trace: ' . $e->getTraceAsString());
+            error_log('Hospital Manager: appointment creation error: ' . $e->getMessage());
             return new WP_Error(
                 'appointment_creation_failed',
-                'Failed to create appointment: ' . $e->getMessage(),
+                'Failed to create appointment.',
                 ['status' => 500]
             );
         }
@@ -306,15 +338,38 @@ class AppointmentController extends BaseController
             );
         }
 
-        $appointment->setAttribute('status', $status);
-        if ($notes) {
-            $appointment->setAttribute('notes', $notes);
+        $user = wp_get_current_user();
+        $is_patient_own = !AccessPolicy::allowsAll($user, 'manage_appointments')
+            && AccessPolicy::allowsOwnPatient($user, 'view_appointments');
+
+        if ($is_patient_own) {
+            // Patients may only cancel their own appointments
+            if (!$this->ownsOrMay($appointment, 'view_appointments')) {
+                return $this->forbidden();
+            }
+            if ($status !== 'cancelled' || ($notes !== null && $notes !== '')) {
+                return new WP_Error('rest_forbidden', 'Patients can only cancel their appointments.', ['status' => 403]);
+            }
+        } elseif (!$this->ownsOrMay($appointment, 'manage_appointments')) {
+            return $this->forbidden();
+        }
+
+        if ($status !== null && $status !== '' && !in_array($status, self::STATUSES, true)) {
+            return new WP_Error('invalid_status', 'Status must be one of: ' . implode(', ', self::STATUSES), ['status' => 400]);
+        }
+
+        $status_changed = $status !== null && $status !== '' && $status !== $appointment->getAttribute('status');
+        if ($status !== null && $status !== '') {
+            $appointment->setAttribute('status', $status);
+        }
+        if ($notes !== null) {
+            $appointment->setAttribute('notes', sanitize_textarea_field($notes));
         }
         $appointment->save();
 
         // Notify patient about appointment status change
         // Get the patient's WordPress user ID for notifications
-        $patient = Patient::find($appointment->getAttribute('patient_id'));
+        $patient = $status_changed ? Patient::find($appointment->getAttribute('patient_id')) : null;
         if ($patient && $patient->user_id) {
             NotificationService::create(
                 $patient->user_id, // Use WordPress user ID for notifications
@@ -345,10 +400,10 @@ class AppointmentController extends BaseController
             $availability = AppointmentService::getAvailability($doctor_id, $date);
             return new WP_REST_Response($availability);
         } catch (\Exception $e) {
-            error_log('Error getting availability: ' . $e->getMessage());
+            error_log('Hospital Manager: error getting availability: ' . $e->getMessage());
             return new WP_Error(
                 'availability_error',
-                'Failed to retrieve availability: ' . $e->getMessage(),
+                'Failed to retrieve availability.',
                 ['status' => 500]
             );
         }
@@ -371,13 +426,15 @@ class AppointmentController extends BaseController
             if (!$appointment) {
                 return new WP_Error('not_found', 'Appointment not found', ['status' => 404]);
             }
+            if (!$this->ownsOrMay($appointment, 'view_appointments')) {
+                return $this->forbidden();
+            }
             
             return new WP_REST_Response($appointment, 200);
             
         } catch (\Exception $e) {
-            error_log('Error getting appointment: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            return new WP_Error('error', 'Failed to retrieve appointment: ' . $e->getMessage(), ['status' => 500]);
+            error_log('Hospital Manager: error getting appointment: ' . $e->getMessage());
+            return new WP_Error('error', 'Failed to retrieve appointment.', ['status' => 500]);
         }
     }
 
@@ -389,6 +446,19 @@ class AppointmentController extends BaseController
     public function get_appointment_stats($request)
     {
         $doctor_id = $request->get_param('doctor_id');
+        $user = wp_get_current_user();
+
+        // Patients have no stats view; doctors without full access only their own
+        if (!AccessPolicy::allowsAll($user, 'view_appointments')) {
+            $own = AccessPolicy::allowsOwnDoctor($user, 'view_appointments') ? AccessPolicy::doctorRecordId($user->ID) : null;
+            if (!$own) {
+                return $this->forbidden();
+            }
+            if ($doctor_id && (int) $doctor_id !== $own) {
+                return $this->forbidden();
+            }
+            $doctor_id = $own;
+        }
         
         if (!$doctor_id) {
             return new WP_Error('missing_doctor_id', 'Doctor ID is required', ['status' => 400]);
@@ -398,14 +468,13 @@ class AppointmentController extends BaseController
             $stats = AppointmentService::getAppointmentStats($doctor_id);
             
             // Debug logging
-            error_log('Appointment stats for doctor ' . $doctor_id . ': ' . print_r($stats, true));
+            \HospitalManager\Helpers\DebugLog::payload('Appointment stats for doctor ' . $doctor_id, $stats);
             
             return new WP_REST_Response($stats, 200);
             
         } catch (\Exception $e) {
-            error_log('Error getting appointment stats: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            return new WP_Error('stats_error', 'Failed to retrieve appointment statistics: ' . $e->getMessage(), ['status' => 500]);
+            error_log('Hospital Manager: error getting appointment stats: ' . $e->getMessage());
+            return new WP_Error('stats_error', 'Failed to retrieve appointment statistics.', ['status' => 500]);
         }
     }
 }

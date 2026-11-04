@@ -1,3 +1,5 @@
+import { api } from './apiService';
+
 /**
  * Service for handling role-based access control in the frontend
  */
@@ -18,19 +20,8 @@ class RoleService {
     }
 
     try {
-      const response = await fetch(`${hospitalManagerData.apiUrl}/inventory/permissions`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-WP-Nonce': hospitalManagerData.nonce
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const response = await api.get('/inventory/permissions');
+      const result = response.data || {};
       
       if (result.success) {
         this.permissions = result.data.permissions;

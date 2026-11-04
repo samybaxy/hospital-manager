@@ -10,7 +10,7 @@ use Exception;
 /**
  * Service class for patient-related business logic
  */
-class PatientService
+class PatientService extends BaseService
 {
     /**
      * Create a new patient with validation
@@ -21,26 +21,25 @@ class PatientService
      */
     public static function createPatient(array $data)
     {        
-        // Validate required fields
+        // Validate required fields using base service method
         $required_fields = ['first_name', 'last_name', 'phone', 'gender'];
-        foreach ($required_fields as $field) {
-            if (empty($data[$field])) {
-                throw new Exception("The {$field} field is required");
-            }
+        $validation_errors = self::validateRequiredFields($data, $required_fields);
+        
+        if (!empty($validation_errors)) {
+            throw new Exception(implode('; ', $validation_errors));
         }
         
         // Check for duplicate patients
         self::preventDuplicates($data);
         
-        // Validate phone number format
-        if (!preg_match('/^\d{10,15}$/', $data['phone'])) {
-            throw new Exception("Invalid phone number format. Phone number should contain 10-15 digits only");
+        // Validate phone number using base service method
+        $phone_error = self::validatePhone($data['phone']);
+        if ($phone_error) {
+            throw new Exception($phone_error);
         }
         
-        // Ensure phone number format consistency
-        if (substr($data['phone'], 0, 1) !== '0' && strlen($data['phone']) === 10) {
-            $data['phone'] = '0' . $data['phone'];
-        }
+        // Format phone number using base service method
+        $data['phone'] = self::formatPhone($data['phone']);
         
         // Validate gender field
         if (!in_array(strtolower($data['gender']), ['male', 'female', 'other', 'm', 'f'])) {
@@ -48,32 +47,51 @@ class PatientService
         }
         
         // Validate age if provided
-        if (isset($data['age']) && !is_numeric($data['age'])) {
-            throw new Exception("Invalid age value. Age must be a number");
+        if (isset($data['age'])) {
+            $age_error = self::validateNumeric($data['age'], 'age');
+            if ($age_error) {
+                throw new Exception($age_error);
+            }
         }
         
         // Validate bio_data if provided
         if (!empty($data['bio_data']) && is_string($data['bio_data'])) {
-            $decoded = json_decode($data['bio_data'], true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
+            if (self::safeJsonDecode($data['bio_data']) === null) {
                 throw new Exception("Invalid JSON format for bio_data");
             }
         }
         
-        // Check for duplicate patients
-        $query = new Patient();
-        $existing = $query->where('phone', $data['phone'])
-            ->where('first_name', $data['first_name'])
-            ->where('last_name', $data['last_name'])
-            ->get();
+        // Check for duplicate patients using model search
+        $existing_patients = Patient::all([
+            'phone' => $data['phone'],
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name']
+        ]);
             
-        if (!empty($existing)) {
+        if (!empty($existing_patients)) {
             throw new Exception("A patient with this name and phone number already exists");
         }
 
-        // Create wp_user entry: use var for debugging purposes
-        $user_id = Patient::createWpUser($data);
-        
+        // A portal login is only created when an email is given (the form treats email
+        // as optional, e.g. walk-in patients). user_id = 0 means "no portal account";
+        // the column is NOT NULL, and passing createWpUser()'s null/error string
+        // straight through used to fail the insert with a raw SQL error.
+        $user_id = 0;
+        if (!empty($data['email'])) {
+            if (!is_email($data['email'])) {
+                throw new Exception('Invalid email address');
+            }
+            if (email_exists($data['email'])) {
+                throw new Exception('A user with this email address already exists');
+            }
+
+            $created = Patient::createWpUser($data);
+            if (!is_int($created) || $created <= 0) {
+                throw new Exception('Could not create a login for this patient' . (is_string($created) ? ': ' . $created : ''));
+            }
+            $user_id = $created;
+        }
+
         // Unset email field before creating the patient
         unset($data['email']);
 
@@ -102,12 +120,16 @@ class PatientService
         
         // Check for duplicate phone number if changed
         if (isset($data['phone']) && $data['phone'] !== $patient->phone) {
-            $query = new Patient();
-            $existing = $query->where('phone', $data['phone'])
-                ->where('ID', '!=', $ID)
-                ->get();
+            // Use model search to check for duplicates
+            global $wpdb;
+            $table = (new Patient())->getTable();
+            $existing_count = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$table} WHERE phone = %s AND ID != %d",
+                $data['phone'],
+                $ID
+            ));
                 
-            if (!empty($existing)) {
+            if ($existing_count > 0) {
                 throw new Exception("Another patient is already using this phone number");
             }
         }
@@ -127,135 +149,109 @@ class PatientService
     }
     
     /**
-     * Search patients by various criteria
+     * Search patients by various criteria with caching
      * 
      * @param array $params Search parameters
      * @return array Search results with metadata
      */
     public static function searchPatients(array $params = [])
     {
-        global $wpdb;
-        $table = (new Patient())->getTable();
-        $perPage = isset($params['per_page']) ? (int)$params['per_page'] : 20;
-        $page = isset($params['page']) ? (int)$params['page'] : 1;
-        
-        // Build the query directly for better control
-        $query = "SELECT * FROM {$table} WHERE 1=1";
-        $count_query = "SELECT COUNT(*) FROM {$table} WHERE 1=1";
-        $values = [];
-        
-        // Apply search filters
-        if (!empty($params['first_name'])) {
-            $query .= " AND first_name LIKE %s";
-            $count_query .= " AND first_name LIKE %s";
-            $values[] = '%' . $wpdb->esc_like($params['first_name']) . '%';
-        }
-        
-        if (!empty($params['last_name'])) {
-            $query .= " AND last_name LIKE %s";
-            $count_query .= " AND last_name LIKE %s";
-            $values[] = '%' . $wpdb->esc_like($params['last_name']) . '%';
-        }
-        
-        if (!empty($params['gender'])) {
-            // Special handling for gender
-            if ($params['gender'] === 'F') {
-                $query .= " AND (gender = %s OR gender = %s)";
-                $count_query .= " AND (gender = %s OR gender = %s)";
-                $values[] = 'F';
-                $values[] = 'Female';
-            } else if ($params['gender'] === 'M') {
-                $query .= " AND (gender = %s OR gender = %s)";
-                $count_query .= " AND (gender = %s OR gender = %s)";
-                $values[] = 'M';
-                $values[] = 'Male';
-            } else {
-                $query .= " AND gender = %s";
-                $count_query .= " AND gender = %s";
-                $values[] = $params['gender'];
+        return self::executeCached('searchPatients', $params, function() use ($params) {
+            // Leverage optimized Patient model search method for simple searches
+            $search_term = $params['search'] ?? '';
+            if (!empty($search_term) && empty(array_diff_key($params, ['search' => true]))) {
+                $columns = ['first_name', 'last_name', 'phone'];
+                return Patient::search($search_term, $columns);
             }
-        }
-        
-        if (!empty($params['age_min'])) {
-            $query .= " AND age >= %d";
-            $count_query .= " AND age >= %d";
-            $values[] = (int)$params['age_min'];
-        }
-        
-        if (!empty($params['age_max'])) {
-            $query .= " AND age <= %d";
-            $count_query .= " AND age <= %d";
-            $values[] = (int)$params['age_max'];
-        }
-        
-        // Count total results
-        $count_values = $values; // Copy values for count query
-        $count_sql = $wpdb->prepare($count_query, $count_values);
-        $total = (int)$wpdb->get_var($count_sql);
-        
-        // Add sorting
-        if (!empty($params['sort_by'])) {
-            $direction = !empty($params['sort_dir']) ? $params['sort_dir'] : 'ASC';
-            $allowed_columns = ['first_name', 'last_name', 'age', 'gender', 'created_at'];
-            $sort_column = in_array($params['sort_by'], $allowed_columns) ? $params['sort_by'] : 'created_at';
-            $query .= " ORDER BY {$sort_column} " . ($direction === 'DESC' ? 'DESC' : 'ASC');
-        } else {
-            // Default sorting
-            $query .= " ORDER BY created_at DESC";
-        }
-        
-        // Add pagination
-        $offset = ($page - 1) * $perPage;
-        $query .= " LIMIT %d OFFSET %d";
-        $values[] = $perPage;
-        $values[] = $offset;
-        
-        // Execute the query
-        $prepared_query = $wpdb->prepare($query, $values);
-        $items = $wpdb->get_results($prepared_query);
-        
-        // Convert results directly to plain arrays with accessible properties
-        $patients = [];
-        if ($items) {
-            foreach ($items as $item) {
-                // Convert the database row directly to an array
-                $patientArray = (array)$item;
-                
-                // Parse JSON fields if needed
-                if (!empty($patientArray['bio_data']) && is_string($patientArray['bio_data'])) {
-                    $decoded = json_decode($patientArray['bio_data'], true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        $patientArray['bio_data'] = $decoded;
-                    }
+            
+            // For complex filtered searches, use optimized query building
+            global $wpdb;
+            $table = (new Patient())->getTable();
+            $perPage = isset($params['per_page']) ? (int)$params['per_page'] : 20;
+            $page = isset($params['page']) ? (int)$params['page'] : 1;
+            
+            // Build optimized query with indexed columns
+            $where_conditions = ['1=1'];
+            $values = [];
+            
+            // Apply search filters efficiently
+            if (!empty($params['first_name'])) {
+                $where_conditions[] = 'first_name LIKE %s';
+                $values[] = '%' . $wpdb->esc_like($params['first_name']) . '%';
+            }
+            
+            if (!empty($params['last_name'])) {
+                $where_conditions[] = 'last_name LIKE %s';
+                $values[] = '%' . $wpdb->esc_like($params['last_name']) . '%';
+            }
+            
+            if (!empty($params['gender'])) {
+                // Optimized gender handling
+                if ($params['gender'] === 'F') {
+                    $where_conditions[] = 'gender IN (%s, %s)';
+                    $values[] = 'F';
+                    $values[] = 'Female';
+                } else if ($params['gender'] === 'M') {
+                    $where_conditions[] = 'gender IN (%s, %s)';
+                    $values[] = 'M';
+                    $values[] = 'Male';
+                } else {
+                    $where_conditions[] = 'gender = %s';
+                    $values[] = $params['gender'];
                 }
-                
-                // Add the patient array to our collection
-                $patients[] = $patientArray;
             }
-        }
-        
-        // Calculate pagination info
-        $last_page = ceil($total / $perPage);
-        
-        return [
-            'patients' => (object)[
-                'items' => $patients,
-                'currentPage' => $page,
-                'lastPage' => $last_page,
-                'perPage' => $perPage,
-                'total' => $total
-            ],
-            'meta' => [
-                'current_page' => $page,
-                'last_page' => $last_page,
+            
+            if (!empty($params['age_min'])) {
+                $where_conditions[] = 'age >= %d';
+                $values[] = (int)$params['age_min'];
+            }
+            
+            if (!empty($params['age_max'])) {
+                $where_conditions[] = 'age <= %d';
+                $values[] = (int)$params['age_max'];
+            }
+            
+            $where_clause = implode(' AND ', $where_conditions);
+            
+            // Optimized count query
+            $count_query = "SELECT COUNT(*) FROM {$table} WHERE {$where_clause}";
+            $total = (int)$wpdb->get_var(self::prepareIf($count_query, $values));
+            
+            // Build main query
+            $query = "SELECT * FROM {$table} WHERE {$where_clause}";
+            
+            // Add sorting with index-friendly defaults
+            $allowed_columns = ['first_name', 'last_name', 'age', 'gender', 'created_at'];
+            if (!empty($params['sort_by']) && in_array($params['sort_by'], $allowed_columns)) {
+                $direction = !empty($params['sort_dir']) && strtoupper($params['sort_dir']) === 'DESC' ? 'DESC' : 'ASC';
+                $query .= " ORDER BY {$params['sort_by']} {$direction}";
+            } else {
+                $query .= " ORDER BY created_at DESC";
+            }
+            
+            // Add pagination
+            $offset = ($page - 1) * $perPage;
+            $query .= " LIMIT %d OFFSET %d";
+            $query_values = array_merge($values, [$perPage, $offset]);
+            
+            // Execute the query
+            $prepared_query = $wpdb->prepare($query, $query_values);
+            $items = $wpdb->get_results($prepared_query, ARRAY_A);
+            
+            return [
+                'data' => $items ?: [],
+                'total' => $total,
                 'per_page' => $perPage,
-                'total' => $total
-            ]
-        ];
+                'current_page' => $page,
+                'last_page' => ceil($total / $perPage),
+                'from' => $total > 0 ? (($page - 1) * $perPage) + 1 : 0,
+                'to' => min($total, $page * $perPage)
+            ];
+        });
     }
     
     /**
-     * Get a patient's full medical history
+     * Get a patient's full medical history with caching
      *
      * @param int $patient_id Patient ID
      * @return array Medical history data
@@ -263,35 +259,43 @@ class PatientService
      */
     public static function getPatientMedicalHistory(int $patient_id)
     {
-        $patient = Patient::find($patient_id);
-        
-        if (!$patient) {
-            throw new Exception("Patient not found");
-        }
-        
-        // Get associated records
-        $appointmentQuery = new Appointment();
-        $appointments = $appointmentQuery->where('patient_id', $patient_id)
-            ->orderBy('appointment_date', 'DESC')
-            ->get();
+        return self::executeCached('getPatientMedicalHistory', ['patient_id' => $patient_id], function() use ($patient_id) {
+            $patient = Patient::find($patient_id);
             
-        $medicalReportQuery = new MedicalReport();
-        $medical_reports = $medicalReportQuery->where('patient_id', $patient_id)
-            ->orderBy('created_at', 'DESC')
-            ->get();
-        
-        // Get related lab investigations - assuming there's a relationship in the patient model
-        $lab_investigations = [];
-        if (method_exists($patient, 'labInvestigations')) {
-            $lab_investigations = $patient->labInvestigations()->orderBy('created_at', 'DESC')->get();
-        }
-        
-        return [
-            'patient' => $patient,
-            'appointments' => $appointments,
-            'medical_reports' => $medical_reports,
-            'lab_investigations' => $lab_investigations
-        ];
+            if (!$patient) {
+                throw new Exception("Patient not found");
+            }
+            
+            // Use optimized model methods with caching
+            $appointments = $patient->getAppointments();
+            $visitation_history = $patient->getVisitationHistory();
+            
+            // Get medical reports if available
+            $medical_reports = [];
+            if (class_exists('HospitalManager\Models\MedicalReport')) {
+                global $wpdb;
+                $reports_table = $wpdb->prefix . 'hm_medical_reports';
+                $medical_reports = $wpdb->get_results($wpdb->prepare(
+                    "SELECT * FROM {$reports_table} WHERE patient_id = %d ORDER BY created_at DESC",
+                    $patient_id
+                ), ARRAY_A);
+            }
+            
+            // Get lab investigations using optimized model method
+            $lab_investigations = [];
+            if (class_exists('HospitalManager\Models\LabInvestigation')) {
+                $lab_model = new \HospitalManager\Models\LabInvestigation();
+                $lab_investigations = $lab_model->getForPatient($patient_id);
+            }
+            
+            return [
+                'patient' => $patient,
+                'appointments' => $appointments ?: [],
+                'visitation_history' => $visitation_history ?: [],
+                'medical_reports' => $medical_reports ?: [],
+                'lab_investigations' => $lab_investigations ?: []
+            ];
+        }, 1800); // Cache for 30 minutes
     }
 
     /**
@@ -392,7 +396,7 @@ class PatientService
             $values[] = $search;
             $values[] = $search;
             $values[] = $search;
-            error_log('PatientService::getPatients - Filter by search: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('PatientService::getPatients - Filter by search', $params);
         }
         
         // Filter by gender if specified
@@ -400,13 +404,13 @@ class PatientService
             $query .= " AND p.gender = %s";
             $countQuery .= " AND p.gender = %s";
             $values[] = $params['gender'];
-            error_log('PatientService::getPatients - Filter by gender: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('PatientService::getPatients - Filter by gender', $params);
         }
         
         // Filter by HMO if specified
         if (!empty($params['hmo_id'])) {
             $hmo_id = (int)$params['hmo_id'];
-            error_log('Filtering patients by HMO ID: ' . $hmo_id . ' (type: ' . gettype($hmo_id) . ')');
+            \HospitalManager\Helpers\DebugLog::line('Filtering patients by HMO ID: ' . $hmo_id . ' (type: ' . gettype($hmo_id) . ')');
             
             // Handle numeric comparison and NULL values properly
             $query .= " AND (CASE WHEN p.hmo_id IS NULL THEN 0 ELSE CAST(p.hmo_id AS SIGNED) END) = %d";
@@ -424,7 +428,7 @@ class PatientService
         
         // Get total count for pagination
         $count_values = $values; // Copy values for count query
-        $prepared_count = $wpdb->prepare($countQuery, $count_values);
+        $prepared_count = self::prepareIf($countQuery, $count_values);
         $total = (int)$wpdb->get_var($prepared_count);
         
         // Apply sorting
@@ -460,7 +464,7 @@ class PatientService
         $prepared_query = $wpdb->prepare($query, $values);
         
         $items = $wpdb->get_results($prepared_query);            // Log the number of results returned
-        error_log('Query returned ' . count($items) . ' patients');
+        \HospitalManager\Helpers\DebugLog::line('Query returned ' . count($items) . ' patients');
         
         // Process results
         $patients = [];
@@ -492,7 +496,7 @@ class PatientService
         if (!empty($params['hmo_id'])) {
             $last_page = $total > 0 ? ceil($total / $perPage) : 1;
             
-            error_log('Adjusted pagination after HMO filtering: total=' . $total . 
+            \HospitalManager\Helpers\DebugLog::line('Adjusted pagination after HMO filtering: total=' . $total . 
                 ', lastPage=' . $last_page);
         }
         

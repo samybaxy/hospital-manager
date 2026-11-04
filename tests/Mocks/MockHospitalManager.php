@@ -18,6 +18,7 @@ class MockHospitalManager
      */
     public static function init() 
     {
+        \HospitalManager\Services\BaseService::watchWrites();
         // Register REST API routes needed for testing
         add_action('rest_api_init', [self::class, 'registerTestRoutes']);
     }

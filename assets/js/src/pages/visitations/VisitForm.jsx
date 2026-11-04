@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 const VisitForm = ({ 
   initialData = {}, 
@@ -43,6 +44,25 @@ const VisitForm = ({
   
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+
+  // Doctors record new visits under themselves (the API refuses any other doctor).
+  // Nurses and administrators still choose the doctor.
+  const { getLockedVisitDoctorId } = useUserAccess();
+  const lockedDoctorId = isEditMode ? null : getLockedVisitDoctorId();
+
+  useEffect(() => {
+    if (lockedDoctorId && String(formData.doctor_id) !== String(lockedDoctorId)) {
+      setFormData(prev => ({ ...prev, doctor_id: String(lockedDoctorId) }));
+    }
+  }, [lockedDoctorId, formData.doctor_id]);
+
+  // /doctors is paginated, so the locked doctor may not be in the fetched page
+  const lockedDoctorOption = lockedDoctorId
+    ? doctors.filter(doctor => String(doctor.ID) === String(lockedDoctorId))
+    : [];
+  const doctorOptions = lockedDoctorId
+    ? (lockedDoctorOption.length ? lockedDoctorOption : [{ ID: lockedDoctorId, first_name: 'You', last_name: '', specialty: `Doctor #${lockedDoctorId}` }])
+    : doctors;
   const [appointments, setAppointments] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
@@ -327,6 +347,7 @@ const VisitForm = ({
               <label htmlFor="doctor_id" className="block text-sm font-semibold text-gray-700 mb-2">
                 Doctor <span className="text-red-500">*</span>
                 {isEditMode && <span className="ml-2 text-xs text-blue-500">(Locked in edit mode)</span>}
+                {lockedDoctorId && <span className="ml-2 text-xs text-blue-500">(You)</span>}
               </label>
               <div className="relative">
                 {isEditMode ? (
@@ -348,11 +369,12 @@ const VisitForm = ({
                     name="doctor_id"
                     value={formData.doctor_id || ''}
                     onChange={handleInputChange}
+                    disabled={Boolean(lockedDoctorId)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${lockedDoctorId ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   >
-                    <option value="">Select a doctor</option>
-                    {doctors.map(doctor => (
+                    {!lockedDoctorId && <option value="">Select a doctor</option>}
+                    {doctorOptions.map(doctor => (
                       <option key={doctor.ID} value={doctor.ID}>
                         Dr. {doctor.first_name} {doctor.last_name} - {doctor.specialty}
                       </option>
@@ -375,6 +397,9 @@ const VisitForm = ({
               </div>
               {isEditMode && (
                 <p className="mt-1 text-xs text-gray-500 italic">Doctor cannot be changed in edit mode</p>
+              )}
+              {lockedDoctorId && (
+                <p className="mt-1 text-xs text-gray-500 italic">Visits you add are recorded under you. Other doctors can still read this patient's history and add their own visits.</p>
               )}
             </div>
 

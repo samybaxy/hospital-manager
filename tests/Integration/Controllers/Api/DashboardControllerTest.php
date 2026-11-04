@@ -8,6 +8,7 @@ use HospitalManager\Models\Visitation;
 use HospitalManager\Models\Appointment;
 use HospitalManager\Models\LabInvestigation;
 use HospitalManager\Models\MedicalReport;
+use HospitalManager\Controllers\Api\DashboardController;
 use WP_REST_Request;
 use WP_REST_Server;
 
@@ -34,15 +35,23 @@ class DashboardControllerTest extends TestCase
     protected $test_patient;
 
     /**
+     * @var \HospitalManager\Models\Doctor hm_doctors record linked to the doctor user
+     */
+    protected $test_doctor;
+
+    /**
      * Set up before each test
      */
     public function setUp(): void
     {
         parent::setUp();
         
-        global $wp_rest_server;
+ global $wp_rest_server;
+        // Fire rest_api_init (mock routes) once, then use a server with only the REAL controller
+        $wp_rest_server = null;
+        rest_get_server();
         $this->server = $wp_rest_server = new WP_REST_Server;
-        do_action('rest_api_init');
+        (new DashboardController())->register_routes();
         
         // Create test users with different roles
         $this->test_users['admin'] = $this->createUserWithRole('administrator');
@@ -70,37 +79,43 @@ class DashboardControllerTest extends TestCase
             'hmo_id' => 1
         ]);
         
+        // Doctor record linked to the doctor user. Appointments, visitations and labs
+        // reference hm_doctors.ID — NOT the WordPress user ID.
+        $this->test_doctor = $this->createTestDoctor(['user_id' => $this->test_users['doctor']]);
+
         // Create visitation records for the patient
+        $visitation_ids = [];
         for ($i = 0; $i < 3; $i++) {
-            Visitation::create([
+            $visitation_ids[] = Visitation::create([
                 'patient_id' => $this->test_patient->ID,
-                'doctor_id' => $this->test_users['doctor'],
+                'doctor_id' => $this->test_doctor->ID,
                 'date' => date('Y-m-d', strtotime("-{$i} days")),
                 'time' => '09:00:00',
                 'medical_history' => 'Lorem ipsum dolor sit amet',
                 'diagnosis' => 'Test diagnosis',
                 'treatment' => 'Test treatment'
-            ]);
+            ])->ID;
         }
         
         // Create pending lab tests for the patient
         LabInvestigation::create([
+            'visitation_id' => $visitation_ids[0],
             'patient_id' => $this->test_patient->ID,
-            'doctor_id' => $this->test_users['doctor'],
-            'lab_tech_id' => $this->test_users['lab_tech'], // Assign to the lab tech
+            'doctor_id' => $this->test_doctor->ID,
+            'lab_tech_id' => $this->test_users['lab_tech'], // lab_tech_id is the WP user ID
             'test_type' => 'Complete Blood Count',
-            'status' => 'pending',
-            'notes' => 'Test investigation',
+            'status' => 'requested', // ENUM has no 'pending'
+            'request_notes' => 'Test investigation',
             'created_at' => date('Y-m-d H:i:s')
         ]);
         
         // Create upcoming appointments
         Appointment::create([
             'patient_id' => $this->test_patient->ID,
-            'doctor_id' => $this->test_users['doctor'],
+            'doctor_id' => $this->test_doctor->ID,
             'appointment_date' => date('Y-m-d', strtotime('+3 days')),
             'appointment_time' => '10:00:00',
-            'status' => 'scheduled',
+            'status' => 'confirmed', // real statuses: pending|confirmed|completed|cancelled
             'reason' => 'Follow-up check',
             'created_at' => date('Y-m-d H:i:s')
         ]);
@@ -108,10 +123,10 @@ class DashboardControllerTest extends TestCase
         // Create today's appointments for doctor
         Appointment::create([
             'patient_id' => $this->test_patient->ID,
-            'doctor_id' => $this->test_users['doctor'],
-            'appointment_date' => date('Y-m-d'),
+            'doctor_id' => $this->test_doctor->ID,
+            'appointment_date' => current_time('Y-m-d'),
             'appointment_time' => '14:00:00',
-            'status' => 'scheduled',
+            'status' => 'confirmed', // real statuses: pending|confirmed|completed|cancelled
             'reason' => 'Consultation',
             'created_at' => date('Y-m-d H:i:s')
         ]);
@@ -119,9 +134,9 @@ class DashboardControllerTest extends TestCase
         // Create pending medical reports for doctor
         MedicalReport::create([
             'patient_id' => $this->test_patient->ID,
-            'doctor_id' => $this->test_users['doctor'],
-            'diagnosis' => 'Test diagnosis',
-            'treatment' => 'Test treatment',
+            'doctor_id' => $this->test_users['doctor'], // medical reports store the doctor's WP user ID
+            'visitation_id' => $visitation_ids[0],
+            'report_content' => 'Test diagnosis / Test treatment',
             'status' => 'pending',
             'created_at' => date('Y-m-d H:i:s')
         ]);
@@ -150,10 +165,10 @@ class DashboardControllerTest extends TestCase
         $this->assertArrayHasKey('upcoming_appointments', $data);
         
         // Verify patient data
-        $this->assertEquals($this->test_patient->ID, $data['patient']->ID);
-        $this->assertEquals($this->test_users['patient'], $data['patient']->user_id);
-        $this->assertEquals('Test', $data['patient']->first_name);
-        $this->assertEquals('Patient', $data['patient']->last_name);
+        $this->assertEquals($this->test_patient->ID, $data['patient']['ID']);
+        $this->assertEquals($this->test_users['patient'], $data['patient']['user_id']);
+        $this->assertEquals('Test', $data['patient']['first_name']);
+        $this->assertEquals('Patient', $data['patient']['last_name']);
         
         // Verify visitations data
         $this->assertNotEmpty($data['recent_visitations']);
@@ -187,8 +202,12 @@ class DashboardControllerTest extends TestCase
         $this->assertArrayHasKey('pending_reports', $data);
         $this->assertArrayHasKey('total_patients_today', $data);
         
+        // Resolved through hm_doctors.user_id, not the WP user ID
+        $this->assertEquals($this->test_doctor->ID, $data['doctor_id']);
+
         // Verify today's appointments
-        $this->assertNotEmpty($data['todays_appointments']);
+        $this->assertCount(1, $data['todays_appointments']);
+        $this->assertEquals($this->test_doctor->ID, $data['todays_appointments'][0]['doctor_id']);
         
         // Verify pending reports
         $this->assertNotEmpty($data['pending_reports']);
@@ -225,8 +244,8 @@ class DashboardControllerTest extends TestCase
         // Check if at least one test has the expected fields
         if (!empty($data['pending_tests'])) {
             $test = $data['pending_tests'][0];
-            $this->assertEquals($test->ID, $test->ID);
-            $this->assertEquals('pending', $test->status);
+            $this->assertEquals($this->test_patient->ID, $test['patient_id']);
+            $this->assertEquals('requested', $test['status']);
         }
         
         // Verify tests completed count is an integer

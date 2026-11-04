@@ -8,7 +8,7 @@ use Exception;
 /**
  * Service class for appointment-related business logic
  */
-class AppointmentService
+class AppointmentService extends BaseService
 {
     /**
      * Get appointments with enhanced filtering and pagination
@@ -18,14 +18,28 @@ class AppointmentService
      */
     public static function getAppointments(array $query_params = [])
     {
-        global $wpdb;
+        return self::executeCached('getAppointments', $query_params, function() use ($query_params) {
+            return self::getAppointmentsUncached($query_params);
+        });
+    }
 
-        // Initialize parameters
-        $params = $query_params['params'] ?? $query_params;
-        
-        // Default parameters
-        $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
-        $perPage = isset($params['per_page']) ? max(1, intval($params['per_page'])) : 10;
+    /**
+     * Get appointments without caching (internal method)
+     * 
+     * @param array $query_params Query parameters including pagination, sorting, and filtering
+     * @return array Appointment data with related information
+     */
+    private static function getAppointmentsUncached(array $query_params = [])
+    {
+        try {
+            $wpdb = self::getWpdb();
+
+            // Initialize parameters
+            $params = $query_params['params'] ?? $query_params;
+            
+            // Default parameters
+            $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
+            $perPage = isset($params['per_page']) ? max(1, intval($params['per_page'])) : 10;
         
         // Initialize tables
         $appointment_table = $wpdb->prefix . 'hm_appointments';
@@ -66,10 +80,10 @@ class AppointmentService
                 $countQuery .= " AND a.patient_id = %d";
                 $values[] = $patient_id;
                 $count_values[] = $patient_id;
-                error_log('AppointmentService::getAppointments - Role restriction: patient can only see own appointments for user ID: ' . $user->ID . ', patient ID: ' . $patient_id);
+                \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Role restriction: patient can only see own appointments for user ID: ' . $user->ID . ', patient ID: ' . $patient_id);
             } else {
                 // If no patient record found, return empty results
-                error_log('AppointmentService::getAppointments - No patient record found for user ID: ' . $user->ID);
+                \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - No patient record found for user ID: ' . $user->ID);
                 return [
                     'appointments' => (object)[
                         'items' => [],
@@ -101,7 +115,7 @@ class AppointmentService
                     $countQuery .= " AND a.doctor_id = %d";
                     $values[] = $doctor_id;
                     $count_values[] = $doctor_id;
-                    error_log('AppointmentService::getAppointments - Role restriction: doctor can only see own appointments');
+                    \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Role restriction: doctor can only see own appointments');
                 }
             }
         }
@@ -117,7 +131,7 @@ class AppointmentService
             $count_values[] = $search;
             $count_values[] = $search;
             $count_values[] = $search;
-            error_log('AppointmentService::getAppointments - Filter by search: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Filter by search', $params);
         }
         
         // Filter by doctor if specified
@@ -126,7 +140,7 @@ class AppointmentService
             $countQuery .= " AND a.doctor_id = %d";
             $values[] = intval($params['doctor_id']);
             $count_values[] = intval($params['doctor_id']);
-            error_log('AppointmentService::getAppointments - Filter by doctor: ' . $params['doctor_id']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by doctor: ' . $params['doctor_id']);
         }
         
         // Filter by patient if specified
@@ -135,7 +149,7 @@ class AppointmentService
             $countQuery .= " AND a.patient_id = %d";
             $values[] = intval($params['patient_id']);
             $count_values[] = intval($params['patient_id']);
-            error_log('AppointmentService::getAppointments - Filter by patient: ' . $params['patient_id']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by patient: ' . $params['patient_id']);
         }
         
         // Filter by status if specified
@@ -144,7 +158,7 @@ class AppointmentService
             $countQuery .= " AND a.status = %s";
             $values[] = sanitize_text_field($params['status']);
             $count_values[] = sanitize_text_field($params['status']);
-            error_log('AppointmentService::getAppointments - Filter by status: ' . $params['status']);
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by status: ' . $params['status']);
         }
         
         // Handle upcoming filter
@@ -154,7 +168,7 @@ class AppointmentService
             $countQuery .= " AND (a.status = 'pending' OR a.status = 'confirmed') AND a.appointment_date >= %s";
             $values[] = $today;
             $count_values[] = $today;
-            error_log('AppointmentService::getAppointments - Filter by upcoming appointments');
+            \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Filter by upcoming appointments');
         }
         
         // Handle date range filtering
@@ -173,9 +187,9 @@ class AppointmentService
         }
         
         // Get total count for pagination
-        $prepared_count = $wpdb->prepare($countQuery, $count_values);
+        $prepared_count = self::prepareIf($countQuery, $count_values);
         $total = (int)$wpdb->get_var($prepared_count);
-        error_log('AppointmentService::getAppointments - Total count: ' . $total . ' for user: ' . $user->ID);
+        \HospitalManager\Helpers\DebugLog::line('AppointmentService::getAppointments - Total count: ' . $total . ' for user: ' . $user->ID);
         
         // Apply sorting - default to DESC for dates
         $sortField = !empty($params['sort_by']) ? $params['sort_by'] : 'appointment_date';
@@ -212,16 +226,13 @@ class AppointmentService
         
         // Execute query
         $prepared_query = $wpdb->prepare($query, $values);
-        error_log('AppointmentService::getAppointments - Final Query: ' . $prepared_query);
-        error_log('AppointmentService::getAppointments - Count Query: ' . $wpdb->prepare($countQuery, $count_values));
+        \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Final Query', $prepared_query);
+        if (\HospitalManager\Helpers\DebugLog::enabled()) {
+            \HospitalManager\Helpers\DebugLog::payload('AppointmentService::getAppointments - Count Query', self::prepareIf($countQuery, $count_values));
+        }
         
         $items = $wpdb->get_results($prepared_query);
-        error_log('Query returned ' . count($items) . ' appointments out of total ' . $total . ' for page ' . $page . ' (perPage: ' . $perPage . ')');
-        
-        // Debug: Log the actual items returned
-        foreach ($items as $index => $item) {
-            error_log('Item ' . $index . ': patient_id=' . $item->patient_id . ', patient_name=' . ($item->patient_name ?? 'NULL'));
-        }
+        \HospitalManager\Helpers\DebugLog::line('Query returned ' . count($items) . ' appointments out of total ' . $total . ' for page ' . $page . ' (perPage: ' . $perPage . ')');
         
         // Process results
         $appointments = [];
@@ -258,7 +269,7 @@ class AppointmentService
         if (!empty($params['status']) && $params['status'] !== 'all') {
             $last_page = $total > 0 ? ceil($total / $perPage) : 1;
             
-            error_log('Adjusted pagination after status filtering: total=' . $total . 
+            \HospitalManager\Helpers\DebugLog::line('Adjusted pagination after status filtering: total=' . $total . 
                 ', lastPage=' . $last_page);
         }
         
@@ -278,6 +289,11 @@ class AppointmentService
                 'total' => (int)$total
             ]
         ];
+        
+        } catch (\Exception $e) {
+            self::logError('AppointmentService', 'getAppointmentsUncached', $e->getMessage(), $query_params);
+            throw new Exception('Failed to retrieve appointments: ' . $e->getMessage());
+        }
     }
     
     /**
@@ -289,7 +305,21 @@ class AppointmentService
      */
     public static function getBookingData($doctor_id)
     {
-        global $wpdb;
+        return self::executeCached('getBookingData', ['doctor_id' => $doctor_id], function() use ($doctor_id) {
+            return self::getBookingDataUncached($doctor_id);
+        }, 900); // Cache for 15 minutes
+    }
+
+    /**
+     * Get booking data without caching (internal method)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Doctor information and available dates
+     * @throws Exception If doctor not found
+     */
+    private static function getBookingDataUncached($doctor_id)
+    {
+        $wpdb = self::getWpdb();
         $doctors_table = $wpdb->prefix . 'hm_doctors';
         
         $doctor = $wpdb->get_row(
@@ -323,11 +353,26 @@ class AppointmentService
      */
     public static function getAvailability($doctor_id, $date = null)
     {
+        $cache_params = ['doctor_id' => $doctor_id, 'date' => $date];
+        return self::executeCached('getAvailability', $cache_params, function() use ($doctor_id, $date) {
+            return self::getAvailabilityUncached($doctor_id, $date);
+        }, 600); // Cache for 10 minutes
+    }
+
+    /**
+     * Get available time slots without caching (internal method)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @param string $date Date in Y-m-d format
+     * @return array Available time slots
+     */
+    private static function getAvailabilityUncached($doctor_id, $date = null)
+    {
         if (!$date) {
             return self::getAvailableDates($doctor_id);
         }
         
-        global $wpdb;
+        $wpdb = self::getWpdb();
         $doctor_table = $wpdb->prefix . 'hm_doctors';
         
         // Get the day of the week from the date
@@ -414,7 +459,21 @@ class AppointmentService
      */
     public static function isSlotAvailable($doctor_id, $date, $time)
     {
-        global $wpdb;
+        // Never cached: a booking must see the slots taken a moment ago.
+        return self::isSlotAvailableUncached($doctor_id, $date, $time);
+    }
+
+    /**
+     * Check if a time slot is available without caching (internal method)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @param string $date Date in Y-m-d format
+     * @param string $time Time in H:i:s format
+     * @return bool True if slot is available, false otherwise
+     */
+    private static function isSlotAvailableUncached($doctor_id, $date, $time)
+    {
+        $wpdb = self::getWpdb();
         
         // Check if requested time is within doctor's availability hours
         $day_of_week = strtolower(date('l', strtotime($date)));
@@ -486,7 +545,21 @@ class AppointmentService
      */
     public static function getAppointmentStats($doctor_id)
     {
-        global $wpdb;
+        return self::executeCached('getAppointmentStats', ['doctor_id' => $doctor_id], function() use ($doctor_id) {
+            return self::getAppointmentStatsUncached($doctor_id);
+        }, 1800); // Cache for 30 minutes
+    }
+
+    /**
+     * Get appointment statistics without caching (internal method)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Appointment statistics
+     * @throws Exception If doctor not found or database error
+     */
+    private static function getAppointmentStatsUncached($doctor_id)
+    {
+        $wpdb = self::getWpdb();
         
         // Verify doctor exists first
         $doctor_table = $wpdb->prefix . 'hm_doctors';
@@ -502,8 +575,7 @@ class AppointmentService
         $table_name = $wpdb->prefix . 'hm_appointments';
         
         // Check if table exists
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'");
-        if (!$table_exists) {
+        if (!self::tableExists('hm_appointments')) {
             throw new Exception('Appointments table not found');
         }
         
@@ -562,7 +634,20 @@ class AppointmentService
      */
     public static function getAvailableDates($doctor_id)
     {
-        global $wpdb;
+        return self::executeCached('getAvailableDates', ['doctor_id' => $doctor_id], function() use ($doctor_id) {
+            return self::getAvailableDatesUncached($doctor_id);
+        }, 3600); // Cache for 1 hour
+    }
+
+    /**
+     * Get available dates without caching (internal method)
+     * 
+     * @param int $doctor_id Doctor ID
+     * @return array Available dates
+     */
+    private static function getAvailableDatesUncached($doctor_id)
+    {
+        $wpdb = self::getWpdb();
         $doctor_table = $wpdb->prefix . 'hm_doctors';
         
         // Get doctor's availability settings

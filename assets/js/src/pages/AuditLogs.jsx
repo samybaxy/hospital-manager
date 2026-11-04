@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import { api } from '../services/apiService';
 
 const AuditLogs = () => {
   const [logs, setLogs] = useState([]);
@@ -13,35 +14,22 @@ const AuditLogs = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const { apiUrl, nonce } = window.hospitalManagerData || {};
-        
-        if (!apiUrl) {
-          throw new Error('API URL not available');
-        }
-        
-        let url = `${apiUrl}/audit-logs?page=${currentPage}`;
+        setLoading(true);
+        setError(null);
+        const params = { page: currentPage };
         if (filter !== 'all') {
-          url += `&type=${filter}`;
+          params.type = filter;
         }
-        
-        const response = await fetch(url, {
-          headers: {
-            'X-WP-Nonce': nonce,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch audit logs');
-        }
-        
-        const data = await response.json();
-        setLogs(data.logs);
-        setTotalPages(data.total_pages || 1);
-        setLoading(false);
+        const response = await api.get('/audit-logs', params);
+        const data = response.data || {};
+        // { data: [...], meta: { last_page, ... } }
+        setLogs(Array.isArray(data.data) ? data.data : []);
+        setTotalPages((data.meta && data.meta.last_page) || 1);
       } catch (err) {
-        console.error('Error fetching audit logs:', err);
-        setError(err.message);
+        const status = err.response && err.response.status;
+        setError(status === 403 ? 'You do not have permission to view audit logs.' : 'Failed to fetch audit logs');
+        setLogs([]);
+      } finally {
         setLoading(false);
       }
     };

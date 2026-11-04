@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import { api } from '../services/apiService';
 
 const Statistics = () => {
   const [stats, setStats] = useState(null);
@@ -10,29 +11,13 @@ const Statistics = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { apiUrl, nonce } = window.hospitalManagerData || {};
-        
-        if (!apiUrl) {
-          throw new Error('API URL not available');
-        }
-        
-        const response = await fetch(`${apiUrl}/stats`, {
-          headers: {
-            'X-WP-Nonce': nonce,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch statistics');
-        }
-        
-        const data = await response.json();
-        setStats(data);
-        setLoading(false);
+        const response = await api.get('/stats');
+        setStats(response.data);
       } catch (err) {
-        console.error('Error fetching statistics:', err);
-        setError(err.message);
+        setError(err.response && err.response.status === 403
+          ? 'You do not have permission to view statistics.'
+          : 'Failed to fetch statistics');
+      } finally {
         setLoading(false);
       }
     };

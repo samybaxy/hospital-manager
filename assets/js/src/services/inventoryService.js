@@ -2,8 +2,8 @@ import { apiClient } from './apiClient';
 
 class InventoryService {
   constructor() {
-    const { nonce, siteUrl } = window.hospitalManagerData || {};
-    this.baseURL =`${siteUrl}/wp-json/hospital-manager/v1/inventory`;
+    // Relative to the shared client's baseURL (.../wp-json/hospital-manager/v1)
+    this.baseURL = '/inventory';
   }
 
   /**
@@ -114,13 +114,13 @@ class InventoryService {
   }
 
   /**
-   * Bulk update inventory items
+   * Bulk operation on inventory items (POST /inventory/bulk)
+   * @param {'update_status'|'delete'|'update_location'} action
+   * @param {Array<Object>} items  e.g. [{ ID: 3, status: 'inactive' }]
    */
-  async bulkUpdate(updates) {
+  async bulkUpdate(action, items) {
     try {
-      const response = await apiClient.post(`${this.baseURL}/bulk-update`, {
-        updates
-      });
+      const response = await apiClient.post(`${this.baseURL}/bulk`, { action, items });
       return response.data.data || {};
     } catch (error) {
       console.error('Error performing bulk update:', error);
@@ -174,8 +174,18 @@ class InventoryService {
    * Record a new inventory transaction
    */
   async recordTransaction(transactionData) {
+    // The form uses the table's column names; the endpoint takes
+    // item_id / type / quantity / reference.
+    const t = transactionData || {};
+    const payload = {
+      item_id: parseInt(t.item_id ?? t.inventory_id, 10),
+      type: t.type ?? t.transaction_type,
+      quantity: parseInt(t.quantity ?? t.quantity_changed, 10),
+      reference: t.reference ?? t.reference_number ?? '',
+      notes: t.notes ?? '',
+    };
     try {
-      const response = await apiClient.post(`${this.baseURL}/transactions`, transactionData);
+      const response = await apiClient.post(`${this.baseURL}/transactions`, payload);
       return response.data.data || null;
     } catch (error) {
       console.error('Error recording transaction:', error);
@@ -203,7 +213,7 @@ class InventoryService {
    */
   async acknowledgeAlert(alertId) {
     try {
-      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/alerts/${alertId}/acknowledge`);
+      const response = await apiClient.put(`${this.baseURL}/alerts/${alertId}/acknowledge`);
       return response.data.data || null;
     } catch (error) {
       console.error('Error acknowledging alert:', error);
@@ -216,7 +226,7 @@ class InventoryService {
    */
   async resolveAlert(alertId) {
     try {
-      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/alerts/${alertId}/resolve`);
+      const response = await apiClient.put(`${this.baseURL}/alerts/${alertId}/resolve`);
       return response.data.data || null;
     } catch (error) {
       console.error('Error resolving alert:', error);
@@ -338,7 +348,7 @@ class InventoryService {
    */
   async approveReorder(reorderId) {
     try {
-      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/reorders/${reorderId}/approve`);
+      const response = await apiClient.put(`${this.baseURL}/reorders/${reorderId}/approve`);
       return response.data.data || null;
     } catch (error) {
       console.error('Error approving reorder:', error);
@@ -351,7 +361,7 @@ class InventoryService {
    */
   async completeReorder(reorderId, completionData = {}) {
     try {
-      const response = await apiClient.put(`/wp-json/hospital-manager/v1/inventory/reorders/${reorderId}/complete`, completionData);
+      const response = await apiClient.put(`${this.baseURL}/reorders/${reorderId}/complete`, completionData);
       return response.data.data || null;
     } catch (error) {
       console.error('Error completing reorder:', error);

@@ -92,7 +92,7 @@ class ChatMessage extends BaseModel
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 
@@ -109,6 +109,8 @@ class ChatMessage extends BaseModel
      */
     public static function getChatMessages($chatId, $page = 1, $perPage = 50)
     {
+        $page = max(1, (int) $page);
+        $perPage = min(200, max(1, (int) $perPage)); // per_page=0 used to divide by zero (500)
         global $wpdb;
         // Get the table name
         $instance = new static();

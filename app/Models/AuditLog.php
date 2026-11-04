@@ -25,18 +25,17 @@ class AuditLog extends BaseModel
     protected static $conditions = [];
     protected static $orderBy = [];
     
-    public function __construct($attributes = [])
+    /**
+     * AuditLog constructor
+     * 
+     * @param int|array $attributes Model ID or attributes array
+     */
+    public function __construct($attributes = 0)
     {
-        global $wpdb;
-        $this->table = $wpdb->prefix . $this->tableName;
+        // Set the table name for this model
+        $this->tableName = 'hm_audit_logs';
         
-        // Ensure $attributes is an array
-        if (is_string($attributes)) {
-            $attributes = json_decode($attributes, true) ?: [];
-        } elseif (!is_array($attributes)) {
-            $attributes = [];
-        }
-        
+        // Call parent constructor which handles the WPMVC logic
         parent::__construct($attributes);
     }
     
@@ -44,13 +43,14 @@ class AuditLog extends BaseModel
     {
         global $wpdb;
         
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         
         $result = $wpdb->insert(
             $table,
             $attributes,
             array_map(function($field) {
-                return is_numeric($field) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($field);
             }, $attributes)
         );
 
@@ -62,6 +62,37 @@ class AuditLog extends BaseModel
         $attributes['ID'] = $wpdb->insert_id;
 
         return new static($attributes);
+    }
+
+    /**
+     * A patient's full audit trail: entries on the patient record itself plus entries
+     * on related records (appointments, visits, labs, radiology, reports) that carry
+     * details.patient_id — the convention AuditLogger callers such as LabResultService use.
+     *
+     * @param int $patient_id hm_patients.ID
+     * @param int $limit
+     * @return static[] Newest first
+     */
+    public static function getForPatient($patient_id, $limit = 200)
+    {
+        global $wpdb;
+        $table = (new static())->getTable();
+
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$table}
+             WHERE (entity_type = 'patient' AND entity_id = %d)
+                OR (JSON_VALID(details)
+                    AND CAST(JSON_UNQUOTE(JSON_EXTRACT(details, '$.patient_id')) AS UNSIGNED) = %d)
+             ORDER BY created_at DESC, ID DESC
+             LIMIT %d",
+            $patient_id,
+            $patient_id,
+            $limit
+        ), ARRAY_A);
+
+        return array_map(function ($row) {
+            return new static($row);
+        }, $rows ?: []);
     }
 
     public static function where($column, $value)
@@ -80,7 +111,7 @@ class AuditLog extends BaseModel
     {
         global $wpdb;
         
-        $query = "SELECT SQL_CALC_FOUND_ROWS * FROM {$this->table} WHERE 1=1";
+        $query = "SELECT SQL_CALC_FOUND_ROWS * FROM {$this->getTable()} WHERE 1=1";
         
         // Add where conditions
         foreach (static::$conditions as $condition) {
@@ -128,7 +159,8 @@ class AuditLog extends BaseModel
     public static function get()
     {
         global $wpdb;
-        $table = (new static)->table;
+        $instance = new static();
+        $table = $instance->getTable();
         $query = "SELECT * FROM {$table} WHERE 1=1";
 
         foreach (static::$conditions as $condition) {

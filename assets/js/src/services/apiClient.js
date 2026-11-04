@@ -1,196 +1,118 @@
 import axios from 'axios';
 
 /**
- * API client for the Hospital Manager WordPress plugin
- * Uses the hospital-manager/v1 namespace for all API requests
+ * API client for the Hospital Manager WordPress plugin (hospital-manager/v1).
+ *
+ * Authentication is the WordPress login cookie plus a REST nonce (X-WP-Nonce)
+ * on every request. The nonce is tied to the session: a nonce created before
+ * login is useless after it, so the freshest one (from the login response or
+ * any response header) is kept in sessionStorage and read on every request.
  */
 
-// Get the WordPress data from the global object
-const { apiUrl, nonce, siteUrl } = window.hospitalManagerData || {};
+const NONCE_KEY = 'hospital_manager_csrf_nonce';
 
-// Create an Axios instance with baseURL and default headers
+const { apiUrl, siteUrl } = window.hospitalManagerData || {};
+
+// The page was just rendered for whoever holds the login cookie, so its nonce
+// is the right one now; a nonce kept from an earlier session would be rejected.
+if (window.hospitalManagerData && window.hospitalManagerData.nonce) {
+  sessionStorage.setItem(NONCE_KEY, window.hospitalManagerData.nonce);
+}
+
 const apiClient = axios.create({
-  baseURL: apiUrl || `${siteUrl}/wp-json/hospital-manager/v1`,
+  baseURL: apiUrl || `${siteUrl || window.location.origin}/wp-json/hospital-manager/v1`,
   headers: {
     'Content-Type': 'application/json',
   },
-  // Only prevent problematic redirects but allow normal status codes to work
-  validateStatus: function (status) {
-    return status >= 200 && status < 300 || status === 401;
-  }
+  withCredentials: true,
 });
 
-// Simple CSRF token manager to avoid circular dependencies
+/** The nonce to send: the latest one the server gave us, else the page's. */
+export const getNonce = () =>
+  sessionStorage.getItem(NONCE_KEY) ||
+  (window.hospitalManagerData && window.hospitalManagerData.nonce) ||
+  (window.wpApiSettings && window.wpApiSettings.nonce) ||
+  null;
+
+/** Remember a nonce handed out by the server. */
+export const setNonce = (nonce) => {
+  if (!nonce) return;
+  sessionStorage.setItem(NONCE_KEY, nonce);
+  if (window.hospitalManagerData) window.hospitalManagerData.nonce = nonce;
+  if (window.wpApiSettings) window.wpApiSettings.nonce = nonce;
+};
+
+/** Forget the session nonce (logout / expired session). */
+export const clearNonce = () => sessionStorage.removeItem(NONCE_KEY);
+
+// Kept for older imports.
 const csrfTokenManager = {
-  updateToken: null, // Will be set by authService when it initializes
-  
-  setUpdateFunction: (updateFn) => {
-    csrfTokenManager.updateToken = updateFn;
-  },
-  
-  update: (token) => {
-    if (csrfTokenManager.updateToken && typeof csrfTokenManager.updateToken === 'function') {
-      csrfTokenManager.updateToken(token);
-    } else {
-      // Fallback: store in sessionStorage directly
-      sessionStorage.setItem('hospital_manager_csrf_nonce', token);
-    }
+  setUpdateFunction: () => {},
+  update: setNonce,
+};
+
+// Listeners told when the server says the session is gone (401).
+const unauthorizedListeners = new Set();
+export const onUnauthorized = (fn) => {
+  unauthorizedListeners.add(fn);
+  return () => unauthorizedListeners.delete(fn);
+};
+
+const isAuthCall = (url = '') =>
+  url.includes('/auth/login') || url.includes('/auth/logout') || url.includes('/auth/me') ||
+  url.includes('/auth/reset-password');
+
+apiClient.interceptors.request.use((config) => {
+  const nonce = getNonce();
+  if (nonce) {
+    config.headers['X-WP-Nonce'] = nonce;
+  }
+  return config;
+});
+
+const pickUpNonce = (response) => {
+  if (!response) return;
+  if (response.data && response.data.fresh_nonce) {
+    setNonce(response.data.fresh_nonce);
+  }
+  const headerNonce = response.headers && response.headers['x-wp-nonce'];
+  if (headerNonce) {
+    setNonce(headerNonce);
   }
 };
 
-// Add request interceptor to ensure we always send the latest CSRF token
-apiClient.interceptors.request.use(
-  (config) => {
-    // Get the latest CSRF token for requests that need it
-    if (config.method === 'post' || config.method === 'put' || config.method === 'patch' || config.method === 'delete') {
-      // Get the current CSRF token from storage or global
-      const csrfToken = sessionStorage.getItem('hospital_manager_csrf_nonce') ||
-                       (window.hospitalManagerData && window.hospitalManagerData.nonce) ||
-                       (window.wpApiSettings && window.wpApiSettings.nonce);
-      
-      if (csrfToken) {
-        config.headers['X-WP-Nonce'] = csrfToken;
-        
-        // Also add it to the data if it's not already there and this is a login request
-        if (config.url && config.url.includes('/auth/') && config.data && !config.data.nonce) {
-          config.data.nonce = csrfToken;
-        }
-      }
-    }
-    
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add response interceptor to handle redirects and CSRF token updates
 apiClient.interceptors.response.use(
   (response) => {
-    // Update CSRF token if provided in response data
-    if (response.data && response.data.fresh_nonce) {
-      csrfTokenManager.update(response.data.fresh_nonce);
-      
-      // Update global variables as well for immediate availability
-      if (window.hospitalManagerData) {
-        window.hospitalManagerData.nonce = response.data.fresh_nonce;
-      }
-      if (window.wpApiSettings) {
-        window.wpApiSettings.nonce = response.data.fresh_nonce;
-      }
-    }
-    
-    // Update CSRF token if provided in response headers
-    if (response.headers['x-wp-nonce']) {
-      csrfTokenManager.update(response.headers['x-wp-nonce']);
-      
-      // Update global variables as well
-      if (window.hospitalManagerData) {
-        window.hospitalManagerData.nonce = response.headers['x-wp-nonce'];
-      }
-      if (window.wpApiSettings) {
-        window.wpApiSettings.nonce = response.headers['x-wp-nonce'];
-      }
-    }
-    
-    // For auth endpoints, check if browser is trying to redirect to wp-login
-    if (response.request && response.request.responseURL && 
-        response.request.responseURL.includes('wp-login.php') &&
-        response.config && response.config.url && 
-        response.config.url.includes('/auth/')) {
-      console.warn('WordPress login redirect detected for auth endpoint');
-      
-      // Only transform redirects for auth-related endpoints
-      return {
-        ...response,
-        status: 401,
-        data: {
-          authenticated: false,
-          message: 'Authentication failed. Please check your credentials.'
-        }
-      };
-    }
+    pickUpNonce(response);
     return response;
   },
   (error) => {
-    // Don't log CSRF errors that will likely be auto-retried
-    const isCsrfError = error.response && 
-                       error.response.status === 403 && 
-                       error.response.data && 
-                       error.response.data.code === 'csrf_failed' &&
-                       error.config &&
-                       error.config.url &&
-                       error.config.url.includes('/auth/login');
-    
-    // Update CSRF token if provided in error response
-    if (error.response && error.response.data && error.response.data.fresh_nonce) {
-      csrfTokenManager.update(error.response.data.fresh_nonce);
-      
-      // Update global variables as well for immediate availability
-      if (window.hospitalManagerData) {
-        window.hospitalManagerData.nonce = error.response.data.fresh_nonce;
-      }
-      if (window.wpApiSettings) {
-        window.wpApiSettings.nonce = error.response.data.fresh_nonce;
-      }
-      
-      // For CSRF failures on login, suppress the console error since it will be retried
-      if (isCsrfError) {
-        console.log('CSRF token refreshed for login retry');
-      }
+    const response = error.response;
+    pickUpNonce(response);
+
+    // Session expired or signed out elsewhere: tell the app (it clears its
+    // state and shows the login screen). Login/me calls handle 401 themselves.
+    if (response && response.status === 401 && !isAuthCall(error.config && error.config.url)) {
+      unauthorizedListeners.forEach((fn) => {
+        try { fn(); } catch (e) { /* ignore */ }
+      });
     }
-    
-    // If there's an auth-related redirect
-    if (error.response && 
-        error.response.status >= 300 && 
-        error.response.status < 400 && 
-        error.config && 
-        error.config.url && 
-        error.config.url.includes('/auth/')) {
-      
-      console.warn('Auth redirect prevented', error.response.headers.location);
-      
-      // Only transform redirects for auth-related endpoints
-      return {
-        status: 401,
-        data: {
-          authenticated: false,
-          message: 'Authentication failed. Please check your credentials.'
-        }
-      };
-    }
-    
-    // For other errors, just pass them through
+
     return Promise.reject(error);
   }
 );
 
-// Create a wrapper for API calls
 const api = {
-  get: (url, params = {}, config = {}) => {
-    return apiClient.get(url, { params, ...config });
-  },
-  post: (url, data = {}, config = {}) => {
-    return apiClient.post(url, data, config);
-  },
-  put: (url, data = {}, config = {}) => {
-    return apiClient.put(url, data, config);
-  },
-  delete: (url, config = {}) => {
-    return apiClient.delete(url, config);
-  },
-  patch: (url, data = {}, config = {}) => {
-    return apiClient.patch(url, data, config);
-  },
-  upload: (url, formData, config = {}) => {
-    return apiClient.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+  get: (url, params = {}, config = {}) => apiClient.get(url, { params, ...config }),
+  post: (url, data = {}, config = {}) => apiClient.post(url, data, config),
+  put: (url, data = {}, config = {}) => apiClient.put(url, data, config),
+  delete: (url, config = {}) => apiClient.delete(url, config),
+  patch: (url, data = {}, config = {}) => apiClient.patch(url, data, config),
+  upload: (url, formData, config = {}) =>
+    apiClient.post(url, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
       ...config,
-    });
-  }
+    }),
 };
 
 export { apiClient, api, csrfTokenManager };

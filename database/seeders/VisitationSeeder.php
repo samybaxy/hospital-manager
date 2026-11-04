@@ -88,24 +88,26 @@ class VisitationSeeder extends Seeder
      */
     private function getAppointmentsForVisitations()
     {
-        // Get from transient if available
-        $appointments = get_transient('hm_appointments_for_visitations');
-        if (!empty($appointments)) {
-            return $appointments;
-        }
-        
-        // Otherwise get completed appointments from database
+        // Read completed appointments straight from the table. (A transient hand-off
+        // from AppointmentSeeder used to be preferred here; it included pending,
+        // confirmed and cancelled appointments and survived truncates, producing
+        // visits for appointments that never happened or no longer exist.)
         global $wpdb;
         $appointments_table = $wpdb->prefix . 'hm_appointments';
-        
-        $completed_appointments = $wpdb->get_results(
-            "SELECT ID, patient_id, doctor_id, appointment_date, appointment_time, reason 
-             FROM {$appointments_table} 
-             WHERE status = 'completed' 
-             ORDER BY RAND() 
-             LIMIT 30",
-            ARRAY_A
-        );
+        $visitations_table = $wpdb->prefix . 'hm_visitations';
+
+        // Every completed appointment without a visit gets one. Completed slots later
+        // today haven't happened yet, so only up to the current time.
+        $completed_appointments = $wpdb->get_results($wpdb->prepare(
+            "SELECT a.ID, a.patient_id, a.doctor_id, a.appointment_date, a.appointment_time, a.reason
+             FROM {$appointments_table} a
+             LEFT JOIN {$visitations_table} v ON v.appointment_id = a.ID
+             WHERE a.status = 'completed'
+               AND v.ID IS NULL
+               AND TIMESTAMP(a.appointment_date, a.appointment_time) <= %s
+             ORDER BY a.appointment_date ASC",
+            current_time('mysql')
+        ), ARRAY_A);
         
         if (empty($completed_appointments)) {
             return [];

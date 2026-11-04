@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { api } from '../../services/apiService';
+import { useUserAccess } from '../../hooks/useUserAccess';
 
 // CSS utility for line clamping
 const lineClampStyle = {
@@ -28,6 +29,9 @@ const PatientDetails = () => {
   // Check if we came from a doctor's page or visitation page
   const fromDoctor = location.state?.fromDoctor || null;
   const fromVisitation = location.state?.fromVisitation || null;
+  // Edit/Delete follow GET /access, derived from the API's AccessPolicy (patients
+  // viewing their own record used to see both buttons).
+  const { hasAccess } = useUserAccess();
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -254,6 +258,7 @@ const PatientDetails = () => {
           </p>
         </div>
         <div className="flex gap-2 mt-2 md:mt-0">
+          {hasAccess('edit_patients') && (
           <Link to={`/patients/${patientId}/edit`}>
             <Button variant="primary">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -262,12 +267,15 @@ const PatientDetails = () => {
               Edit Patient
             </Button>
           </Link>
+          )}
+          {hasAccess('delete_patients') && (
           <Button variant="danger" onClick={handleDelete}>
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
             Delete
           </Button>
+          )}
         </div>
       </div>
 

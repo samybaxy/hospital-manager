@@ -47,7 +47,8 @@ class DatabaseSeederCommand
      */
     public function register()
     {
-        if (!class_exists('WP_CLI')) {
+        // Release builds leave the seeders out (bin/build-release.sh)
+        if (!class_exists('WP_CLI') || !class_exists(DatabaseSeeder::class)) {
             return;
         }
         

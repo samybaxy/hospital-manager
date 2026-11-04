@@ -160,7 +160,7 @@ const InventorySuppliers = ({ onRefresh }) => {
         setSuccess('Supplier updated successfully');
         setShowEditModal(false);
       } else {
-        await inventoryService.addSupplier(supplierForm);
+        await inventoryService.createSupplier(supplierForm);
         setSuccess('Supplier added successfully');
         setShowAddModal(false);
       }
@@ -171,7 +171,7 @@ const InventorySuppliers = ({ onRefresh }) => {
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Error saving supplier:', err);
-      setError(err.message || 'Failed to save supplier');
+      setError(err.response?.data?.message || err.message || 'Failed to save supplier');
     } finally {
       setSubmitting(false);
     }
@@ -190,7 +190,7 @@ const InventorySuppliers = ({ onRefresh }) => {
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Error deleting supplier:', err);
-      setError(err.message || 'Failed to delete supplier');
+      setError(err.response?.data?.message || err.message || 'Failed to delete supplier');
     } finally {
       setSubmitting(false);
     }

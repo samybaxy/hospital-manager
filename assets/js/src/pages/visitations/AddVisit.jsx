@@ -55,7 +55,7 @@ const AddVisit = () => {
 
   // Handle form submission
   const handleSubmit = async (formData) => {
-    if (!hasAccess('visitations')) {
+    if (!hasAccess('add_visitation')) {
       setError('You do not have permission to add visits');
       return;
     }
@@ -88,7 +88,8 @@ const AddVisit = () => {
   };
 
   // Check access permissions
-  if (!hasAccess('visitations') || (role !== 'administrator' && role !== 'doctor' && role !== 'developer' && role !== 'hospital_nurse')) {
+  // add_visitation comes from GET /access, derived from the API's AccessPolicy
+  if (!hasAccess('add_visitation')) {
     return (
       <div className="max-w-2xl mx-auto py-8">
         <Card>

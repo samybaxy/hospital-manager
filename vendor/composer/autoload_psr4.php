@@ -22,8 +22,6 @@ return array(
     'Peast\\' => array($vendorDir . '/mck89/peast/lib/Peast'),
     'PHP_Parallel_Lint\\PhpConsoleColor\\' => array($vendorDir . '/php-parallel-lint/php-console-color/src'),
     'MyApp\\' => array($vendorDir . '/10quality/wpmvc/app'),
-    'Mockery\\' => array($vendorDir . '/mockery/mockery/library/Mockery'),
-    'HospitalManager\\Tests\\' => array($baseDir . '/tests'),
     'HospitalManager\\Database\\' => array($baseDir . '/database'),
     'HospitalManager\\' => array($baseDir . '/app'),
     'GrahamCampbell\\ResultType\\' => array($vendorDir . '/graham-campbell/result-type/src'),
@@ -32,9 +30,6 @@ return array(
     'Gettext\\' => array($vendorDir . '/gettext/gettext/src'),
     'Faker\\' => array($vendorDir . '/fakerphp/faker/src/Faker'),
     'Dotenv\\' => array($vendorDir . '/vlucas/phpdotenv/src'),
-    'Doctrine\\Instantiator\\' => array($vendorDir . '/doctrine/instantiator/src/Doctrine/Instantiator'),
-    'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
     'Composer\\Installers\\' => array($vendorDir . '/composer/installers/src/Composer/Installers'),
-    'Brain\\Monkey\\' => array($vendorDir . '/brain/monkey/src'),
     'Ayuco\\' => array($vendorDir . '/10quality/ayuco/src'),
 );

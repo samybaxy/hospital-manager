@@ -19,14 +19,15 @@ class DatabaseSeeder
         LabTestDefinitionSeeder::class,
         LabInvestigationSeeder::class,
         RadiologicalExamSeeder::class,
-        NotificationSeeder::class,
+        MedicalReportSeeder::class,   // before chats/notifications: they reference reports and visits
         ChatSeeder::class,
-        MedicalReportSeeder::class,
+        NotificationSeeder::class,
         InventorySeeder::class,
         InventorySuppliersSeeder::class,
         InventoryTransactionsSeeder::class,
         InventoryAlertsSeeder::class,
         InventoryReordersSeeder::class,
+        DemoDataSeeder::class,
         AuditLogSeeder::class,
     ];
     

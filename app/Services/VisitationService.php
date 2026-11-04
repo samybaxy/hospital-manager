@@ -10,7 +10,7 @@ use Exception;
 /**
  * Service class for visitation-related business logic
  */
-class VisitationService
+class VisitationService extends BaseService
 {
     /**
      * Get visitations with enhanced filtering and pagination
@@ -20,12 +20,25 @@ class VisitationService
      */
     public static function getVisitations(array $query_params = [])
     {
-        global $wpdb;
+        return self::executeCached('getVisitations', $query_params, function() use ($query_params) {
+            return self::getVisitationsUncached($query_params);
+        });
+    }
+
+    /**
+     * Get visitations without caching (internal method)
+     * 
+     * @param array $query_params Query parameters including pagination, sorting, and filtering
+     * @return array Visitation data with related information
+     */
+    private static function getVisitationsUncached(array $query_params = [])
+    {
+        $wpdb = self::getWpdb();
 
         try {
             // Initialize parameters
             $params = $query_params['params'] ?? $query_params;
-            error_log('VisitationService::getVisitations called with params: ' . print_r($params, true));
+            \HospitalManager\Helpers\DebugLog::payload('VisitationService::getVisitations called with params', $params);
             
             // Default parameters
             $page = isset($params['page']) ? max(1, intval($params['page'])) : 1;
@@ -57,22 +70,25 @@ class VisitationService
                 // Patients can only see their own visitations
                 $query .= " AND v.patient_id = %d";
                 $countQuery .= " AND v.patient_id = %d";
-                $values[] = Patient::findByUserId( $user->ID )->ID;
-                error_log('VisitationService::getVisitations - Role restriction: patient can only see own visitations');
+                // A patient login without a patient record sees nothing (this used
+                // to be a fatal "property on null").
+                $own = Patient::findByUserId( $user->ID );
+                $values[] = $own ? (int) $own->ID : 0;
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Role restriction: patient can only see own visitations');
             }
             
             if (!empty($params['doctor_id'])) {
                 $query .= " AND v.doctor_id = %d";
                 $countQuery .= " AND v.doctor_id = %d";
                 $values[] = intval($params['doctor_id']);
-                error_log('VisitationService::getVisitations - Filter by doctor: ' . $params['doctor_id']);
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Filter by doctor: ' . $params['doctor_id']);
             }
             
             if (!empty($params['date'])) {
                 $query .= " AND DATE(v.date) = %s";
                 $countQuery .= " AND DATE(v.date) = %s";
                 $values[] = $params['date'];
-                error_log('VisitationService::getVisitations - Filter by exact date: ' . $params['date']);
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Filter by exact date: ' . $params['date']);
             }
             
             // Handle date range filtering
@@ -80,14 +96,14 @@ class VisitationService
                 $query .= " AND DATE(v.date) >= %s";
                 $countQuery .= " AND DATE(v.date) >= %s";
                 $values[] = sanitize_text_field($params['date_from']);
-                error_log('VisitationService::getVisitations - Filter by date from: ' . $params['date_from']);
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Filter by date from: ' . $params['date_from']);
             }
             
             if (!empty($params['date_to'])) {
                 $query .= " AND DATE(v.date) <= %s";
                 $countQuery .= " AND DATE(v.date) <= %s";
                 $values[] = sanitize_text_field($params['date_to']);
-                error_log('VisitationService::getVisitations - Filter by date to: ' . $params['date_to']);
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Filter by date to: ' . $params['date_to']);
             }
             
             // Add search functionality
@@ -103,7 +119,7 @@ class VisitationService
                 )";
                 $values[] = $search;
                 $values[] = $search;
-                error_log('VisitationService::getVisitations - Filter by search: ' . print_r($params, true));
+                \HospitalManager\Helpers\DebugLog::payload('VisitationService::getVisitations - Filter by search', $params);
             }
             
             // Handle status filtering if applicable
@@ -111,12 +127,12 @@ class VisitationService
                 $query .= " AND v.status = %s";
                 $countQuery .= " AND v.status = %s";
                 $values[] = sanitize_text_field($params['status']);
-                error_log('VisitationService::getVisitations - Filter by status: ' . $params['status']);
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations - Filter by status: ' . $params['status']);
             }
             
             // Get total count for pagination
             $count_values = $values; // Copy values for count query
-            $prepared_count = $wpdb->prepare($countQuery, $count_values);
+            $prepared_count = self::prepareIf($countQuery, $count_values);
             $total = (int)$wpdb->get_var($prepared_count);
             
             // Apply sorting
@@ -153,7 +169,7 @@ class VisitationService
             // Execute query
             $prepared_query = $wpdb->prepare($query, $values);
             $items = $wpdb->get_results($prepared_query);
-            error_log('Query returned ' . count($items) . ' visitations');
+            \HospitalManager\Helpers\DebugLog::line('Query returned ' . count($items) . ' visitations');
             
             // Process results
             $visitations = [];
@@ -193,13 +209,13 @@ class VisitationService
             
             // Handle database errors
             if ($wpdb->last_error) {
-                error_log('Database error in VisitationService::getVisitations: ' . $wpdb->last_error);
-                error_log('Query: ' . $wpdb->last_query);
+                \HospitalManager\Helpers\DebugLog::line('Database error in VisitationService::getVisitations: ' . $wpdb->last_error);
+                \HospitalManager\Helpers\DebugLog::payload('VisitationService::getVisitations - Query', $wpdb->last_query);
                 throw new Exception('Database query failed');
             }
             
             // Debug logging
-            error_log('VisitationService::getVisitations executed: Found ' . count($visitations) . ' visitations, Total: ' . $total);
+            \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitations executed: Found ' . count($visitations) . ' visitations, Total: ' . $total);
             
             // Return data in a format consistent with existing API
             return [
@@ -220,7 +236,7 @@ class VisitationService
 
         } catch (\Exception $e) {
             error_log('Exception in VisitationService::getVisitations: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            \HospitalManager\Helpers\DebugLog::line('Stack trace: ' . $e->getTraceAsString());
             throw new Exception('Failed to retrieve visitations: ' . $e->getMessage());
         }
     }
@@ -234,7 +250,21 @@ class VisitationService
      */
     public static function getVisitation(int $id)
     {
-        global $wpdb;
+        return self::executeCached('getVisitation', ['id' => $id], function() use ($id) {
+            return self::getVisitationUncached($id);
+        }, 1800); // Cache for 30 minutes
+    }
+
+    /**
+     * Get a single visitation record without caching (internal method)
+     * 
+     * @param int $id The visitation ID
+     * @return array|false Visitation data with related information, or false if not found
+     * @throws Exception If there's a database error
+     */
+    private static function getVisitationUncached(int $id)
+    {
+        $wpdb = self::getWpdb();
 
         try {
             // Initialize tables
@@ -293,18 +323,18 @@ class VisitationService
             $user = wp_get_current_user();
             if (in_array('patient', $user->roles) && (int) $visitationArray['patient_id'] !== Patient::get_pid_from_wp($user->ID)) {
                 // Patients can only see their own visitations
-                error_log('VisitationService::getVisitation - Permission denied: patient attempted to view another patient\'s visitation');
+                \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitation - Permission denied: patient attempted to view another patient\'s visitation');
                 return false;
             }
             
             // Log successful retrieval
-            error_log('VisitationService::getVisitation - Successfully retrieved visitation #' . $id);
+            \HospitalManager\Helpers\DebugLog::line('VisitationService::getVisitation - Successfully retrieved visitation #' . $id);
             
             return $visitationArray;
             
         } catch (\Exception $e) {
             error_log('Exception in VisitationService::getVisitation: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
+            \HospitalManager\Helpers\DebugLog::line('Stack trace: ' . $e->getTraceAsString());
             throw new Exception('Failed to retrieve visitation: ' . $e->getMessage());
         }
     }

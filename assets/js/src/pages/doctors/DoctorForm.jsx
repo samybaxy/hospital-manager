@@ -292,10 +292,16 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
     try {
       setLoading(true);
       
-      // Create a copy of the form data without the email field
-      // since it's managed by WordPress users table, not the doctors table
+      // Email lives on the WordPress user, not the doctors table. When adding a
+      // doctor it is sent so the backend can create their login (no email = no
+      // login). When editing it is read-only and never sent.
       const dataToSubmit = { ...formData };
-      delete dataToSubmit.email;
+      const email = (formData.email || '').trim();
+      if (isEditing || !email) {
+        delete dataToSubmit.email;
+      } else {
+        dataToSubmit.email = email;
+      }
       
       // Convert appointment_availability to the format expected by backend
       // Backend expects: { day: [{ start: "09:00", end: "17:00" }] } for enabled days
@@ -605,7 +611,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
 
                 <div className="sm:col-span-3">
                   <label htmlFor="email" className={formStyles.label}>
-                    Email <span className="text-xs text-gray-500">(WordPress User)</span>
+                    Email <span className="text-xs text-gray-500">{isEditing ? '(WordPress User)' : '(optional, creates a login)'}</span>
                   </label>
                   <div className="relative">
                     <input
@@ -615,11 +621,21 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                       value={formData.email}
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      placeholder="Email address from WordPress user"
-                      className={`${formErrors.email ? formStyles.errorField : formStyles.inputField} pl-10 bg-gray-50 border-gray-300 text-gray-500`}
-                      disabled
-                      readOnly
+                      placeholder={isEditing ? 'Email address from WordPress user' : 'Enter email address'}
+                      className={
+                        isEditing
+                          ? `${formErrors.email ? formStyles.errorField : formStyles.inputField} pl-10 bg-gray-50 border-gray-300 text-gray-500`
+                          : formErrors.email ? formStyles.errorField : formStyles.inputField
+                      }
+                      disabled={isEditing}
+                      readOnly={isEditing}
                     />
+                    {!isEditing && (
+                      <p className={formStyles.helpText}>
+                        A doctor login is created for this email and a set-password link is emailed to it. Leave blank to add the doctor without a login.
+                      </p>
+                    )}
+                    {isEditing && (
                     <div className="mt-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-md">
                       <p className="text-xs text-amber-700 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -628,6 +644,7 @@ const DoctorForm = ({ doctor = {}, isEditing = false, cancelUrl = '/doctors' }) 
                         <span>Email is linked to WordPress user account and cannot be modified here</span>
                       </p>
                     </div>
+                    )}
                     {formErrors.email && (
                       <p className="mt-1 text-sm text-red-600 flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">

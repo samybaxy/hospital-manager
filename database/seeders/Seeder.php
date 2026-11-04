@@ -56,8 +56,19 @@ abstract class Seeder
      */
     protected function createUser($role)
     {
-        $username = strtolower($this->faker->userName());
-        $email = $this->faker->email();
+        // Generate random names if faker is not available
+        if ($this->faker) {
+            $username = strtolower($this->faker->userName());
+            $email = $this->faker->email();
+            $firstName = $this->faker->firstName();
+            $lastName = $this->faker->lastName();
+        } else {
+            // Fallback if faker is not available
+            $username = strtolower('user_' . uniqid());
+            $email = $username . '@example.com';
+            $firstName = 'User';
+            $lastName = uniqid();
+        }
         
         // Create user
         $user_id = wp_create_user(
@@ -75,8 +86,8 @@ abstract class Seeder
         $user->set_role($role);
         
         // Add some user meta
-        update_user_meta($user_id, 'first_name', $this->faker->firstName());
-        update_user_meta($user_id, 'last_name', $this->faker->lastName());
+        update_user_meta($user_id, 'first_name', $firstName);
+        update_user_meta($user_id, 'last_name', $lastName);
         
         return $user_id;
     }
@@ -100,5 +111,87 @@ abstract class Seeder
         $color = isset($colors[$type]) ? $colors[$type] : $colors['info'];
         $reset = ($color !== "") ? $colors['reset'] : "";
         echo $color . $message . $reset . PHP_EOL;
+    }
+    
+    /**
+     * Verify that a user can authenticate with the given credentials
+     * Uses wp_check_password instead of wp_authenticate to avoid headers being sent
+     * 
+     * @param string $username Username or email
+     * @param string $password Password
+     * @return bool True if authentication succeeds
+     */
+    protected function verifyUserCredentials($username, $password)
+    {
+        $user = get_user_by('login', $username);
+        if (!$user) {
+            // Try by email if username lookup failed
+            $user = get_user_by('email', $username);
+        }
+        
+        if (!$user) {
+            $this->log("User '{$username}' not found", 'error');
+            return false;
+        }
+        
+        if (wp_check_password($password, $user->user_pass, $user->ID)) {
+            $this->log("Password verification successful for '{$username}'", 'success');
+            return true;
+        } else {
+            $this->log("Password verification failed for '{$username}'", 'error');
+            return false;
+        }
+    }
+    
+    /**
+     * Create a user with proper password handling
+     * 
+     * @param string $username Username
+     * @param string $password Plain text password
+     * @param string $email Email address
+     * @param string $role User role
+     * @param array $meta Additional user meta
+     * @return int|false User ID on success, false on failure
+     */
+    protected function createUserSafely($username, $password, $email, $role = 'subscriber', $meta = [])
+    {
+        // Check if user already exists
+        if (username_exists($username)) {
+            $this->log("Username '{$username}' already exists", 'warning');
+            return false;
+        }
+        
+        if (email_exists($email)) {
+            $this->log("Email '{$email}' already exists", 'warning');
+            return false;
+        }
+        
+        // Create the user
+        $user_id = wp_create_user($username, $password, $email);
+        
+        if (is_wp_error($user_id)) {
+            $this->log("Error creating user '{$username}': " . $user_id->get_error_message(), 'error');
+            return false;
+        }
+        
+        // Set role
+        $user = new \WP_User($user_id);
+        $user->set_role($role);
+        
+        // Add user meta
+        foreach ($meta as $key => $value) {
+            update_user_meta($user_id, $key, $value);
+        }
+        
+        $this->log("Created user '{$username}' with role '{$role}'", 'success');
+        
+        // Verify the password works
+        if ($this->verifyUserCredentials($username, $password)) {
+            $this->log("Password verification successful for '{$username}'", 'success');
+        } else {
+            $this->log("Password verification failed for '{$username}' - this might indicate a problem", 'warning');
+        }
+        
+        return $user_id;
     }
 }

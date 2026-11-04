@@ -2,13 +2,13 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useUserAccess } from '../hooks/useUserAccess';
-import AccessDebug from './AccessDebug';
 import Sidebar from './Sidebar';
 
 // Separate loading component to avoid conditional hook calls
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+const LoadingSpinner = ({ message = "Loading..." }) => (
+  <div className="flex items-center justify-center h-screen flex-col">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-gray-600">{message}</p>
   </div>
 );
 
@@ -30,7 +30,8 @@ const Layout = ({ children }) => {
   useEffect(() => {
     if (location.pathname === '/patients' || 
         location.pathname === '/doctors' || 
-        location.pathname === '/appointments' ||
+        location.pathname === '/appointments' || 
+        location.pathname.startsWith('/appointments/book/') ||
         location.pathname === '/visitations' || 
         location.pathname === '/inventory' || 
         location.pathname === '/lab-investigations'
@@ -64,29 +65,37 @@ const Layout = ({ children }) => {
   
   // Thorough sign out process
   const handleSignOut = useCallback(async () => {
+    setIsSigningOut(true);
+    
+    // Close the user menu dropdown immediately
+    setUserMenuOpen(false);
+    
+    console.log('Starting logout process...');
+    
     try {
-      setIsSigningOut(true);
-      
-      // Close the user menu dropdown immediately
-      setUserMenuOpen(false);
-      
       // Use AuthContext logout function which handles tokens and API calls
       await logout();
       
-      // Short delay to ensure all state changes are processed
-      setTimeout(() => {
-        // Redirect to WordPress home page
-        window.location.href = '/'; // This will navigate to WordPress home, not the React app root
-      }, 100);
+      console.log('Logout completed successfully');
+      
     } catch (error) {
-      console.error("Error during sign out process:", error);
-      // Even if there's an error, try to redirect
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 100);
-    } finally {
-      setIsSigningOut(false);
+      console.error("Error during logout API call:", error);
+      // Continue with cleanup even if API call failed
     }
+    
+    console.log('Clearing local state and redirecting to homepage...');
+    
+    // Clear all application state
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Always redirect to homepage (never wp-login.php)
+    const homeUrl = window.location.origin + '/';
+    console.log('Redirecting to:', homeUrl);
+    
+    // Use window.location.href for a clean redirect
+    window.location.href = homeUrl;
+    
   }, [logout]);
 
   // We've moved all navigation items to the Sidebar component
@@ -108,8 +117,12 @@ const Layout = ({ children }) => {
   }, []);
 
   // Handle loading and authentication states without conditional hook calls
-  if (authLoading || isSigningOut) {
-    return <LoadingSpinner />;
+  if (authLoading) {
+    return <LoadingSpinner message="Authenticating..." />;
+  }
+  
+  if (isSigningOut) {
+    return <LoadingSpinner message="Signing out..." />;
   }
 
   if (!isAuthenticated && location.pathname !== '/login') {
@@ -187,6 +200,7 @@ const Layout = ({ children }) => {
                     </span>
                   </div>
                 </div>
+
               </div>
 
               {/* Empty space to replace search bar */}
@@ -234,13 +248,6 @@ const Layout = ({ children }) => {
                       >
                         Your Profile
                       </Link>
-                      <Link 
-                        to="/settings" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        Settings
-                      </Link>
                       <button 
                         onClick={handleSignOut} 
                         className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -262,9 +269,7 @@ const Layout = ({ children }) => {
           </div>
         </main>
       </div>
-      
-      {/* Debug component for administrators only */}
-      {isAdministrator() && <AccessDebug />}
+
     </div>
   );
 };

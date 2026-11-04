@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import StatusMessage from '../components/StatusMessage';
 // Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
+import { api } from '../services/apiService';
 // Import new components
 import AddLabInvestigation from '../components/AddLabInvestigation';
 import EditLabInvestigation from '../components/EditLabInvestigation';
@@ -59,7 +60,7 @@ const LabInvestigations = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isPatient } = useUserAccess();
+  const { isPatient, hasAccess } = useUserAccess();
   
   // Extract the patient role check to avoid function recreation in useCallback
   const userIsPatient = isPatient();
@@ -271,7 +272,7 @@ const LabInvestigations = () => {
                 <span className="hidden sm:inline">Results</span>
               </button>
             )}
-            {!isPatient() && (
+            {hasAccess('edit_lab_results') && (
               <button
                 onClick={() => handleOpenEditModal(investigation)}
                 className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -322,58 +323,14 @@ const LabInvestigations = () => {
       // Note: Patient filtering is now handled automatically by the backend for security
       // No need to pass patient_id parameter - the backend will enforce it based on user role
       
-      // Use URLSearchParams to construct proper query string
-      const queryParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value);
-        }
-      });
-      
-      // Modify the service call to ensure search parameter is included
-      // We'll directly fetch using fetch API to diagnose the issue
-      const queryString = queryParams.toString();
-      const apiUrl = `/wp-json/hospital-manager/v1/lab-investigations?${queryString}`;
-      
-      try {
-        // Create a custom fetch implementation to log and ensure all params are sent
-        const directResponse = await fetch(apiUrl);
-        const directData = await directResponse.json();
-        
-        // Use the direct fetch result instead of the service call
-        const response = {
-          data: directData.data || [],
-          pagination: directData.pagination || {}
-        };
-        
-        setInvestigations(response.data || []);
-        
-        // Handle pagination data from API response
-        if (response.pagination) {
-          setTotalPages(response.pagination.total_pages || 1);
-          setTotalRecords(response.pagination.total || 0);
-          setCurrentPage(response.pagination.current_page || page);
-        } else {
-          // Fallback if pagination object is missing
-          setTotalPages(Math.ceil((response.total || 0) / perPage));
-          setTotalRecords(response.total || 0);
-          setCurrentPage(page);
-        }
-        
-        // Show success message only on initial load (page 1) and if there are investigations
-        if (page === 1 && response.data && response.data.length > 0) {
-          showStatusMessage(`Lab Investigations data loaded successfully (${response.data.length} records found)`, 'success');
-        }
-        
-        setError(null);
-        setLoading(false);
-        return; // Skip the original service call
-      } catch (fetchErr) {
-        console.error('Direct fetch error:', fetchErr);
-        // Continue with original service call as fallback
-      }
-      
-      const response = await laboratoryService.getInvestigations(params);
+      // Shared client: sends the session nonce and handles an expired session.
+      // (search is passed through; laboratoryService.getInvestigations drops it.)
+      const { data: payload } = await api.get('/lab-investigations', params);
+      const response = {
+        data: (payload && payload.data) || [],
+        pagination: (payload && payload.pagination) || null,
+        total: payload && payload.total,
+      };
       
       setInvestigations(response.data || []);
       

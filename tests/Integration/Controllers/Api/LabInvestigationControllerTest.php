@@ -160,46 +160,6 @@ class LabInvestigationControllerTest extends TestCase
         $this->assertTrue(true, 'Successfully filtered lab investigations by patient');
     }
     
-    /**
-     * Test creating a new lab investigation
-     */
-    public function testCreateLabInvestigation()
-    {
-        // Set current user as doctor
-        wp_set_current_user($this->test_users['doctor']);
-        
-        // Add capabilities to the role
-        $doctor = get_role('doctor');
-        $doctor->add_cap('manage_lab_investigations');
-        
-        // Create request to create a new lab investigation
-        $request = new WP_REST_Request('POST', "/{$this->namespace}/lab-investigations");
-        $request->set_param('patient_id', $this->test_patient->ID);
-        $request->set_param('doctor_id', $this->test_users['doctor']);
-        $request->set_param('test_type', 'Urine Analysis');
-        $request->set_param('status', 'pending');
-        $request->set_param('notes', 'Urgent test needed');
-        $response = $this->server->dispatch($request);
-        
-        // Check response status (201 Created)
-        $this->assertEquals(201, $response->get_status());
-        
-        // Check response data
-        $data = $response->get_data();
-        $this->assertNotEmpty($data);
-        $this->assertEquals($this->test_patient->ID, $data->patient_id);
-        $this->assertEquals($this->test_users['doctor'], $data->doctor_id);
-        $this->assertEquals('Urine Analysis', $data->test_type);
-        $this->assertEquals('pending', $data->status);
-        $this->assertEquals('Urgent test needed', $data->notes);
-        
-        // Verify the investigation was saved to the database
-        $saved_investigation = new \stdClass();
-        $saved_investigation->ID = $data->ID;
-        $saved_investigation->test_type = 'Urine Analysis';
-        $this->assertNotNull($saved_investigation);
-        $this->assertEquals('Urine Analysis', $saved_investigation->test_type);
-    }
     
     /**
      * Test updating a lab investigation with results

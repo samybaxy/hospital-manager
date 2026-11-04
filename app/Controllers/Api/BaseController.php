@@ -26,42 +26,12 @@ class BaseController extends WP_REST_Controller
             return true; // Always allow access to login endpoint
         }
         
-        // First check if user is authenticated through WordPress session
+        // Only a signed-in user (WordPress cookie + nonce, or the app's own cookie)
+        // gets past this point. Nonce-only and Bearer-only requests used to be
+        // accepted on WP_DEBUG local sites when Origin/Referer matched the site,
+        // skipping the capability check below; both headers are easily forged and
+        // logged-out nonces are public.
         if (!is_user_logged_in()) {
-            // If not logged in through WordPress session, check the request for nonce
-            $nonce = $request->get_header('X-WP-Nonce');
-            
-            if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
-                // Nonce verification passed, but we still need to match the user
-                // This would require getting the user from the nonce or other authentication method
-                // For development purposes, we'll accept the nonce as sufficient only with strict conditions
-                if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
-                    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-                    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-                    
-                    // Only allow from same origin
-                    if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
-                        return true; // In debug mode, allow nonce-only auth from same origin
-                    }
-                }
-            }
-            
-            // Check for authorization header (JWT or custom token)
-            $auth_header = $request->get_header('Authorization');
-            if ($auth_header && strpos($auth_header, 'Bearer') !== false) {
-                // Implement JWT token validation here if using JWT
-                // For development purposes, we'll accept the header as sufficient only with strict conditions
-                if (defined('WP_DEBUG') && WP_DEBUG && defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local') {
-                    $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-                    $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-                    
-                    // Only allow from same origin
-                    if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
-                        return true; // In debug mode, allow header-only auth from same origin
-                    }
-                }
-            }
-            
             // No valid authentication found
             return new WP_Error(
                 'rest_forbidden',
@@ -70,49 +40,10 @@ class BaseController extends WP_REST_Controller
             );
         }
 
-        // Check required capability if specified
-        if ($required_capability && !current_user_can($required_capability)) {
-            // For development, accept administrator as having all capabilities
-            if (current_user_can('administrator')) {
-                return true;
-            }
-            
-            // Check if the user has one of the allowed roles for this application
-            $allowed_roles = [
-                'administrator', 
-                'doctor', 
-                'patient', 
-                'lab_tech', 
-                'developer',
-                'hospital_nurse',
-                'hospital_staff',
-                'pharmacy_staff',
-                'inventory_manager'
-            ];
-            $user = wp_get_current_user();
-            $user_roles = (array) $user->roles;
-            
-            // Check if any of the user's roles are in the allowed roles array
-            $has_allowed_role = false;
-            foreach ($user_roles as $role) {
-                if (in_array($role, $allowed_roles)) {
-                    $has_allowed_role = true;
-                    break;
-                }
-            }
-            
-            if ($has_allowed_role) {
-                return true;
-            }
-            
-            return new WP_Error(
-                'rest_forbidden',
-                'You do not have permission to access this resource.',
-                ['status' => 403]
-            );
-        }
-
-        return true;
+        // Role-based access, decided in one place. This used to let any hospital
+        // role through whenever the capability was missing, and no role had these
+        // capabilities, so every check passed for everyone (patients included).
+        return \HospitalManager\Services\AccessPolicy::authorize($request, $required_capability);
     }
     
     /**
@@ -123,41 +54,12 @@ class BaseController extends WP_REST_Controller
      */
     public function check_auth() 
     {
-        // First check standard WordPress authentication
+        // Signed-in users only. This used to also accept a valid nonce on its own
+        // (logged-out nonces are public), the mere presence of a login or Basic-auth
+        // header/cookie, a cookie with the literal value "authenticated", and on
+        // WP_DEBUG local sites any request with a site Origin/Referer.
         if (is_user_logged_in()) {
             return true;
-        }
-        
-        // Check for nonce in header
-        $headers = getallheaders();
-        if (isset($headers['X-WP-Nonce']) && wp_verify_nonce($headers['X-WP-Nonce'], 'wp_rest')) {
-            return true;
-        }
-        
-        // Check for application password authentication
-        if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
-            return true;
-        }
-        
-        // Check for authentication via cookies for AJAX requests
-        if (wp_doing_ajax() && isset($_COOKIE[LOGGED_IN_COOKIE])) {
-            return true;
-        }
-        
-        // Check for custom authentication marker set in login endpoint
-        if (isset($_COOKIE['hospital_manager_auth']) && $_COOKIE['hospital_manager_auth'] === 'authenticated') {
-            return true;
-        }
-        
-        // In development environment, be more permissive but with strict checks
-        if (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'local' && defined('WP_DEBUG') && WP_DEBUG) {
-            // Check if the request comes from the same origin
-            $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-            
-            if (strpos($referer, site_url()) === 0 || strpos($origin, site_url()) === 0) {
-                return true;
-            }
         }
         
         return new WP_Error(

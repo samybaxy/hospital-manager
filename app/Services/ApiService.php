@@ -2,27 +2,28 @@
 
 namespace HospitalManager\Services;
 
-use HospitalManager\Controllers\Api\PatientController;
-use HospitalManager\Controllers\Api\VisitationController;
-use HospitalManager\Controllers\Api\LabInvestigationController;
-use HospitalManager\Controllers\Api\ChatController;
-use HospitalManager\Controllers\Api\NotificationController;
-use HospitalManager\Controllers\Api\AppointmentController;
-use HospitalManager\Controllers\Api\AuthController;
-use HospitalManager\Controllers\Api\UserController;
-use HospitalManager\Controllers\Api\DoctorController;
-use HospitalManager\Controllers\Api\AuditController;
-use HospitalManager\Controllers\Api\DashboardController;
-use HospitalManager\Controllers\Api\StatsController;
-use HospitalManager\Controllers\Api\HMOController;
-use HospitalManager\Controllers\Api\InventoryController;
-use HospitalManager\Controllers\Api\ProfileController;
-use HospitalManager\Models\HMO;
+use HospitalManager\Controllers\Api\{
+    PatientController,
+    VisitationController,
+    LabInvestigationController,
+    ChatController,
+    NotificationController,
+    AppointmentController,
+    AuthController,
+    UserController,
+    DoctorController,
+    AuditController,
+    DashboardController,
+    StatsController,
+    HMOController,
+    InventoryController,
+    ProfileController
+};
 
 /**
  * Service for managing API registration and standardization
  */
-class ApiService
+class ApiService extends BaseService
 {
     /**
      * API version
@@ -33,28 +34,39 @@ class ApiService
 
     /**
      * Get the controllers that need to be registered
+     * Using a more maintainable approach with controller registry
      *
      * @return array Array of controller instances
      */
     public static function getControllers()
     {
-        return [
-            new PatientController(),
-            new VisitationController(),
-            new LabInvestigationController(),
-            new ChatController(),
-            new NotificationController(),
-            new AppointmentController(),
-            new AuthController(),
-            new UserController(), // Added for secure password change endpoint
-            new DoctorController(),
-            new AuditController(),
-            new DashboardController(),
-            new StatsController(),
-            new HMOController(),
-            new InventoryController(),
-            new ProfileController(),
+        $controllers = [
+            'patient' => PatientController::class,
+            'visitation' => VisitationController::class,
+            'lab_investigation' => LabInvestigationController::class,
+            'chat' => ChatController::class,
+            'notification' => NotificationController::class,
+            'appointment' => AppointmentController::class,
+            'auth' => AuthController::class,
+            'user' => UserController::class,
+            'doctor' => DoctorController::class,
+            'audit' => AuditController::class,
+            'dashboard' => DashboardController::class,
+            'stats' => StatsController::class,
+            'hmo' => HMOController::class,
+            'inventory' => InventoryController::class,
+            'profile' => ProfileController::class,
         ];
+
+        // Initialize controllers
+        $instances = [];
+        foreach ($controllers as $key => $controller_class) {
+            if (class_exists($controller_class)) {
+                $instances[$key] = new $controller_class();
+            }
+        }
+
+        return $instances;
     }
 
     /**
@@ -66,8 +78,12 @@ class ApiService
     {
         // Register regular API controllers
         $controllers = self::getControllers();
-        foreach ($controllers as $controller) {
-            $controller->register_routes();
+        foreach ($controllers as $key => $controller) {
+            if (method_exists($controller, 'register_routes')) {
+                $controller->register_routes();
+            } else {
+                self::logError('ApiService', 'registerRoutes', "Controller {$key} missing register_routes method");
+            }
         }
         
         // Register Http route classes
@@ -95,22 +111,35 @@ class ApiService
      */
     public static function init()
     {
-        // Set CORS headers
-        add_action('rest_api_init', function() {
-            remove_filter('rest_pre_serve_request', 'rest_send_cors_headers');
-            add_filter('rest_pre_serve_request', function($value) {
-                header('Access-Control-Allow-Origin: ' . get_http_origin());
-                header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-                header('Access-Control-Allow-Credentials: true');
-                header('Access-Control-Allow-Headers: Authorization, Content-Type, X-WP-Nonce');
-                
-                if ('OPTIONS' === $_SERVER['REQUEST_METHOD']) {
-                    exit(0);
-                }
-                
-                return $value;
-            });
-        }, 15);
+        // CORS for this plugin's routes: only the site's own origin. This used to
+        // replace WordPress' CORS handling for *every* REST route with one that
+        // echoed any Origin back with Allow-Credentials. Core's handling stays in
+        // place; for hospital-manager/v1 we remove its headers for other origins.
+        add_filter('rest_pre_serve_request', function($served, $result, $request) {
+            if (strpos((string) $request->get_route(), '/hospital-manager/v1') !== 0) {
+                return $served;
+            }
+            $origin = get_http_origin();
+            if ($origin && !self::isSameSiteOrigin($origin) && !headers_sent()) {
+                header_remove('Access-Control-Allow-Origin');
+                header_remove('Access-Control-Allow-Credentials');
+            }
+            return $served;
+        }, 20, 3);
+    }
+
+    /** Whether $origin is this site (home or site URL, same scheme, host and port). */
+    public static function isSameSiteOrigin($origin)
+    {
+        $norm = function ($url) {
+            $p = wp_parse_url($url);
+            if (empty($p['host'])) {
+                return null;
+            }
+            return strtolower(($p['scheme'] ?? 'http') . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : ''));
+        };
+        $origin = $norm($origin);
+        return $origin !== null && in_array($origin, [$norm(home_url()), $norm(site_url())], true);
     }
 
     /**
@@ -127,12 +156,32 @@ class ApiService
         return [
             'success' => $success,
             'message' => $message,
-            'data' => $data,
+            'data' => self::serializeModels($data),
             'status' => $status,
             'version' => self::$version,
         ];
     }
     
+    /**
+     * Convert models (and arrays of models, at any depth) to plain arrays.
+     *
+     * Models keep their columns in protected attributes, so json_encode() on a model
+     * yields "{}". Uses the model's own toArray() when it defines one.
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    public static function serializeModels($data)
+    {
+        if ($data instanceof \HospitalManager\Models\BaseModel) {
+            return method_exists($data, 'toArray') ? $data->toArray() : $data->getAttributes();
+        }
+        if (is_array($data)) {
+            return array_map([self::class, 'serializeModels'], $data);
+        }
+        return $data;
+    }
+
     /**
      * Format error response
      *

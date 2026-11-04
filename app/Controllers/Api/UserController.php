@@ -143,7 +143,7 @@ class UserController extends BaseController
         set_transient($rate_limit_key, $attempts + 1, HOUR_IN_SECONDS);
 
         // Log successful password change
-        error_log('Hospital Manager: Password changed successfully for user: ' . $user->user_login);
+        \HospitalManager\Helpers\DebugLog::line('Hospital Manager: Password changed for user ID ' . $user->ID);
 
         // Invalidate all existing sessions except current one
         $sessions = \WP_Session_Tokens::get_instance($user->ID);
