@@ -86,7 +86,8 @@ class DashboardController extends WP_REST_Controller
             ], 200);
         }
 
-        return new WP_REST_Response(['role' => $roles[0] ?? ''], 200);
+        // Not a hospital role (e.g. a plain WordPress subscriber)
+        return new WP_REST_Response(['error' => 'No dashboard for this role'], 403);
     }
 
     /**

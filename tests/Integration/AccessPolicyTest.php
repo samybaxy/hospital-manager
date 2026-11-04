@@ -419,7 +419,9 @@ class AccessPolicyTest extends TestCase
     public function test_patients_get_own_record_access_only_for_read_capabilities()
     {
         foreach (array_keys(AccessPolicy::MAP) as $capability) {
-            $expected = in_array($capability, ['view_patients', 'view_patient_records'], true);
+            // Appointments too: patients see, book and cancel their own
+            // (AppointmentController enforces "own")
+            $expected = in_array($capability, ['view_patients', 'view_patient_records', 'view_appointments', 'schedule_appointments'], true);
             $this->assertSame($expected, AccessPolicy::patientsOwnRecords($capability), $capability);
             $this->assertNotContains('patient', AccessPolicy::rolesFor($capability), "patients must never get blanket '{$capability}'");
         }

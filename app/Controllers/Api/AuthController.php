@@ -238,7 +238,7 @@ class AuthController extends BaseController
         
         // Get more info about the request
         $request_info = [
-            'ip' => $_SERVER['REMOTE_ADDR'],
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? 'not_set',
             'user_agent' => isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'not_set',
             'auth_header' => isset($_SERVER['HTTP_AUTHORIZATION']) ? 'present' : 'not_present',
             'content_type' => isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : 'not_set'

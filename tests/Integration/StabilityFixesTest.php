@@ -417,7 +417,7 @@ class StabilityFixesTest extends TestCase
 
         // dbDelta reads "CREATE TABLE IF NOT EXISTS x" as a table named "IF", so it
         // never upgraded existing tables; an inline CONSTRAINT became a bogus column.
-        $this->assertStringNotContainsString('IF NOT EXISTS', $sql);
+        $this->assertDoesNotMatchRegularExpression('/CREATE TABLE IF NOT EXISTS/i', $sql);
         $this->assertDoesNotMatchRegularExpression('/^\s*CONSTRAINT /mi', $sql);
         $this->assertDoesNotMatchRegularExpression("/enum\\([^)]*',\\s+'/i", $sql, 'no spaces inside ENUM lists');
         $this->assertNotEmpty(\CreateHospitalTables::SCHEMA_VERSION);

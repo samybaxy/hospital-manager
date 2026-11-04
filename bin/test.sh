@@ -72,6 +72,10 @@ php -r '
 if [[ ! -f "$WP_TESTS_DIR/includes/functions.php" || ! -f "$WP_CORE_DIR/wp-settings.php" ]]; then
     WP_VERSION="$(php -r 'include $argv[1]; echo $wp_version;' "$WP_DIR/wp-includes/version.php")"
     echo "Installing WordPress $WP_VERSION test library into $WP_TESTS_DIR ..."
+    # The installer skips anything whose folder exists, so a half-finished earlier
+    # attempt (e.g. offline) left them empty for good. Start those over.
+    [[ -f "$WP_CORE_DIR/wp-settings.php" ]] || rm -rf "$WP_CORE_DIR" /tmp/wordpress.tar.gz
+    [[ -f "$WP_TESTS_DIR/includes/functions.php" ]] || rm -rf "$WP_TESTS_DIR"
     # last arg "true": skip DB creation (done above; avoids needing mysqladmin)
     bash bin/install-wp-tests.sh "$DB_NAME" "$DB_USER" "$DB_PASS" "$DB_HOST" "$WP_VERSION" true >/dev/null
 fi
