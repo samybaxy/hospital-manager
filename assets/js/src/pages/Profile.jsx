@@ -5,6 +5,8 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import StatusMessage from '../components/StatusMessage';
+import { api } from '../services/apiService';
+import authService from '../services/authService';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -44,23 +46,16 @@ const Profile = () => {
     
     setProfileLoading(true);
     try {
-      const response = await fetch('/wp-json/hospital-manager/v1/profile', {
-        headers: {
-          'X-WP-Nonce': window.hospitalManager?.nonce || '',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setProfileData(data.data);
-          setFormData({
-            first_name: data.data.first_name || '',
-            last_name: data.data.last_name || '',
-            email: data.data.email || '',
-            phone: data.data.phone || ''
-          });
-        }
+      const response = await api.get('/profile');
+      const data = response.data || {};
+      if (data.success && data.data) {
+        setProfileData(data.data);
+        setFormData({
+          first_name: data.data.first_name || '',
+          last_name: data.data.last_name || '',
+          email: data.data.email || '',
+          phone: data.data.phone || ''
+        });
       }
     } catch (error) {
       console.error('Error fetching profile data:', error);
@@ -113,22 +108,14 @@ const Profile = () => {
     setLoading(true);
     
     try {
-      const response = await fetch('/wp-json/hospital-manager/v1/profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-WP-Nonce': window.hospitalManager?.nonce || '',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
+      const response = await api.post('/profile', formData);
+      const data = response.data || {};
+
+      if (data.success) {
         setIsEditing(false);
         setProfileData(data.data);
         showStatusMessage('Profile updated successfully!', 'success');
-        
+
         // Update user context if available
         if (updateUser) {
           updateUser(data.data);
@@ -138,7 +125,7 @@ const Profile = () => {
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      showStatusMessage('Failed to update profile. Please try again.', 'error');
+      showStatusMessage(error.response?.data?.message || 'Failed to update profile. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -323,8 +310,8 @@ const Profile = () => {
       <div className="space-y-6">
         {/* Main Profile Information */}
         <div className="w-full">
-          <Card className="p-8 shadow-sm border-0 bg-white">
-            <div className="flex items-center justify-between mb-8">
+          <Card className="p-4 sm:p-8 shadow-sm border-0 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6 sm:mb-8">
               <div className="flex items-center space-x-3">
                 <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
                 <h2 className="text-2xl font-bold text-gray-900">Personal Information</h2>
@@ -341,6 +328,7 @@ const Profile = () => {
                     <input
                       type="text"
                       name="first_name"
+                      autoComplete="given-name"
                       value={formData.first_name}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition-colors"
@@ -354,6 +342,7 @@ const Profile = () => {
                     <input
                       type="text"
                       name="last_name"
+                      autoComplete="family-name"
                       value={formData.last_name}
                       onChange={handleInputChange}
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition-colors"
@@ -369,6 +358,7 @@ const Profile = () => {
                   <input
                     type="email"
                     name="email"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition-colors"
@@ -383,6 +373,7 @@ const Profile = () => {
                   <input
                     type="tel"
                     name="phone"
+                    autoComplete="tel"
                     value={formData.phone}
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition-colors"
@@ -465,7 +456,7 @@ const Profile = () => {
             </div>
             <div className="space-y-4">
               <div className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">Password</p>
                     <p className="text-xs text-gray-500 mt-1">Last changed 30 days ago</p>
@@ -482,7 +473,7 @@ const Profile = () => {
               </div>
               
               <div className="bg-white p-4 rounded-lg border border-red-200 shadow-sm">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">Two-Factor Auth</p>
                     <p className="text-xs text-gray-500 mt-1">Not enabled</p>
@@ -512,15 +503,15 @@ const Profile = () => {
             </div>
             <div className="space-y-3">
               <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                   <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Account Created</span>
-                  <span className="text-sm font-bold text-gray-900">
+                  <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                     {formatDate(profileData?.user_registered || user?.created_at)}
                   </span>
                 </div>
               </div>
               <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                   <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">User ID</span>
                   <span className="text-sm font-bold text-gray-900 font-mono">
                     {profileData?.ID || user?.ID || 'N/A'}
@@ -528,7 +519,7 @@ const Profile = () => {
                 </div>
               </div>
               <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                   <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Role</span>
                   <span className={`text-sm font-bold px-2 py-1 rounded-full ${getRoleBadgeColor(role)} border`}>
                     {role?.replace('_', ' ').toUpperCase() || 'USER'}
@@ -551,7 +542,7 @@ const Profile = () => {
               </div>
               <div className="space-y-3">
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">License Number</span>
                     <span className="text-sm font-bold text-gray-900 font-mono">
                       {profileData?.license_number || 'Not specified'}
@@ -559,23 +550,23 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Specialization</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.specialty || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Office</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.office || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Status</span>
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${
                       profileData?.status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' : 
@@ -586,17 +577,17 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Experience</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.years_experience ? `${profileData.years_experience} years` : 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Education</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.education || 'Not specified'}
                     </span>
                   </div>
@@ -617,7 +608,7 @@ const Profile = () => {
               </div>
               <div className="space-y-3">
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Patient ID</span>
                     <span className="text-sm font-bold text-gray-900 font-mono">
                       {profileData?.ID ? `PT-${profileData.ID.toString().padStart(3, '0')}` : 'Not assigned'}
@@ -625,15 +616,15 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Age</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.age || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Gender</span>
                     <span className="text-sm font-bold text-gray-900 capitalize">
                       {profileData?.gender || 'Not specified'}
@@ -641,7 +632,7 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Marital Status</span>
                     <span className="text-sm font-bold text-gray-900 capitalize">
                       {profileData?.marital_status || 'Not specified'}
@@ -649,31 +640,31 @@ const Profile = () => {
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">City</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.city || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">State</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.state || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">HMO</span>
-                    <span className="text-sm font-bold text-gray-900">
+                    <span className="text-sm font-bold text-gray-900 min-w-0 break-words">
                       {profileData?.hmo_name || 'Not specified'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-purple-200 shadow-sm">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-wrap justify-between items-center gap-x-3 gap-y-1">
                     <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">HMO ID</span>
                     <span className="text-sm font-bold text-gray-900 font-mono">
                       {profileData?.hmo_designated_id || 'Not specified'}
@@ -700,6 +691,7 @@ const Profile = () => {
             <input
               type="password"
               name="current_password"
+              autoComplete="current-password"
               value={passwordData.current_password}
               onChange={handlePasswordChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -714,6 +706,7 @@ const Profile = () => {
             <input
               type="password"
               name="new_password"
+              autoComplete="new-password"
               value={passwordData.new_password}
               onChange={handlePasswordChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -732,6 +725,7 @@ const Profile = () => {
             <input
               type="password"
               name="confirm_password"
+              autoComplete="new-password"
               value={passwordData.confirm_password}
               onChange={handlePasswordChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"

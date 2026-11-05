@@ -34,3 +34,5 @@ debug.log
 *.njsproj
 *.sln
 *.sw?
+# Release zips (bin/build-release.sh)
+/release/

@@ -28,6 +28,15 @@ class NotificationController extends BaseController
             ]
         ]);
 
+        // Mark every notification of the signed-in user as read
+        register_rest_route($this->namespace, '/notifications/mark-all-read', [
+            [
+                'methods' => WP_REST_Server::CREATABLE,
+                'callback' => [$this, 'mark_all_as_read'],
+                'permission_callback' => [$this, 'check_auth']
+            ]
+        ]);
+
         register_rest_route($this->namespace, '/notifications/(?P<ID>\d+)/read', [
             [
                 'methods' => WP_REST_Server::EDITABLE,
@@ -46,7 +55,8 @@ class NotificationController extends BaseController
         $result = NotificationService::getUserNotifications($user_id, $page, $per_page);
 
         return new WP_REST_Response([
-            'data' => $result['items'],
+            // Notification models serialise to "{}" unless converted
+            'data' => \HospitalManager\Services\ApiService::serializeModels($result['items']),
             'meta' => [
                 'current_page' => $result['current_page'],
                 'last_page' => $result['last_page'],
@@ -54,6 +64,15 @@ class NotificationController extends BaseController
                 'total' => $result['total']
             ]
         ]);
+    }
+
+    public function mark_all_as_read($request)
+    {
+        $updated = NotificationService::markAllAsRead(get_current_user_id());
+        if ($updated === false) {
+            return new WP_Error('update_failed', 'Failed to mark notifications as read', ['status' => 500]);
+        }
+        return new WP_REST_Response(['success' => true, 'updated' => (int) $updated]);
     }
 
     public function mark_as_read($request)
@@ -83,47 +102,22 @@ class NotificationController extends BaseController
     }
     
     /**
-     * Check if user is authenticated properly for notifications
-     * 
+     * Notifications are only for a signed-in user (WordPress cookie + nonce, or
+     * the app's own cookie, both resolved before this runs).
+     *
+     * This used to also accept any request carrying "Authorization: Bearer <anything>"
+     * (an unimplemented JWT placeholder) and any AJAX-looking request that merely had
+     * a login cookie present, without validating either. Both let anonymous callers
+     * through, so they were removed.
+     *
      * @return bool|\WP_Error
      */
     public function check_auth()
     {
-        // Check if user is logged in through standard WordPress authentication
         if (is_user_logged_in()) {
             return true;
         }
-        
-        // Check if user is authenticated through JWT or other means
-        // This depends on how authentication is implemented in the frontend
-        $headers = getallheaders();
-        
-        // If using Authorization header with Bearer token
-        if (isset($headers['Authorization'])) {
-            $auth_header = $headers['Authorization'];
-            
-            if (strpos($auth_header, 'Bearer') !== false) {
-                // For JWT validation, you would validate the token here
-                // This is a placeholder and would need to be implemented based on your authentication strategy
-                return true;
-            }
-        }
-        
-        // Handle AJAX requests from same origin
-        if (wp_doing_ajax() && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 
-            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-            // Check if the request is coming from our own site
-            $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-            
-            if (strpos($referer, site_url()) === 0) {
-                // Request is from our site, now check for WordPress cookie authentication
-                if (isset($_COOKIE[LOGGED_IN_COOKIE])) {
-                    return true;
-                }
-            }
-        }
-        
-        // User is not authenticated
+
         return new \WP_Error(
             'rest_not_logged_in',
             __('You are not currently logged in.'),

@@ -343,11 +343,10 @@ class LabInvestigation extends BaseModel
             $this->attributes['lab_notes'] = $lab_notes;
         }
         
-        // Check for abnormal or critical values
-        if (is_array($results)) {
-            $this->attributes['is_abnormal'] = $this->checkAbnormalResults($results);
-            $this->attributes['is_critical'] = $this->checkCriticalResults($results);
-        }
+        // Check for abnormal or critical values (results may arrive as an array or a
+        // JSON string; both shapes are handled by resultParameters())
+        $this->attributes['is_abnormal'] = $this->checkAbnormalResults($results);
+        $this->attributes['is_critical'] = $this->checkCriticalResults($results);
         
         $result = $this->save();
         
@@ -361,13 +360,32 @@ class LabInvestigation extends BaseModel
     /**
      * Check if results contain abnormal values
      */
+    /**
+     * The individual result parameters, whatever shape the results came in:
+     * {"parameters": [...]} (what the app and seeders store), a bare list, or either
+     * as a JSON string. The checks below used to loop over the top level, so with the
+     * stored shape they only ever saw the "parameters" key and never flagged anything.
+     *
+     * @param mixed $results
+     * @return array
+     */
+    protected function resultParameters($results)
+    {
+        if (is_string($results)) {
+            $results = json_decode($results, true);
+        }
+        if (!is_array($results)) {
+            return [];
+        }
+        if (isset($results['parameters']) && is_array($results['parameters'])) {
+            return $results['parameters'];
+        }
+        return array_values(array_filter($results, 'is_array'));
+    }
+
     protected function checkAbnormalResults($results)
     {
-        if (!is_array($results)) {
-            return 0;
-        }
-        
-        foreach ($results as $parameter) {
+        foreach ($this->resultParameters($results) as $parameter) {
             if (isset($parameter['is_abnormal']) && $parameter['is_abnormal']) {
                 return 1;
             }
@@ -381,11 +399,7 @@ class LabInvestigation extends BaseModel
      */
     protected function checkCriticalResults($results)
     {
-        if (!is_array($results)) {
-            return 0;
-        }
-        
-        foreach ($results as $parameter) {
+        foreach ($this->resultParameters($results) as $parameter) {
             if (isset($parameter['is_critical']) && $parameter['is_critical']) {
                 return 1;
             }

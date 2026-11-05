@@ -5,8 +5,25 @@ import { Link } from 'react-router-dom';
 import { api } from '../services/apiService';
 import { useUserAccess } from '../hooks/useUserAccess';
 
+const EMPTY_INVENTORY = {
+  total_items: 0,
+  critical_items: 0,
+  expiring_soon: 0,
+  expired_items: 0,
+  out_of_stock: 0,
+  total_value: 0,
+};
+
 const Dashboard = () => {
-  const { isPatient } = useUserAccess();
+  const { 
+    role,
+    error: accessError,
+    isPatient, 
+    hasAccess, 
+    canCreatePatients, 
+    canEditPatients, 
+    canScheduleAppointments 
+  } = useUserAccess();
   const [stats, setStats] = useState({
     patients: 0,
     doctors: 0,
@@ -31,69 +48,66 @@ const Dashboard = () => {
   const appointmentsRef = useRef(null);
   const cardsContainerRef = useRef(null);
   
+  const patientView = isPatient();
+
   useEffect(() => {
+    // Wait for the role, so patients never ask for the staff figures.
+    if (!role) {
+      if (accessError) {
+        setError('Could not load your permissions. Please refresh the page.');
+        setLoading(false);
+      }
+      return;
+    }
+
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/dashboard/stats');
-        
-        if (response.data) {
-          setStats({
-            patients: response.data.patients_count || 0,
-            doctors: response.data.doctors_count || 0,
-            appointments: response.data.appointments_count || 0,
-            departments: response.data.departments_count || 0,
-            inventory_summary: response.data.inventory_summary || {
-              total_items: 0,
-              critical_items: 0,
-              expiring_soon: 0,
-              expired_items: 0,
-              out_of_stock: 0,
-              total_value: 0
-            }
-          });
-          
-          // Set upcoming appointments if available
-          if (response.data.upcoming_appointments) {
-            setUpcomingAppointments(response.data.upcoming_appointments);
-          }
+        setError(null);
+
+        // Patients get their own summary; hospital-wide figures are for staff.
+        if (patientView) {
+          const response = await api.get('/dashboard');
+          const data = response.data || {};
+          setStats((prev) => ({
+            ...prev,
+            appointments: (data.upcoming_appointments || []).length,
+            visitations: (data.recent_visitations || []).length,
+            pending_labs: (data.pending_lab_tests || []).length,
+          }));
+          setUpcomingAppointments(data.upcoming_appointments || []);
+          return;
         }
+
+        const response = await api.get('/dashboard/stats');
+        const data = response.data || {};
+        setStats({
+          patients: data.patients_count || 0,
+          doctors: data.doctors_count || 0,
+          appointments: data.appointments_count || 0,
+          departments: data.departments_count || 0,
+          inventory_summary: data.inventory_summary || EMPTY_INVENTORY,
+        });
+        setUpcomingAppointments(data.upcoming_appointments || []);
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        
-        // Provide more helpful error message depending on the error
-        if (err.response && err.response.status === 404) {
-          setError('Dashboard API endpoint not found. Please ensure the backend API is properly set up.');
-        } else if (err.response && err.response.status === 401) {
-          setError('Authentication required. Please log in again.');
-        } else if (err.message === 'Network Error') {
+        const status = err.response && err.response.status;
+        if (status === 403) {
+          setError('Dashboard figures are not available for your role.');
+        } else if (status === 404) {
+          setError((err.response.data && err.response.data.error) || 'No dashboard data was found for your account.');
+        } else if (!err.response) {
           setError('Network error. Please check your connection and try again.');
         } else {
           setError('Failed to load dashboard data. Please try again later.');
         }
-        
-        // Set empty data for demonstration purposes
-        setStats({
-          patients: 12,
-          doctors: 5,
-          appointments: 24,
-          departments: 8,
-          inventory_summary: {
-            total_items: 250,
-            critical_items: 15,
-            expiring_soon: 8,
-            expired_items: 3,
-            out_of_stock: 5,
-            total_value: 45000
-          }
-        });
+        // Leave the figures at zero: never show made-up numbers.
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchDashboardData();
-  }, []);
+  }, [role, patientView, accessError]);
 
   // Monitor container width to determine stacking
   useEffect(() => {
@@ -155,6 +169,22 @@ const Dashboard = () => {
           ) : (
             <div className="bg-primary-50 p-4 rounded-md border border-primary-200">
               <h2 className="font-semibold text-primary-900">Quick Stats</h2>
+              {patientView ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.appointments}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Upcoming appointments</span>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.visitations || 0}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Recent visits</span>
+                </div>
+                <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
+                  <span className="block text-xl sm:text-2xl font-bold truncate">{stats.pending_labs || 0}</span>
+                  <span className="text-xs sm:text-sm text-gray-500 truncate">Pending lab tests</span>
+                </div>
+              </div>
+              ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
                 <div className="bg-white p-3 rounded shadow-sm text-center min-w-0">
                   <span className="block text-xl sm:text-2xl font-bold truncate">{stats.patients}</span>
@@ -173,38 +203,100 @@ const Dashboard = () => {
                   <span className="text-xs sm:text-sm text-gray-500 truncate">Departments</span>
                 </div>
               </div>
+              )}
             </div>
           )}
           
           <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
-            {/* Only show patient management buttons for non-patient users */}
-            {!isPatient() && (
-              <>
+            {/* Add New Patient Button - Only show if user can create patients */}
+            {canCreatePatients() && (
+              <div className="relative group flex-1 sm:flex-none">
                 <Link to="/patients/new" className="flex-1 sm:flex-none">
-                  <Button variant="primary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">Add New Patient</Button>
+                  <Button variant="primary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">
+                    Add New Patient
+                  </Button>
                 </Link>
-                <Link to="/patients" className="flex-1 sm:flex-none">
-                  <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">View All Patients</Button>
-                </Link>
-              </>
+              </div>
             )}
-            <div className="relative group flex-1 sm:flex-none">
-              <Link to={isPatient() ? "/doctors?from=dashboard" : "#"} state={isPatient() ? { from: 'dashboard' } : undefined}>
-                <Button 
-                  variant="secondary" 
-                  disabled={!isPatient()}
-                  className={`w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 ${isPatient() ? "" : "cursor-not-allowed opacity-50"}`}
+            
+            {/* View All Patients Button - Only show if user can access patients */}
+            {hasAccess('patients') && (
+              <div className="relative group flex-1 sm:flex-none">
+                <Link to="/patients" className="flex-1 sm:flex-none">
+                  <Button variant="secondary" className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2">
+                    View All Patients
+                  </Button>
+                </Link>
+              </div>
+            )}
+            
+            {/* Book Appointment Button - Show for patients or users who can schedule appointments */}
+            {(isPatient() || canScheduleAppointments()) ? (
+              <div className="relative group flex-1 sm:flex-none">
+                <Link 
+                  to={isPatient() ? "/doctors?from=dashboard" : "/appointments/new"} 
+                  state={isPatient() ? { from: 'dashboard' } : undefined}
                 >
-                  Book Appointment
-                </Button>
-              </Link>
-              {!isPatient() && (
-                <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
-                  Only patients can book appointments with doctors
+                  <Button 
+                    variant="secondary" 
+                    className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2"
+                  >
+                    Book Appointment
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              /* Show disabled button with icon for users who can't schedule appointments */
+              <div className="relative group flex-1 sm:flex-none">
+                <div className="pointer-events-none">
+                  <Button 
+                    variant="secondary" 
+                    disabled={true}
+                    className="w-full sm:w-auto text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 relative !cursor-not-allowed !opacity-50 !bg-gray-100 !border-gray-300 !text-gray-400 hover:!bg-gray-100 hover:!border-gray-300"
+                    style={{
+                      cursor: 'not-allowed !important',
+                      backgroundColor: '#f3f4f6 !important',
+                      borderColor: '#d1d5db !important',
+                      color: '#9ca3af !important'
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
+                    <div className="flex items-center justify-center">
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        className="h-4 w-4 mr-2 text-red-400" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" 
+                        />
+                      </svg>
+                      Book Appointment
+                    </div>
+                  </Button>
+                </div>
+                <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    {isPatient() ? 'Patient access only' : 'Admin override: Appointment scheduling disabled'}
+                  </div>
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                 </div>
-              )}
-            </div>
+                <p className="[@media(hover:hover)]:hidden mt-1 text-xs text-gray-500 text-center">
+                  {isPatient() ? 'Patient access only' : 'Appointment scheduling is disabled for administrators'}
+                </p>
+              </div>
+            )}
           </div>
         </Card>
         
@@ -262,7 +354,7 @@ const Dashboard = () => {
                   </div>
                 ))}
                 <div className="pt-3 text-right">
-                  <Link to="/appointments" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  <Link to="/appointments" className="inline-flex items-center min-h-11 text-blue-600 hover:text-blue-800 text-sm font-medium">
                     {isPatient() ? 'View my appointments' : 'View all appointments'} →
                   </Link>
                 </div>
@@ -274,19 +366,57 @@ const Dashboard = () => {
                   <Link to="/doctors">
                     <Button variant="primary" className="text-sm">Schedule Appointment</Button>
                   </Link>
+                ) : canScheduleAppointments() ? (
+                  <Link to="/appointments/new">
+                    <Button variant="primary" className="text-sm">Schedule Appointment</Button>
+                  </Link>
                 ) : (
                   <div className="relative group inline-block">
-                    <Button 
-                      variant="primary" 
-                      className="text-sm cursor-not-allowed opacity-50" 
-                      disabled
-                    >
-                      Schedule Appointment
-                    </Button>
-                    <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
-                      Only patients can book appointments with doctors
+                    <div className="pointer-events-none">
+                      <Button 
+                        variant="primary" 
+                        className="text-sm !cursor-not-allowed !opacity-50 !bg-gray-100 !border-gray-300 !text-gray-400 hover:!bg-gray-100 hover:!border-gray-300 relative" 
+                        disabled
+                        style={{
+                          cursor: 'not-allowed !important',
+                          backgroundColor: '#f3f4f6 !important',
+                          borderColor: '#d1d5db !important',
+                          color: '#9ca3af !important'
+                        }}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <div className="flex items-center justify-center">
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            className="h-4 w-4 mr-2 text-red-400" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" 
+                            />
+                          </svg>
+                          Schedule Appointment
+                        </div>
+                      </Button>
+                    </div>
+                    <div className="hidden [@media(hover:hover)]:block invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs font-medium text-white bg-gray-900 rounded-lg shadow-lg whitespace-nowrap z-10">
+                      <div className="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Admin override: Appointment scheduling disabled
+                      </div>
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                     </div>
+                    <p className="[@media(hover:hover)]:hidden mt-1 text-xs text-gray-500 text-center">Appointment scheduling is disabled for administrators</p>
                   </div>
                 )}
               </div>
@@ -377,12 +507,14 @@ const Dashboard = () => {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2">
-                <Link to="/inventory" className="flex-1 min-w-0">
-                  <Button variant="outline" className="w-full text-sm">
-                    View Inventory
-                  </Button>
-                </Link>
-                {!isPatient() && (
+                {hasAccess('inventory') && (
+                  <Link to="/inventory" className="flex-1 min-w-0">
+                    <Button variant="outline" className="w-full text-sm">
+                      View Inventory
+                    </Button>
+                  </Link>
+                )}
+                {hasAccess('inventory') && !isPatient() && (
                   <Link to="/inventory/new" className="flex-1 min-w-0">
                     <Button variant="secondary" className="w-full text-sm">
                       Add Item

@@ -6,14 +6,14 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "dev:debug": "NODE_ENV=development vite",
+    "dev:debug": "vite --mode development",
     "build": "vite build",
-    "build:dev": "NODE_ENV=development vite build --mode development",
+    "build:dev": "vite build --mode development",
     "preview": "vite preview",
-    "watch": "NODE_ENV=development vite build --watch --mode development"
+    "watch": "vite build --watch --mode development"
   },
   "author": "Samybaxy",
-  "license": "MIT",
+  "license": "GPL-2.0-or-later",
   "private": true,
   "dependencies": {
     "@tanstack/react-table": "8.21.3",
@@ -24,11 +24,12 @@
     "react-router-dom": "^6.18.0"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
     "@vitejs/plugin-react": "^4.2.0",
     "audit-ci": "7.1.0",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
+    "tailwindcss": "^3.4.17",
     "vite": "^5.0.0"
   },
   "resolutions": {

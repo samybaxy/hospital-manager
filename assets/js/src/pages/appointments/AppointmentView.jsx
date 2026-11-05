@@ -52,26 +52,9 @@ const AppointmentView = () => {
       
       try {
         setIsLoading(true);
-        console.log('Fetching appointment with ID:', appointmentId, 'Type:', typeof appointmentId);
-        
-        // First try to get the appointment directly
-        let response;
-        try {
-          response = await api.get(`/appointments/${appointmentId}`);
-        } catch (directError) {
-          console.log('Direct fetch failed, trying to find in appointments list:', directError);
-          
-          // If direct fetch fails, try to get from appointments list
-          const listResponse = await api.get('/appointments');
-          const appointments = listResponse.data?.data || listResponse.data || [];
-          const foundAppointment = appointments.find(app => app.ID == appointmentId);
-          
-          if (foundAppointment) {
-            response = { data: foundAppointment };
-          } else {
-            throw directError; // Throw the original error if not found in list either
-          }
-        }
+        // (A fallback used to search GET /appointments when this failed; it read
+        // the wrong shape and threw, and it would hide a 403/404 from the user.)
+        const response = await api.get(`/appointments/${appointmentId}`);
         
         // Handle different API response formats
         const appointmentData = response.data;
@@ -153,7 +136,7 @@ const AppointmentView = () => {
       }, 2000);
     } catch (err) {
       console.error('Error cancelling appointment:', err);
-      setError('Failed to cancel appointment. Please try again.');
+      setError(err.response?.data?.message || 'Failed to cancel appointment. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -239,14 +222,14 @@ const AppointmentView = () => {
       {appointment && (
         <div className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-lg border border-gray-100">
           {/* Date and Time Header - Highlighted area */}
-          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 text-white relative overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 sm:p-8 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 opacity-10">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-48 w-48" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold mb-6 relative">Appointment Schedule</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 relative">Appointment Schedule</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-8">
               <div className="flex items-center backdrop-blur-sm bg-white/10 rounded-lg p-4 transition-all duration-300 hover:bg-white/20">
                 <div className="bg-white p-3 rounded-full shadow-md mr-4 text-blue-600">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">

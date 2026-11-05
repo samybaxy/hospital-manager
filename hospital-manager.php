@@ -4,6 +4,7 @@
  * Plugin URI: https://github.com/AniomaHospital/hospital-manager
  * Description: A comprehensive hospital management system for Nigerian hospitals with patient, doctor, and operations management.
  * Version: 1.0.0
+ * Requires PHP: 8.2
  * Author: Samuel N
  * Author URI: https://github.com/samybaxy
  * License: GPL-2.0+
@@ -29,6 +30,15 @@ if (defined('RUNNING_PHPUNIT_TESTS') && RUNNING_PHPUNIT_TESTS) {
 // Composer autoload
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Cached service results go stale on any write to a hospital table (see BaseService)
+\HospitalManager\Services\BaseService::watchWrites();
+
+// Demo-data tool: staging zips and dev checkouts only, production zips leave this file out
+if (is_admin() && is_file(__DIR__ . '/database/seeders/SeedTool.php')) {
+    require_once __DIR__ . '/database/seeders/SeedTool.php';
+    \HospitalManager\Database\Seeders\SeedTool::register();
+}
+
 // Focused intervention to prevent only wp-login.php redirects after failed auth
 add_action('init', function() {
     // Check if this is a REST API request to our namespace
@@ -42,7 +52,6 @@ add_action('init', function() {
             add_filter('wp_redirect', function($location, $status) {
                 // Only block wp-login.php redirects
                 if (strpos($location, 'wp-login.php') !== false) {
-                    error_log('Hospital Manager: Prevented redirect to wp-login.php (status ' . $status . ')');
                     return false; // Return false to prevent redirect
                 }
                 
@@ -129,95 +138,75 @@ class HospitalManager extends Bridge
      */
     protected $plugin_version = '1.0.0';
 
+    /**
+     * Deactivation must not touch data: admins deactivate plugins to debug or
+     * while updating. Tables, roles and settings are only removed by uninstall.php,
+     * and only when the "delete data on uninstall" option is on.
+     */
     public function deactivate_plugin()
     {
-        try {
-            // Log that we're starting deactivation
-            error_log('Hospital Manager: Starting plugin deactivation');
-            
-            // Include the migration file
-            $migration_file = plugin_dir_path(__FILE__) . 'database/migrations/create_hospital_tables.php';
-            error_log('Hospital Manager: Loading migration file: ' . $migration_file);
-            
-            if (!file_exists($migration_file)) {
-                error_log('Hospital Manager: Migration file not found: ' . $migration_file);
-                return;
-            }
-            
-            require_once $migration_file;
-            error_log('Hospital Manager: Migration file loaded successfully');
-            
-            // Cleanup tasks when plugin is deactivated
-            error_log('Hospital Manager: Running database cleanup');
-            CreateHospitalTables::down();
-            error_log('Hospital Manager: Database cleanup completed successfully');
-
-            // Remove custom roles
-            remove_role('doctor');
-            remove_role('patient');
-            remove_role('receptionist');
-            remove_role('lab_tech');
-            // remove_role('developer');
-            remove_role('hospital_nurse');
-            remove_role('hospital_staff');
-            remove_role('pharmacy_staff');
-            remove_role('inventory_manager');
-            
-            // Cleanup inventory-specific roles
-            RoleService::cleanupRoles();
-            
-            error_log('Hospital Manager: Custom roles removed successfully');
-            
-            error_log('Hospital Manager: Plugin deactivation completed successfully');
-        } catch (\Exception $e) {
-            // Log any exceptions that occur during deactivation
-            error_log('Hospital Manager Deactivation Error: ' . $e->getMessage());
-            error_log('Hospital Manager Deactivation Error Stack Trace: ' . $e->getTraceAsString());
-        }
+        flush_rewrite_rules();
     }
 
     public function activate_plugin()
     {
         try {
-            // Log that we're starting activation
-            error_log('Hospital Manager: Starting plugin activation');
-            
-            // Step 1: Include the migration file
-            $migration_file = plugin_dir_path(__FILE__) . 'database/migrations/create_hospital_tables.php';
-            error_log('Hospital Manager: Loading migration file: ' . $migration_file);
-            
-            if (!file_exists($migration_file)) {
-                error_log('Hospital Manager: Migration file not found: ' . $migration_file);
-                return;
-            }
-            
-            require_once $migration_file;
-            error_log('Hospital Manager: Migration file loaded successfully');
-            
-            // Step 2: Create database tables
-            error_log('Hospital Manager: Starting database table creation');
-            CreateHospitalTables::up();
-            error_log('Hospital Manager: Database tables created successfully');
-            
-            // Step 3: Initialize roles
-            error_log('Hospital Manager: Initializing roles');
+            self::install_schema();
             RoleService::initializeRoles();
-            error_log('Hospital Manager: Roles initialized successfully');
-
-            // Register Menu Helper
             MenuHelper::createHospitalManagerMenuItem();
-            error_log('Hospital Manager: Menu item created successfully');
-            
-            error_log('Hospital Manager: Plugin activation completed successfully');
-        } catch (\Exception $e) {
-            // Log any exceptions that occur during activation
-            error_log('Hospital Manager Activation Error: ' . $e->getMessage());
-            error_log('Hospital Manager Activation Error Stack Trace: ' . $e->getTraceAsString());
+        } catch (\Throwable $e) {
+            error_log('Hospital Manager activation failed: ' . $e->getMessage());
+            wp_die(
+                esc_html('Hospital Manager could not be activated: ' . $e->getMessage()),
+                'Hospital Manager',
+                ['back_link' => true]
+            );
+        }
+
+        $missing = \CreateHospitalTables::missingTables();
+        if ($missing) {
+            wp_die(
+                esc_html('Hospital Manager could not create these database tables: ' . implode(', ', $missing)
+                    . '. Check that the database user may CREATE and ALTER tables.'),
+                'Hospital Manager',
+                ['back_link' => true]
+            );
+        }
+    }
+
+    /** Create or upgrade the tables and record the schema version. */
+    public static function install_schema()
+    {
+        $migration_file = plugin_dir_path(__FILE__) . 'database/migrations/create_hospital_tables.php';
+        if (!file_exists($migration_file)) {
+            throw new \RuntimeException('Migration file missing: database/migrations/create_hospital_tables.php');
+        }
+        require_once $migration_file;
+        \CreateHospitalTables::up();
+        update_option('hospital_manager_db_version', \CreateHospitalTables::SCHEMA_VERSION);
+    }
+
+    /**
+     * Plugin updates don't run the activation hook, so compare the stored schema
+     * version on each load and upgrade the tables when the code is newer.
+     */
+    public static function maybe_upgrade_schema()
+    {
+        require_once plugin_dir_path(__FILE__) . 'database/migrations/create_hospital_tables.php';
+        if (get_option('hospital_manager_db_version') === \CreateHospitalTables::SCHEMA_VERSION) {
+            return;
+        }
+        try {
+            self::install_schema();
+            RoleService::initializeRoles();
+        } catch (\Throwable $e) {
+            error_log('Hospital Manager schema upgrade failed: ' . $e->getMessage());
         }
     }
 
     public function init()
     {
+        add_action('plugins_loaded', [self::class, 'maybe_upgrade_schema']);
         add_action('rest_api_init', [$this, 'register_api_routes']);
 
         // Initialize the FrontendController

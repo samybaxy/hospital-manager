@@ -7,8 +7,27 @@ const Header = ({ title }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    console.log('Header logout initiated...');
+    
+    // Preserve dev mode setting
+    const devMode = localStorage.getItem('hospital_manager_dev_mode');
+    
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
+    // Clear storage but preserve dev mode
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    if (devMode !== null) {
+      localStorage.setItem('hospital_manager_dev_mode', devMode);
+    }
+    
+    // Redirect to homepage, not login page
+    window.location.href = window.location.origin + '/';
   };
 
   return (

@@ -73,6 +73,8 @@ class RadiologicalExamSeeder extends Seeder
         
         // Get existing visitations
         $visitation_ids = $this->getExistingIds('hm_visitations');
+        // Shuffle: iterating in ID order clustered every exam on the first ~65 visits
+        shuffle($visitation_ids);
         
         // Get lab_tech IDs to use for radiological technicians (since we don't have a dedicated role)
         $tech_ids = $this->getUserIds(5, 'lab_tech');

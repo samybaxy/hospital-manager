@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/apiService';
-import authService from '../services/authService';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
+  // Accepts a username or an email address; WordPress's wp_signon handles both.
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   
-  const { login, error } = useAuth();
+  const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -27,14 +26,15 @@ const Login = () => {
       return;
     }
     
-    if (!email || !password) {
-      setLoginError('Email and password are required');
+    const loginName = identifier.trim();
+    if (!loginName || !password) {
+      setLoginError('Username or email and password are required');
       return;
     }
-    
-    // Basic email validation
+
+    // Only check the format when it looks like an email; anything else is a username.
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (loginName.includes('@') && !emailRegex.test(loginName)) {
       setLoginError('Please enter a valid email address');
       return;
     }
@@ -44,14 +44,14 @@ const Login = () => {
     
     try {
       // Use the centralized auth context login function
-      const success = await login(email, password, rememberMe);
+      const result = await login(loginName, password, rememberMe);
       
-      if (success) {
+      if (result.success) {
         // Redirect to the page they were trying to access or dashboard
         navigate(from, { replace: true });
       } else {
         // Error message will be set by AuthContext
-        setLoginError(error || 'Invalid login credentials');
+        setLoginError(result.message || 'Invalid login credentials');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -61,9 +61,14 @@ const Login = () => {
     }
   };
 
+  // Already signed in (cookie session): skip the form.
+  if (isAuthenticated && !loading && !isSubmitting) {
+    return <Navigate to={from} replace />;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-16 px-4 sm:px-6 lg:px-8 my-12">
-      <div className="max-w-md w-full p-8 bg-white rounded-lg shadow-xl my-12 mx-auto">
+    <div className="min-h-[70dvh] flex items-center justify-center bg-gradient-to-b from-primary-50 to-primary-100 py-6 sm:py-16 px-4 sm:px-6 lg:px-8 sm:my-12">
+      <div className="max-w-md w-full p-5 sm:p-8 bg-white rounded-lg shadow-xl sm:my-12 mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-primary-800">Hospital Manager</h2>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
@@ -81,10 +86,10 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label 
-              htmlFor="email" 
+              htmlFor="login-identifier" 
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Email Address
+              Username or Email
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -94,13 +99,15 @@ const Login = () => {
                 </svg>
               </div>
               <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="login-identifier"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 className="w-full pl-10 pr-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="user@example.com"
+                placeholder="username or user@example.com"
                 disabled={isSubmitting}
                 autoFocus
                 required
@@ -118,7 +125,7 @@ const Login = () => {
               </label>
               <a 
                 href="#" 
-                className="text-sm text-primary-600 hover:text-primary-800"
+                className="inline-flex items-center min-h-11 -my-3 pl-2 text-sm text-primary-600 hover:text-primary-800"
                 onClick={(e) => {
                   e.preventDefault();
                   setShowResetModal(true);
@@ -147,16 +154,16 @@ const Login = () => {
             </div>
           </div>
           
-          <div className="flex items-center">
+          <div className="flex items-center min-h-11">
             <input
               id="remember-me"
               name="remember-me"
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              className="size-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="remember-me" className="ml-2 block py-2 pr-2 text-sm text-gray-700">
               Remember me
             </label>
           </div>
@@ -164,7 +171,7 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150"
+              className="w-full flex justify-center min-h-11 items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base sm:text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition duration-150"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

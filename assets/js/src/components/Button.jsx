@@ -20,9 +20,10 @@ const Button = ({
   };
   
   const sizeClasses = {
-    sm: 'px-2.5 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
+    // Phones get 44px-tall targets at every size; from sm up md is 36px and sm 32px
+    sm: 'min-h-11 sm:min-h-8 px-3 sm:px-2.5 py-1.5 text-sm sm:text-xs',
+    md: 'min-h-11 sm:min-h-9 px-4 py-2 text-sm',
+    lg: 'min-h-11 px-6 py-3 text-base',
   };
 
   const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer';

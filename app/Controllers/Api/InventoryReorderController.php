@@ -212,13 +212,31 @@ class InventoryReorderController extends InventoryBaseController
     public function create_reorder($request)
     {
         try {
+            global $wpdb;
+
+            // Request params use API names; hm_inventory_reorders uses inventory_id /
+            // suggested_quantity / created_by (inserting item_id/quantity/requested_by
+            // failed with "Unknown column").
+            $item_id = (int) $request->get_param('item_id');
+            $item = $wpdb->get_row($wpdb->prepare(
+                "SELECT ID, quantity, reorder_level, cost FROM {$wpdb->prefix}hm_inventory WHERE ID = %d",
+                $item_id
+            ));
+            if (!$item) {
+                return new WP_Error('reorder_item_not_found', 'Inventory item not found', ['status' => 404]);
+            }
+
+            $quantity = (int) $request->get_param('quantity');
             $data = [
-                'item_id' => $request->get_param('item_id'),
-                'supplier_id' => $request->get_param('supplier_id'),
-                'quantity' => $request->get_param('quantity'),
-                'priority' => $request->get_param('priority'),
+                'inventory_id' => $item_id,
+                'supplier_id' => $request->get_param('supplier_id') ? (int) $request->get_param('supplier_id') : null,
+                'suggested_quantity' => $quantity,
+                'current_quantity' => (int) $item->quantity,
+                'reorder_level' => (int) $item->reorder_level,
+                'estimated_cost' => $item->cost !== null ? round((float) $item->cost * $quantity, 2) : null,
+                'priority' => $request->get_param('priority') ?: InventoryReorder::PRIORITY_MEDIUM,
                 'notes' => $request->get_param('notes'),
-                'requested_by' => get_current_user_id()
+                'created_by' => get_current_user_id(),
             ];
 
             $reorder = InventoryReorder::create($data);
@@ -229,11 +247,13 @@ class InventoryReorderController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'reorder_create_error',
-                'Failed to create reorder: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('reorder_create_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to create reorder: ' . $e->getMessage());
+            return new WP_Error('reorder_create_error', 'Failed to create reorder.', ['status' => 500]);
         }
     }
 
@@ -255,11 +275,13 @@ class InventoryReorderController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'reorder_approve_error',
-                'Failed to approve reorder: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('reorder_approve_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to approve reorder: ' . $e->getMessage());
+            return new WP_Error('reorder_approve_error', 'Failed to approve reorder.', ['status' => 500]);
         }
     }
 
@@ -284,11 +306,13 @@ class InventoryReorderController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'reorder_complete_error',
-                'Failed to complete reorder: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('reorder_complete_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to complete reorder: ' . $e->getMessage());
+            return new WP_Error('reorder_complete_error', 'Failed to complete reorder.', ['status' => 500]);
         }
     }
 
@@ -319,11 +343,13 @@ class InventoryReorderController extends InventoryBaseController
             ], 200);
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'reorder_suggestions_error',
-                'Failed to generate reorder suggestions: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('reorder_suggestions_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to generate reorder suggestions: ' . $e->getMessage());
+            return new WP_Error('reorder_suggestions_error', 'Failed to generate reorder suggestions.', ['status' => 500]);
         }
     }
 }

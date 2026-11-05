@@ -68,7 +68,7 @@ class LabInvestigationService extends BaseService
             $count_query = "SELECT COUNT(*) FROM {$table} l 
                            LEFT JOIN {$wpdb->prefix}hm_patients p ON l.patient_id = p.ID
                            WHERE {$where_clause}";
-            $total = (int)$wpdb->get_var($wpdb->prepare($count_query, $values));
+            $total = (int)$wpdb->get_var(self::prepareIf($count_query, $values));
             
             // Main query with optimized joins
             $query = "SELECT l.*, 

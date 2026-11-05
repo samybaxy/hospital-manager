@@ -30,7 +30,7 @@ class PatientController extends BaseController
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'create_patient'],
                 'permission_callback' => function($request) {
-                    return $this->check_permission($request, 'manage_patient_records');
+                    return $this->check_permission($request, 'create_patients');
                 },
             ]
         ]);
@@ -48,14 +48,14 @@ class PatientController extends BaseController
                 'methods' => WP_REST_Server::EDITABLE,
                 'callback' => [$this, 'update_patient'],
                 'permission_callback' => function($request) {
-                    return $this->check_permission($request, 'manage_patient_records');
+                    return $this->check_permission($request, 'edit_patients');
                 },
             ],
             [
                 'methods' => WP_REST_Server::DELETABLE,
                 'callback' => [$this, 'delete_patient'],
                 'permission_callback' => function($request) {
-                    return $this->check_permission($request, 'manage_patient_records');
+                    return $this->check_permission($request, 'delete_patients');
                 },
             ]
         ]);

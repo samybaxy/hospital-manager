@@ -194,16 +194,20 @@ class PatientControllerTest extends TestCase
     }
 
     /**
-     * Test updating a patient
+     * Test updating a patient through the REAL controller (the mock writes straight to
+     * the table and skips Patient::update(), so it can't show phone handling).
      */
     public function testUpdatePatient()
     {
-        // Set current user as Administrator
+        global $wp_rest_server;
+        $wp_rest_server = new WP_REST_Server;
+        (new \HospitalManager\Controllers\Api\PatientController())->register_routes();
+
         wp_set_current_user($this->test_users['admin']);
-        
-        // Prepare update data
+        get_role('administrator')->add_cap('manage_patient_records');
+
         $update_data = [
-            'phone' => '5555555555',
+            'phone' => '8055555555', // 10 digits: the leading 0 is restored on save
             'address' => 'Updated Address',
             'bio_data' => json_encode([
                 'blood_group' => 'O+',
@@ -211,35 +215,29 @@ class PatientControllerTest extends TestCase
                 'emergency_contact' => '09087654321'
             ])
         ];
-        
-        // Create request to update the patient
+
         $request = new WP_REST_Request('PUT', "/{$this->namespace}/patients/{$this->test_patient->ID}");
         $request->set_body_params($update_data);
-        $response = $this->server->dispatch($request);
-        
-        // Check response status
-        $this->assertEquals(200, $response->get_status());
-        
-        // Check response data
-        $data = $response->get_data();
+        $response = $wp_rest_server->dispatch($request);
+
+        get_role('administrator')->remove_cap('manage_patient_records');
+
+        $this->assertEquals(200, $response->get_status(), wp_json_encode($response->get_data()));
+        $data = json_decode(wp_json_encode($response->get_data()), true);
         $this->assertTrue($data['success']);
-        
-        // Verify the patient was updated
-        $this->assertEquals('5555555555', $data['data']->phone);
-        $this->assertEquals('Updated Address', $data['data']->address);
-        
-        // Verify bio_data was updated correctly
-        $bio_data = json_decode($data['data']->bio_data, true);
-        $this->assertEquals('Updated allergies', $bio_data['allergies']);
-        
-        // Verify the update was saved to database
-        $updated_patient = Patient::find($this->test_patient->ID);
-        $this->assertEquals('05555555555', $updated_patient->phone);
-        
-        // Verify bio_data in database
-        $patient_bio_data = json_decode($updated_patient->bio_data, true);
-        $this->assertEquals('Updated allergies', $patient_bio_data['allergies']);
-        $this->assertEquals('O+', $patient_bio_data['blood_group']);
+
+        // Response reflects the saved record
+        $this->assertSame('08055555555', $data['data']['phone']);
+        $this->assertEquals('Updated Address', $data['data']['address']);
+        $bio = is_array($data['data']['bio_data']) ? $data['data']['bio_data'] : json_decode($data['data']['bio_data'], true);
+        $this->assertEquals('Updated allergies', $bio['allergies']);
+
+        // Stored as an 11-digit string, leading zero intact
+        global $wpdb;
+        $stored = $wpdb->get_var($wpdb->prepare(
+            "SELECT phone FROM {$wpdb->prefix}hm_patients WHERE ID = %d", $this->test_patient->ID
+        ));
+        $this->assertSame('08055555555', $stored);
     }
 
     /**

@@ -117,7 +117,7 @@ const InventoryTransactions = ({ onRefresh }) => {
     setError(null);
 
     try {
-      await inventoryService.addTransaction(transactionForm);
+      await inventoryService.recordTransaction(transactionForm);
       setSuccess('Transaction recorded successfully');
       setShowAddModal(false);
       setTransactionForm({
@@ -138,7 +138,7 @@ const InventoryTransactions = ({ onRefresh }) => {
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Error recording transaction:', err);
-      setError(err.message || 'Failed to record transaction');
+      setError(err.response?.data?.message || err.message || 'Failed to record transaction');
     } finally {
       setSubmitting(false);
     }
@@ -167,6 +167,7 @@ const InventoryTransactions = ({ onRefresh }) => {
       'stock_out': { variant: 'red', children: 'Stock Out' },
       'adjustment': { variant: 'blue', children: 'Adjustment' },
       'transfer': { variant: 'purple', children: 'Transfer' },
+      'returned': { variant: 'orange', children: 'Return' },
       'return': { variant: 'orange', children: 'Return' },
       'expired': { variant: 'red', children: 'Expired' },
       'damaged': { variant: 'red', children: 'Damaged' }
@@ -343,7 +344,7 @@ const InventoryTransactions = ({ onRefresh }) => {
                 <option value="stock_out">Stock Out</option>
                 <option value="adjustment">Adjustment</option>
                 <option value="transfer">Transfer</option>
-                <option value="return">Return</option>
+                <option value="returned">Return</option>
                 <option value="expired">Expired</option>
                 <option value="damaged">Damaged</option>
               </select>
@@ -469,7 +470,7 @@ const InventoryTransactions = ({ onRefresh }) => {
                 <option value="stock_out">Stock Out</option>
                 <option value="adjustment">Adjustment</option>
                 <option value="transfer">Transfer</option>
-                <option value="return">Return</option>
+                <option value="returned">Return</option>
                 <option value="expired">Expired</option>
                 <option value="damaged">Damaged</option>
               </select>

@@ -32,7 +32,7 @@ const NavItemBase = ({ route, icon, label, isCollapsed }) => {
       <Link 
         to={linkPath} 
         className={`
-          flex items-center px-3 py-2 text-base font-medium rounded-md group w-full
+          flex items-center min-h-11 px-3 py-2 text-base font-medium rounded-md group w-full
           ${isActive 
             ? 'bg-primary-900 text-white' 
             : 'text-primary-100 hover:bg-primary-700 hover:text-white'}
@@ -143,13 +143,8 @@ const ALL_NAV_ITEMS = [
 //     path: '/statistics', 
 //     label: 'Statistics', 
 //     icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' 
-//   },
-  { 
-    route: "settings", 
-    path: '/settings', 
-    label: 'Settings', 
-    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' 
-  }
+//   }
+  // Settings is not built yet; add it back here when it is.
 ];
 
 /**
@@ -187,7 +182,7 @@ const Sidebar = ({ isOpen, isCollapsed, onToggleCollapse }) => {
       
       {/* Navigation Menu */}
       <nav className="mt-4 flex-1 flex flex-col">
-        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full flex-1 pb-20 md:pb-4`}>
+        <ul className={`space-y-1 ${isCollapsed ? 'px-1' : 'px-2'} w-full flex-1 pb-[max(1rem,env(safe-area-inset-bottom))]`}>
           {/* Render all navigation items with access control */}
           {ALL_NAV_ITEMS.map((item) => (
             <NavItem 

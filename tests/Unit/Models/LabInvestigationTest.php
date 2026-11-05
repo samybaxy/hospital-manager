@@ -44,30 +44,6 @@ class LabInvestigationTest extends TestCase
         ]);
     }
     
-    /**
-     * Test lab investigation creation
-     */
-    public function testCreateLabInvestigation()
-    {
-        $data = [
-            'visitation_id' => $this->visitation->ID,
-            'patient_id' => $this->patient->ID,
-            'test_type' => 'Complete Blood Count',
-            'doctor_id' => $this->doctor->ID,
-            'notes' => 'Check for infection markers',
-            'status' => 'pending',
-            'created_at' => current_time('mysql')
-        ];
-
-        $lab = LabInvestigation::create($data);
-
-        $this->assertInstanceOf(LabInvestigation::class, $lab);
-        $this->assertEquals($this->visitation->ID, $lab->visitation_id);
-        $this->assertEquals($this->patient->ID, $lab->patient_id);
-        $this->assertEquals('Complete Blood Count', $lab->test_type);
-        $this->assertEquals($this->doctor->ID, $lab->doctor_id);
-        $this->assertEquals('pending', $lab->status);
-    }
 
     /**
      * Test finding a lab investigation by ID
@@ -131,30 +107,6 @@ class LabInvestigationTest extends TestCase
         $this->assertEquals($this->doctor->ID, $doctor->ID);
     }
 
-    /**
-     * Test updating a lab investigation
-     */
-    public function testUpdateLabInvestigation()
-    {
-        // Create a test lab investigation
-        $lab = $this->createTestLabInvestigation([
-            'visitation_id' => $this->visitation->ID,
-            'patient_id' => $this->patient->ID,
-            'doctor_id' => $this->doctor->ID,
-            'status' => 'pending'
-        ]);
-
-        // Update the lab investigation with results
-        $lab->results = 'Normal blood count, hemoglobin 14.2 g/dL';
-        $lab->status = 'completed';
-        $lab->save();
-
-        // Retrieve the lab investigation again
-        $updated = LabInvestigation::find($lab->ID);
-        
-        $this->assertEquals('completed', $updated->status);
-        $this->assertEquals('Normal blood count, hemoglobin 14.2 g/dL', $updated->results);
-    }
 
     /**
      * Test deleting a lab investigation

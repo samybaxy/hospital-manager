@@ -9,7 +9,9 @@ class Debugger
      */
     public static function log($message, $data = null)
     {
-        $log_file = dirname(__FILE__, 3) . '/debug.log';
+        // Outside the plugin: a debug.log in the plugin folder is downloadable
+        // from the web, and these dumps contain (test) patient records.
+        $log_file = sys_get_temp_dir() . '/hospital-manager-tests.log';
         $timestamp = date('Y-m-d H:i:s');
         
         $log_message = "[{$timestamp}] {$message}\n";

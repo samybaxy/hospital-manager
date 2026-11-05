@@ -7,8 +7,10 @@ class CreateHospitalTables
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
 
-        // Patients table
-        $sql_patients = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_patients (
+        // Patients table. (dbDelta lowercases mixed-case enum values such as 'Male' when it
+        // compares, so it re-applies the same gender/marital_status definitions on each
+        // schema upgrade. Harmless.)
+        $sql_patients = "CREATE TABLE {$wpdb->prefix}hm_patients (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             first_name varchar(100) NOT NULL,
@@ -17,8 +19,8 @@ class CreateHospitalTables
             hmo_designated_id varchar(100) UNIQUE,
             phone varchar(20),
             age int,
-            gender ENUM('Male', 'Female'),
-            marital_status ENUM('Single', 'Married', 'Divorced', 'Widowed', 'Separated'),
+            gender enum('Male','Female') DEFAULT NULL,
+            marital_status enum('Single','Married','Divorced','Widowed','Separated') DEFAULT NULL,
             address text,
             city varchar(100),
             `state` varchar(100),
@@ -31,7 +33,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Doctors table
-        $sql_doctors = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_doctors (
+        $sql_doctors = "CREATE TABLE {$wpdb->prefix}hm_doctors (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             first_name varchar(100) NOT NULL,
@@ -52,7 +54,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // HMOs table
-        $sql_hmos = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_hmos (
+        $sql_hmos = "CREATE TABLE {$wpdb->prefix}hm_hmos (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(100) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
@@ -61,7 +63,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Visitations table
-        $sql_visitations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_visitations (
+        $sql_visitations = "CREATE TABLE {$wpdb->prefix}hm_visitations (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
@@ -81,7 +83,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Lab Investigations table
-        $sql_lab_investigations = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_investigations (
+        $sql_lab_investigations = "CREATE TABLE {$wpdb->prefix}hm_lab_investigations (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
             patient_id bigint(20) NOT NULL,
@@ -95,7 +97,7 @@ class CreateHospitalTables
             flags JSON NULL,
             is_abnormal tinyint(1) DEFAULT 0,
             is_critical tinyint(1) DEFAULT 0,
-            status ENUM('requested', 'sample_collected', 'in_progress', 'completed', 'verified', 'cancelled') NOT NULL DEFAULT 'requested',
+            status enum('requested','sample_collected','in_progress','completed','verified','cancelled') NOT NULL DEFAULT 'requested',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (ID),
@@ -109,12 +111,12 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Laboratory Categories table
-        $sql_lab_categories = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_categories (
+        $sql_lab_categories = "CREATE TABLE {$wpdb->prefix}hm_lab_categories (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(100) NOT NULL,
             description text,
             display_order int(11) DEFAULT 0,
-            status ENUM('active', 'inactive') DEFAULT 'active',
+            status enum('active','inactive') DEFAULT 'active',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (ID),
@@ -122,7 +124,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Test Definitions table - FIXED foreign key reference
-        $sql_lab_test_definitions = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_lab_test_definitions (
+        $sql_lab_test_definitions = "CREATE TABLE {$wpdb->prefix}hm_lab_test_definitions (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             category_id bigint(20) NOT NULL,
             code varchar(50) NOT NULL,
@@ -138,7 +140,7 @@ class CreateHospitalTables
             methodology varchar(255),
             cost decimal(10,2),
             is_panel tinyint(1) DEFAULT 0,
-            status ENUM('active', 'inactive') DEFAULT 'active',
+            status enum('active','inactive') DEFAULT 'active',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (ID),
@@ -146,12 +148,13 @@ class CreateHospitalTables
             KEY category_id (category_id),
             KEY name (name),
             KEY is_panel (is_panel),
-            KEY status (status),
-            CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES {$wpdb->prefix}hm_lab_categories(ID) ON DELETE CASCADE
+            KEY status (status)
         ) $charset_collate;";
+        // (The foreign key to hm_lab_categories is added by ensureForeignKeys():
+        // dbDelta can't parse a CONSTRAINT line and would try to add it as a column.)
 
         // Radiological Exams table
-        $sql_radiological_exams = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_radiological_exams (
+        $sql_radiological_exams = "CREATE TABLE {$wpdb->prefix}hm_radiological_exams (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             visitation_id bigint(20) NOT NULL,
             tech_id bigint(20) NOT NULL,
@@ -166,7 +169,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Audit Logs table
-        $sql_audit_logs = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_audit_logs (
+        $sql_audit_logs = "CREATE TABLE {$wpdb->prefix}hm_audit_logs (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             action varchar(50) NOT NULL,
@@ -181,7 +184,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Notifications table
-        $sql_notifications = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_notifications (
+        $sql_notifications = "CREATE TABLE {$wpdb->prefix}hm_notifications (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             user_id bigint(20) NOT NULL,
             type varchar(50) NOT NULL,
@@ -197,7 +200,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Appointments table
-        $sql_appointments = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_appointments (
+        $sql_appointments = "CREATE TABLE {$wpdb->prefix}hm_appointments (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
@@ -216,7 +219,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Create chats table first
-        $sql_chats = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_chats (
+        $sql_chats = "CREATE TABLE {$wpdb->prefix}hm_chats (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             doctor_id bigint(20) NOT NULL,
             patient_id bigint(20) NOT NULL,
@@ -231,7 +234,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Create messages table
-        $sql_messages = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_chat_messages (
+        $sql_messages = "CREATE TABLE {$wpdb->prefix}hm_chat_messages (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             chat_id bigint(20) NOT NULL,
             sender_id bigint(20) NOT NULL,
@@ -247,7 +250,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Medical Reports table
-        $sql_medical_reports = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_medical_reports (
+        $sql_medical_reports = "CREATE TABLE {$wpdb->prefix}hm_medical_reports (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             patient_id bigint(20) NOT NULL,
             doctor_id bigint(20) NOT NULL,
@@ -263,7 +266,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Inventory table
-        $sql_inventory = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory (
+        $sql_inventory = "CREATE TABLE {$wpdb->prefix}hm_inventory (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             item_name varchar(255) NOT NULL,
             category varchar(100) NOT NULL DEFAULT 'Supplies',
@@ -285,11 +288,11 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Inventory transactions table for tracking movements and changes
-        $sql_inventory_transactions = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_transactions (
+        $sql_inventory_transactions = "CREATE TABLE {$wpdb->prefix}hm_inventory_transactions (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             inventory_id bigint(20) NOT NULL,
             user_id bigint(20) NOT NULL,
-            transaction_type ENUM('stock_in', 'stock_out', 'adjustment', 'transfer', 'expired', 'damaged', 'returned') NOT NULL,
+            transaction_type enum('stock_in','stock_out','adjustment','transfer','expired','damaged','returned') NOT NULL,
             quantity_changed int NOT NULL,
             previous_quantity int NOT NULL,
             new_quantity int NOT NULL,
@@ -315,11 +318,11 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Inventory alerts table for system notifications
-        $sql_inventory_alerts = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_alerts (
+        $sql_inventory_alerts = "CREATE TABLE {$wpdb->prefix}hm_inventory_alerts (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             inventory_id bigint(20) NOT NULL,
-            alert_type ENUM('low_stock', 'out_of_stock', 'expired', 'expiring_soon', 'critical_level', 'reorder_point') NOT NULL,
-            severity ENUM('low', 'medium', 'high', 'critical') NOT NULL DEFAULT 'medium',
+            alert_type enum('low_stock','out_of_stock','expired','expiring_soon','critical_level','reorder_point') NOT NULL,
+            severity enum('low','medium','high','critical') NOT NULL DEFAULT 'medium',
             title varchar(255) NOT NULL,
             message text NOT NULL,
             threshold_value int NULL,
@@ -344,7 +347,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Inventory suppliers table for supplier management
-        $sql_inventory_suppliers = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_suppliers (
+        $sql_inventory_suppliers = "CREATE TABLE {$wpdb->prefix}hm_inventory_suppliers (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             name varchar(255) NOT NULL,
             contact_person varchar(255) NULL,
@@ -370,7 +373,7 @@ class CreateHospitalTables
         ) $charset_collate;";
 
         // Inventory reorder suggestions table
-        $sql_inventory_reorders = "CREATE TABLE IF NOT EXISTS {$wpdb->prefix}hm_inventory_reorders (
+        $sql_inventory_reorders = "CREATE TABLE {$wpdb->prefix}hm_inventory_reorders (
             ID bigint(20) NOT NULL AUTO_INCREMENT,
             inventory_id bigint(20) NOT NULL,
             supplier_id bigint(20) NULL,
@@ -378,8 +381,8 @@ class CreateHospitalTables
             current_quantity int NOT NULL,
             reorder_level int NOT NULL,
             max_stock_level int NULL,
-            priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
-            status ENUM('pending', 'approved', 'ordered', 'received', 'cancelled') NOT NULL DEFAULT 'pending',
+            priority enum('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
+            status enum('pending','approved','ordered','received','cancelled') NOT NULL DEFAULT 'pending',
             estimated_cost decimal(10,2) NULL,
             order_reference varchar(100) NULL,
             expected_delivery_date date NULL,
@@ -421,6 +424,63 @@ class CreateHospitalTables
         dbDelta($sql_inventory_alerts);
         dbDelta($sql_inventory_suppliers);
         dbDelta($sql_inventory_reorders);
+
+        self::ensureForeignKeys();
+    }
+
+    /**
+     * Schema version. Bump it whenever a CREATE TABLE above changes: on the next
+     * request HospitalManager::maybe_upgrade_schema() re-runs up(), and dbDelta
+     * adds the new columns/indexes to existing tables without touching data.
+     *
+     * The statements must stay dbDelta-compatible: plain "CREATE TABLE" (no
+     * IF NOT EXISTS, which dbDelta reads as a table called "IF"), no spaces
+     * inside ENUM lists, and no inline CONSTRAINT lines.
+     */
+    const SCHEMA_VERSION = '1.1.0';
+
+    /** Every table up() creates (without the prefix). */
+    public static function tables()
+    {
+        return [
+            'hm_patients', 'hm_doctors', 'hm_hmos', 'hm_visitations', 'hm_lab_categories',
+            'hm_lab_test_definitions', 'hm_lab_investigations', 'hm_radiological_exams',
+            'hm_audit_logs', 'hm_notifications', 'hm_appointments', 'hm_chats',
+            'hm_chat_messages', 'hm_medical_reports', 'hm_inventory',
+            'hm_inventory_transactions', 'hm_inventory_alerts', 'hm_inventory_suppliers',
+            'hm_inventory_reorders',
+        ];
+    }
+
+    /** Tables from tables() that don't exist. */
+    public static function missingTables()
+    {
+        global $wpdb;
+        $missing = [];
+        foreach (self::tables() as $table) {
+            $name = $wpdb->prefix . $table;
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $wpdb->esc_like($name))) !== $name) {
+                $missing[] = $name;
+            }
+        }
+        return $missing;
+    }
+
+    /** Add foreign keys that dbDelta can't manage, if they're missing. */
+    private static function ensureForeignKeys()
+    {
+        global $wpdb;
+        $table = $wpdb->prefix . 'hm_lab_test_definitions';
+        $exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+             WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = %s
+               AND CONSTRAINT_TYPE = 'FOREIGN KEY' AND CONSTRAINT_NAME = 'fk_category'",
+            $table
+        ));
+        if (!$exists) {
+            $wpdb->query("ALTER TABLE {$table} ADD CONSTRAINT fk_category FOREIGN KEY (category_id)
+                REFERENCES {$wpdb->prefix}hm_lab_categories(ID) ON DELETE CASCADE");
+        }
     }
 
     public static function down()

@@ -141,11 +141,13 @@ class InventoryAlertController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'alerts_fetch_error',
-                'Failed to fetch alerts: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('alerts_fetch_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to fetch alerts: ' . $e->getMessage());
+            return new WP_Error('alerts_fetch_error', 'Failed to fetch alerts.', ['status' => 500]);
         }
     }
 
@@ -205,11 +207,13 @@ class InventoryAlertController extends InventoryBaseController
             ], 200);
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'alerts_generate_error',
-                'Failed to generate alerts: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('alerts_generate_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to generate alerts: ' . $e->getMessage());
+            return new WP_Error('alerts_generate_error', 'Failed to generate alerts.', ['status' => 500]);
         }
     }
 }

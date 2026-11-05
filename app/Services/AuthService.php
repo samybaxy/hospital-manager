@@ -44,11 +44,9 @@ class AuthService extends BaseService {
             return $result;
         }
         
-        // Check for custom X-WP-Bypass-Auth header for development/debugging
+        // (An X-WP-Bypass-Auth header used to skip authentication when WP_DEBUG
+        // was on. Removed: any client can send a header.)
         $headers = function_exists('getallheaders') ? getallheaders() : [];
-        if (isset($headers['X-WP-Bypass-Auth']) && defined('WP_DEBUG') && WP_DEBUG) {
-            return true;
-        }
         
         // Check for nonce directly
         $nonce = null;
@@ -68,25 +66,27 @@ class AuthService extends BaseService {
             return true;
         }
         
-        // If user is already logged in, don't interfere
+        // A signed-in user without a valid nonce is left to WordPress core
+        // (rest_cookie_check_errors), which treats the request as anonymous. This
+        // used to return true here, which told core authentication had passed and
+        // skipped its nonce check, so other sites could make requests with the
+        // user's cookies (CSRF).
         if (is_user_logged_in()) {
-            return true;
+            return $result;
         }
         
-        // Try our custom cookie authentication
+        // The app's own cookie is a cookie too, so it needs a nonce for that user.
         if (self::authenticate_with_custom_cookie()) {
-            return true;
-        }
-        
-        // For development environments, be more permissive
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-            $referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
-            
-            if (strpos($origin, site_url()) === 0 || strpos($referer, site_url()) === 0) {
+            if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
                 return true;
             }
+            wp_set_current_user(0);
+            return $result;
         }
+        
+        // (With WP_DEBUG on a local site, any request whose Origin/Referer matched
+        // the site used to be signed in as the first administrator. Removed: those
+        // headers are trivially forged by any non-browser client.)
         
         // Do not override authentication - let WordPress handle it
         return $result;

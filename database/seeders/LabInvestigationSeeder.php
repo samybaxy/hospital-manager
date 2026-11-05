@@ -94,7 +94,7 @@ class LabInvestigationSeeder extends Seeder
         $patient_ids = $this->getExistingIds('hm_patients');
         $doctor_ids = $this->getExistingIds('hm_doctors');
         $lab_tech_ids = $this->getUserIds(5, 'lab_tech');
-        $visitation_ids = $this->getExistingIds('hm_visitations');
+        $visitation_ids = $this->getVisitationsCoveringEveryPatient();
         
         if (empty($patient_ids) || empty($doctor_ids) || empty($lab_tech_ids) || empty($visitation_ids)) {
             $this->log('Missing required data for lab investigations. Make sure patients, doctors, and visitations exist.');
@@ -110,7 +110,11 @@ class LabInvestigationSeeder extends Seeder
         
         // Create some lab investigations for each visitation
         $count = 0;
-        $maxRecords = 50;
+        // Scale with patients (was a flat 50, consumed by the first ~20 visits in ID
+        // order, so only ~14 patients ever had labs).
+        // Up to 3 labs per visit, so 3 x patients guarantees the first pass (one visit per
+        // patient) completes before the cap.
+        $maxRecords = max(50, count($patient_ids) * 3);
         
         foreach ($visitation_ids as $visitation_id) {
             if ($count >= $maxRecords) break;
@@ -241,6 +245,37 @@ class LabInvestigationSeeder extends Seeder
      * @param string $table Table name without prefix
      * @return array Array of IDs
      */
+    /**
+     * Visit IDs ordered so that each patient's most recent visit comes first
+     * (shuffled), followed by all remaining visits (shuffled). Iterating this list
+     * gives every patient with a visit at least one lab before any gets extras.
+     *
+     * @return array
+     */
+    protected function getVisitationsCoveringEveryPatient()
+    {
+        global $wpdb;
+        $rows = $wpdb->get_results(
+            "SELECT ID, patient_id FROM {$wpdb->prefix}hm_visitations ORDER BY date DESC, ID DESC"
+        );
+
+        $first = [];
+        $rest = [];
+        foreach ($rows as $row) {
+            if (!isset($first[$row->patient_id])) {
+                $first[$row->patient_id] = $row->ID;
+            } else {
+                $rest[] = $row->ID;
+            }
+        }
+
+        $first = array_values($first);
+        shuffle($first);
+        shuffle($rest);
+
+        return array_merge($first, $rest);
+    }
+
     protected function getExistingIds($table)
     {
         global $wpdb;

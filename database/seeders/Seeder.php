@@ -2,6 +2,19 @@
 
 namespace HospitalManager\Database\Seeders;
 
+// Staging zips install with --no-dev and add Faker's folder back by hand
+// (bin/build-release.sh), so Composer's autoloader doesn't know about it.
+if (!class_exists('Faker\\Factory') && is_dir(dirname(__DIR__, 2) . '/vendor/fakerphp/faker/src/Faker')) {
+    spl_autoload_register(function ($class) {
+        if (strpos($class, 'Faker\\') === 0) {
+            $file = dirname(__DIR__, 2) . '/vendor/fakerphp/faker/src/' . str_replace('\\', '/', $class) . '.php';
+            if (is_file($file)) {
+                require $file;
+            }
+        }
+    });
+}
+
 abstract class Seeder
 {
     protected $faker;

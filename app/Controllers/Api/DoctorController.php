@@ -14,12 +14,12 @@ class DoctorController extends BaseController
 {
     public function register_routes()
     {
-        // Get all doctors (public endpoint)
+        // Get all doctors (any signed-in user)
         register_rest_route($this->namespace, '/doctors', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctors'],
-                'permission_callback' => '__return_true'
+                'permission_callback' => [$this, 'check_signed_in']
             ]
         ]);
 
@@ -28,25 +28,25 @@ class DoctorController extends BaseController
             [
                 'methods' => WP_REST_Server::CREATABLE,
                 'callback' => [$this, 'create_doctor'],
-                'permission_callback' => [$this, 'check_doctor_permission']
+                'permission_callback' => [$this, 'check_manage_doctors']
             ]
         ]);
 
-        // Get doctor specialties (public endpoint)
+        // Get doctor specialties (any signed-in user)
         register_rest_route($this->namespace, '/doctors/specialties', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_specialties'],
-                'permission_callback' => '__return_true'
+                'permission_callback' => [$this, 'check_signed_in']
             ]
         ]);
 
-        // Get single doctor (public endpoint)
+        // Get single doctor (any signed-in user)
         register_rest_route($this->namespace, '/doctors/(?P<ID>\d+)', [
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctor'],
-                'permission_callback' => '__return_true'
+                'permission_callback' => [$this, 'check_signed_in']
             ]
         ]);
 
@@ -55,7 +55,7 @@ class DoctorController extends BaseController
             [
                 'methods' => WP_REST_Server::READABLE,
                 'callback' => [$this, 'get_doctor_patients'],
-                'permission_callback' => '__return_true'
+                'permission_callback' => [$this, 'check_view_doctor_patients']
             ]
         ]);
 
@@ -73,7 +73,7 @@ class DoctorController extends BaseController
             [
                 'methods' => WP_REST_Server::DELETABLE,
                 'callback' => [$this, 'delete_doctor'],
-                'permission_callback' => [$this, 'check_doctor_permission']
+                'permission_callback' => [$this, 'check_manage_doctors']
             ]
         ]);
     }
@@ -83,8 +83,6 @@ class DoctorController extends BaseController
      */
     public function get_doctors(WP_REST_Request $request) {
         try {
-            error_log('Hospital Manager API Request: GET /hospital-manager/v1/doctors - Params: ' . print_r($request->get_params(), true));
-            
             // Extract parameters from request
             $params = $request->get_params()['params'] ?? [];
             
@@ -174,7 +172,7 @@ class DoctorController extends BaseController
                 'fullName' => $doctor->first_name . ' ' . $doctor->last_name,
                 'specialty' => $doctor->specialty,
                 'phone' => $doctor->phone,
-                'email' => $user->user_email,
+                'email' => $user ? $user->user_email : '',
                 'status' => $doctor->status,
                 'license_number' => $doctor->license_number,
                 'board_certification' => $doctor->board_certification,
@@ -215,7 +213,44 @@ class DoctorController extends BaseController
             }
             
             // Create new doctor instance
+            // Optional login for the doctor (same rules as patients): a doctor
+            // without an email is created without a portal account (user_id = 0).
+            $user_id = 0;
+            if (!empty($data['email'])) {
+                $email = sanitize_email($data['email']);
+                if (!is_email($email)) {
+                    return new WP_Error('invalid_email', 'Invalid email address', ['status' => 400]);
+                }
+                if (email_exists($email)) {
+                    return new WP_Error('email_exists', 'A user with this email address already exists', ['status' => 400]);
+                }
+
+                $login = sanitize_user(strstr($email, '@', true), true) ?: 'doctor_' . wp_generate_password(6, false);
+                $base = $login;
+                for ($n = 1; username_exists($login); $n++) {
+                    $login = $base . $n;
+                }
+
+                $user_id = wp_insert_user([
+                    'user_login' => $login,
+                    'user_email' => $email,
+                    'user_pass' => wp_generate_password(),
+                    'first_name' => sanitize_text_field($data['first_name']),
+                    'last_name' => sanitize_text_field($data['last_name']),
+                    'display_name' => 'Dr. ' . trim(sanitize_text_field($data['first_name']) . ' ' . sanitize_text_field($data['last_name'])),
+                    'role' => 'doctor',
+                ]);
+                if (is_wp_error($user_id)) {
+                    return new WP_Error('user_create_failed', 'Could not create a login for this doctor: ' . $user_id->get_error_message(), ['status' => 500]);
+                }
+
+                // The generated password is never shown to anyone, so email the
+                // doctor WordPress's standard set-password link.
+                wp_new_user_notification($user_id, null, 'user');
+            }
+
             $doctor = new Doctor();
+            $doctor->user_id = (int) $user_id;
             
             // Set required fields
             $doctor->first_name = sanitize_text_field($data['first_name']);
@@ -234,16 +269,13 @@ class DoctorController extends BaseController
                 $doctor->education = sanitize_text_field($data['education']);
             }
             
-            if (isset($data['certification'])) {
-                $doctor->certification = sanitize_text_field($data['certification']);
+            // The column is board_certification ("certification" was silently dropped)
+            if (isset($data['board_certification']) || isset($data['certification'])) {
+                $doctor->board_certification = sanitize_text_field($data['board_certification'] ?? $data['certification']);
             }
             
             if (isset($data['office'])) {
                 $doctor->office = sanitize_text_field($data['office']);
-            }
-            
-            if (isset($data['department'])) {
-                $doctor->department = sanitize_text_field($data['department']);
             }
             
             // Handle appointment_availability using DoctorService
@@ -339,8 +371,14 @@ class DoctorController extends BaseController
             if (isset($data['specialty'])) {
                 $doctor->specialty = sanitize_text_field($data['specialty']);
             }
-            if (isset($data['license_number'])) {
+            if (isset($data['license_number']) && \HospitalManager\Services\AccessPolicy::allowsAll(wp_get_current_user(), 'manage_doctors')) {
                 $doctor->license_number = sanitize_text_field($data['license_number']);
+            }
+            // Only administrators change a doctor's status or licence; a doctor
+            // editing their own profile can't (re)activate themselves.
+            $is_admin = \HospitalManager\Services\AccessPolicy::allowsAll(wp_get_current_user(), 'manage_doctors');
+            if (!$is_admin) {
+                unset($data['status']);
             }
             if (isset($data['status'])) {
                 $doctor->status = sanitize_text_field($data['status']);
@@ -355,16 +393,13 @@ class DoctorController extends BaseController
                 $doctor->education = sanitize_text_field($data['education']);
             }
             
-            if (isset($data['certification'])) {
-                $doctor->certification = sanitize_text_field($data['certification']);
+            // The column is board_certification ("certification" was silently dropped)
+            if (isset($data['board_certification']) || isset($data['certification'])) {
+                $doctor->board_certification = sanitize_text_field($data['board_certification'] ?? $data['certification']);
             }
             
             if (isset($data['office'])) {
                 $doctor->office = sanitize_text_field($data['office']);
-            }
-            
-            if (isset($data['department'])) {
-                $doctor->department = sanitize_text_field($data['department']);
             }
             
             // Handle appointment_availability using DoctorService
@@ -396,10 +431,10 @@ class DoctorController extends BaseController
             ], 200);
             
         } catch (\Exception $e) {
-            error_log('Error updating doctor: ' . $e->getMessage());
+            error_log('Hospital Manager: error updating doctor: ' . $e->getMessage());
             return new WP_Error(
                 'doctor_update_failed',
-                'Failed to update doctor: ' . $e->getMessage(),
+                'Failed to update doctor.',
                 ['status' => 500]
             );
         }
@@ -554,34 +589,74 @@ class DoctorController extends BaseController
     }
 
     /**
-     * Check if user has doctor permissions
-     * For development, this is more lenient to allow easier testing
-     * 
+     * Doctor directory, specialties and profiles: any signed-in user (patients
+     * need them to book). They used to be public, contact details included.
+     */
+    public function check_signed_in()
+    {
+        if (!is_user_logged_in()) {
+            return new \WP_Error('rest_forbidden', 'You must be logged in to access this endpoint.', ['status' => 401]);
+        }
+        return true;
+    }
+
+    /**
+     * A doctor's patient list (names, phones, last visit): staff who may look
+     * patients up. It used to be public.
+     */
+    public function check_view_doctor_patients()
+    {
+        $signed_in = $this->check_signed_in();
+        if (is_wp_error($signed_in)) {
+            return $signed_in;
+        }
+        if (!\HospitalManager\Services\AccessPolicy::allowsAll(wp_get_current_user(), 'view_patients')) {
+            return new \WP_Error('rest_forbidden', 'You do not have permission to view these patients.', ['status' => 403]);
+        }
+        return true;
+    }
+
+    /** Create and delete doctors: administrators only. */
+    public function check_manage_doctors()
+    {
+        $signed_in = $this->check_signed_in();
+        if (is_wp_error($signed_in)) {
+            return $signed_in;
+        }
+        if (!\HospitalManager\Services\AccessPolicy::allowsAll(wp_get_current_user(), 'manage_doctors')) {
+            return new \WP_Error('rest_forbidden', 'Only administrators can add or remove doctors.', ['status' => 403]);
+        }
+        return true;
+    }
+
+    /**
+     * Edit a doctor: administrators, or a doctor editing their own record. Any
+     * doctor used to be able to edit, deactivate or delete every other doctor.
+     *
      * @return bool|\WP_Error
      */
-    public function check_doctor_permission()
+    public function check_doctor_permission($request = null)
     {
-        // First check if user is authenticated at all using the base check_auth method
-        $auth_check = $this->check_auth();
-        if (is_wp_error($auth_check)) {
-            return $auth_check;
+        $signed_in = $this->check_signed_in();
+        if (is_wp_error($signed_in)) {
+            return $signed_in;
         }
-        
-        // Check strict permissions for production
-        if (defined('WP_ENVIRONMENT_TYPE') && WP_ENVIRONMENT_TYPE === 'production') {
-            if (!current_user_can('doctor') && !current_user_can('administrator')) {
-                return new \WP_Error(
-                    'rest_forbidden',
-                    __('You do not have permission to access doctor resources.'),
-                    ['status' => 403]
-                );
-            }
+
+        $user = wp_get_current_user();
+        if (\HospitalManager\Services\AccessPolicy::allowsAll($user, 'manage_doctors')) {
             return true;
         }
-        
-        // In development/local, we're being more permissive
-        // We've already checked authentication via check_auth,
-        // so we can just return true here
-        return true;
+
+        $id = $request ? (int) $request->get_param('ID') : 0;
+        if ($id && in_array('doctor', (array) $user->roles, true)
+            && \HospitalManager\Services\AccessPolicy::doctorRecordId($user->ID) === $id) {
+            return true;
+        }
+
+        return new \WP_Error(
+            'rest_forbidden',
+            __('You can only edit your own doctor profile.'),
+            ['status' => 403]
+        );
     }
 }

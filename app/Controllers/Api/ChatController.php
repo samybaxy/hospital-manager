@@ -65,7 +65,10 @@ class ChatController extends BaseController
     {
         $user_id = get_current_user_id();
         $user = wp_get_current_user();
-        return new WP_REST_Response(Chat::getUserChats($user_id, in_array('doctor', $user->roles)));
+        // Chat models serialise to "{}" unless converted
+        return new WP_REST_Response(\HospitalManager\Services\ApiService::serializeModels(
+            Chat::getUserChats($user_id, in_array('doctor', $user->roles))
+        ));
     }
 
     public function get_messages($request)
@@ -85,7 +88,11 @@ class ChatController extends BaseController
         }
 
         $messages = ChatMessage::getChatMessages($chat_id, $page, $per_page);
-        return new WP_REST_Response($messages);
+
+        return new WP_REST_Response([
+            'data' => array_map([$this, 'format_message'], $messages->data),
+            'meta' => $messages->meta,
+        ]);
     }
 
     public function send_message($request)
@@ -122,10 +129,10 @@ class ChatController extends BaseController
         WebSocketService::sendMessage('chat', [
             'type' => 'new_message',
             'chat_id' => $chat_id,
-            'message' => $message
+            'message' => $this->format_message($message) // raw model would push "{}"
         ], $receiver_id);
 
-        return new WP_REST_Response($message, 201);
+        return new WP_REST_Response($this->format_message($message), 201);
     }
 
     public function start_chat($request)
@@ -135,7 +142,8 @@ class ChatController extends BaseController
 
         $existing_chat = Chat::findByUsers($doctor_id, $patient_id);
         if ($existing_chat) {
-            return new WP_REST_Response($existing_chat);
+            // A raw model serialises to "{}" — the client got no chat ID back
+            return new WP_REST_Response($existing_chat->getAttributes());
         }
 
         $chat = Chat::create([
@@ -173,5 +181,26 @@ class ChatController extends BaseController
     private function can_access_chat($chat_id, $user_id)
     {
         return Chat::canAccess($chat_id, $user_id);
+    }
+
+    /**
+     * Message model -> array. Models serialise to "{}" otherwise, and getChatMessages()
+     * attaches full WP_User objects as sender/receiver; exposing those would leak user
+     * records (including the password hash), so only ID + display name are returned.
+     */
+    private function format_message($message)
+    {
+        $data = $message->getAttributes();
+
+        foreach (['sender', 'receiver'] as $key) {
+            if (array_key_exists($key, $data)) {
+                $user = $data[$key];
+                $data[$key] = $user instanceof \WP_User
+                    ? ['ID' => (int) $user->ID, 'display_name' => $user->display_name]
+                    : null;
+            }
+        }
+
+        return $data;
     }
 }

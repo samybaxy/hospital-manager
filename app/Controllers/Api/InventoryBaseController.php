@@ -60,11 +60,16 @@ abstract class InventoryBaseController extends BaseController
                 200
             );
         } catch (\Exception $e) {
+            // Honour 4xx codes thrown by callbacks (e.g. "not found" => 404); anything else is a 500.
+            $code = (int) $e->getCode();
+            $status = ($code >= 400 && $code < 500) ? $code : 500;
+
             return new WP_Error(
                 $error_code,
                 $error_message_prefix . ': ' . $e->getMessage(),
-                ['status' => 500]
+                ['status' => $status]
             );
         }
     }
+
 }

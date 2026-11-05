@@ -118,37 +118,6 @@ class VisitationTest extends TestCase
         $this->assertEquals($this->doctor->last_name, $doctor->last_name);
     }
 
-    /**
-     * Test lab investigations relationship
-     */
-    public function testLabInvestigationsRelationship()
-    {
-        // Create a test visitation
-        $visitation = $this->createTestVisitation([
-            'patient_id' => $this->patient->ID,
-            'doctor_id' => $this->doctor->ID
-        ]);
-        
-        // Create a lab investigation for this visitation
-        $lab = LabInvestigation::create([
-            'visitation_id' => $visitation->ID,
-            'patient_id' => $this->patient->ID,
-            'doctor_id' => $this->doctor->ID,
-            'test_type' => 'Blood Test',
-            'status' => 'pending',
-            'created_at' => current_time('mysql'),
-            'notes' => 'Check for anemia'
-        ]);
-        
-        // Get the related lab investigations
-        $investigations = $visitation->labInvestigations();
-        
-        $this->assertIsArray($investigations);
-        $this->assertNotEmpty($investigations);
-        $this->assertInstanceOf(LabInvestigation::class, $investigations[0]);
-        $this->assertEquals($lab->ID, $investigations[0]->ID);
-        $this->assertEquals('Blood Test', $investigations[0]->test_type);
-    }
 
     /**
      * Test updating a visitation

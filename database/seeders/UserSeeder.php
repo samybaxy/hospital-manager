@@ -112,6 +112,10 @@ class UserSeeder extends Seeder
             }
         }
         
+        // Readable names everywhere the app shows display_name (visits, audit, chats)
+        $renamed = self::normalizeDisplayNames();
+        $this->log("Set display names for {$renamed} users");
+
         // Create one demo user for each role with known credentials
         $this->log("Creating demo users with known credentials...");
         
@@ -150,6 +154,41 @@ class UserSeeder extends Seeder
         return $total_success > 0;
     }
     
+    /**
+     * Give users whose display_name is still their login a readable name built from
+     * first_name/last_name ("Dr. First Last" for doctors). Idempotent: users with a
+     * real display name are left alone.
+     *
+     * @return int Number of users updated
+     */
+    public static function normalizeDisplayNames()
+    {
+        global $wpdb;
+        $users = $wpdb->get_results("SELECT ID, user_login FROM {$wpdb->users} WHERE display_name = user_login");
+        $updated = 0;
+
+        foreach ($users as $row) {
+            $first = trim((string) get_user_meta($row->ID, 'first_name', true));
+            $last = trim((string) get_user_meta($row->ID, 'last_name', true));
+            if ($first === '' && $last === '') {
+                continue;
+            }
+
+            $user = get_userdata($row->ID);
+            $name = trim("{$first} {$last}");
+            if ($user && in_array('doctor', (array) $user->roles, true)) {
+                $name = "Dr. {$name}";
+            }
+
+            $result = wp_update_user(['ID' => $row->ID, 'display_name' => $name, 'nickname' => $name]);
+            if (!is_wp_error($result)) {
+                $updated++;
+            }
+        }
+
+        return $updated;
+    }
+
     /**
      * Ensure all required roles exist
      */

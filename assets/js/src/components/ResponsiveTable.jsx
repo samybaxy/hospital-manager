@@ -1,6 +1,23 @@
 import React from 'react';
 import { useResponsiveTable } from '../hooks/useResponsiveTable';
 
+const pagerButton =
+  'inline-flex items-center justify-center min-h-11 sm:min-h-9 px-4 sm:px-3 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed';
+
+/** The row-actions column: id 'actions' (or meta.isActions). */
+const isActionsColumn = (column) => column.id === 'actions' || column.columnDef.meta?.isActions === true;
+
+/** Label for a field in the phone card view (header text, meta.label, or the id). */
+const columnLabel = (column) => {
+  const def = column.columnDef;
+  if (def.meta?.label) return def.meta.label;
+  if (typeof def.header === 'string') return def.header;
+  return String(column.id || '')
+    .replace(/[_.]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/^./, (c) => c.toUpperCase());
+};
+
 const ResponsiveTable = ({
   data = [],
   columns = [],
@@ -52,45 +69,46 @@ const ResponsiveTable = ({
 
   return (
     <div className={`space-y-4 ${containerClassName}`}>
-      {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-500 p-2 bg-yellow-50 rounded">
-          Screen: {isMobile ? 'Mobile' : isTablet ? 'Tablet' : 'Desktop'} | 
-          Width: {typeof window !== 'undefined' ? window.innerWidth : 'Unknown'}px |
-          Columns: {table.getAllColumns().length}
-        </div>
-      )}
-      
-      {/* Mobile Card View (< 640px) */}
+      {/* Mobile Card View (< 640px): one card per row, label above/beside value,
+          the actions column as full-width 44px buttons at the bottom */}
       <div className="block sm:hidden">
-        <div className="space-y-3">
-          {table.getRowModel().rows.map((row) => (
-            <div
-              key={row.id}
-              className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm ${
-                onRowClick ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : ''
-              }`}
-              onClick={() => onRowClick && onRowClick(row.original)}
-            >
-              {row.getVisibleCells().map((cell) => {
-                const column = cell.column.columnDef;
-                // Skip columns that should be hidden on mobile
-                if (column.meta?.hideOnMobile) return null;
-                
-                return (
-                  <div key={cell.id} className="flex justify-between items-start py-1.5 border-b border-gray-100 last:border-b-0">
-                    <span className="text-sm font-medium text-gray-600 min-w-0 flex-1 pr-3">
-                      {typeof column.header === 'string' ? column.header : 'Field'}:
-                    </span>
-                    <div className="text-sm text-gray-900 min-w-0 flex-1 text-right">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        <ul className="space-y-3">
+          {table.getRowModel().rows.map((row) => {
+            const cells = row.getVisibleCells().filter((cell) => !cell.column.columnDef.meta?.hideOnMobile);
+            const actionCells = cells.filter((cell) => isActionsColumn(cell.column));
+            const fieldCells = cells.filter((cell) => !isActionsColumn(cell.column));
+            return (
+              <li
+                key={row.id}
+                className={`bg-white p-4 rounded-lg border border-gray-200 shadow-sm ${
+                  onRowClick ? 'cursor-pointer active:bg-gray-50' : ''
+                }`}
+                onClick={() => onRowClick && onRowClick(row.original)}
+              >
+                <dl className="divide-y divide-gray-100">
+                  {fieldCells.map((cell) => (
+                    <div key={cell.id} className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 py-2 first:pt-0">
+                      <dt className="text-sm font-medium text-gray-500">{columnLabel(cell.column)}</dt>
+                      <dd className="text-sm text-gray-900 min-w-0 text-right break-words [overflow-wrap:anywhere] ml-auto">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </dd>
                     </div>
+                  ))}
+                </dl>
+                {actionCells.length > 0 && (
+                  <div
+                    className="mt-3 pt-3 border-t border-gray-100 [&_div]:flex [&_div]:w-full [&_div]:flex-wrap [&_div]:gap-2 [&_div>*]:!ml-0 [&_div>*]:!mr-0 [&_a]:min-h-11 [&_button]:min-h-11 [&_a]:flex-1 [&_button]:flex-1 [&_a]:justify-center [&_button]:justify-center [&_a]:px-4 [&_button]:px-4 [&_a]:text-sm [&_button]:text-sm"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {actionCells.map((cell) => (
+                      <div key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       </div>
 
       {/* Tablet/Desktop Table View (>= 640px) */}
@@ -163,7 +181,7 @@ const ResponsiveTable = ({
                     return (
                       <td key={cell.id} className={`px-4 lg:px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${
                         column.meta?.headerAlign || 'text-left'
-                      }`}>
+                      } ${isActionsColumn(cell.column) ? '[&_a]:min-h-7 [&_button]:min-h-7' : ''}`}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     );
@@ -175,52 +193,52 @@ const ResponsiveTable = ({
         </div>
       </div>
 
-      {/* Pagination */}
-      {showPagination && enablePagination && (
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
-          <div className="text-sm text-gray-700">
+      {/* Pagination: Prev / page / Next on phones (First/Last from sm) */}
+      {showPagination && enablePagination && table.getPageCount() > 0 && (
+        <nav className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2 sm:pt-4" aria-label="Pagination">
+          <p className="text-sm text-gray-700 text-center">
             Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{' '}
             {Math.min(
               (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
               table.getFilteredRowModel().rows.length
             )}{' '}
             of {table.getFilteredRowModel().rows.length} results
-          </div>
-          
-          <div className="flex items-center space-x-2">
+          </p>
+
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
             <button
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${pagerButton} hidden sm:inline-flex`}
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
               First
             </button>
             <button
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={pagerButton}
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              Previous
+              <span aria-hidden="true" className="sm:hidden">‹&nbsp;</span>Previous
             </button>
-            <span className="px-3 py-2 text-sm font-medium text-gray-700">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            <span className="px-2 text-sm font-medium text-gray-700 whitespace-nowrap">
+              {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
             </span>
             <button
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={pagerButton}
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              Next
+              Next<span aria-hidden="true" className="sm:hidden">&nbsp;›</span>
             </button>
             <button
-              className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${pagerButton} hidden sm:inline-flex`}
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >
               Last
             </button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );

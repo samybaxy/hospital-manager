@@ -12,7 +12,7 @@ const ViewVisitDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const { hasAccess, role } = useUserAccess();
+  const { hasAccess, role, canEditVisit } = useUserAccess();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -47,47 +47,15 @@ const ViewVisitDetails = () => {
 
   // Check permissions once when data is loaded
   const hasVisitAccess = useMemo(() => {
-    if (!visit) return false;
-    
-    // Admins can view any visit
-    if (role === 'administrator') return true;
-    
-    // Doctors can view visits they conducted
-    if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
-    
-    // Developers can view any visit
-    if (role === 'developer') return true;
-    
-    // Nurses can view any visit
-    if (role === 'hospital_nurse') return true;
-    
-    // Hospital staff can view any visit
-    if (role === 'hospital_staff') return true;
-    
-    // Patients can view their own visits - backend already handles this restriction
-    // If the backend returned the data, the patient has permission to view it
-    if (role === 'patient') return true;
-    
-    return false;
-  }, [visit, role, user?.ID]);
+    // The API only returns visits this user may see (patients: their own)
+    return Boolean(visit) && hasAccess('visitations');
+  }, [visit, hasAccess]);
 
   const hasEditAccess = useMemo(() => {
-    if (!visit) return false;
-    
-    // Admins can edit any visit
-    if (role === 'administrator') return true;
-    
-    // Doctors can edit visits they conducted
-    if (role === 'doctor' && visit.doctor_id === user?.ID) return true;
-    
-    // Developers can edit any visit
-    if (role === 'developer') return true;
-    
-    // Nurses can edit any visit
-    if (role === 'hospital_nurse') return true;
-    
-    return false;
-  }, [visit, role, user?.ID]);
+    // edit_visitation comes from GET /access, derived from the API's AccessPolicy
+    // Doctors: only visits where they are the visit's doctor (enforced by the API too)
+    return canEditVisit(visit);
+  }, [visit, canEditVisit]);
 
   // Format date and time for display
   const formatDateTime = useCallback((date, time) => {
@@ -195,13 +163,13 @@ const ViewVisitDetails = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-6 text-white">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold">Visit Details #{visit.ID}</h1>
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg p-4 sm:p-6 text-white">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold break-words">Visit Details #{visit.ID}</h1>
             <p className="text-indigo-100 mt-2">Complete information about this patient visit</p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-3">
             {hasEditAccess && (
               <Button
                 variant="secondary"

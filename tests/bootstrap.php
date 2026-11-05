@@ -1,4 +1,9 @@
 <?php
+// Command-line only: this script changes or wipes data and must never run from a web request.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 /**
  * PHPUnit bootstrap file.
  *
@@ -7,6 +12,23 @@
 
 // Composer autoloader must be loaded before WP's bootstrap.
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+
+// getallheaders() only exists under a web SAPI, but auth code reads request
+// headers through it. Same result, built from $_SERVER['HTTP_*'].
+if ( ! function_exists( 'getallheaders' ) ) {
+	function getallheaders() {
+		$headers = [];
+		foreach ( $_SERVER as $key => $value ) {
+			if ( strpos( $key, 'HTTP_' ) === 0 ) {
+				$name             = str_replace( ' ', '-', ucwords( strtolower( str_replace( '_', ' ', substr( $key, 5 ) ) ) ) );
+				// Keep the casing clients actually send (X-WP-Nonce, not X-Wp-Nonce).
+				$name             = preg_replace( '/^X-Wp-/', 'X-WP-', $name );
+				$headers[ $name ] = $value;
+			}
+		}
+		return $headers;
+	}
+}
 
 // Load the PHPUnit Polyfills for WordPress testing
 define( 'WP_TESTS_PHPUNIT_POLYFILLS_PATH', dirname( __DIR__ ) . '/vendor/yoast/phpunit-polyfills/src/' );
@@ -33,13 +55,18 @@ if ( ! file_exists( "{$_tests_dir}/includes/functions.php" ) ) {
     $db_user = getenv('WP_TEST_DB_USER') ?: 'root';
     $db_pass = getenv('WP_TEST_DB_PASS') ?: 'root';
     
-    // Check if we're in Local by Flywheel environment
-    $local_socket = '/home/samuel/.config/Local/run/GG3TfnWBh/mysql/mysqld.sock';
-    if (file_exists($local_socket)) {
-        $db_host = "localhost:{$local_socket}";
-        echo "Using Local by Flywheel MySQL socket: {$local_socket}" . PHP_EOL;
-    } else {
-        $db_host = getenv('WP_TEST_DB_HOST') ?: 'localhost';
+    // DB host: explicit WP_TEST_DB_HOST wins; otherwise use the MySQL socket the
+    // running PHP is configured with (Local by Flywheel sets mysqli.default_socket
+    // per site, so this follows whichever site's PHP runs the tests).
+    $db_host = getenv('WP_TEST_DB_HOST');
+    if (!$db_host) {
+        $local_socket = ini_get('mysqli.default_socket');
+        if ($local_socket && file_exists($local_socket)) {
+            $db_host = "localhost:{$local_socket}";
+            echo "Using MySQL socket: {$local_socket}" . PHP_EOL;
+        } else {
+            $db_host = 'localhost';
+        }
     }
     
     $wp_version = getenv('WP_VERSION') ?: 'latest';

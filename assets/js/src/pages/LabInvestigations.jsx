@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import StatusMessage from '../components/StatusMessage';
 // Modified import to ensure it's using the latest version
 import laboratoryService from '../services/laboratoryService';
+import { api } from '../services/apiService';
 // Import new components
 import AddLabInvestigation from '../components/AddLabInvestigation';
 import EditLabInvestigation from '../components/EditLabInvestigation';
@@ -59,7 +60,7 @@ const LabInvestigations = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isPatient } = useUserAccess();
+  const { isPatient, hasAccess } = useUserAccess();
   
   // Extract the patient role check to avoid function recreation in useCallback
   const userIsPatient = isPatient();
@@ -140,7 +141,7 @@ const LabInvestigations = () => {
       },
       // Hide on mobile only
       meta: {
-        hideOnMobile: true,
+        hideOnMobile: false,
         hideOnTablet: false,
         cardLabel: 'Patient'
       },
@@ -188,7 +189,7 @@ const LabInvestigations = () => {
       ),
       // Hide on mobile only
       meta: {
-        hideOnMobile: true,
+        hideOnMobile: false,
         hideOnTablet: false,
         cardLabel: 'Date'
       },
@@ -237,7 +238,7 @@ const LabInvestigations = () => {
       },
       // Hide on mobile AND tablet
       meta: {
-        hideOnMobile: true,
+        hideOnMobile: false,
         hideOnTablet: true,
         cardLabel: 'Priority'
       },
@@ -252,34 +253,34 @@ const LabInvestigations = () => {
           <div className="flex justify-end space-x-1 sm:space-x-2">
             <button
               onClick={() => { openModal(investigation, 'view'); }}
-              className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-2.5 py-1.5 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              <span className="hidden sm:inline">View</span>
+              <span>View</span>
             </button>
             {(investigation.status === 'completed' || investigation.status === 'verified') && (
               <button
                 onClick={() => { openModal(investigation, 'results'); }}
-                className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="hidden sm:inline">Results</span>
+                <span>Results</span>
               </button>
             )}
-            {!isPatient() && (
+            {hasAccess('edit_lab_results') && (
               <button
                 onClick={() => handleOpenEditModal(investigation)}
-                className="inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-2.5 py-1.5 border border-indigo-300 text-xs font-medium rounded text-indigo-700 bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span className="hidden sm:inline">Edit</span>
+                <span>Edit</span>
               </button>
             )}
           </div>
@@ -322,58 +323,14 @@ const LabInvestigations = () => {
       // Note: Patient filtering is now handled automatically by the backend for security
       // No need to pass patient_id parameter - the backend will enforce it based on user role
       
-      // Use URLSearchParams to construct proper query string
-      const queryParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          queryParams.append(key, value);
-        }
-      });
-      
-      // Modify the service call to ensure search parameter is included
-      // We'll directly fetch using fetch API to diagnose the issue
-      const queryString = queryParams.toString();
-      const apiUrl = `/wp-json/hospital-manager/v1/lab-investigations?${queryString}`;
-      
-      try {
-        // Create a custom fetch implementation to log and ensure all params are sent
-        const directResponse = await fetch(apiUrl);
-        const directData = await directResponse.json();
-        
-        // Use the direct fetch result instead of the service call
-        const response = {
-          data: directData.data || [],
-          pagination: directData.pagination || {}
-        };
-        
-        setInvestigations(response.data || []);
-        
-        // Handle pagination data from API response
-        if (response.pagination) {
-          setTotalPages(response.pagination.total_pages || 1);
-          setTotalRecords(response.pagination.total || 0);
-          setCurrentPage(response.pagination.current_page || page);
-        } else {
-          // Fallback if pagination object is missing
-          setTotalPages(Math.ceil((response.total || 0) / perPage));
-          setTotalRecords(response.total || 0);
-          setCurrentPage(page);
-        }
-        
-        // Show success message only on initial load (page 1) and if there are investigations
-        if (page === 1 && response.data && response.data.length > 0) {
-          showStatusMessage(`Lab Investigations data loaded successfully (${response.data.length} records found)`, 'success');
-        }
-        
-        setError(null);
-        setLoading(false);
-        return; // Skip the original service call
-      } catch (fetchErr) {
-        console.error('Direct fetch error:', fetchErr);
-        // Continue with original service call as fallback
-      }
-      
-      const response = await laboratoryService.getInvestigations(params);
+      // Shared client: sends the session nonce and handles an expired session.
+      // (search is passed through; laboratoryService.getInvestigations drops it.)
+      const { data: payload } = await api.get('/lab-investigations', params);
+      const response = {
+        data: (payload && payload.data) || [],
+        pagination: (payload && payload.pagination) || null,
+        total: payload && payload.total,
+      };
       
       setInvestigations(response.data || []);
       

@@ -294,7 +294,7 @@ class Appointment extends BaseModel
         if (isset($this->attributes['ID']) && !empty($this->attributes['ID'])) {
             // This is an update
             $formats = array_map(function($value) {
-                return is_numeric($value) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($value);
             }, array_values($data));
             
             $result = $wpdb->update(
@@ -315,7 +315,7 @@ class Appointment extends BaseModel
             // This is an insert
             $data['created_at'] = current_time('mysql');
             $formats = array_map(function($value) {
-                return is_numeric($value) ? '%d' : '%s';
+                return \HospitalManager\Models\BaseModel::sqlFormat($value);
             }, array_values($data));
             
             $result = $wpdb->insert(
@@ -440,64 +440,21 @@ class Appointment extends BaseModel
                     date('g:i A', strtotime($time))
                 );
                 
-                // Get the notifications table name directly
-                $notifications_table = $wpdb->prefix . 'hm_notifications';
-                
-                // Check if the table exists, if not, we'll skip inserting notifications
-                if ($wpdb->get_var("SHOW TABLES LIKE '{$notifications_table}'") === $notifications_table) {
-                    // Insert notification directly using wpdb
-                    $result = $wpdb->insert(
-                        $notifications_table,
-                        [
-                            'user_id' => $doctor_user_id,
-                            'type' => 'appointment',
-                            'title' => $notification_title,
-                            'message' => $notification_message,
-                            'is_read' => 0,
-                            'created_at' => current_time('mysql'),
-                            'updated_at' => current_time('mysql')
-                        ],
-                        [
-                            '%d', '%s', '%s', '%s', '%d', '%s', '%s'
-                        ]
-                    );
-                    
-                    if ($result) {
-                        $notification_id = $wpdb->insert_id;
-                        
-                        // Insert notification meta data
-                        $notifications_meta_table = $wpdb->prefix . 'hm_notification_meta';
-                        
-                        if ($wpdb->get_var("SHOW TABLES LIKE '{$notifications_meta_table}'") === $notifications_meta_table) {
-                            // Insert meta for appointment_id
-                            $wpdb->insert(
-                                $notifications_meta_table,
-                                [
-                                    'notification_id' => $notification_id,
-                                    'meta_key' => 'appointment_id',
-                                    'meta_value' => $appointment_id
-                                ],
-                                ['%d', '%s', '%s']
-                            );
-                            
-                            // Insert other meta as needed
-                            $wpdb->insert(
-                                $notifications_meta_table,
-                                [
-                                    'notification_id' => $notification_id,
-                                    'meta_key' => 'appointment_date',
-                                    'meta_value' => $date
-                                ],
-                                ['%d', '%s', '%s']
-                            );
-                        }
-                        
-                        error_log("Direct notification insertion successful: ID $notification_id");
-                        return true;
-                    }
-                } else {
-                    error_log("Notifications table not found: $notifications_table");
+                // Via NotificationService (hm_notifications). The hand-written insert
+                // used columns that don't exist (is_read, updated_at) plus a non-existent
+                // hm_notification_meta table, so doctors never got booking notifications.
+                $notification = \HospitalManager\Services\NotificationService::create(
+                    (int) $doctor_user_id,
+                    'appointment',
+                    $notification_title,
+                    $notification_message,
+                    ['appointment_id' => (int) $appointment_id, 'appointment_date' => $date]
+                );
+
+                if (!is_wp_error($notification)) {
+                    return true;
                 }
+                error_log('Appointment notification failed: ' . $notification->get_error_message());
             } else {
                 error_log("Skipping notification - invalid doctor user ID: $doctor_user_id");
             }

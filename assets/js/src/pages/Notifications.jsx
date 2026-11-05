@@ -1,76 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import { api } from '../services/apiService';
+
+/** `read` comes back as "0"/"1" (or a boolean); normalise it. */
+const isRead = (notification) => {
+  const value = notification.read ?? isRead(notification);
+  return value === true || value === 1 || value === '1';
+};
+
+const TYPE_LABELS = {
+  appointment: 'Appointment',
+  lab_result: 'Lab result',
+  visitation: 'Visit',
+  message: 'Message',
+  inventory: 'Inventory',
+  system: 'System',
+};
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get('/notifications', { page, per_page: 20 });
+      const data = response.data || {};
+      // { data: [...], meta: { last_page, ... } }
+      setNotifications(Array.isArray(data.data) ? data.data : []);
+      setLastPage((data.meta && data.meta.last_page) || 1);
+    } catch (err) {
+      setError('Failed to fetch notifications');
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
 
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const { apiUrl, nonce } = window.hospitalManagerData || {};
-        
-        if (!apiUrl) {
-          throw new Error('API URL not available');
-        }
-        
-        const response = await fetch(`${apiUrl}/notifications`, {
-          headers: {
-            'X-WP-Nonce': nonce,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch notifications');
-        }
-        
-        const data = await response.json();
-        setNotifications(data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-    
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
+
+  const markLocal = (ids) =>
+    setNotifications((prev) =>
+      prev.map((n) => (ids === 'all' || ids.includes(n.ID) ? { ...n, read: '1' } : n))
+    );
 
   const markAsRead = async (ID) => {
     try {
-      const { apiUrl, nonce } = window.hospitalManagerData || {};
-      
-      if (!apiUrl) {
-        throw new Error('API URL not available');
-      }
-      
-      const response = await fetch(`${apiUrl}/notifications/${ID}/read`, {
-        method: 'POST',
-        headers: {
-          'X-WP-Nonce': nonce,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to mark notification as read');
-      }
-      
-      // Update the notification in the local state
-      setNotifications(prevNotifications => 
-        prevNotifications.map(notification => 
-          notification.ID === ID 
-            ? { ...notification, is_read: true } 
-            : notification
-        )
-      );
+      setActionError(null);
+      await api.post(`/notifications/${ID}/read`);
+      markLocal([ID]);
     } catch (err) {
-      console.error('Error marking notification as read:', err);
-      setError(err.message);
+      setActionError('Failed to mark notification as read');
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      setActionError(null);
+      await api.post('/notifications/mark-all-read');
+      markLocal('all');
+    } catch (err) {
+      // Older servers lack the bulk route: mark the visible ones one by one.
+      if (err.response && err.response.status === 404) {
+        const unread = notifications.filter((n) => !isRead(n)).map((n) => n.ID);
+        try {
+          await Promise.all(unread.map((id) => api.post(`/notifications/${id}/read`)));
+          markLocal(unread);
+          return;
+        } catch (e) { /* fall through */ }
+      }
+      setActionError('Failed to mark all notifications as read');
     }
   };
   
@@ -89,7 +95,7 @@ const Notifications = () => {
         <Button 
           variant="primary" 
           className="mt-4"
-          onClick={() => window.location.reload()}
+          onClick={fetchNotifications}
         >
           Try Again
         </Button>
@@ -100,40 +106,17 @@ const Notifications = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Notifications</h1>
-      <p className="text-lg text-gray-600">Stay updated with latest hospital activities</p>
+      <p className="text-base sm:text-lg text-gray-600">Stay updated with latest hospital activities</p>
       
+      {actionError && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3">{actionError}</div>
+      )}
+
       <div className="flex justify-end mb-4">
         <Button 
           variant="secondary"
-          onClick={async () => {
-            try {
-              const { apiUrl, nonce } = window.hospitalManagerData || {};
-              
-              if (!apiUrl) {
-                throw new Error('API URL not available');
-              }
-              
-              const response = await fetch(`${apiUrl}/notifications/mark-all-read`, {
-                method: 'POST',
-                headers: {
-                  'X-WP-Nonce': nonce,
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              if (!response.ok) {
-                throw new Error('Failed to mark all notifications as read');
-              }
-              
-              // Update all notifications as read in the local state
-              setNotifications(prevNotifications => 
-                prevNotifications.map(notification => ({ ...notification, is_read: true }))
-              );
-            } catch (err) {
-              console.error('Error marking all notifications as read:', err);
-              setError(err.message);
-            }
-          }}
+          onClick={markAllAsRead}
+          disabled={!notifications.some((n) => !isRead(n))}
         >
           Mark All as Read
         </Button>
@@ -145,11 +128,11 @@ const Notifications = () => {
             notifications.map((notification) => (
               <div 
                 key={notification.ID} 
-                className={`p-4 ${notification.is_read ? 'bg-white' : 'bg-blue-50'}`}
+                className={`p-4 ${isRead(notification) ? 'bg-white' : 'bg-blue-50'}`}
               >
                 <div className="sm:flex sm:justify-between sm:items-start">
                   <div className="sm:flex-1">
-                    <h3 className={`text-base font-medium ${notification.is_read ? 'text-gray-900' : 'text-blue-800'}`}>
+                    <h3 className={`text-base font-medium ${isRead(notification) ? 'text-gray-900' : 'text-blue-800'}`}>
                       {notification.title}
                     </h3>
                     <p className="mt-1 text-sm text-gray-600">
@@ -157,20 +140,18 @@ const Notifications = () => {
                     </p>
                     <div className="mt-2 flex items-center text-xs text-gray-500">
                       <span>{notification.created_at}</span>
-                      <span className="mx-2">•</span>
-                      <span>{notification.sender}</span>
-                      {notification.category && (
+                      {notification.type && (
                         <>
                           <span className="mx-2">•</span>
                           <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100">
-                            {notification.category}
+                            {TYPE_LABELS[notification.type] || notification.type}
                           </span>
                         </>
                       )}
                     </div>
                   </div>
                   <div className="mt-4 sm:mt-0 sm:ml-6">
-                    {!notification.is_read && (
+                    {!isRead(notification) && (
                       <Button 
                         variant="secondary" 
                         size="sm"
@@ -190,6 +171,18 @@ const Notifications = () => {
           )}
         </div>
       </Card>
+
+      {lastPage > 1 && (
+        <div className="flex justify-between items-center">
+          <Button variant="secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm text-gray-600">Page {page} of {lastPage}</span>
+          <Button variant="secondary" disabled={page >= lastPage} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

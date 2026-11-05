@@ -28,82 +28,98 @@ class LabResultService extends BaseService
             return false;
         }
 
-        // Get patient and doctor info for notifications
-        $patient = Patient::find($lab->attributes['patient_id']);
-        $doctor = Doctor::find($lab->attributes['doctor_id']);
+        self::sendResultNotifications($lab);
 
-        // Create notification for patient
-        if ($patient) {
+        return true;
+    }
+
+    /**
+     * Notify the patient and requesting doctor that results are ready, and audit it.
+     * Does not modify the investigation.
+     *
+     * @param LabInvestigation $lab
+     */
+    private static function sendResultNotifications($lab)
+    {
+        // Get patient and doctor info for notifications
+        $patient = Patient::find($lab->getAttributes()['patient_id']);
+        $doctor = Doctor::find($lab->getAttributes()['doctor_id']);
+
+        // Notifications go to WordPress users. Never fall back to the patient/doctor
+        // *record* ID: that would notify whichever user happens to have that ID.
+        $patient_user_id = $patient ? (int) $patient->user_id : 0;
+        $doctor_user_id = $doctor ? (int) $doctor->user_id : 0;
+
+        // Create notification for patient (only if they have a portal account)
+        if ($patient_user_id > 0) {
             NotificationService::create(
-                $patient->user_id ?? $patient->ID,
+                $patient_user_id,
                 'lab_results',
                 'Lab Results Available',
                 "Your lab test results are now available",
                 [
-                    'lab_result_id' => $lab->attributes['ID'],
-                    'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                    'is_critical' => $lab->attributes['is_critical'] ?? 0,
-                    'is_abnormal' => $lab->attributes['is_abnormal'] ?? 0
+                    'lab_result_id' => $lab->getAttributes()['ID'],
+                    'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                    'is_critical' => $lab->getAttributes()['is_critical'] ?? 0,
+                    'is_abnormal' => $lab->getAttributes()['is_abnormal'] ?? 0
                 ]
             );
 
             // Send real-time notification
             WebSocketService::sendMessage('lab_results', [
-                'lab_result_id' => $lab->attributes['ID'],
-                'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                'patient_id' => $lab->attributes['patient_id'],
-                'is_critical' => $lab->attributes['is_critical'] ?? 0,
-                'is_abnormal' => $lab->attributes['is_abnormal'] ?? 0
-            ], $patient->user_id ?? $patient->ID);
+                'lab_result_id' => $lab->getAttributes()['ID'],
+                'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                'patient_id' => $lab->getAttributes()['patient_id'],
+                'is_critical' => $lab->getAttributes()['is_critical'] ?? 0,
+                'is_abnormal' => $lab->getAttributes()['is_abnormal'] ?? 0
+            ], $patient_user_id, false); // notification already created above
         }
 
         // Also notify the requesting doctor
-        if ($doctor && $lab->attributes['doctor_id']) {
+        if ($doctor_user_id > 0) {
             $message = "Lab results for patient are now available";
-            if ($lab->attributes['is_critical']) {
+            if ($lab->getAttributes()['is_critical']) {
                 $message = "CRITICAL: Lab results for patient require immediate attention";
-            } elseif ($lab->attributes['is_abnormal']) {
+            } elseif ($lab->getAttributes()['is_abnormal']) {
                 $message = "ABNORMAL: Lab results for patient are outside normal range";
             }
 
             NotificationService::create(
-                $doctor->user_id ?? $doctor->ID,
+                $doctor_user_id,
                 'lab_results',
-                $lab->attributes['is_critical'] ? 'CRITICAL Lab Results' : 'Lab Results Ready',
+                $lab->getAttributes()['is_critical'] ? 'CRITICAL Lab Results' : 'Lab Results Ready',
                 $message,
                 [
-                    'lab_result_id' => $lab->attributes['ID'],
-                    'patient_id' => $lab->attributes['patient_id'],
-                    'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                    'is_critical' => $lab->attributes['is_critical'] ?? 0,
-                    'is_abnormal' => $lab->attributes['is_abnormal'] ?? 0
+                    'lab_result_id' => $lab->getAttributes()['ID'],
+                    'patient_id' => $lab->getAttributes()['patient_id'],
+                    'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                    'is_critical' => $lab->getAttributes()['is_critical'] ?? 0,
+                    'is_abnormal' => $lab->getAttributes()['is_abnormal'] ?? 0
                 ]
             );
 
             WebSocketService::sendMessage('lab_results', [
-                'lab_result_id' => $lab->attributes['ID'],
-                'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                'patient_id' => $lab->attributes['patient_id'],
-                'is_critical' => $lab->attributes['is_critical'] ?? 0,
-                'is_abnormal' => $lab->attributes['is_abnormal'] ?? 0
-            ], $doctor->user_id ?? $doctor->ID);
+                'lab_result_id' => $lab->getAttributes()['ID'],
+                'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                'patient_id' => $lab->getAttributes()['patient_id'],
+                'is_critical' => $lab->getAttributes()['is_critical'] ?? 0,
+                'is_abnormal' => $lab->getAttributes()['is_abnormal'] ?? 0
+            ], $doctor_user_id, false); // notification already created above
         }
 
         // Log the action
         AuditLogger::log(
             'update_lab_results',
             'lab_investigation',
-            $lab->attributes['ID'],
+            $lab->getAttributes()['ID'],
             [
-                'patient_id' => $lab->attributes['patient_id'],
-                'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                'is_critical' => $lab->attributes['is_critical'] ?? 0,
-                'is_abnormal' => $lab->attributes['is_abnormal'] ?? 0,
+                'patient_id' => $lab->getAttributes()['patient_id'],
+                'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                'is_critical' => $lab->getAttributes()['is_critical'] ?? 0,
+                'is_abnormal' => $lab->getAttributes()['is_abnormal'] ?? 0,
                 'updated_by' => get_current_user_id()
             ]
         );
-
-        return true;
     }
 
     /**
@@ -125,7 +141,7 @@ class LabResultService extends BaseService
                 'New Lab Test Request',
                 "New lab test requested for patient",
                 [
-                    'lab_id' => $lab->attributes['ID'],
+                    'lab_id' => $lab->getAttributes()['ID'],
                     'patient_id' => $data['patient_id'],
                     'sample_type' => $data['sample_type'] ?? 'Lab Test',
                     'visitation_id' => $data['visitation_id'] ?? null
@@ -133,7 +149,7 @@ class LabResultService extends BaseService
             );
 
             WebSocketService::sendMessage('lab_request', [
-                'lab_id' => $lab->attributes['ID'],
+                'lab_id' => $lab->getAttributes()['ID'],
                 'sample_type' => $data['sample_type'] ?? 'Lab Test',
                 'patient_id' => $data['patient_id'],
                 'visitation_id' => $data['visitation_id'] ?? null
@@ -150,14 +166,14 @@ class LabResultService extends BaseService
                     'New Lab Test Request',
                     "New lab test request needs assignment",
                     [
-                        'lab_id' => $lab->attributes['ID'],
+                        'lab_id' => $lab->getAttributes()['ID'],
                         'patient_id' => $data['patient_id'],
                         'sample_type' => $data['sample_type'] ?? 'Lab Test'
                     ]
                 );
 
                 WebSocketService::sendMessage('lab_request', [
-                    'lab_id' => $lab->attributes['ID'],
+                    'lab_id' => $lab->getAttributes()['ID'],
                     'sample_type' => $data['sample_type'] ?? 'Lab Test',
                     'patient_id' => $data['patient_id']
                 ], $tech->ID);
@@ -168,7 +184,7 @@ class LabResultService extends BaseService
         AuditLogger::log(
             'request_lab_investigation',
             'lab_investigation',
-            $lab->attributes['ID'],
+            $lab->getAttributes()['ID'],
             [
                 'patient_id' => $data['patient_id'],
                 'sample_type' => $data['sample_type'] ?? 'Lab Test',
@@ -192,31 +208,33 @@ class LabResultService extends BaseService
                 return false;
             }
             
-            if (!isset($lab->attributes) || !is_array($lab->attributes)) {
-                error_log("LabResultService::notifyLabRequest - Lab investigation attributes not set or not array");
-                error_log("LabResultService::notifyLabRequest - Lab object: " . print_r($lab, true));
+            // `attributes` is protected: isset($lab->attributes) from here was always
+            // false, so this method returned early and lab techs were never notified.
+            $data = $lab->getAttributes();
+            if (empty($data)) {
+                error_log("LabResultService::notifyLabRequest - Lab investigation {$labId} has no data");
                 return false;
             }
 
             // Notify the lab tech
-            if (isset($lab->attributes['lab_tech_id']) && $lab->attributes['lab_tech_id']) {
+            if (!empty($data['lab_tech_id'])) {
                 NotificationService::create(
-                    $lab->attributes['lab_tech_id'],
+                    $lab->getAttributes()['lab_tech_id'],
                     'lab_request',
                     'New Lab Test Assignment',
                     "You have been assigned a new lab test",
                     [
-                        'lab_id' => $lab->attributes['ID'],
-                        'patient_id' => $lab->attributes['patient_id'],
-                        'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test'
+                        'lab_id' => $lab->getAttributes()['ID'],
+                        'patient_id' => $lab->getAttributes()['patient_id'],
+                        'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test'
                     ]
                 );
 
                 WebSocketService::sendMessage('lab_assignment', [
-                    'lab_id' => $lab->attributes['ID'],
-                    'sample_type' => $lab->attributes['sample_type'] ?? 'Lab Test',
-                    'patient_id' => $lab->attributes['patient_id']
-                ], $lab->attributes['lab_tech_id']);
+                    'lab_id' => $lab->getAttributes()['ID'],
+                    'sample_type' => $lab->getAttributes()['sample_type'] ?? 'Lab Test',
+                    'patient_id' => $lab->getAttributes()['patient_id']
+                ], $lab->getAttributes()['lab_tech_id']);
             }
 
             return true;
@@ -231,7 +249,15 @@ class LabResultService extends BaseService
      */
     public static function notifyResultsReady($labId)
     {
-        return self::updateLabResults($labId, null);
+        // Used to call updateLabResults($labId, null), which re-saved the
+        // investigation with null results — wiping what had just been entered.
+        $lab = LabInvestigation::find($labId);
+        if (!$lab) {
+            return false;
+        }
+
+        self::sendResultNotifications($lab);
+        return true;
     }
 
     /**
@@ -297,6 +323,9 @@ class LabResultService extends BaseService
             return false;
         }
 
+        // Capture before updating — reading it afterwards logged the new status as "old"
+        $old_status = $lab->getAttributes()['status'] ?? 'unknown';
+
         $success = $lab->updateStatus($status);
         
         if ($success) {
@@ -304,11 +333,11 @@ class LabResultService extends BaseService
             AuditLogger::log(
                 'update_lab_status',
                 'lab_investigation',
-                $lab->attributes['ID'],
+                $lab->getAttributes()['ID'],
                 [
-                    'old_status' => $lab->attributes['status'] ?? 'unknown',
+                    'old_status' => $old_status,
                     'new_status' => $status,
-                    'patient_id' => $lab->attributes['patient_id'],
+                    'patient_id' => $lab->getAttributes()['patient_id'],
                     'updated_by' => get_current_user_id()
                 ]
             );

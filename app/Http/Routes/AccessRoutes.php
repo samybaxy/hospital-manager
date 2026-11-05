@@ -22,5 +22,14 @@ class AccessRoutes
                 return is_user_logged_in();
             }
         ]);
+
+        // Temporary route to sync roles - only for admins
+        register_rest_route('hospital-manager/v1', '/sync-roles', [
+            'methods' => 'POST',
+            'callback' => [$accessController, 'syncRoles'],
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            }
+        ]);
     }
 }

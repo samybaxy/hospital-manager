@@ -135,13 +135,13 @@ class AuditControllerTest extends TestCase
         $systemLogs = array_filter($data['data']['logs'], function($log) {
             // Check for entity_type no matter how it's nested
             if (is_object($log)) {
+                // Models keep their columns in protected $attributes: read them via
+                // getAttributes() (isset($log->attributes) from here is always false)
+                if (method_exists($log, 'getAttributes')) {
+                    return ($log->getAttributes()['entity_type'] ?? null) === 'system';
+                }
                 if (property_exists($log, 'entity_type')) {
                     return $log->entity_type === 'system';
-                }
-                
-                // Check if it's in the attributes property that might be exposed
-                if (property_exists($log, 'attributes') && isset($log->attributes['entity_type'])) {
-                    return $log->attributes['entity_type'] === 'system';
                 }
             } elseif (is_array($log)) {
                 if (isset($log['entity_type'])) {
@@ -253,6 +253,12 @@ class AuditControllerTest extends TestCase
             // Add more detailed debugging
             Debugger::log("Examining log:", $log);
             
+            // Models keep columns in protected $attributes; property_exists() can't
+            // see them, which silently skipped the checks below. Normalise first.
+            if (is_object($log) && method_exists($log, 'getAttributes')) {
+                $log = $log->getAttributes();
+            }
+
             // Handle both object and array format
             if (is_object($log)) {
                 // Check for entity_type and entity_id as direct properties

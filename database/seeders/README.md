@@ -81,16 +81,37 @@ wp hospital-manager seed all --fresh
 
 ## Demo Users
 
-The seeders create the following demo users for testing:
+The seeders create one demo user per role, all with the password `demo1234`:
 
-| Role         | Username      | Password  | Email                    |
-|-------------|---------------|-----------|--------------------------|
-| Administrator| admin_demo    | password | admin_demo@example.com   |
-| Doctor      | doctor_demo   | password | doctor_demo@example.com  |
-| Patient     | patient_demo  | password | patient_demo@example.com |
-| Receptionist| reception_demo| password | reception_demo@example.com |
-| Lab Tech    | lab_demo      | password | lab_demo@example.com     |
-| Desk Officer| desk_demo     | password | desk_demo@example.com    |
+| Role              | Username                 | Email                         |
+|-------------------|--------------------------|-------------------------------|
+| Administrator     | demo_administrator       | administrator@example.com     |
+| Doctor            | demo_doctor              | doctor@example.com            |
+| Patient           | demo_patient             | patient@example.com           |
+| Lab Technician    | demo_lab_tech            | lab_tech@example.com          |
+| Nurse             | demo_hospital_nurse      | hospital_nurse@example.com    |
+| Hospital Staff    | demo_hospital_staff      | hospital_staff@example.com    |
+| Pharmacy Staff    | demo_pharmacy_staff      | pharmacy_staff@example.com    |
+| Inventory Manager | demo_inventory_manager   | inventory_manager@example.com |
+| Developer         | demo_developer           | developer@example.com         |
+
+`DemoDataSeeder` links `demo_doctor` and `demo_patient` (shared appointments, visits,
+labs, reports and a chat) so both dashboards have data. All other seeded users use the
+password `hospital123`.
+
+## Rebuilding Clinical Data
+
+To regenerate appointments, visits, labs, radiology, reports, chats, notifications and
+audit logs for the **existing** users/patients/doctors (logins and record IDs stay the
+same):
+
+```bash
+php database/seeders.php clinical      # or: composer seed:clinical
+```
+
+This empties those tables first (anything entered through the app in them is lost) and
+clears the plugin's query caches. If there's no system `php`, use `bin/local-php.sh`
+instead of `php` (see the main README).
 
 ## Data Volume
 

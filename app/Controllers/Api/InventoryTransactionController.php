@@ -158,11 +158,13 @@ class InventoryTransactionController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'transactions_fetch_error',
-                'Failed to fetch transactions: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('transactions_fetch_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to fetch transactions: ' . $e->getMessage());
+            return new WP_Error('transactions_fetch_error', 'Failed to fetch transactions.', ['status' => 500]);
         }
     }
 
@@ -192,11 +194,13 @@ class InventoryTransactionController extends InventoryBaseController
             );
 
         } catch (Exception $e) {
-            return new WP_Error(
-                'transaction_create_error',
-                'Failed to create transaction: ' . $e->getMessage(),
-                ['status' => 500]
-            );
+            // 4xx codes thrown by the service (not found, wrong status, bad input) pass through
+            $code = (int) $e->getCode();
+            if ($code >= 400 && $code < 500) {
+                return new WP_Error('transaction_create_error', $e->getMessage(), ['status' => $code]);
+            }
+            error_log('Hospital Manager: Failed to create transaction: ' . $e->getMessage());
+            return new WP_Error('transaction_create_error', 'Failed to create transaction.', ['status' => 500]);
         }
     }
 }

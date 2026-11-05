@@ -68,6 +68,11 @@ class AuditLogger
                 'created_at' => current_time('mysql')
             ]);
 
+            // hm_audit_logs has no ip_address / user_agent columns: inserting them made
+            // every audit write fail ("Unknown column 'ip_address'"), silently, because
+            // of the catch below. Store them inside the details JSON instead.
+            $logData = self::moveRequestMetaIntoDetails($logData);
+
             // Create the audit log entry
             $logEntry = AuditLog::create($logData);
             
@@ -82,6 +87,36 @@ class AuditLogger
         }
     }
     
+    /**
+     * Fold ip_address / user_agent into the details JSON and drop them as columns.
+     *
+     * @param array $logData
+     * @return array
+     */
+    private static function moveRequestMetaIntoDetails(array $logData)
+    {
+        $meta = [];
+        foreach (['ip_address', 'user_agent'] as $key) {
+            if (array_key_exists($key, $logData)) {
+                if ($logData[$key] !== null && $logData[$key] !== '') {
+                    $meta[$key] = $logData[$key];
+                }
+                unset($logData[$key]);
+            }
+        }
+
+        if ($meta) {
+            $details = json_decode((string) ($logData['details'] ?? ''), true);
+            if (!is_array($details)) {
+                $details = [];
+            }
+            // Explicit values passed in details win over request metadata
+            $logData['details'] = wp_json_encode(array_merge($meta, $details));
+        }
+
+        return $logData;
+    }
+
     /**
      * Check if a string is valid JSON
      *

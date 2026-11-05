@@ -7,7 +7,7 @@ class DatabaseSeeder
     /**
      * List of all seeders to run
      */
-    protected $seeders = [
+    const SEEDERS = [
         RoleSeeder::class,
         UserSeeder::class,
         HMOSeeder::class,
@@ -19,14 +19,15 @@ class DatabaseSeeder
         LabTestDefinitionSeeder::class,
         LabInvestigationSeeder::class,
         RadiologicalExamSeeder::class,
-        NotificationSeeder::class,
+        MedicalReportSeeder::class,   // before chats/notifications: they reference reports and visits
         ChatSeeder::class,
-        MedicalReportSeeder::class,
+        NotificationSeeder::class,
         InventorySeeder::class,
         InventorySuppliersSeeder::class,
         InventoryTransactionsSeeder::class,
         InventoryAlertsSeeder::class,
         InventoryReordersSeeder::class,
+        DemoDataSeeder::class,
         AuditLogSeeder::class,
     ];
     
@@ -39,7 +40,7 @@ class DatabaseSeeder
         echo "\033[33m" . "Starting Hospital Manager Data Seeding" . "\033[0m\n";
         echo "\033[33m" . "=====================================" . "\033[0m\n\n";
 
-        foreach ($this->seeders as $seederClass) {
+        foreach (self::SEEDERS as $seederClass) {
             echo "\033[33m" . "Running: " . basename(str_replace('\\', '/', $seederClass)) . "\033[0m\n";
             $seeder = new $seederClass();
             $seeder->run();

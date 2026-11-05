@@ -1,4 +1,9 @@
 <?php
+// Command-line only: this script changes or wipes data and must never run from a web request.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 /**
  * Hospital Manager Database Seeder Script
  * 
@@ -60,6 +65,8 @@ require_once dirname(__FILE__) . '/seeders/InventorySuppliersSeeder.php';
 require_once dirname(__FILE__) . '/seeders/InventoryTransactionsSeeder.php';
 require_once dirname(__FILE__) . '/seeders/InventoryAlertsSeeder.php';
 require_once dirname(__FILE__) . '/seeders/InventoryReordersSeeder.php';
+require_once dirname(__FILE__) . '/seeders/DemoDataSeeder.php';
+require_once dirname(__FILE__) . '/seeders/ClinicalDataSeeder.php';
 require_once dirname(__FILE__) . '/seeders/ResetSeeder.php';
 
 use HospitalManager\Database\Seeders\DatabaseSeeder;
@@ -83,6 +90,8 @@ use HospitalManager\Database\Seeders\InventorySuppliersSeeder;
 use HospitalManager\Database\Seeders\InventoryTransactionsSeeder;
 use HospitalManager\Database\Seeders\InventoryAlertsSeeder;
 use HospitalManager\Database\Seeders\InventoryReordersSeeder;
+use HospitalManager\Database\Seeders\DemoDataSeeder;
+use HospitalManager\Database\Seeders\ClinicalDataSeeder;
 use HospitalManager\Database\Seeders\ResetSeeder;
 
 // Map of seeder aliases to class names
@@ -108,6 +117,8 @@ $seeder_map = [
     'inventory-transactions' => InventoryTransactionsSeeder::class,
     'inventory-alerts' => InventoryAlertsSeeder::class,
     'inventory-reorders' => InventoryReordersSeeder::class,
+    'demo-data' => DemoDataSeeder::class,
+    'clinical' => ClinicalDataSeeder::class,
     'reset' => ResetSeeder::class
 ];
 
