@@ -153,6 +153,35 @@ Demo logins use the password `demo1234`: `demo_administrator`, `demo_doctor`,
 `demo_pharmacy_staff`, `demo_inventory_manager`, `demo_developer`
 (email `<role>@example.com`, e.g. `doctor@example.com`).
 
+## Release Builds
+
+```bash
+bin/build-release.sh             # release/hospital-manager-<version>.zip, for production
+bin/build-release.sh --staging   # release/hospital-manager-<version>-staging.zip, for test sites
+```
+
+Install either zip from Plugins > Add New > Upload Plugin. Activating creates the tables,
+the roles and a "Hospital Manager" page with the app. It needs PHP 8.2 or newer.
+
+### Seeding a staging site
+
+Only the staging zip has seed data. **Never install it on a production site:** it creates
+an administrator account whose password is published here.
+
+1. Make sure the site reports a non-production environment. In `wp-config.php`:
+   `define('WP_ENVIRONMENT_TYPE', 'staging');`
+   (Many hosts set this for staging sites. If the site must stay on the production type,
+   use `define('HOSPITAL_MANAGER_ALLOW_SEED', true);` instead.)
+2. Go to **Tools > Hospital Manager Seed**, turn on **Seed demo data on this site**, and
+   click **Run seed**. If a step fails, reload the page and resume.
+
+Over SSH, this does the same from the plugin folder: `php database/seeders.php all`.
+It has no empty-database or environment check, so run it once, on test sites only.
+
+Seeding only runs against empty hospital tables. To start over, set
+`hospital_manager_delete_data_on_uninstall` to `1`, delete the plugin and install it again.
+The demo WordPress users stay behind, so remove them from Users.
+
 ## Project Structure
 
 ```

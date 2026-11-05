@@ -7,7 +7,7 @@ class DatabaseSeeder
     /**
      * List of all seeders to run
      */
-    protected $seeders = [
+    const SEEDERS = [
         RoleSeeder::class,
         UserSeeder::class,
         HMOSeeder::class,
@@ -40,7 +40,7 @@ class DatabaseSeeder
         echo "\033[33m" . "Starting Hospital Manager Data Seeding" . "\033[0m\n";
         echo "\033[33m" . "=====================================" . "\033[0m\n\n";
 
-        foreach ($this->seeders as $seederClass) {
+        foreach (self::SEEDERS as $seederClass) {
             echo "\033[33m" . "Running: " . basename(str_replace('\\', '/', $seederClass)) . "\033[0m\n";
             $seeder = new $seederClass();
             $seeder->run();

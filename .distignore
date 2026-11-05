@@ -1,9 +1,11 @@
 # Files left out of the release zip (bin/build-release.sh).
 # Development tooling, tests, sources and data-changing scripts must not ship:
 # the reset/seed scripts wipe or overwrite hospital data.
+# (bin/build-release.sh --staging adds database/seeders* back in.)
 /.git
 /.github
 /.circleci
+/.claude
 /.gitignore
 /.distignore
 /.babelrc

@@ -4,6 +4,7 @@
  * Plugin URI: https://github.com/AniomaHospital/hospital-manager
  * Description: A comprehensive hospital management system for Nigerian hospitals with patient, doctor, and operations management.
  * Version: 1.0.0
+ * Requires PHP: 8.2
  * Author: Samuel N
  * Author URI: https://github.com/samybaxy
  * License: GPL-2.0+
@@ -31,6 +32,12 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 // Cached service results go stale on any write to a hospital table (see BaseService)
 \HospitalManager\Services\BaseService::watchWrites();
+
+// Demo-data tool: staging zips and dev checkouts only, production zips leave this file out
+if (is_admin() && is_file(__DIR__ . '/database/seeders/SeedTool.php')) {
+    require_once __DIR__ . '/database/seeders/SeedTool.php';
+    \HospitalManager\Database\Seeders\SeedTool::register();
+}
 
 // Focused intervention to prevent only wp-login.php redirects after failed auth
 add_action('init', function() {
